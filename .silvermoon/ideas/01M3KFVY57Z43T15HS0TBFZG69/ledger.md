@@ -28,8 +28,10 @@ contents, installed-package smoke, and skill synchronization.
 
 ### Deployment steps
 
-- [ ] **D-S01:** Step title
+- [ ] **D-S01:** Establish the exact primary deployment
+- [ ] **D-S02:** Verify optimized behavior from a clean clone
 
 ### Deployment acceptance criteria
 
-- [ ] **D-AC01:** Criterion title
+- [ ] **D-AC01:** Primary contains the accepted performance implementation
+- [ ] **D-AC02:** Published source reproduces the optimized observation
