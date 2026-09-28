@@ -70,7 +70,10 @@ keys, YAML aliases or anchors, comments, and noncanonical YAML are rejected.
 Effective language resolves as `idea language > project preferredLanguage >
 user preferredLanguage > en-US`. Every complete observation exposes the
 resolved non-empty tag as `configuration.preferredLanguage`. Missing idea
-language remains dynamically inherited and is never written back.
+language remains dynamically inherited and is never written back. Dialogue
+project status presents this effective value as `interaction language`
+(`交互语言`), meaning the language Silvermoon should use to interact with the
+user rather than a programming language used by the project.
 
 State is derived in order:
 

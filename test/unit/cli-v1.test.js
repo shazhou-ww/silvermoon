@@ -122,6 +122,8 @@ test("renders JSON verbatim and omits the empty outcomes section in Markdown", (
   const text = human.logs[0];
   assert.match(text, /^## Current instruction\n\nDetermine the available next work\.\n\n/);
   assert.match(text, /\n\n## Project status\n\n/);
+  assert.match(text, /- interaction language: en-US/);
+  assert.doesNotMatch(text, /- language: en-US/);
   assert.match(text, /\n\n### Ideas you can continue\n\n- `01M36QGPNTXEPP61DA4KP4AVZF` preparing/);
   assert.doesNotMatch(text, /### Issues to address/);
   assert.doesNotMatch(text, /Actions and results|No repository side effect was attempted/);
@@ -148,6 +150,8 @@ test("uses localized section headings from resolved configuration", () => {
 
   assert.match(output.logs[0], /^## 本次指示\n\n查看当前可推进的工作。\n\n/);
   assert.match(output.logs[0], /\n\n## 项目现状\n\n/);
+  assert.match(output.logs[0], /- 交互语言: zh-CN/);
+  assert.doesNotMatch(output.logs[0], /- 语言: zh-CN/);
   assert.match(output.logs[0], /\n\n### 可继续推进的想法\n\n/);
   assert.doesNotMatch(output.logs[0], /## 本次操作及结果/);
   assert.match(output.logs[0], /\n\n## 下一步建议\n\n/);

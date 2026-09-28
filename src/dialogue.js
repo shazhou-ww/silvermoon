@@ -193,7 +193,7 @@ function renderObservation(observation, language) {
       `- ${localize(language, "primary", "主仓库")}: ${codeSpan(`${observation.configuration.primaryRepository}#${observation.configuration.primaryBranch}`)}`,
     );
     lines.push(
-      `- ${localize(language, "language", "语言")}: ${observation.configuration.preferredLanguage}`,
+      `- ${localize(language, "interaction language", "交互语言")}: ${observation.configuration.preferredLanguage}`,
     );
   }
   if (observation.ideas) {
