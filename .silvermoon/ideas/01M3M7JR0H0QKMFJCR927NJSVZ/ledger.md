@@ -1,0 +1,36 @@
+# Ledger
+
+## Implementation
+
+### Implementation steps
+
+- [x] **I-S01:** 统一正式文档与 skill 的世界术语
+- [x] **I-S02:** 更新 CLI 与用户可见元数据
+- [x] **I-S03:** 调整契约测试并验证术语边界
+
+### Implementation acceptance criteria
+
+- [x] **I-AC01:** 正式界面不再使用仙侠别名
+- [x] **I-AC02:** 三重世界和文档契约名称保持一致
+- [x] **I-AC03:** 行为与兼容性保持不变
+
+Evidence: targeted terminology tests and scoped alias searches passed;
+`pnpm check` passed with 74 integration tests, 2 skips, package smoke, e2e,
+and skill consistency checks.
+
+## Deployment
+
+### Deployment steps
+
+- [x] **D-S01:** 验证远端主分支的术语边界
+- [x] **D-S02:** 验证安装包中的 CLI 与 skill
+
+### Deployment acceptance criteria
+
+- [x] **D-AC01:** Primary 快照满足正式术语契约
+- [x] **D-AC02:** 打包安装后的行为保持一致
+
+Evidence: `silvermoon check --remote` passed for primary
+`018a274cd9a8cd33b42603e41857b0f1afe21a05`; remote terminology boundary
+search returned `REMOTE_TERMINOLOGY_BOUNDARY_OK`; `pnpm pack:check` and
+`pnpm test:e2e` passed with `PACK_SMOKE_OK` for `silvermoon@0.0.3`.

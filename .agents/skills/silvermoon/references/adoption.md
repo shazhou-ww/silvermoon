@@ -77,10 +77,11 @@ Each idea is self-contained:
             `-- Idea.md
 ```
 
-Ideal World (道心) uses `Idea.md`, Inner World (内景) uses
-`Implementation.md`, and Outer World (现世) uses `Deployment.md`: 道心立意，
-内景成形，现世验真. Each world may have supporting files and directories,
-but they serve rather than replace the canonical same-world entry.
+Ideal World (理想世界) uses the `Idea.md` ideal contract.
+Inner World (主体世界) uses the `Implementation.md` inner implementation
+contract. Outer World (现实世界) uses the `Deployment.md` real-world
+deployment contract. Each world may have supporting files and directories, but
+they serve rather than replace the canonical same-world entry.
 
 The nested opaque Git trees produce `idealRevision`,
 `implementationRevision`, and `deploymentRevision`. Inner World includes Ideal
