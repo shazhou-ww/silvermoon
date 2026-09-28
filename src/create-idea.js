@@ -19,7 +19,7 @@ import { canonicalizeLanguageTag } from "./language.js";
 import { IDEAS_ROOT, ideaPaths } from "./layout.js";
 import { observeSnapshot } from "./observation.js";
 import {
-  assessRepositoryReadiness,
+  assessIdeaCreationReadiness,
   projectInstructions,
 } from "./whatsnext.js";
 
@@ -152,6 +152,14 @@ function failureEnvelope({
   );
 }
 
+function projectCreationObservation(observation) {
+  const { ideas: _ideas, ...project } = observation;
+  if (project.observedThrough === "ideas") {
+    project.observedThrough = "configuration";
+  }
+  return project;
+}
+
 export async function createIdea({
   generateId = generateUlid,
   language,
@@ -181,7 +189,7 @@ export async function createIdea({
   if (!observed.projectReady) {
     return createEnvelope(
       intention,
-      observed.observation,
+      projectCreationObservation(observed.observation),
       outcomes,
       projectInstructions(
         observed,
@@ -192,7 +200,7 @@ export async function createIdea({
     );
   }
   const repositoryRoot = observed.observation.root;
-  const readiness = await assessRepositoryReadiness({
+  const readiness = await assessIdeaCreationReadiness({
     observed,
     outcomes,
     recheckCommand,
@@ -201,7 +209,10 @@ export async function createIdea({
   if (!readiness.ready) {
     return createEnvelope(
       intention,
-      readiness.observation,
+      dialogueReadyObservation(
+        readiness.observation,
+        "repository-preparation-required",
+      ),
       outcomes,
       readiness.instructions,
     );
@@ -308,20 +319,20 @@ export async function createIdea({
         "success",
         localize(
           observed.language,
-          `Created idea ${id} at ${paths.ideaPath} with ${paths.ideaDocumentPath}, ${paths.implementationDocumentPath}, ${paths.deploymentDocumentPath}, ${paths.ledgerPath}, and ${paths.statusPath}.`,
-          `已在 ${paths.ideaPath} 创建 idea ${id}，包含 ${paths.ideaDocumentPath}、${paths.implementationDocumentPath}、${paths.deploymentDocumentPath}、${paths.ledgerPath} 和 ${paths.statusPath}。`,
+          `Created idea ${id} at ${paths.ideaPath}.`,
+          `已在 ${paths.ideaPath} 创建 idea ${id}。`,
         ),
       ));
       return createEnvelope(
         intention,
         dialogueReadyObservation(readiness.observation, "idea-created", {
-          createdIdea: { id, state: "preparing" },
+          createdIdea: { id, path: paths.ideaPath, state: "preparing" },
         }),
         outcomes,
         localize(
           observed.language,
-          `Describe the requested Ideal World in ${paths.ideaDocumentPath}, keep the other world and ledger placeholders synchronized, inspect the complete candidate with \`silvermoon check --worktree\`, then stage and validate it with \`silvermoon check --staged\` before committing and publishing against observed primary ${readiness.primary}.`,
-          `在 ${paths.ideaDocumentPath} 中描述请求的道心，并保持其他 world 与 ledger 占位同步；先用 \`silvermoon check --worktree\` 检查完整候选，再 stage 并用 \`silvermoon check --staged\` 验证，然后基于已观察 primary ${readiness.primary} 提交并发布。`,
+          `Use ${observed.language} for natural-language content while describing the requested Ideal World in ${paths.ideaDocumentPath}; keep the stable IDs and placeholders in ${paths.implementationDocumentPath}, ${paths.deploymentDocumentPath}, and ${paths.ledgerPath} synchronized.`,
+          `使用 ${observed.language} 在 ${paths.ideaDocumentPath} 中描述请求的道心，并保持 ${paths.implementationDocumentPath}、${paths.deploymentDocumentPath} 与 ${paths.ledgerPath} 中的稳定 ID 和占位同步。`,
         ),
       );
     } catch (caught) {

@@ -93,8 +93,8 @@ function renderIntention(intention, language) {
     return intention.args.language === null
       ? localize(
         language,
-        "Create one new idea using the effective project language.",
-        "使用项目的有效语言创建一个新 idea。",
+        `Create one new idea and use ${language} for natural-language content.`,
+        `创建一个新 idea，并使用 ${language} 撰写自然语言内容。`,
       )
       : localize(
         language,
@@ -138,8 +138,8 @@ function renderObservation(observation, language) {
   if (observation.state === "idea-created") {
     return localize(
       language,
-      `The repository was ready before creation. Created idea: ${codeSpan(observation.createdIdea.id)}; state: preparing.`,
-      `创建前项目与 repository 已就绪。新建 idea：${codeSpan(observation.createdIdea.id)}；状态：preparing。`,
+      `The local repository was ready before creation. Created idea: ${codeSpan(observation.createdIdea.id)}; path: ${codeSpan(observation.createdIdea.path)}; state: preparing.`,
+      `创建前项目与本地 repository 已就绪。新建 idea：${codeSpan(observation.createdIdea.id)}；路径：${codeSpan(observation.createdIdea.path)}；状态：preparing。`,
     );
   }
   if (observation.state === "idea-create-failed") {
@@ -159,6 +159,11 @@ function renderObservation(observation, language) {
       language,
       "The project is configured, but the repository requires synchronization.",
       "项目配置已就绪，但 repository 仍需整备或同步。",
+    ),
+    "repository-preparation-required": localize(
+      language,
+      "The project is ready, but the local repository must be prepared before creating an idea.",
+      "项目已就绪，但创建 idea 前仍需整备本地 repository。",
     ),
     "navigation-ready": localize(
       language,

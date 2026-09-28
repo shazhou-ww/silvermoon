@@ -42,6 +42,12 @@ Creation intent is distinct from active-idea selection. If hygiene blocks the
 command, perform only the reported remediation and retry `create-idea`; do not
 replace the request with selector-less navigation.
 
+Creation checks project readiness, then requires the configured primary branch
+and upstream plus a clean worktree. It does not fetch, compare ancestry, or
+require local HEAD to be aligned with the remote tip. Its preparation reports
+omit the active-idea inventory because existing work does not replace explicit
+creation intent.
+
 `--language` is the only command-level language override. It normalizes a valid
 BCP 47 tag and writes it to the new idea's `status.yaml`. Without the option,
 creation writes no language field and the idea dynamically inherits project,

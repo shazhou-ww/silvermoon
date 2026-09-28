@@ -78,11 +78,11 @@ silvermoon create-idea
 silvermoon create-idea --language zh-cn
 ```
 
-The command first applies the same repository, worktree, conflict, and ancestry
-hygiene used by navigation. When those checks pass, it creates one untracked
-idea scaffold with `Idea.md`, `Implementation.md`, `Deployment.md`,
-`ledger.md`, and `status.yaml`. It never stages, commits, pushes, or records a
-human decision.
+The command requires the configured primary branch and upstream plus a clean
+local worktree. It does not fetch or require local HEAD to match the remote
+tip. When those checks pass, it creates one untracked idea scaffold with
+`Idea.md`, `Implementation.md`, `Deployment.md`, `ledger.md`, and
+`status.yaml`. It never stages, commits, pushes, or records a human decision.
 
 Replace the guidance in `Idea.md` with the desired outcome, scope, and
 constraints. Keep implementation and deployment placeholders synchronized

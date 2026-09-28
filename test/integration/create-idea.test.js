@@ -70,7 +70,32 @@ async function pushPeerChange(repository) {
   git(peer, "push", "origin", "main");
 }
 
-test("[unrelated-active-create] [publish-coordinates] creates an exact scaffold and reports both side effects", async () => {
+test("project setup reports no idea inventory and performs no repository access", async () => {
+  const repository = await fixture();
+  await rm(join(repository.root, ".agents"), { recursive: true });
+  const commands = [];
+
+  const report = await observeGitCommands(
+    (args) => commands.push(args),
+    () => createIdea({
+      generateId: () => createdId,
+      root: repository.root,
+      userHome: repository.base,
+    }),
+  );
+
+  assert.equal(report.observation.state, "project-setup-required");
+  assert.equal(Object.hasOwn(report.observation, "ideas"), false);
+  assert.equal(report.observation.observedThrough, "configuration");
+  assert.equal(
+    commands.some(([name]) =>
+      ["fetch", "ls-remote", "status", "symbolic-ref"].includes(name)
+    ),
+    false,
+  );
+});
+
+test("[unrelated-active-create] [create-no-remote] creates an exact scaffold without remote access", async () => {
   const repository = await fixture();
   const before = repositoryState(repository.root, repository.repository);
   const commands = [];
@@ -95,18 +120,19 @@ test("[unrelated-active-create] [publish-coordinates] creates an exact scaffold 
     args: { language: null },
   });
   assert.equal(report.observation.state, "idea-created");
-  assert.deepEqual(report.observation.createdIdea, { id: createdId, state: "preparing" });
+  assert.deepEqual(report.observation.createdIdea, {
+    id: createdId,
+    path: ideaPaths(createdId).ideaPath,
+    state: "preparing",
+  });
   assert.equal(Object.hasOwn(report.observation, "ideas"), false);
   assert.deepEqual(
     report.outcomes.map(({ type, status }) => [type, status]),
-    [
-      ["fetch-primary", "success"],
-      ["create-idea-scaffold", "success"],
-    ],
+    [["create-idea-scaffold", "success"]],
   );
-  assert.match(report.outcomes[1].summary, new RegExp(createdId));
+  assert.match(report.outcomes[0].summary, new RegExp(createdId));
   assert.match(report.instructions, new RegExp(ideaPaths(createdId).ideaDocumentPath));
-  assert.match(report.instructions, new RegExp(before.head));
+  assert.match(report.instructions, /en-US/);
 
   const paths = ideaPaths(createdId);
   for (const [path, source] of [
@@ -123,7 +149,10 @@ test("[unrelated-active-create] [publish-coordinates] creates an exact scaffold 
   );
   const after = repositoryState(repository.root, repository.repository);
   assert.deepEqual(after, before);
-  assert.equal(commands.filter(([name]) => name === "fetch").length, 1);
+  assert.equal(
+    commands.some(([name]) => name === "fetch" || name === "ls-remote"),
+    false,
+  );
   assert.equal(
     commands.some(([name]) => ["commit", "push"].includes(name)),
     false,
@@ -214,7 +243,8 @@ test("preserves create intent and does not mutate a dirty repository", async () 
     userHome: repository.base,
   });
 
-  assert.equal(report.observation.state, "repository-sync-required");
+  assert.equal(report.observation.state, "repository-preparation-required");
+  assert.equal(Object.hasOwn(report.observation, "ideas"), false);
   assert.deepEqual(report.outcomes, []);
   assert.match(report.instructions, /silvermoon create-idea/);
   assert.doesNotMatch(report.instructions, /--json/);
@@ -250,29 +280,63 @@ test("[ulid-collision] retries without changing the colliding idea", async () =>
   assert.equal(await readFile(existingStatus, "utf8"), original);
 });
 
-test("[publish-concurrent-move] retains the observed publish guard when primary moves during creation", async () => {
-  const repository = await fixture();
-  const observedPrimary = git(repository.root, "rev-parse", "HEAD");
-  let generated = false;
+test("creates while local primary is ahead, behind, or diverged", async () => {
+  for (const relation of ["ahead", "behind", "diverged"]) {
+    const repository = await fixture({ prefix: `silvermoon-create-${relation}-` });
+    if (relation !== "behind") {
+      await writeFile(join(repository.root, `${relation}-local.txt`), "local\n");
+      git(repository.root, "add", ".");
+      git(repository.root, "commit", "-m", `Create ${relation} local commit`);
+    }
+    if (relation !== "ahead") {
+      await pushPeerChange(repository);
+    }
 
-  const report = await createIdea({
-    generateId: async () => {
-      if (!generated) {
-        generated = true;
-        await pushPeerChange(repository);
-      }
-      return createdId;
-    },
+    const commands = [];
+    const report = await observeGitCommands(
+      (args) => commands.push(args),
+      () => createIdea({
+        generateId: () => relation === "ahead" ? createdId : secondId,
+        root: repository.root,
+        userHome: repository.base,
+      }),
+    );
+
+    assert.equal(report.observation.state, "idea-created", relation);
+    assert.equal(
+      commands.some(([name]) => name === "fetch" || name === "ls-remote"),
+      false,
+      relation,
+    );
+  }
+});
+
+test("[create-primary-branch] [create-primary-upstream] requires configured primary coordinates", async () => {
+  const repository = await fixture();
+  git(repository.root, "checkout", "-b", "feature");
+  git(repository.root, "branch", "--set-upstream-to=origin/main", "feature");
+
+  const branchMismatch = await createIdea({
+    generateId: () => createdId,
     root: repository.root,
     userHome: repository.base,
   });
+  assert.equal(branchMismatch.observation.state, "repository-preparation-required");
+  assert.equal(
+    branchMismatch.observation.problems[0].type,
+    "primary-branch-mismatch",
+  );
 
-  assert.equal(report.outcomes.at(-1).status, "success");
-  assert.match(report.instructions, new RegExp(observedPrimary));
-  assert.notEqual(
-    git(repository.root, "ls-remote", repository.repository, "refs/heads/main")
-      .split(/\s+/)[0],
-    observedPrimary,
+  git(repository.root, "checkout", "main");
+  git(repository.root, "branch", "--unset-upstream");
+  const upstreamMismatch = await createIdea({
+    generateId: () => createdId,
+    root: repository.root,
+    userHome: repository.base,
+  });
+  assert.equal(
+    upstreamMismatch.observation.problems[0].type,
+    "primary-upstream-mismatch",
   );
 });
 

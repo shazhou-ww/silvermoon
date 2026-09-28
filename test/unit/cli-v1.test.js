@@ -191,14 +191,18 @@ test("retains fetch failures and scaffold results while hiding aligned fetch suc
   const report = envelope();
   report.observation.state = "idea-created";
   delete report.observation.ideas;
-  report.observation.createdIdea = { id: "01M36QGPNTXEPP61DA4KP4AVZF", state: "preparing" };
+  report.observation.createdIdea = {
+    id: "01M36QGPNTXEPP61DA4KP4AVZF",
+    path: ".silvermoon/ideas/01M36QGPNTXEPP61DA4KP4AVZF",
+    state: "preparing",
+  };
   report.outcomes = [
     { type: "fetch-primary", status: "success", summary: "Fetched primary." },
     { type: "create-idea-scaffold", status: "success", summary: "Created idea." },
   ];
   const success = capture();
   render(report, false, success.io);
-  assert.match(success.logs[0], /The repository was ready before creation/);
+  assert.match(success.logs[0], /The local repository was ready before creation/);
   assert.match(success.logs[0], /- success \[create-idea-scaffold\]: Created idea\./);
   assert.doesNotMatch(success.logs[0], /Fetched primary/);
 
@@ -234,6 +238,25 @@ test("renders observed problems under their own level-three heading", () => {
   report.observation.problems.push({
     type: "worktree-changes",
     summary: "One untracked path.",
+  });
+
+  test("renders create-specific intent and local repository preparation", () => {
+    const report = envelope();
+    report.intention = { command: "create-idea", args: { language: null } };
+    report.observation = {
+      state: "repository-preparation-required",
+      root: "C:\\repository",
+      version: { type: "worktree" },
+      configuration: report.observation.configuration,
+      problems: [{ type: "worktree-changes", summary: "One untracked path." }],
+    };
+    const output = capture();
+
+    render(report, false, output.io);
+
+    assert.match(output.logs[0], /^## Current instruction\n\nCreate one new idea and use en-US for natural-language content\./);
+    assert.match(output.logs[0], /local repository must be prepared/);
+    assert.doesNotMatch(output.logs[0], /Ideas you can continue|ideas: preparing/);
   });
   const output = capture();
   render(report, false, output.io);

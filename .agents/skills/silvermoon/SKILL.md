@@ -29,15 +29,16 @@ and Git.
    the current state, nonempty navigation candidates and problems have separate
    `### Ideas you can continue` and `### Issues to address` headings.
    A selected idea instead reports its own lifecycle state; a created idea
-   reports its new identity. `## Actions and results` omits routine successful
-   fetch when HEAD matches primary, but JSON still records the fetch and any
-   other attempted outcome.
+   reports its new identity and root path. `## Actions and results` omits
+   routine successful fetch when HEAD matches primary, but JSON still records
+   the fetch and any other attempted outcome.
    Rendering is not a second decision model.
 3. Read every problem and all ordered instructions in the current layer.
    `project-setup-required` blocks repository and idea reasoning;
-   `repository-sync-required` blocks idea routing. Execute instructions whose
-   prerequisites remain true, and reobserve after completing the layer or
-   encountering an unexpected result.
+   `repository-sync-required` blocks idea routing, while
+   `repository-preparation-required` blocks creation. Execute instructions
+   whose prerequisites remain true, and reobserve after completing the layer
+   or encountering an unexpected result.
 4. Never infer selection from candidate count. Bare `whats-next` presents all
    active ideas and the option to discuss and run `create-idea`, even when
    exactly one idea is active. Only an explicit ULID or alias selects an idea.
@@ -45,8 +46,9 @@ and Git.
    not selector-less `whats-next`.
 
 `whats-next` may fetch and inspect. It never checkout, merges, edits, commits,
-stashes, deletes, resets, fast-forwards, or pushes. `create-idea` runs the same
-hygiene preflight and, only when it passes, creates the structured idea scaffold.
+stashes, deletes, resets, fast-forwards, or pushes. `create-idea` does not fetch
+or compare remote ancestry. It requires the configured primary branch and
+upstream plus a clean local worktree, then creates the structured idea scaffold.
 The target repository does not need a package manifest, package manager,
 Silvermoon dependency, or `node_modules`. The packaged skill is canonical;
 register or update it only at `.agents/skills/silvermoon` through the supported
