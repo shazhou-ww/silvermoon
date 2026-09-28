@@ -25,10 +25,18 @@ failures, package-content checks, installed-package smoke tests, and skill sync.
 
 ### Deployment steps
 
-- [ ] **D-S01:** Establish the exact primary deployment
-- [ ] **D-S02:** Verify behavior from a clean clone
+- [x] **D-S01:** Establish the exact primary deployment
+- [x] **D-S02:** Verify behavior from a clean clone
 
 ### Deployment acceptance criteria
 
-- [ ] **D-AC01:** Primary contains the accepted implementation
-- [ ] **D-AC02:** Published source reproduces snapshot-only validation
+- [x] **D-AC01:** Primary contains the accepted implementation
+- [x] **D-AC02:** Published source reproduces snapshot-only validation
+
+Primary proof: `origin/main` resolved to
+`12e52b3815f67e548e9f72c8a13dd779bdf41747`; clean-clone ancestry checks
+confirmed implementation commit `1aba5d0c27f66187e24819d5d5c33a6d6bc2e0fb`
+and acceptance commit `a5b1f82505ac05441575f48d10074b24a4a1e4c6`.
+Clean-clone proof: locked dependency installation succeeded, targeted integration
+tests passed 24/24, and `node bin/silvermoon.js check --remote` validated that
+exact primary tip as project-ready. The temporary clone was removed afterward.
