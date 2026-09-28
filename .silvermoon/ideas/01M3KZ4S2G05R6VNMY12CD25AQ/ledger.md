@@ -32,16 +32,30 @@ skill 同步检查通过。另修复 README `--out` integration test 在并行�
 ### Deployment steps
 
 - [x] **D-S01:** 发布稳定的 create-idea 契约
-- [ ] **D-S02:** 验证安装包的三类输出路径
+- [x] **D-S02:** 验证安装包的三类输出路径
 
 ### Deployment acceptance criteria
 
-- [ ] **D-AC01:** primary 上的候选可验证
-- [ ] **D-AC02:** 安装后的 create-idea 遵守收紧契约
-- [ ] **D-AC03:** whats-next 行为没有回归
+- [x] **D-AC01:** primary 上的候选可验证
+- [x] **D-AC02:** 安装后的 create-idea 遵守收紧契约
+- [x] **D-AC03:** whats-next 行为没有回归
 
 发布证据：configured primary `origin/main` 已发布 commit
 `2f3d4cde6fa960d7f41a18f868e6552c27189d28`，对应稳定 deployment
 revision `60657f64def499931c96079cf0bf23266c5c5c95`。`silvermoon check
 --remote --json` 对该 commit 返回 `project-ready` 且 `problems` 为空；
 指定本 idea 的 `whats-next --json` 返回 `deploying` 和上述 revision。
+
+部署验真：primary 前进后，`silvermoon check --remote --json` 对 commit
+`aaff86dea97ec23a186d9f61af8502b11e2d14c1` 仍返回 `project-ready` 且
+`problems` 为空；指定本 idea 的 `whats-next --json` 继续返回 `deploying`
+和 deployment revision `60657f64def499931c96079cf0bf23266c5c5c95`。
+
+从已发布源码打包并隔离安装 `silvermoon@0.0.3` 的部署矩阵全部通过：
+项目未整备的 JSON/文本输出不含 idea inventory 且保留未知文件；dirty、
+错误 branch 与错误 upstream 仅报告本地准备问题；ahead、behind 和不可用
+网络下均可创建，英文与中文输出符合契约，观测命令中没有 fetch 或
+ls-remote；故障注入返回 failure outcome，并保留并发写入的文件；同一
+安装包的 `whats-next` 能 fetch 并报告 behind，也能在 remote 不可用时返回
+`primary-fetch-failed` 与 failure outcome。脚本结束后临时根目录全部清理。
+正式 `pnpm test:e2e` 亦通过，installed-package smoke test 1/1。
