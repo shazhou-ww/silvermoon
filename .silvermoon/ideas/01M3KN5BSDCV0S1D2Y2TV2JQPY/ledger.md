@@ -30,10 +30,18 @@ package contents、skill 同步与 Markdown lint 通过）。
 
 ### Deployment steps
 
-- [ ] **D-S01:** 发布稳定的验真契约
-- [ ] **D-S02:** 验证 primary 与安装包消费者
+- [x] **D-S01:** 发布稳定的验真契约
+- [x] **D-S02:** 验证 primary 与安装包消费者
 
 ### Deployment acceptance criteria
 
-- [ ] **D-AC01:** primary 可验证
-- [ ] **D-AC02:** 已安装消费者遵守输出契约
+- [x] **D-AC01:** primary 可验证
+- [x] **D-AC02:** 已安装消费者遵守输出契约
+
+Deployment revision `e49bce8bc11c5ca52d2e248c597a1cc9c4c8424e`
+在 primary commit `37d241cd9d245b701089e420e127acbcd21d0085`
+上发布。指定 idea 的 `whats-next --json` 返回 `idea-selected`、
+`selectedIdea.state: deploying` 及上述 revision。
+`silvermoon check --remote --json` 在上述 commit 返回 `project-ready`、
+`problems: []`；`pnpm test:e2e` 的 installed-package smoke 通过（1/1），
+验证独立消费者的 check、create-idea 和整备输出及副作用记录。
