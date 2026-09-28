@@ -173,7 +173,8 @@ package manager, `package.json`, project-local Silvermoon dependency, or
 and upstream identity, then fetch and ancestry. A local branch may have any
 name, but its upstream must identify the configured repository and primary
 branch. Change summaries have fixed item and UTF-8 byte budgets and provide
-full counts, omitted counts, and exact inspection commands. Bare navigation
+full counts and omitted counts; instructions require inspection of the complete
+change set without prescribing a particular diff tool. Bare navigation
 never selects an idea: it always lists every active idea alongside the option
 to discuss and run `create-idea`.
 

@@ -25,7 +25,8 @@ configuration schema/semantics，以及 `.agents/skills/silvermoon` 与当前运
 先检查本地 worktree、HEAD 和 upstream，再访问 configured primary。当前 branch
 只要求 upstream 对应 configured repository/branch，不要求本地名称相同。对
 conflicted、staged、unstaged 和 untracked changes 返回稳定 counts、有界路径样例
-与精确检查命令；fetch 和 ancestry 只记录事实、outcome 与建议，不修改 worktree、
+与完整修改集的检查要求，不规定查看 diff 的工具；fetch 和 ancestry 只记录事实、
+outcome 与建议，不修改 worktree、
 index、branch 或 history。
 
 ### I-S04: 规范任务导航与 lifecycle instructions
@@ -92,7 +93,8 @@ problems 与有序 instructions。Unit 与 installed-package e2e fixtures 证明
 `whats-next` 在任何 remote 访问前报告本地冲突或修改，只接受指向 configured
 primary 的 upstream，并正确区分 fetch failure、behind、ahead、diverged 和
 aligned。大量 changes 的输出受固定 item/UTF-8 byte budget 限制，同时保留完整
-counts、omitted 数和精确 Git 检查命令；integration tests 证明输出上界、顺序和
+counts、omitted 数和检查全部路径及修改内容的要求，不限定具体工具；integration
+tests 证明输出上界、顺序和
 工作区不被 Silvermoon 修改。
 
 ### I-AC04: 任务导航不替用户选择

@@ -319,9 +319,25 @@ test("[dirty] reports local changes before any remote access and preserves selec
     commands.some(([name]) => name === "fetch" || name === "ls-remote"),
     false,
   );
-  assert.match(report.instructions, /^Inspect all paths /);
+  assert.match(report.instructions, /^Inspect all staged, unstaged, and untracked paths and their changes/);
+  assert.doesNotMatch(report.instructions, /git -C|diff --cached|status --short/);
   assert.doesNotMatch(report.instructions, /^\d+\. /m);
   assert.match(report.instructions, new RegExp(FIRST_ID));
+});
+
+test("localized worktree guidance covers all changes without prescribing diff commands", async () => {
+  const repository = await fixture({ preferredLanguage: "zh-CN" });
+  await writeFile(join(repository.root, "local.txt"), "preserve me\n");
+
+  const report = await whatsNext({
+    root: repository.root,
+    userHome: repository.base,
+  });
+
+  assert.equal(report.observation.state, "repository-sync-required");
+  assert.match(report.instructions, /^检查全部 staged、unstaged 和 untracked 路径及其修改内容/);
+  assert.match(report.instructions, /不要只依据上述样例/);
+  assert.doesNotMatch(report.instructions, /git -C|diff --cached|status --short/);
 });
 
 test("reports every observable local readiness problem before remote access", async () => {
@@ -348,14 +364,13 @@ test("reports every observable local readiness problem before remote access", as
     commands.some(([name]) => name === "fetch" || name === "ls-remote"),
     false,
   );
-  assert.match(report.instructions, /status --short/);
-  assert.match(report.instructions, /^1\. Inspect all paths /);
+  assert.match(report.instructions, /^1\. Inspect all staged, unstaged, and untracked paths and their changes/);
   assert.match(report.instructions, /\n2\. Configure a named remote /);
   assert.match(report.instructions, /upstream/);
   assert.match(report.instructions, /silvermoon whats-next/);
 });
 
-test("[structured-changes] bounds large change summaries and provides exact inspection commands", async () => {
+test("[structured-changes] bounds large change summaries and requires full inspection", async () => {
   const repository = await fixture();
   for (let index = 0; index < 50; index += 1) {
     await writeFile(
@@ -374,9 +389,9 @@ test("[structured-changes] bounds large change summaries and provides exact insp
   assert.ok(sample);
   assert.ok(sample[1].split(", ").length <= CHANGE_SAMPLE_ITEM_LIMIT);
   assert.equal(Number(sample[2]), 50 - CHANGE_SAMPLE_ITEM_LIMIT);
-  assert.match(report.instructions, /git .* status --short/);
-  assert.match(report.instructions, /diff --cached/);
-  assert.match(report.instructions, /ls-files --others --exclude-standard/);
+  assert.match(report.instructions, /Inspect all staged, unstaged, and untracked paths and their changes/);
+  assert.match(report.instructions, /not just the samples above/);
+  assert.doesNotMatch(report.instructions, /git -C|diff --cached|status --short/);
 });
 
 test("[conflict] prioritizes conflicts while still reporting all known changes", async () => {
@@ -411,8 +426,9 @@ test("[conflict] prioritizes conflicts while still reporting all known changes",
     ["worktree-conflicts", "worktree-changes"],
   );
   assert.match(report.observation.problems[0].summary, /conflict\.txt/);
-  assert.match(report.instructions, /diff --name-only --diff-filter=U/);
-  assert.match(report.instructions, /extra\.txt|status --short/);
+  assert.match(report.instructions, /^1\. Inspect every conflicted path and its contents/);
+  assert.match(report.instructions, /\n2\. Inspect all staged, unstaged, and untracked paths and their changes/);
+  assert.doesNotMatch(report.instructions, /git -C|diff --name-only|status --short/);
   assert.equal(report.outcomes.length, 0);
 });
 

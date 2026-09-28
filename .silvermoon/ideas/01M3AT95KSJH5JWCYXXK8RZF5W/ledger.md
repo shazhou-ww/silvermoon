@@ -52,6 +52,13 @@ e2e 1/1；package contents、skill 同步及 Markdown lint 通过）。
 `pnpm check` 通过（unit、contract、integration、installed-package e2e、
 package contents、skill 同步及 Markdown lint）。
 
+工具无关检查复验：仓库整备分别要求检查所有冲突路径及内容、全部 staged /
+unstaged / untracked 路径及修改，不再指定逐条 Git 查看命令；大型集合仍保留
+counts、样例和 omitted 数。`test/integration/whatsnext.test.js` 验证单条、
+多条、冲突及有界样例的指引；`pnpm check` 通过（unit、contract、
+integration、installed-package e2e、package contents、skill 同步及
+Markdown lint），`check --worktree --json` 返回 `project-ready`。
+
 ## Deployment
 
 ### Deployment steps

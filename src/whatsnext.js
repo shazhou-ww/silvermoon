@@ -109,13 +109,13 @@ export function summarizeWorktreeChanges(changes, language = "en-US") {
   );
 }
 
-function worktreeInstructionSteps(root, changes, language) {
+function worktreeInstructionSteps(changes, language) {
   const lines = [];
   if (changes.conflicted.length > 0) {
     lines.push(localize(
       language,
-      `Inspect conflicts with ${command(root, 'git -C "<root>" diff --name-only --diff-filter=U')} and resolve them without discarding either side.`,
-      `使用 ${command(root, 'git -C "<root>" diff --name-only --diff-filter=U')} 检查冲突，并在不丢弃任一方内容的前提下解决冲突。`,
+      "Inspect every conflicted path and its contents, then resolve the conflicts without discarding either side.",
+      "检查全部冲突路径及其内容，再在不丢弃任一方内容的前提下解决冲突。",
     ));
   }
   const hasOrdinaryChanges =
@@ -125,8 +125,8 @@ function worktreeInstructionSteps(root, changes, language) {
   if (hasOrdinaryChanges) {
     lines.push(localize(
       language,
-      `Inspect all paths with ${command(root, 'git -C "<root>" status --short')}, staged changes with ${command(root, 'git -C "<root>" diff --cached --')}, unstaged changes with ${command(root, 'git -C "<root>" diff --')}, and untracked paths with ${command(root, 'git -C "<root>" ls-files --others --exclude-standard')}. Preserve unknown work, then commit, isolate, or explicitly discard each change.`,
-      `使用 ${command(root, 'git -C "<root>" status --short')} 检查全部路径，使用 ${command(root, 'git -C "<root>" diff --cached --')} 检查 staged 修改，使用 ${command(root, 'git -C "<root>" diff --')} 检查 unstaged 修改，并使用 ${command(root, 'git -C "<root>" ls-files --others --exclude-standard')} 检查 untracked 路径。保留未知工作，再逐项提交、隔离，或在获得明确授权后放弃。`,
+      "Inspect all staged, unstaged, and untracked paths and their changes, not just the samples above. Preserve unknown work, then commit, isolate, or explicitly discard each change.",
+      "检查全部 staged、unstaged 和 untracked 路径及其修改内容，不要只依据上述样例。保留未知工作，再逐项提交、隔离，或在获得明确授权后放弃。",
     ));
   }
   return lines;
@@ -231,8 +231,8 @@ async function assessRepositoryReadinessInternal({
       observation: repositoryProblemObservation(observed.observation, [problem]),
       instructions: localize(
         language,
-        `Repair the local Git state, inspect it with ${command(root, 'git -C "<root>" status --short')}, then run ${command(root, recheckCommand)} again.`,
-        `修复本地 Git 状态，使用 ${command(root, 'git -C "<root>" status --short')} 检查后，再运行 ${command(root, recheckCommand)}。`,
+        `Repair the local Git state, verify that all changes can be inspected, then run ${command(root, recheckCommand)} again.`,
+        `修复本地 Git 状态，确认可检查全部修改后，再运行 ${command(root, recheckCommand)}。`,
       ),
       ready: false,
     };
@@ -281,7 +281,7 @@ async function assessRepositoryReadinessInternal({
         }, language),
       });
     }
-    localSteps.push(...worktreeInstructionSteps(root, changes, language));
+    localSteps.push(...worktreeInstructionSteps(changes, language));
   }
 
   const head = resolveHead(root);
