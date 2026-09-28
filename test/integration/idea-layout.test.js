@@ -227,26 +227,47 @@ test("rejects an alias that collides with any exact idea ULID", async () => {
   );
 });
 
-test("validates each decision against its corresponding world in history", async () => {
+test("derives lifecycle without requiring historical revision objects", async () => {
   const root = await createRepository();
   const paths = ideaPaths(id);
   const current = (await inspectIdeaLayout({ root })).ideas[0];
-  await writeFile(
-    join(root, ...paths.statusPath.split("/")),
-    serializeIdeaStatus({
-      version: 1,
-      id,
-      alias: "publish-documentation",
-      approvedRevision: current.idealRevision,
-      implementationAcceptedRevision: current.implementationRevision,
-      deploymentAcceptedRevision: current.deploymentRevision,
-    }),
-  );
-  git(root, "add", ".");
-  git(root, "commit", "-m", "Accept worlds");
-  const commit = git(root, "rev-parse", "HEAD");
+  const historicalRevision = "0".repeat(40);
+  const cases = [
+    {
+      state: "preparing",
+      status: {
+        approvedRevision: historicalRevision,
+      },
+    },
+    {
+      state: "implementing",
+      status: {
+        approvedRevision: current.idealRevision,
+        implementationAcceptedRevision: historicalRevision,
+      },
+    },
+    {
+      state: "deploying",
+      status: {
+        approvedRevision: current.idealRevision,
+        implementationAcceptedRevision: current.implementationRevision,
+        deploymentAcceptedRevision: historicalRevision,
+      },
+    },
+  ];
 
-  const inspected = await inspectIdeaLayout({ historyCommit: commit, root });
-  assert.deepEqual(inspected.diagnostics, []);
-  assert.equal(inspected.ideas[0].state, "completed");
+  for (const fixture of cases) {
+    await writeFile(
+      join(root, ...paths.statusPath.split("/")),
+      serializeIdeaStatus({
+        version: 1,
+        id,
+        alias: "publish-documentation",
+        ...fixture.status,
+      }),
+    );
+    const inspected = await inspectIdeaLayout({ root });
+    assert.deepEqual(inspected.diagnostics, []);
+    assert.equal(inspected.ideas[0].state, fixture.state);
+  }
 });

@@ -6,6 +6,7 @@ import { afterEach, test } from "node:test";
 
 import { observeGitCommands } from "../../src/git.js";
 import { checkRepository } from "../../src/index.js";
+import { serializeIdeaStatus } from "../../src/ideas.js";
 import { ideaPaths } from "../../src/layout.js";
 import {
   createRepository,
@@ -75,6 +76,101 @@ test("keeps the requested revision in intention and only the resolved commit in 
     type: "commit",
     commit: expected,
   });
+});
+
+test("validates identical trees independently of target and parent topology", async () => {
+  const repository = await fixture();
+  const paths = ideaPaths(FIRST_ID);
+  const rootCommit = git(repository.root, "rev-parse", "HEAD");
+  const historicalRevision = "0".repeat(40);
+  await writeFile(
+    join(repository.root, ...paths.statusPath.split("/")),
+    serializeIdeaStatus({
+      version: 1,
+      id: FIRST_ID,
+      alias: "fixture",
+      approvedRevision: historicalRevision,
+    }),
+  );
+  git(repository.root, "add", "--all");
+  git(repository.root, "commit", "-m", "Retain historical approval fact");
+  const snapshotCommit = git(repository.root, "rev-parse", "HEAD");
+  const snapshotTree = git(repository.root, "rev-parse", `${snapshotCommit}^{tree}`);
+  const rootFirst = git(
+    repository.root,
+    "commit-tree",
+    snapshotTree,
+    "-p",
+    rootCommit,
+    "-p",
+    snapshotCommit,
+    "-m",
+    "Merge with root first",
+  );
+  const snapshotFirst = git(
+    repository.root,
+    "commit-tree",
+    snapshotTree,
+    "-p",
+    snapshotCommit,
+    "-p",
+    rootCommit,
+    "-m",
+    "Merge with snapshot first",
+  );
+  git(repository.root, "push", "origin", "main");
+  const commands = [];
+
+  const { reports, rootReport } = await observeGitCommands(
+    (args) => commands.push(args),
+    async () => {
+      const rootReport = await checkRepository({
+        commit: rootCommit,
+        root: repository.root,
+        userHome: repository.base,
+      });
+      const reports = [];
+      for (const target of [
+        {},
+        { commit: snapshotCommit },
+        { commit: rootFirst },
+        { commit: snapshotFirst },
+        { staged: true },
+        { worktree: true },
+        { remote: true },
+      ]) {
+        reports.push(await checkRepository({
+          ...target,
+          root: repository.root,
+          userHome: repository.base,
+        }));
+      }
+      return { reports, rootReport };
+    },
+  );
+
+  assert.equal(rootReport.observation.state, "project-ready");
+  const comparable = ({ version: _version, ...observation }) => observation;
+  const expected = comparable(reports[0].observation);
+  assert.equal(expected.state, "project-ready");
+  assert.equal(expected.ideas.counts.preparing, 1);
+  for (const report of reports.slice(1)) {
+    assert.deepEqual(comparable(report.observation), expected);
+  }
+  assert.equal(
+    commands.some(([name, ...args]) =>
+      name === "rev-parse" && args.some((argument) => argument.endsWith("^1"))
+    ),
+    false,
+  );
+  assert.equal(commands.some(([name]) => name === "show"), false);
+  assert.equal(commands.some(([name]) => name === "log"), false);
+  assert.equal(
+    commands.some(([name, ...args]) =>
+      name === "cat-file" && args.includes(historicalRevision)
+    ),
+    false,
+  );
 });
 
 test("checks from a nested directory against the discovered Git root", async () => {

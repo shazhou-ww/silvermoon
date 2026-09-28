@@ -44,8 +44,9 @@ Each world is an opaque Git tree:
 - `deploymentRevision` identifies `outer/` and includes both nested worlds.
 
 `status.yaml` and `ledger.md` are outside all three world trees. The repository
-object format in use determines revision shape; Silvermoon validates object
-types and candidate bindings rather than interpreting world contents.
+object format in use determines revision shape. Silvermoon validates canonical
+revision shape, computes the current world trees, and compares those values to
+status facts rather than interpreting world contents.
 
 ## Status File
 
@@ -186,16 +187,20 @@ inherited. It does not stage, commit, push, or record approval.
 - `check --staged` validates the index snapshot for a pre-commit hook.
 - `check --commit <revision>` validates one local commit snapshot.
 - `check --remote` fetches primary using committed coordinates, validates its
-  immutable tip, and proves retained revision facts against complete reachable
-  primary history. Unrelated skill or idea findings in local `HEAD` do not
-  block locating and validating the remote snapshot.
+  immutable tip, and does not audit the history or provenance of retained
+  revision facts. Unrelated skill or idea findings in local `HEAD` do not block
+  locating and validating the remote snapshot.
 
 Targets are mutually exclusive and never change the caller's branch, index, or
 worktree. `--remote` may fetch Git objects, but it does not produce dialogue
 outcomes. `check` validates the selected snapshot's project contract only:
 Git, configuration, canonical skill, idea layout, world revisions, and status.
-It does not check local worktree cleanliness, upstream, or ancestry readiness,
-route ideas, or give next-step instructions.
+Its result depends on the materialized tree, not commit parents, parent order,
+branch, merge/cherry-pick path, or retained decision reachability. A canonical
+decision revision that differs from the current world is a valid historical
+fact and naturally derives an earlier lifecycle state; it need not still exist
+in the local object database. `check` does not check local worktree cleanliness,
+upstream, or ancestry readiness, route ideas, or give next-step instructions.
 
 Unlike dialogue commands, `check --json` contains **only** `intention` and
 `observation`:
@@ -257,8 +262,9 @@ internal failure and must fail closed; `2` means invalid CLI usage. Do not
 infer success merely from a rendered report or empty-looking output.
 
 Runtime checks verify canonical YAML, fixed paths, the three world entries,
-unique aliases, Git object format, tree object types, per-world candidate
-revision binding, and acceptance history.
+unique aliases, Git object format, current world tree resolution, and lifecycle
+derivation from the selected snapshot. They do not infer newly made decisions
+from a parent diff or audit decision provenance through history.
 
 ## Schemas
 

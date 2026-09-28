@@ -8,7 +8,6 @@ import {
   fetchPrimary,
   indexSnapshot,
   resolveCommit,
-  resolveHead,
   runGit,
   sanitizeGitMessage,
   worktreeSnapshot,
@@ -41,26 +40,20 @@ function failureReport({
 }
 
 async function inspectTree({
-  baseRevision,
   gitRoot,
-  historyCommit,
   root,
   tree,
   userHome,
-  validateCandidate,
   version,
 }) {
   return withTemporaryTree(gitRoot, tree, (contentRoot) =>
     observeSnapshot({
-      baseRevision,
       contentRoot,
       gitRoot,
-      historyCommit,
       root,
       projectOnly: true,
       snapshotTree: tree,
       userHome,
-      validateCandidate,
       version,
     })
   );
@@ -173,7 +166,6 @@ export async function checkRepository({
         (contentRoot, tree) => observeSnapshot({
           contentRoot,
           gitRoot: repositoryRoot,
-          historyCommit: primary,
           root: repositoryRoot,
           projectOnly: true,
           snapshotTree: tree,
@@ -212,19 +204,16 @@ export async function checkRepository({
       });
     }
     try {
-      const parent = runGit(repositoryRoot, ["rev-parse", `${resolvedCommit}^1`]);
       const observed = await withTemporaryWorktree(
         repositoryRoot,
         resolvedCommit,
         (contentRoot, tree) => observeSnapshot({
-          baseRevision: parent.ok ? parent.stdout : null,
           contentRoot,
           gitRoot: repositoryRoot,
           root: repositoryRoot,
           projectOnly: true,
           snapshotTree: tree,
           userHome,
-          validateCandidate: true,
           version: { type: "commit", commit: resolvedCommit },
         }),
       );
@@ -246,12 +235,10 @@ export async function checkRepository({
     try {
       const snapshot = indexSnapshot(repositoryRoot);
       const observed = await inspectTree({
-        baseRevision: resolveHead(repositoryRoot),
         gitRoot: repositoryRoot,
         root: repositoryRoot,
         tree: snapshot.tree,
         userHome,
-        validateCandidate: true,
         version: { type: "staged" },
       });
       return finishCheck(intention, observed);
@@ -271,12 +258,10 @@ export async function checkRepository({
   try {
     const snapshot = worktreeSnapshot(repositoryRoot);
     const observed = await inspectTree({
-      baseRevision: resolveHead(repositoryRoot),
       gitRoot: repositoryRoot,
       root: repositoryRoot,
       tree: snapshot.tree,
       userHome,
-      validateCandidate: true,
       version: { type: "worktree" },
     });
     return finishCheck(intention, observed);

@@ -117,6 +117,14 @@ means the chosen project snapshot is valid; `1` means invalid or unavailable
 and must block the commit; `2` means invalid CLI usage. Do not treat the
 existence of a report as permission to commit.
 
+`check` does not infer that a status field was newly written, prove who
+authorized it, compare it with a commit parent, or search history for its
+origin. Those are workflow responsibilities: match an explicit human decision
+to the exact revision reported by `whats-next`, edit only the corresponding
+status fact, review the candidate, and publish without rewriting concurrent
+history. Old decision revisions may remain in status after a world changes;
+their mismatch is what derives the idea's earlier lifecycle state.
+
 Prefer a status-only decision commit, publish through the repository's normal
 non-force path, and verify the commit is reachable from refreshed primary.
 

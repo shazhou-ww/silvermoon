@@ -131,10 +131,6 @@ export function worktreeSnapshot(root) {
   }
 }
 
-function paths(stdout) {
-  return stdout.split(/\r?\n/).filter(Boolean);
-}
-
 const CHANGE_KINDS = {
   A: "added",
   C: "copied",
@@ -301,21 +297,8 @@ export function resolveCommit(root, revision) {
   );
 }
 
-export function commitChangedPaths(root, commit) {
-  const parent = runGit(root, ["rev-parse", "--verify", `${commit}^1`]);
-  const changed = parent.ok
-    ? requireGit(root, ["diff", "--name-only", parent.stdout, commit, "--"], `Cannot inspect commit ${commit}`)
-    : requireGit(
-      root,
-      ["diff-tree", "--root", "--no-commit-id", "--name-only", "-r", commit, "--"],
-      `Cannot inspect root commit ${commit}`,
-    );
-  return paths(changed);
-}
-
 export function indexSnapshot(root) {
   return {
-    paths: paths(requireGit(root, ["diff", "--cached", "--name-only", "--"], "Cannot inspect staged changes")),
     tree: requireGit(root, ["write-tree"], "Cannot snapshot the index"),
   };
 }

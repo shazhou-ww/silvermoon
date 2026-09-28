@@ -117,16 +117,13 @@ export function repositoryProblemObservation(observation, problems) {
 
 async function observeSnapshotInternal({
   allowMissingIdeas = false,
-  baseRevision,
   contentRoot,
   gitRoot,
-  historyCommit,
   ideaLanguage,
   projectOnly = false,
   root,
   snapshotTree,
   userHome,
-  validateCandidate = false,
   version,
 }) {
   const adoption = await traceAsync(
@@ -203,13 +200,10 @@ async function observeSnapshotInternal({
       "idea-layout.inspect",
       {},
       () => inspectIdeaLayout({
-        baseRevision,
         config: adoption.config,
         gitRoot: gitRoot ?? adoption.root,
-        historyCommit,
         root: contentRoot ?? adoption.root,
         snapshotTree,
-        validateCandidate,
       }),
     );
   } catch (caught) {

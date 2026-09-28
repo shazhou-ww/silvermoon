@@ -7,7 +7,6 @@ import { pathToFileURL } from "node:url";
 import { afterEach, test } from "node:test";
 
 import {
-  commitChangedPaths,
   fetchPrimary,
   indexSnapshot,
   observeGitCommands,
@@ -79,12 +78,11 @@ test("fetches primary by URL without a named Git remote", async () => {
   assert.equal(git(root, "for-each-ref", "--format=%(refname) %(objectname)"), refs);
 });
 
-test("resolves commits and reports root commit paths", async () => {
+test("resolves commits", async () => {
   const { root } = await createRepository();
   const commit = resolveCommit(root, "HEAD");
 
   assert.equal(commit, git(root, "rev-parse", "HEAD"));
-  assert.deepEqual(commitChangedPaths(root, commit), ["README.md"]);
   assert.throws(() => resolveCommit(root, "missing-revision"), /Cannot resolve commit/);
 });
 
@@ -101,7 +99,6 @@ test("materializes staged and full worktree snapshots without changing caller st
   const status = git(root, "status", "--short");
 
   const staged = indexSnapshot(root);
-  assert.deepEqual(staged.paths, ["staged.txt"]);
   await withTemporaryTree(root, staged.tree, async (worktree) => {
     assert.equal(await readFile(join(worktree, "README.md"), "utf8"), "fixture\n");
     assert.equal(await readFile(join(worktree, "staged.txt"), "utf8"), "staged\n");
