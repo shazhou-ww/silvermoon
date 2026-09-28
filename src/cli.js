@@ -17,15 +17,27 @@ const { version: VERSION } = JSON.parse(
   readFileSync(new URL("../package.json", import.meta.url), "utf8"),
 );
 
+const TRACE_FILE_SUFFIX = ".trace.jsonl";
+
 function write(method, value) {
   const text = value.replace(/\n$/, "");
   if (text) method(text);
 }
 
+export function normalizeTraceFileName(value) {
+  return value.endsWith(TRACE_FILE_SUFFIX)
+    ? value
+    : `${value}${TRACE_FILE_SUFFIX}`;
+}
+
 function addCommonOptions(command) {
   return command
     .option("--json", "serialize the conversation envelope as JSON")
-    .option("--trace <trace-jsonl-file-name>", "write task timing spans as JSONL")
+    .option(
+      "--trace <file.trace.jsonl>",
+      "write task timing spans as JSONL (suffix is appended when omitted)",
+      normalizeTraceFileName,
+    )
     .option("-r, --root <path>", "repository root", process.cwd());
 }
 
@@ -68,7 +80,7 @@ Examples:
   $ silvermoon whats-next
   $ silvermoon whats-next <idea>
   $ silvermoon whats-next <idea> --json
-  $ silvermoon whats-next <idea> --trace trace.jsonl
+  $ silvermoon whats-next <idea> --trace whats-next.trace.jsonl
   $ silvermoon create-idea
   $ silvermoon check
   $ silvermoon check --worktree

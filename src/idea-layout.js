@@ -2,7 +2,7 @@ import { lstat, readFile, readdir } from "node:fs/promises";
 import { relative, resolve } from "node:path";
 
 import { deriveIdeaState, isValidUlid, parseIdeaStatus } from "./ideas.js";
-import { gitObjectIdLength, runGit, worktreePathTree } from "./git.js";
+import { inspectTreePaths, worktreeSnapshot } from "./git.js";
 import { IDEAS_ROOT, ideaPaths } from "./layout.js";
 
 function displayPath(root, path) {
@@ -93,13 +93,18 @@ async function rejectSymlinks(root, path, diagnostics) {
   }
 }
 
-function resolveTree({ gitRoot, root, snapshotTree }, path) {
-  if (snapshotTree) {
-    const resolved = runGit(gitRoot, ["rev-parse", `${snapshotTree}:${path}`]);
-    if (!resolved.ok) throw new Error(resolved.stderr || `Cannot resolve ${path}`);
-    return resolved.stdout;
+function objectIdLength(tree) {
+  if (/^[0-9a-f]{40}$/.test(tree)) return 40;
+  if (/^[0-9a-f]{64}$/.test(tree)) return 64;
+  throw new Error(`Unsupported Git tree object ID: ${tree}`);
+}
+
+function requiredTree(objects, path) {
+  const inspected = objects.get(path);
+  if (!inspected || inspected.type !== "tree" || inspected.object === null) {
+    throw new Error(`${path} does not resolve to a Git tree`);
   }
-  return worktreePathTree(root, path);
+  return inspected.object;
 }
 
 export async function inspectIdeaLayout({
@@ -134,9 +139,12 @@ export async function inspectIdeaLayout({
     };
   }
 
-  let objectIdLength;
+  let resolvedSnapshotTree;
+  let repositoryObjectIdLength;
   try {
-    objectIdLength = gitObjectIdLength(gitRoot);
+    resolvedSnapshotTree = snapshotTree
+      ?? worktreeSnapshot(gitRoot, { paths: [IDEAS_ROOT] }).tree;
+    repositoryObjectIdLength = objectIdLength(resolvedSnapshotTree);
   } catch (caught) {
     return {
       diagnostics: [error(
@@ -157,6 +165,24 @@ export async function inspectIdeaLayout({
   const ideaIds = new Set(
     entries.filter((entry) => isValidUlid(entry.name)).map((entry) => entry.name),
   );
+  const worldPaths = [...ideaIds].flatMap((id) => {
+    const paths = ideaPaths(id);
+    return [paths.idealPath, paths.innerPath, paths.outerPath];
+  });
+  let worldObjects;
+  try {
+    worldObjects = inspectTreePaths(gitRoot, resolvedSnapshotTree, worldPaths);
+  } catch (caught) {
+    return {
+      diagnostics: [error(
+        "idea.revision.unavailable",
+        IDEAS_ROOT,
+        caught.message,
+        "Ensure every world can be represented as a Git tree.",
+      )],
+      ideas: [],
+    };
+  }
   for (const entry of entries) {
     const folderPath = resolve(ideasRoot, entry.name);
     const folderMetadata = await lstat(folderPath);
@@ -244,7 +270,7 @@ export async function inspectIdeaLayout({
     try {
       status = parseIdeaStatus(
         await readFile(resolve(root, paths.statusPath), "utf8"),
-        { objectIdLength },
+        { objectIdLength: repositoryObjectIdLength },
       );
     } catch (caught) {
       diagnostics.push(error(
@@ -295,15 +321,9 @@ export async function inspectIdeaLayout({
     let revisions;
     try {
       revisions = {
-        idealRevision: resolveTree({ gitRoot, root, snapshotTree }, paths.idealPath),
-        implementationRevision: resolveTree(
-          { gitRoot, root, snapshotTree },
-          paths.innerPath,
-        ),
-        deploymentRevision: resolveTree(
-          { gitRoot, root, snapshotTree },
-          paths.outerPath,
-        ),
+        idealRevision: requiredTree(worldObjects, paths.idealPath),
+        implementationRevision: requiredTree(worldObjects, paths.innerPath),
+        deploymentRevision: requiredTree(worldObjects, paths.outerPath),
       };
     } catch (caught) {
       diagnostics.push(error(

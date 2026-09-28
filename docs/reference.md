@@ -85,9 +85,9 @@ State is derived in order:
 ## Public Commands
 
 ```sh
-silvermoon whats-next [idea] [--trace <trace-jsonl-file-name>]
-silvermoon create-idea [--language <tag>] [--trace <trace-jsonl-file-name>]
-silvermoon check [--remote | --commit <revision> | --staged | --worktree] [--trace <trace-jsonl-file-name>]
+silvermoon whats-next [idea] [--trace <file.trace.jsonl>]
+silvermoon create-idea [--language <tag>] [--trace <file.trace.jsonl>]
+silvermoon check [--remote | --commit <revision> | --staged | --worktree] [--trace <file.trace.jsonl>]
 ```
 
 `whats-next` and `create-idea` build one dialogue envelope:
@@ -130,17 +130,20 @@ trustworthy report was formed, even when it reports readiness blocks or a
 failed operation; `1` means an internal failure prevented a trustworthy
 report; `2` means invalid CLI usage.
 
-All commands accept `--trace <trace-jsonl-file-name>`. The trace is newline-
-delimited JSON with paired `span-start` and `span-end` events, UTC timestamps,
-monotonic `durationMs`, parent span IDs, and success or error status. It covers
-the command, snapshot observation, adoption, user configuration, idea layout,
+All commands accept `--trace <file.trace.jsonl>`. If the supplied path does not
+end with the exact lowercase `.trace.jsonl` suffix, Silvermoon appends it while
+preserving the directory and original name. Repository-local `*.trace.jsonl`
+files are ignored by the canonical repository. The trace is newline-delimited
+JSON with paired `span-start` and `span-end` events, UTC timestamps, monotonic
+`durationMs`, parent span IDs, and success or error status. It covers the
+command, snapshot observation, adoption, user configuration, idea layout,
 repository readiness, temporary snapshot materialization, and individual Git
 commands. Git events record the subcommand and result but not command arguments,
 stdout, or stderr. The path is relative to the caller's working directory when
 not absolute. Events are buffered so a trace inside the repository cannot
 affect that invocation's worktree observation. The file is written after the
 measured command work finishes and uses exclusive creation, so an existing
-file is never overwritten.
+normalized target is never overwritten.
 
 Dialogue observation state is a discriminated union:
 

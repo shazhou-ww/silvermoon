@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, test } from "node:test";
 
+import { observeGitCommands } from "../../src/git.js";
 import { inspectIdeaLayout } from "../../src/idea-layout.js";
 import { serializeIdeaStatus } from "../../src/ideas.js";
 import { ideaPaths } from "../../src/layout.js";
@@ -49,10 +50,15 @@ async function writeIdea(root, ideaId = id, status = {}) {
   return paths;
 }
 
-async function createRepository() {
+async function createRepository({ objectFormat } = {}) {
   const root = await mkdtemp(join(tmpdir(), "silvermoon-ideas-"));
   temporaryDirectories.push(root);
-  git(root, "init", "--initial-branch=main");
+  git(
+    root,
+    "init",
+    "--initial-branch=main",
+    ...(objectFormat ? [`--object-format=${objectFormat}`] : []),
+  );
   git(root, "config", "user.name", "silvermoon test");
   git(root, "config", "user.email", "silvermoon@example.invalid");
   git(root, "config", "core.autocrlf", "false");
@@ -80,6 +86,56 @@ test("derives three nested world tree revisions", async () => {
   assert.equal(
     idea.deploymentRevision,
     git(root, "rev-parse", `HEAD:${paths.outerPath}`),
+  );
+});
+
+test("derives SHA-256 world revisions from the shared snapshot", async () => {
+  const root = await createRepository({ objectFormat: "sha256" });
+
+  const inspected = await inspectIdeaLayout({ root });
+
+  assert.deepEqual(inspected.diagnostics, []);
+  for (const revision of Object.values(inspected.ideas[0].revisions)) {
+    assert.match(revision, /^[0-9a-f]{64}$/);
+  }
+});
+
+test("uses a constant Git command budget for worktree and immutable snapshots", async () => {
+  const root = await createRepository();
+  const prefix = id.slice(0, -1);
+  for (const suffix of "0123456789ABC") {
+    await writeIdea(root, `${prefix}${suffix}`);
+  }
+  const worktreeCommands = [];
+
+  const worktree = await observeGitCommands(
+    (args) => worktreeCommands.push(args),
+    () => inspectIdeaLayout({ root }),
+  );
+
+  assert.deepEqual(worktree.diagnostics, []);
+  assert.equal(worktree.ideas.length, 14);
+  assert.deepEqual(
+    worktreeCommands.map(([name]) => name),
+    ["read-tree", "add", "write-tree", "cat-file"],
+  );
+  assert.deepEqual(worktreeCommands[1].slice(-2), ["--", ".silvermoon/ideas"]);
+
+  git(root, "add", ".");
+  git(root, "commit", "-m", "Add performance fixture ideas");
+  const snapshotTree = git(root, "rev-parse", "HEAD^{tree}");
+  const snapshotCommands = [];
+  const snapshot = await observeGitCommands(
+    (args) => snapshotCommands.push(args),
+    () => inspectIdeaLayout({ root, snapshotTree }),
+  );
+
+  assert.deepEqual(snapshot.diagnostics, []);
+  assert.equal(snapshot.ideas.length, 14);
+  assert.deepEqual(snapshotCommands.map(([name]) => name), ["cat-file"]);
+  assert.deepEqual(
+    snapshot.ideas.map(({ revisions }) => revisions),
+    worktree.ideas.map(({ revisions }) => revisions),
   );
 });
 
