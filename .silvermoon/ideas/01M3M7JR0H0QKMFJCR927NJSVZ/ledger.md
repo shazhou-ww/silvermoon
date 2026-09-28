@@ -22,8 +22,10 @@ and skill consistency checks.
 
 ### Deployment steps
 
-- [ ] **D-S01:** Step title
+- [ ] **D-S01:** 验证远端主分支的术语边界
+- [ ] **D-S02:** 验证安装包中的 CLI 与 skill
 
 ### Deployment acceptance criteria
 
-- [ ] **D-AC01:** Criterion title
+- [ ] **D-AC01:** Primary 快照满足正式术语契约
+- [ ] **D-AC02:** 打包安装后的行为保持一致
