@@ -22,6 +22,7 @@ const id = "01M36QGPNTXEPP61DA4KP4AVZF";
 function ideaPaths(ideaId) {
   const idea = join(".silvermoon", "ideas", ideaId);
   return {
+    root: idea,
     status: join(idea, "status.yaml"),
     ledger: join(idea, "ledger.md"),
     outer: join(idea, "outer"),
@@ -254,17 +255,18 @@ try {
   assert.equal(created.observation.state, "idea-created");
   assert.deepEqual(
     created.outcomes.map(({ type, status }) => [type, status]),
-    [
-      ["fetch-primary", "success"],
-      ["create-idea-scaffold", "success"],
-    ],
+    [["create-idea-scaffold", "success"]],
   );
   const ideasAfter = await readdir(join(consumer, ".silvermoon", "ideas"));
   const createdId = ideasAfter.find((ideaId) => !ideasBefore.includes(ideaId));
   assert.match(createdId, /^[0-7][0-9A-HJKMNP-TV-Z]{25}$/);
-  assert.deepEqual(created.observation.createdIdea, { id: createdId, state: "preparing" });
-  assert.equal(Object.hasOwn(created.observation, "ideas"), false);
   const createdPaths = ideaPaths(createdId);
+  assert.deepEqual(created.observation.createdIdea, {
+    id: createdId,
+    path: `.silvermoon/ideas/${createdId}`,
+    state: "preparing",
+  });
+  assert.equal(Object.hasOwn(created.observation, "ideas"), false);
   assert.equal(
     await readFile(join(consumer, createdPaths.idea), "utf8"),
     `# Replace with a specific title for this idea

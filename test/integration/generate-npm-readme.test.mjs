@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
-import { readFile, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { spawnSync } from "node:child_process";
-import { resolve } from "node:path";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { test } from "node:test";
 
@@ -56,7 +57,8 @@ test("rewrites the real repository README onto an immutable commit without touch
 
 test("--out writes the generated README atomically without truncating the source", async () => {
   const before = await readFile(readmePath, "utf8");
-  const outPath = resolve(repositoryRoot, ".readme-out-test.tmp");
+  const outputDirectory = await mkdtemp(join(tmpdir(), "silvermoon-readme-"));
+  const outPath = join(outputDirectory, "README.md");
   const cli = spawnSync(
     process.execPath,
     [generatorPath, "--commit", commit, "--out", outPath],
@@ -69,6 +71,6 @@ test("--out writes the generated README atomically without truncating the source
     // The source README must survive an --out run byte-identical.
     assert.equal(await readFile(readmePath, "utf8"), before);
   } finally {
-    await rm(outPath, { force: true });
+    await rm(outputDirectory, { recursive: true, force: true });
   }
 });

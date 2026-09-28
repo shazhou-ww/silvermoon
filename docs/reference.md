@@ -157,8 +157,11 @@ Observations are discriminated by command intent and `state`:
 - `project-setup-required` uses `observedThrough` (`root`, `version`,
   `configuration`, or `ideas`) to identify the deepest reliable cumulative
   shape. Fields beyond that boundary are absent rather than null or fabricated.
-- `repository-sync-required` always includes `root`, `version`,
-  `configuration`, `ideas`, and at least one `problem`.
+- `repository-sync-required` is used by `whats-next` and always includes
+  `root`, `version`, `configuration`, `ideas`, and at least one `problem`.
+- `repository-preparation-required` is used by `create-idea` when its local
+  safety checks fail. It includes `root`, `version`, `configuration`, and at
+  least one `problem`, but no idea inventory or remote synchronization facts.
 - Bare `whats-next` returns `navigation-ready` with `ideas.counts` and
   `ideas.activeIdeas` (possibly empty). It never selects a candidate.
 - Selected `whats-next` returns `idea-selected` with only `selectedIdea`
@@ -166,10 +169,10 @@ Observations are discriminated by command intent and `state`:
   Unknown selectors return `idea-not-found` with `candidates`, not a
   fabricated selected idea.
 - After a successful `create-idea` preflight, `idea-created` carries
-  `createdIdea` (`id`, `state: "preparing"`). This confirms pre-creation
-  readiness, not a clean post-creation worktree. An attempted but failed
-  scaffold returns `idea-create-failed` without `createdIdea`; preflight
-  failures retain their setup or synchronization state.
+  `createdIdea` (`id`, `path`, `state: "preparing"`). This confirms
+  pre-creation readiness, not a clean post-creation worktree. An attempted but
+  failed scaffold returns `idea-create-failed` without `createdIdea`; preflight
+  failures retain their setup or local preparation state.
 
 Dialogue versions have `version.type: "worktree"`. When present, `ideas.counts` has
 `preparing`, `implementing`, `deploying`, `completed`, and `abandoned`;
@@ -192,10 +195,12 @@ change set without prescribing a particular diff tool. Bare navigation
 never selects an idea: it always lists every active idea alongside the option
 to discuss and run `create-idea`.
 
-`create-idea` applies the same hygiene preflight and then creates one canonical
-scaffold. Its optional language override is normalized before preflight and is
-the only command override; without it the status remains dynamically
-inherited. It does not stage, commit, push, or record approval.
+`create-idea` requires the configured primary branch and upstream plus a clean
+worktree, then creates one canonical scaffold. It does not fetch, compare
+remote ancestry, or require local HEAD to match the remote tip. Its optional
+language override is normalized before preflight and is the only command
+override; without it the status remains dynamically inherited. It does not
+stage, commit, push, or record approval.
 
 ## Validation Targets
 

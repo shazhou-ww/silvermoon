@@ -4,16 +4,28 @@
 
 ### Implementation steps
 
-- [ ] **I-S01:** 拆分 create-idea readiness
-- [ ] **I-S02:** 建立 create 专属报告与渲染
-- [ ] **I-S03:** 同步公开契约与回归验证
+- [x] **I-S01:** 拆分 create-idea readiness
+- [x] **I-S02:** 建立 create 专属报告与渲染
+- [x] **I-S03:** 同步公开契约与回归验证
 
 ### Implementation acceptance criteria
 
-- [ ] **I-AC01:** create 仅检查必要的本地安全条件
-- [ ] **I-AC02:** 三类用户路径简洁且意图一致
-- [ ] **I-AC03:** 成功和失败结果均可可靠行动
-- [ ] **I-AC04:** 发布候选完整一致
+- [x] **I-AC01:** create 仅检查必要的本地安全条件
+- [x] **I-AC02:** 三类用户路径简洁且意图一致
+- [x] **I-AC03:** 成功和失败结果均可可靠行动
+- [x] **I-AC04:** 发布候选完整一致
+
+实现证据：`create-idea` 使用 create 专属本地 preflight，要求 configured
+primary branch/upstream 与 clean worktree，不调用 fetch/ls-remote，也不以
+ahead、behind 或 diverged 阻塞 scaffold。项目未整备和本地仓库未整备报告
+不携带 idea inventory；创建成功报告 canonical idea path，精简 outcome，
+并以解析后的交互语言引导下一步。失败清理继续保护并发修改。
+
+目标测试通过 43/43。`pnpm check` 通过：unit 47/47、contract 23/23、
+integration 73 passed 且 2 条 Windows symlink 权限条件跳过、package
+contents 检查通过、installed-package e2e 1/1、Markdown lint 与 canonical
+skill 同步检查通过。另修复 README `--out` integration test 在并行测试时
+短暂污染真实 worktree 的既有竞态，改为使用系统临时目录。
 
 ## Deployment
 

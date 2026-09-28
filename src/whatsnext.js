@@ -212,8 +212,10 @@ function navigationInstruction(ideas, language) {
 async function assessRepositoryReadinessInternal({
   observed,
   outcomes,
+  requirePrimaryBranch = false,
   recheckCommand = "silvermoon whats-next",
   root,
+  synchronizePrimary = true,
 }) {
   const language = observed.language;
   let changes;
@@ -317,10 +319,26 @@ async function assessRepositoryReadinessInternal({
       `Preserve current work, then switch to or create the intended local branch whose upstream is ${observed.config.primaryRepository}#${observed.config.primaryBranch}.`,
       `保留当前工作，然后切换或创建 upstream 为 ${observed.config.primaryRepository}#${observed.config.primaryBranch} 的预期本地分支。`,
     ));
-  } else if (
-    branch.repository !== observed.config.primaryRepository
-    || branch.upstreamBranch !== observed.config.primaryBranch
-  ) {
+  } else {
+    if (requirePrimaryBranch && branch.branch !== observed.config.primaryBranch) {
+      localProblems.push({
+        type: "primary-branch-mismatch",
+        summary: localize(
+          language,
+          `Current branch is ${branch.branch}; expected configured primary branch ${observed.config.primaryBranch}.`,
+          `当前分支为 ${branch.branch}；预期为 configured primary branch ${observed.config.primaryBranch}。`,
+        ),
+      });
+      localSteps.push(localize(
+        language,
+        `Preserve current work, then switch to configured primary branch ${observed.config.primaryBranch}.`,
+        `保留当前工作，然后切换到 configured primary branch ${observed.config.primaryBranch}。`,
+      ));
+    }
+    if (
+      branch.repository !== observed.config.primaryRepository
+      || branch.upstreamBranch !== observed.config.primaryBranch
+    ) {
     const actual = branch.remote === null
       ? localize(language, "none", "无")
       : `${branch.repository ?? branch.remote}#${branch.upstreamBranch ?? localize(language, "unknown", "未知")}`;
@@ -337,6 +355,7 @@ async function assessRepositoryReadinessInternal({
       `Configure a named remote for ${observed.config.primaryRepository}, then set branch ${branch.branch} to track that remote's ${observed.config.primaryBranch} branch. Verify with ${command(root, 'git -C "<root>" rev-parse --abbrev-ref --symbolic-full-name \'@{upstream}\'')}.`,
       `为 ${observed.config.primaryRepository} 配置 named remote，再将分支 ${branch.branch} 的 upstream 设为该 remote 的 ${observed.config.primaryBranch}。使用 ${command(root, 'git -C "<root>" rev-parse --abbrev-ref --symbolic-full-name \'@{upstream}\'')} 验证。`,
     ));
+    }
   }
 
   if (localProblems.length > 0) {
@@ -355,6 +374,16 @@ async function assessRepositoryReadinessInternal({
         recheckCommand,
       ),
       ready: false,
+    };
+  }
+
+  if (!synchronizePrimary) {
+    return {
+      branch,
+      changes,
+      head,
+      observation: observed.observation,
+      ready: true,
     };
   }
 
@@ -469,6 +498,18 @@ export async function assessRepositoryReadiness(options) {
     "repository.assess-readiness",
     {},
     () => assessRepositoryReadinessInternal(options),
+  );
+}
+
+export async function assessIdeaCreationReadiness(options) {
+  return traceAsync(
+    "repository.assess-creation-readiness",
+    {},
+    () => assessRepositoryReadinessInternal({
+      ...options,
+      requirePrimaryBranch: true,
+      synchronizePrimary: false,
+    }),
   );
 }
 

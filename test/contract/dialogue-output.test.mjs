@@ -31,6 +31,7 @@ test("public commands share intention and observation but only dialogues add out
     assert.equal(Object.hasOwn(navigation.observation, "selectedIdea"), false);
     assert.equal(creation.observation.state, "idea-created");
     assert.equal(creation.observation.createdIdea.state, "preparing");
+    assert.match(creation.observation.createdIdea.path, /\.silvermoon\/ideas\//);
     assert.equal(Object.hasOwn(creation.observation, "ideas"), false);
     assert.deepEqual(Object.keys(check).sort(), ["intention", "observation"]);
     assert.deepEqual(check.intention, {

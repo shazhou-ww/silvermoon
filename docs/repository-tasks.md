@@ -26,9 +26,12 @@ Choose the entry command from the user's intent. Explicit new-idea requests use
 `silvermoon create-idea` even when unrelated active ideas exist; all navigation
 uses `silvermoon whats-next [idea]`. Add `--json` only for a programmatic
 consumer. Both commands apply the
-same branch, conflict, worktree, and ancestry hygiene. If hygiene blocks an
-explicit creation, perform only that blocking action and then retry
-`create-idea` so active-idea selection cannot replace the pending create intent.
+same project checks, but their repository readiness differs. `whats-next`
+checks local hygiene and remote ancestry. `create-idea` requires the configured
+primary branch and upstream plus a clean worktree, without fetching or requiring
+HEAD to match the remote tip. If hygiene blocks explicit creation, perform only
+that blocking action and then retry `create-idea` so active-idea selection
+cannot replace the pending create intent.
 
 ## Decisions And Publication
 
