@@ -2,14 +2,8 @@ import { lstat, readFile, readdir } from "node:fs/promises";
 import { relative, resolve } from "node:path";
 
 import { deriveIdeaState, isValidUlid, parseIdeaStatus } from "./ideas.js";
-import { gitObjectIdLength, runGit, worktreePathTree } from "./git.js";
+import { inspectTreePaths, worktreeSnapshot } from "./git.js";
 import { IDEAS_ROOT, ideaPaths } from "./layout.js";
-
-const REVISION_BINDINGS = {
-  approvedRevision: "idealRevision",
-  implementationAcceptedRevision: "implementationRevision",
-  deploymentAcceptedRevision: "deploymentRevision",
-};
 
 function displayPath(root, path) {
   return relative(root, path).replaceAll("\\", "/");
@@ -25,91 +19,6 @@ async function metadata(path) {
   } catch (caught) {
     if (caught.code === "ENOENT") return null;
     throw caught;
-  }
-}
-
-function validateRevisionObjects(root, statusPath, status, diagnostics) {
-  for (const key of Object.keys(REVISION_BINDINGS)) {
-    if (!status[key]) continue;
-    const type = runGit(root, ["cat-file", "-t", status[key]]);
-    if (!type.ok || type.stdout !== "tree") {
-      diagnostics.push(error(
-        "idea.revision.invalid-object",
-        `${statusPath}#${key}`,
-        `${key} must resolve to a Git tree object: ${status[key]}`,
-        "Use the current corresponding world tree object ID from Git.",
-      ));
-    }
-  }
-}
-
-function validateRevisionHistory(root, commit, idea, diagnostics) {
-  for (const [statusKey, revisionKey] of Object.entries(REVISION_BINDINGS)) {
-    const revision = idea.status[statusKey];
-    if (!revision) continue;
-    const history = runGit(root, [
-      "log",
-      "--reverse",
-      "--format=%H",
-      "-S",
-      `${statusKey}: ${revision}`,
-      commit,
-      "--",
-      idea.statusPath,
-    ]);
-    const evidenceCommit = history.ok
-      ? history.stdout.split(/\r?\n/).filter(Boolean)[0]
-      : null;
-    if (!evidenceCommit) {
-      const shallow = runGit(root, ["rev-parse", "--is-shallow-repository"]);
-      diagnostics.push(error(
-        shallow.ok && shallow.stdout === "true"
-          ? "history.incomplete"
-          : "idea.revision.history-missing",
-        `${idea.statusPath}#${statusKey}`,
-        `Primary history does not prove when ${statusKey} recorded ${revision}.`,
-        "Fetch complete primary history or repair the decision through a forward commit.",
-      ));
-      continue;
-    }
-    const tree = runGit(root, ["rev-parse", `${evidenceCommit}:${idea.worlds[revisionKey].path}`]);
-    if (!tree.ok || tree.stdout !== revision) {
-      diagnostics.push(error(
-        "idea.revision.history-mismatch",
-        `${idea.statusPath}#${statusKey}`,
-        `${statusKey} was not bound to its world tree in commit ${evidenceCommit}.`,
-        "Record the decision only for the corresponding world tree in the same candidate commit.",
-      ));
-    }
-  }
-}
-
-function validateCandidateRevisions(root, baseRevision, idea, diagnostics, objectIdLength) {
-  let previous = {};
-  if (baseRevision) {
-    const previousSource = runGit(root, ["show", `${baseRevision}:${idea.statusPath}`]);
-    if (previousSource.ok) {
-      try {
-        previous = parseIdeaStatus(previousSource.stdout + "\n", { objectIdLength });
-      } catch {
-        previous = {};
-      }
-    }
-  }
-  for (const [statusKey, revisionKey] of Object.entries(REVISION_BINDINGS)) {
-    if (
-      idea.status[statusKey] === previous[statusKey] ||
-      idea.status[statusKey] === undefined
-    ) continue;
-    const expected = idea.revisions[revisionKey];
-    if (idea.status[statusKey] !== expected) {
-      diagnostics.push(error(
-        "idea.revision.candidate-mismatch",
-        `${idea.statusPath}#${statusKey}`,
-        `${statusKey} must equal the corresponding world tree in the same candidate snapshot.`,
-        `Use ${expected} for ${revisionKey} or omit the stale mutation.`,
-      ));
-    }
   }
 }
 
@@ -184,23 +93,25 @@ async function rejectSymlinks(root, path, diagnostics) {
   }
 }
 
-function resolveTree({ gitRoot, root, snapshotTree }, path) {
-  if (snapshotTree) {
-    const resolved = runGit(gitRoot, ["rev-parse", `${snapshotTree}:${path}`]);
-    if (!resolved.ok) throw new Error(resolved.stderr || `Cannot resolve ${path}`);
-    return resolved.stdout;
+function objectIdLength(tree) {
+  if (/^[0-9a-f]{40}$/.test(tree)) return 40;
+  if (/^[0-9a-f]{64}$/.test(tree)) return 64;
+  throw new Error(`Unsupported Git tree object ID: ${tree}`);
+}
+
+function requiredTree(objects, path) {
+  const inspected = objects.get(path);
+  if (!inspected || inspected.type !== "tree" || inspected.object === null) {
+    throw new Error(`${path} does not resolve to a Git tree`);
   }
-  return worktreePathTree(root, path);
+  return inspected.object;
 }
 
 export async function inspectIdeaLayout({
-  baseRevision,
   config: _config,
-  historyCommit,
   root,
   gitRoot = root,
   snapshotTree,
-  validateCandidate = false,
 }) {
   const diagnostics = [];
   const ideasRoot = resolve(root, IDEAS_ROOT);
@@ -228,9 +139,12 @@ export async function inspectIdeaLayout({
     };
   }
 
-  let objectIdLength;
+  let resolvedSnapshotTree;
+  let repositoryObjectIdLength;
   try {
-    objectIdLength = gitObjectIdLength(gitRoot);
+    resolvedSnapshotTree = snapshotTree
+      ?? worktreeSnapshot(gitRoot, { paths: [IDEAS_ROOT] }).tree;
+    repositoryObjectIdLength = objectIdLength(resolvedSnapshotTree);
   } catch (caught) {
     return {
       diagnostics: [error(
@@ -251,6 +165,24 @@ export async function inspectIdeaLayout({
   const ideaIds = new Set(
     entries.filter((entry) => isValidUlid(entry.name)).map((entry) => entry.name),
   );
+  const worldPaths = [...ideaIds].flatMap((id) => {
+    const paths = ideaPaths(id);
+    return [paths.idealPath, paths.innerPath, paths.outerPath];
+  });
+  let worldObjects;
+  try {
+    worldObjects = inspectTreePaths(gitRoot, resolvedSnapshotTree, worldPaths);
+  } catch (caught) {
+    return {
+      diagnostics: [error(
+        "idea.revision.unavailable",
+        IDEAS_ROOT,
+        caught.message,
+        "Ensure every world can be represented as a Git tree.",
+      )],
+      ideas: [],
+    };
+  }
   for (const entry of entries) {
     const folderPath = resolve(ideasRoot, entry.name);
     const folderMetadata = await lstat(folderPath);
@@ -338,7 +270,7 @@ export async function inspectIdeaLayout({
     try {
       status = parseIdeaStatus(
         await readFile(resolve(root, paths.statusPath), "utf8"),
-        { objectIdLength },
+        { objectIdLength: repositoryObjectIdLength },
       );
     } catch (caught) {
       diagnostics.push(error(
@@ -389,15 +321,9 @@ export async function inspectIdeaLayout({
     let revisions;
     try {
       revisions = {
-        idealRevision: resolveTree({ gitRoot, root, snapshotTree }, paths.idealPath),
-        implementationRevision: resolveTree(
-          { gitRoot, root, snapshotTree },
-          paths.innerPath,
-        ),
-        deploymentRevision: resolveTree(
-          { gitRoot, root, snapshotTree },
-          paths.outerPath,
-        ),
+        idealRevision: requiredTree(worldObjects, paths.idealPath),
+        implementationRevision: requiredTree(worldObjects, paths.innerPath),
+        deploymentRevision: requiredTree(worldObjects, paths.outerPath),
       };
     } catch (caught) {
       diagnostics.push(error(
@@ -409,7 +335,6 @@ export async function inspectIdeaLayout({
       continue;
     }
 
-    validateRevisionObjects(gitRoot, paths.statusPath, status, diagnostics);
     const worlds = {
       idealRevision: {
         name: "Ideal World",
@@ -443,10 +368,6 @@ export async function inspectIdeaLayout({
       worlds,
     };
     if (status.alias !== undefined) idea.alias = status.alias;
-    if (validateCandidate) {
-      validateCandidateRevisions(gitRoot, baseRevision, idea, diagnostics, objectIdLength);
-    }
-    if (historyCommit) validateRevisionHistory(gitRoot, historyCommit, idea, diagnostics);
     ideas.push(idea);
   }
 

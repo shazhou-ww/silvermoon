@@ -10,6 +10,7 @@ import { fileURLToPath } from "node:url";
 import { diagnosticProblem } from "./dialogue.js";
 import { loadConfig } from "./config.js";
 import { runGit } from "./git.js";
+import { traceAsync } from "./trace.js";
 
 const packageRoot = fileURLToPath(new URL("..", import.meta.url));
 const packageJson = JSON.parse(await readFile(resolve(packageRoot, "package.json"), "utf8"));
@@ -48,7 +49,11 @@ async function directoryDigest(root) {
 
 async function inspectSkill(contentRoot) {
   const path = resolve(contentRoot, ...REPOSITORY_SKILL_PATH.split("/"));
-  const expectedDigest = await directoryDigest(packagedSkill);
+  const expectedDigest = await traceAsync(
+    "skill.digest-packaged",
+    {},
+    () => directoryDigest(packagedSkill),
+  );
   let metadata;
   try {
     metadata = await lstat(path);
@@ -90,7 +95,11 @@ async function inspectSkill(contentRoot) {
   }
   let actualDigest;
   try {
-    actualDigest = await directoryDigest(path);
+    actualDigest = await traceAsync(
+      "skill.digest-repository",
+      {},
+      () => directoryDigest(path),
+    );
   } catch (caught) {
     return {
       ok: false,
@@ -140,7 +149,11 @@ export async function inspectAdoption({
     });
   }
 
-  const loadedConfig = await loadConfig({ root: snapshotRoot });
+  const loadedConfig = await traceAsync(
+    "config.load",
+    {},
+    () => loadConfig({ root: snapshotRoot }),
+  );
   for (const diagnostic of loadedConfig.diagnostics) {
     findings.push({
       priority: diagnostic.code === "config.unsupported-version" ? 20 : 30,
@@ -150,7 +163,11 @@ export async function inspectAdoption({
     });
   }
 
-  const skill = await inspectSkill(snapshotRoot);
+  const skill = await traceAsync(
+    "skill.inspect",
+    {},
+    () => inspectSkill(snapshotRoot),
+  );
   if (!skill.ok) {
     findings.push({
       priority: 40,

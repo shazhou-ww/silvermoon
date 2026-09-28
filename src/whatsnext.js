@@ -18,6 +18,7 @@ import {
   repositoryProblemObservation,
   withObservationLanguage,
 } from "./observation.js";
+import { traceAsync } from "./trace.js";
 
 export const CHANGE_SAMPLE_ITEM_LIMIT = 12;
 export const CHANGE_SAMPLE_BYTE_LIMIT = 768;
@@ -211,7 +212,7 @@ function navigationInstruction(ideas, language) {
   ]);
 }
 
-export async function assessRepositoryReadiness({
+async function assessRepositoryReadinessInternal({
   observed,
   outcomes,
   recheckCommand = "silvermoon whats-next",
@@ -464,6 +465,14 @@ export async function assessRepositoryReadiness({
     instructions,
     ready: false,
   };
+}
+
+export async function assessRepositoryReadiness(options) {
+  return traceAsync(
+    "repository.assess-readiness",
+    {},
+    () => assessRepositoryReadinessInternal(options),
+  );
 }
 
 export async function whatsNext({

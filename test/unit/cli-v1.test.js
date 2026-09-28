@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { createProgram, render, runCli } from "../../src/cli.js";
+import {
+  createProgram,
+  normalizeTraceFileName,
+  render,
+  runCli,
+} from "../../src/cli.js";
 
 function capture() {
   const logs = [];
@@ -61,10 +66,32 @@ test("registers only the approved command surface", () => {
     command.name() === "create-idea"
   );
   assert.ok(create.options.some(({ long }) => long === "--language"));
+  for (const command of program.commands) {
+    assert.ok(command.options.some(({ long }) => long === "--trace"));
+  }
   for (const name of ["check", "whats-next"]) {
     const command = program.commands.find((candidate) => candidate.name() === name);
     assert.ok(!command.options.some(({ long }) => long === "--language"));
   }
+});
+
+test("normalizes trace paths to the exact lowercase suffix", () => {
+  assert.equal(
+    normalizeTraceFileName("logs/whats-next"),
+    "logs/whats-next.trace.jsonl",
+  );
+  assert.equal(
+    normalizeTraceFileName("logs/whats-next.trace.jsonl"),
+    "logs/whats-next.trace.jsonl",
+  );
+  assert.equal(
+    normalizeTraceFileName("logs/whats-next.TRACE.JSONL"),
+    "logs/whats-next.TRACE.JSONL.trace.jsonl",
+  );
+  assert.equal(
+    normalizeTraceFileName("C:\\traces\\check.jsonl"),
+    "C:\\traces\\check.jsonl.trace.jsonl",
+  );
 });
 
 test("help lists exactly the three public subcommands", async () => {
@@ -75,7 +102,12 @@ test("help lists exactly the three public subcommands", async () => {
   assert.match(help, /\bcheck\b/);
   assert.match(help, /\bcreate-idea\b/);
   assert.match(help, /\bwhats-next\b/);
+  assert.match(help, /whats-next\.trace\.jsonl/);
   assert.doesNotMatch(help, /help \[command\]|\bwhatsnext\b|\bnewidea\b|\bnew-idea\b/);
+
+  const command = capture();
+  assert.equal(await runCli(["whats-next", "--help"], command.io), 0);
+  assert.match(command.logs.join("\n"), /--trace <file\.trace\.jsonl>/);
 });
 
 test("renders JSON verbatim and omits the empty outcomes section in Markdown", () => {

@@ -4,15 +4,33 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+import { traceAsync, traceSync } from "./trace.js";
+
 let commandObserver = null;
 
-export function runGit(root, args, { env } = {}) {
+export function runGit(root, args, { env, input } = {}) {
   if (commandObserver) commandObserver([...args]);
-  const result = spawnSync("git", ["-C", root, ...args], {
-    encoding: "utf8",
-    env: { ...process.env, GIT_TERMINAL_PROMPT: "0", ...env },
-    windowsHide: true,
-  });
+  const result = traceSync(
+    "git.command",
+    {
+      argumentCount: args.length - 1,
+      network: args[0] === "fetch" || args[0] === "ls-remote",
+      subcommand: args[0] ?? null,
+    },
+    () => spawnSync("git", ["-C", root, ...args], {
+      encoding: "utf8",
+      env: { ...process.env, GIT_TERMINAL_PROMPT: "0", ...env },
+      input,
+      windowsHide: true,
+    }),
+    (completed) => ({
+      attributes: {
+        exitCode: completed.status,
+        signal: completed.signal,
+      },
+      status: completed.status === 0 ? "ok" : "error",
+    }),
+  );
   return {
     error: result.error ?? null,
     ok: result.status === 0,
@@ -59,18 +77,31 @@ function requireGit(root, args, label, options) {
   return result.stdout;
 }
 
-export function gitObjectIdLength(root) {
-  const format = requireGit(
+export function inspectTreePaths(root, tree, paths) {
+  if (paths.length === 0) return new Map();
+  const input = `${paths.map((path) => `${tree}:${path}`).join("\n")}\n`;
+  const output = requireGit(
     root,
-    ["rev-parse", "--show-object-format"],
-    "Cannot determine Git object format",
+    ["cat-file", "--batch-check=%(objectname) %(objecttype)"],
+    "Cannot inspect snapshot world trees",
+    { input },
   );
-  if (format === "sha1") return 40;
-  if (format === "sha256") return 64;
-  throw new Error(`Unsupported Git object format: ${format}`);
+  const lines = output.split(/\r?\n/);
+  if (lines.length !== paths.length) {
+    throw new Error(
+      `Cannot inspect snapshot world trees: expected ${paths.length} result(s), received ${lines.length}`,
+    );
+  }
+  return new Map(paths.map((path, index) => {
+    const [object, type, ...unexpected] = lines[index].split(" ");
+    if (!object || !type || unexpected.length > 0) {
+      throw new Error(`Cannot parse snapshot world tree result for ${path}`);
+    }
+    return [path, { object: type === "missing" ? null : object, type }];
+  }));
 }
 
-export function worktreePathTree(root, path) {
+export function worktreeSnapshot(root, { paths } = {}) {
   const directory = mkdtempSync(join(tmpdir(), "silvermoon-index-"));
   const env = { ...process.env, GIT_INDEX_FILE: join(directory, "index") };
   try {
@@ -78,44 +109,15 @@ export function worktreePathTree(root, path) {
     if (!populated.ok) {
       requireGit(root, ["read-tree", "--empty"], "Cannot initialize snapshot index", { env });
     }
-    requireGit(
-      root,
-      ["add", "--all", "--", path],
-      `Cannot snapshot ${path}`,
-      { env },
-    );
-    const tree = requireGit(root, ["write-tree"], "Cannot write snapshot tree", { env });
-    const object = requireGit(
-      root,
-      ["rev-parse", `${tree}:${path}`],
-      `Cannot resolve tree for ${path}`,
-    );
-    const type = requireGit(root, ["cat-file", "-t", object], `Cannot inspect ${path}`);
-    if (type !== "tree") throw new Error(`${path} does not resolve to a Git tree`);
-    return object;
-  } finally {
-    rmSync(directory, { recursive: true, force: true });
-  }
-}
-export function worktreeSnapshot(root) {
-  const directory = mkdtempSync(join(tmpdir(), "silvermoon-index-"));
-  const env = { ...process.env, GIT_INDEX_FILE: join(directory, "index") };
-  try {
-    const populated = runGit(root, ["read-tree", "HEAD"], { env });
-    if (!populated.ok) {
-      requireGit(root, ["read-tree", "--empty"], "Cannot initialize snapshot index", { env });
-    }
-    requireGit(root, ["add", "--all"], "Cannot snapshot worktree", { env });
+    const add = ["add", "--all"];
+    if (paths !== undefined) add.push("--", ...paths);
+    requireGit(root, add, "Cannot snapshot worktree", { env });
     return {
       tree: requireGit(root, ["write-tree"], "Cannot write worktree snapshot", { env }),
     };
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }
-}
-
-function paths(stdout) {
-  return stdout.split(/\r?\n/).filter(Boolean);
 }
 
 const CHANGE_KINDS = {
@@ -284,51 +286,41 @@ export function resolveCommit(root, revision) {
   );
 }
 
-export function commitChangedPaths(root, commit) {
-  const parent = runGit(root, ["rev-parse", "--verify", `${commit}^1`]);
-  const changed = parent.ok
-    ? requireGit(root, ["diff", "--name-only", parent.stdout, commit, "--"], `Cannot inspect commit ${commit}`)
-    : requireGit(
-      root,
-      ["diff-tree", "--root", "--no-commit-id", "--name-only", "-r", commit, "--"],
-      `Cannot inspect root commit ${commit}`,
-    );
-  return paths(changed);
-}
-
 export function indexSnapshot(root) {
   return {
-    paths: paths(requireGit(root, ["diff", "--cached", "--name-only", "--"], "Cannot inspect staged changes")),
     tree: requireGit(root, ["write-tree"], "Cannot snapshot the index"),
   };
 }
 
 export function fetchRepositoryBranch(root, repository, branch) {
   const remoteRef = `refs/heads/${branch}`;
-  for (let attempt = 0; attempt < 3; attempt += 1) {
-    const advertised = requireGit(
-      root,
-      ["ls-remote", "--refs", repository, remoteRef],
-      `Cannot inspect ${branch}`,
+  const fetched = requireGit(
+    root,
+    [
+      "fetch",
+      "--porcelain",
+      "--no-tags",
+      repository,
+      remoteRef,
+    ],
+    `Cannot fetch ${branch}`,
+  );
+  const updates = fetched
+    .split(/\r?\n/)
+    .map((line) => line.trim().split(/\s+/))
+    .filter((fields) =>
+      fields.length === 4
+      && fields[3] === "FETCH_HEAD"
+      && /^(?:[0-9a-f]{40}|[0-9a-f]{64})$/.test(fields[2])
     );
-    const [primary, advertisedRef] = advertised.split(/\s+/);
-    if (!primary || advertisedRef !== remoteRef) {
-      throw new Error(`Cannot resolve remote branch ${branch}`);
-    }
-    requireGit(
-      root,
-      [
-        "fetch",
-        "--no-tags",
-        "--no-write-fetch-head",
-        repository,
-        remoteRef,
-      ],
-      `Cannot fetch ${branch}`,
-    );
-    if (runGit(root, ["cat-file", "-e", `${primary}^{commit}`]).ok) return primary;
+  if (updates.length !== 1) {
+    throw new Error(`Cannot determine fetched commit for branch ${branch}`);
   }
-  throw new Error(`Remote branch ${branch} moved repeatedly while fetching`);
+  const primary = updates[0][2];
+  if (!runGit(root, ["cat-file", "-e", `${primary}^{commit}`]).ok) {
+    throw new Error(`Fetched branch ${branch} does not resolve to a commit`);
+  }
+  return primary;
 }
 
 export function fetchPrimary(root, config) {
@@ -345,21 +337,23 @@ export async function withTemporaryWorktree(root, commit, callback) {
 }
 
 export async function withTemporaryTree(root, tree, callback) {
-  const temporaryRoot = await mkdtemp(join(tmpdir(), "silvermoon-tree-"));
-  const directory = join(temporaryRoot, "snapshot");
-  const env = { ...process.env, GIT_INDEX_FILE: join(temporaryRoot, "index") };
-  try {
-    await mkdir(directory);
-    requireGit(root, ["read-tree", tree], "Cannot populate isolated index", { env });
-    const prefix = `${directory.replaceAll("\\", "/")}/`;
-    requireGit(
-      root,
-      ["checkout-index", "--all", "--force", `--prefix=${prefix}`],
-      "Cannot populate isolated tree snapshot",
-      { env },
-    );
-    return await callback(directory, tree);
-  } finally {
-    await rm(temporaryRoot, { recursive: true, force: true });
-  }
+  return traceAsync("snapshot.materialize", {}, async () => {
+    const temporaryRoot = await mkdtemp(join(tmpdir(), "silvermoon-tree-"));
+    const directory = join(temporaryRoot, "snapshot");
+    const env = { ...process.env, GIT_INDEX_FILE: join(temporaryRoot, "index") };
+    try {
+      await mkdir(directory);
+      requireGit(root, ["read-tree", tree], "Cannot populate isolated index", { env });
+      const prefix = `${directory.replaceAll("\\", "/")}/`;
+      requireGit(
+        root,
+        ["checkout-index", "--all", "--force", `--prefix=${prefix}`],
+        "Cannot populate isolated tree snapshot",
+        { env },
+      );
+      return await callback(directory, tree);
+    } finally {
+      await rm(temporaryRoot, { recursive: true, force: true });
+    }
+  });
 }

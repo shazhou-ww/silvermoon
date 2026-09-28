@@ -73,7 +73,12 @@ the `intention / observation / outcomes / instructions` envelope. For
 pre-commit validation, run `silvermoon check --staged`: unlike the default
 `check` (committed `HEAD`), it checks the index and exits `0` only when the
 project snapshot is valid. See the [Technical Reference](./docs/reference.md)
-for validation targets and exit codes.
+for validation targets and exit codes. Add `--trace <file.trace.jsonl>` to any
+command to write paired task and Git timing spans for performance analysis.
+If the argument does not end with the exact lowercase `.trace.jsonl` suffix,
+Silvermoon appends it. Repository-local `*.trace.jsonl` files are ignored.
+Trace files are created only after the measured command work completes and
+never overwrite an existing file.
 
 ## Why Silvermoon
 

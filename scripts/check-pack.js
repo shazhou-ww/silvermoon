@@ -55,6 +55,7 @@ if (packed.status !== 0) {
     "src/language.js",
     "src/observation.js",
     "src/repository.js",
+    "src/trace.js",
     "src/user-config.js",
     "src/whatsnext.js",
     "src/yaml.js",

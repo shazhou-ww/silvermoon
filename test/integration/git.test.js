@@ -7,12 +7,10 @@ import { pathToFileURL } from "node:url";
 import { afterEach, test } from "node:test";
 
 import {
-  commitChangedPaths,
   fetchPrimary,
   indexSnapshot,
   observeGitCommands,
   resolveCommit,
-  worktreePathTree,
   worktreeSnapshot,
   withTemporaryTree,
   withTemporaryWorktree,
@@ -73,18 +71,27 @@ test("fetches primary by URL without a named Git remote", async () => {
   const { config, root } = await createRepository();
   assert.equal(git(root, "remote"), "");
   const refs = git(root, "for-each-ref", "--format=%(refname) %(objectname)");
+  const commands = [];
 
-  const primary = fetchPrimary(root, config);
+  const primary = await observeGitCommands(
+    (args) => commands.push(args),
+    () => fetchPrimary(root, config),
+  );
+  assert.equal(primary, git(root, "rev-parse", "HEAD"));
   git(root, "cat-file", "-e", `${primary}^{commit}`);
   assert.equal(git(root, "for-each-ref", "--format=%(refname) %(objectname)"), refs);
+  assert.deepEqual(
+    commands.filter(([name]) => name === "fetch" || name === "ls-remote")
+      .map(([name]) => name),
+    ["fetch"],
+  );
 });
 
-test("resolves commits and reports root commit paths", async () => {
+test("resolves commits", async () => {
   const { root } = await createRepository();
   const commit = resolveCommit(root, "HEAD");
 
   assert.equal(commit, git(root, "rev-parse", "HEAD"));
-  assert.deepEqual(commitChangedPaths(root, commit), ["README.md"]);
   assert.throws(() => resolveCommit(root, "missing-revision"), /Cannot resolve commit/);
 });
 
@@ -101,7 +108,6 @@ test("materializes staged and full worktree snapshots without changing caller st
   const status = git(root, "status", "--short");
 
   const staged = indexSnapshot(root);
-  assert.deepEqual(staged.paths, ["staged.txt"]);
   await withTemporaryTree(root, staged.tree, async (worktree) => {
     assert.equal(await readFile(join(worktree, "README.md"), "utf8"), "fixture\n");
     assert.equal(await readFile(join(worktree, "staged.txt"), "utf8"), "staged\n");
@@ -116,10 +122,18 @@ test("materializes staged and full worktree snapshots without changing caller st
     assert.equal(await readFile(join(worktree, "staged.txt"), "utf8"), "staged\n");
     assert.equal(await readFile(join(worktree, "untracked.txt"), "utf8"), "untracked\n");
   });
-  assert.equal(
-    worktreePathTree(root, "folder"),
-    git(root, "rev-parse", `${worktree.tree}:folder`),
-  );
+
+  const scoped = worktreeSnapshot(root, { paths: ["folder"] });
+  await withTemporaryTree(root, scoped.tree, async (worktree) => {
+    assert.equal(await readFile(join(worktree, "README.md"), "utf8"), "fixture\n");
+    assert.equal(
+      await readFile(join(worktree, "folder", "definition.md"), "utf8"),
+      "definition\n",
+    );
+    await assert.rejects(readFile(join(worktree, "staged.txt"), "utf8"), {
+      code: "ENOENT",
+    });
+  });
 
   assert.equal(git(root, "status", "--short"), status);
   assert.equal(git(root, "branch", "--show-current"), "main");

@@ -55,7 +55,11 @@ Silvermoon 会让目标、实现、仓库状态与现实结果始终相连。完
 `intention / observation / outcomes / instructions` envelope。提交前使用
 `silvermoon check --staged` 验证 index；无参数 `check` 只验证已提交的 `HEAD`，
 不能替代提交前检查。只有项目快照有效时检查才以退出码 `0` 放行，详见英文
-[Technical Reference](./docs/reference.md)。
+[Technical Reference](./docs/reference.md)。任何命令都可以添加
+`--trace <file.trace.jsonl>`，写出用于性能分析的成对任务与 Git 计时 span。参数若
+没有以精确的小写 `.trace.jsonl` 结尾，Silvermoon 会自动追加；repository 内的
+`*.trace.jsonl` 会被忽略。trace 文件只在待测命令工作完成后创建，并且绝不覆盖
+已有文件。
 
 ## 为什么需要 Silvermoon
 
