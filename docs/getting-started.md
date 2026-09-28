@@ -87,8 +87,13 @@ tip. When those checks pass, it creates one untracked idea scaffold with
 Replace the guidance in the `Idea.md` ideal contract with the desired outcome,
 scope, and constraints. Keep the `Implementation.md` inner implementation
 contract and `Deployment.md` real-world deployment contract placeholders
-synchronized until their lifecycle phases. Review every generated path and
-publish the prepared idea through ordinary Git.
+synchronized until their lifecycle phases. Review every generated path,
+validate the complete candidate, and commit and publish the prepared idea to
+the configured primary through the repository's normal non-force publication
+path. Verify it is reachable from refreshed primary before asking the user to
+review or approve the exact reported ideal revision. If publication requires a
+pull request, wait until it reaches primary; never ask for approval of an
+unpublished local candidate. Publication does not itself approve the idea.
 
 Then ask what comes next with the generated ULID or an exact unique alias:
 
@@ -114,6 +119,14 @@ corresponding `status.yaml` field. Validate the full candidate with
 to validate the index before publishing a normal non-force commit. Default
 `check` validates committed `HEAD`, not the pending commit; only a successful
 project validation exits `0`.
+
+When requesting any approval or acceptance, include the idea's alias and ULID,
+the decision and exact world revision, plus a clickable permalink to the
+canonical world entry pinned to the published primary commit. Link to
+`Idea.md`, `Implementation.md`, or `Deployment.md` as appropriate. Do not use
+a local workspace path or a branch-floating link; if the host has no known
+permalink format, provide the primary commit and repository-relative path and
+explain the limitation.
 
 Continue with [Core Concepts](./core-concepts.md) before changing lifecycle
 contracts, or use [Operating Silvermoon](./operations.md) for the routine

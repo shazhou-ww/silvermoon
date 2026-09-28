@@ -8,16 +8,16 @@
 
 ### Implementation acceptance criteria
 
-- [ ] **I-AC01:** 文档化命令运行 scenario 并显式报告 hard failure
+- [ ] **I-AC01:** 文档化命令运行 Silvermoon scenario 并显式报告 hard failure
 - [ ] **I-AC02:** Canonical runner 授权与 preflight 安全
 - [ ] **I-AC03:** Disposable fixture、HOME 和 remote 隔离
 - [ ] **I-AC04:** 使用当前 checkout package 与 skill artifact
 - [ ] **I-AC05:** Versioned scenario 与 trajectory artifact
-- [ ] **I-AC06:** Trajectory 与最终 repository evidence verifier
-- [ ] **I-AC07:** 首批 lifecycle boundary scenarios
+- [ ] **I-AC06:** 以 trajectory 和最终仓库证据确定性验证行为
+- [ ] **I-AC07:** 首批 Silvermoon 导航、创建、只读与 lifecycle gate 场景
 - [ ] **I-AC08:** Focused、full 与 repeated run 支持
-- [ ] **I-AC09:** 文档化 eval 触发条件与 fidelity boundary
-- [ ] **I-AC10:** Agent validation 顺序与失败分类
+- [ ] **I-AC09:** 文档化 session eval 触发条件与 host fidelity boundary
+- [ ] **I-AC10:** Agent 确定性验证顺序与失败分类
 - [ ] **I-AC11:** 默认测试和 CI 不伪造模型场景通过
 
 ## Deployment

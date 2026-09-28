@@ -7,130 +7,100 @@ user-invocable: true
 
 # Silvermoon
 
-Use Silvermoon to navigate or explicitly create ideas against the configured
-remote primary. The CLI derives idea state and checks repository hygiene; the
-Agent performs suggested repository or external actions through ordinary tools
-and Git.
+Use Silvermoon to navigate or create ideas against the configured primary.
+The CLI observes repository and lifecycle state; the Agent performs instructed
+repository or external actions with ordinary tools and Git.
 
-## Start From Primary
+## Choose And Run The Command
 
-1. Preserve the user's intent when choosing the entry command:
-   - For `/silvermoon new` or any other explicit request to create a new idea,
-     run `silvermoon create-idea`.
-   - Otherwise run `silvermoon whats-next [idea]`. Pass the selector only when
-     the user supplied or previously selected one.
-   - Use `--json` when a programmatic consumer needs the structured envelope;
-     otherwise read the default conversation.
-2. Treat `intention`, `observation`, `outcomes`, and `instructions` as one
-   immutable report from a single invocation. Do not combine guidance from
-   different reports. Dialogue text renders `## Current instruction`,
-   `## Project status`, and `## Suggested next steps` (in Chinese:
-   `## 本次指示`, `## 项目现状`, and `## 下一步建议`). Within
-   the current state, nonempty navigation candidates and problems have separate
-   `### Ideas you can continue` and `### Issues to address` headings.
-   A selected idea instead reports its own lifecycle state; a created idea
-   reports its new identity and root path. `## Actions and results` omits
-   routine successful fetch when HEAD matches primary, but JSON still records
-   the fetch and any other attempted outcome.
-   Rendering is not a second decision model.
-3. Read every problem and all ordered instructions in the current layer.
-   `project-setup-required` blocks repository and idea reasoning;
-   `repository-sync-required` blocks idea routing, while
-   `repository-preparation-required` blocks creation. Execute instructions
-   whose prerequisites remain true, and reobserve after completing the layer
-   or encountering an unexpected result.
-4. Never infer selection from candidate count. Bare `whats-next` presents all
-   active ideas and the option to discuss and run `create-idea`, even when
-   exactly one idea is active. Only an explicit ULID or alias selects an idea.
-   After resolving hygiene for an explicit create request, retry `create-idea`,
-   not selector-less `whats-next`.
+- `/silvermoon new` and other explicit new-idea requests use
+  `silvermoon create-idea`. Otherwise use `silvermoon whats-next [idea]`, passing
+  a selector only when the user supplied or previously selected it.
+- Bare `whats-next` lists active ideas and offers creation, even when exactly one idea is active.
+  Never infer selection; require an explicit ULID or alias.
+- Use `--json` only when a programmatic consumer needs the envelope.
+- Treat each command's `intention`, `observation`, `outcomes`, and `instructions`
+  as one report. Read every problem and all ordered instructions; never combine
+  reports.
+  `project-setup-required` blocks repository work, `repository-sync-required`
+  blocks idea routing, and `repository-preparation-required` blocks creation.
+  Reobserve after resolving a blocker or making an expected change.
+- Markdown is a rendering of the report, not a second decision model. A
+  selected idea reports its lifecycle state; creation reports its new identity.
 
-`whats-next` may fetch and inspect. It never checkout, merges, edits, commits,
-stashes, deletes, resets, fast-forwards, or pushes. `create-idea` does not fetch
-or compare remote ancestry. It requires the configured primary branch and
-upstream plus a clean local worktree, then creates the structured idea scaffold.
-The target repository does not need a package manifest, package manager,
-Silvermoon dependency, or `node_modules`. The packaged skill is canonical;
-register or update it only at `.agents/skills/silvermoon` through the supported
-`npx skills add` universal target. Silvermoon reports configuration and skill
-problems but owns no setup mutation command.
+`whats-next` may fetch and inspect but never changes files, branches, index, or
+refs. `create-idea` requires the configured primary branch and upstream plus a
+clean worktree; it does not fetch or compare ancestry. The target does not need
+a package manifest, package manager, Silvermoon dependency, or `node_modules`.
+The packaged skill is canonical; register it at `.agents/skills/silvermoon`
+with the supported `npx skills add` universal target. Silvermoon reports setup
+problems but does not repair them.
 
-`check` is separate from dialogue: it validates only the selected project's
-snapshot, without `whats-next` repository synchronization or idea navigation.
-Its `--json` report contains `intention` and `observation` but no `outcomes`
-or `instructions`. Default `check` validates committed `HEAD`; use
-`check --worktree` for a full candidate and `check --staged` for the index in
-a pre-commit hook. Exit code `0` alone means valid; `1` means invalid or
-unavailable and `2` means invalid CLI usage. Never allow a commit because a
-report was produced without checking its exit status.
+`check` validates only a project snapshot; it does not navigate ideas or check
+repository synchronization. Default `check` validates committed `HEAD`;
+`--worktree` validates the full candidate and `--staged` the index. Its JSON
+contains `intention` and `observation` only. Exit `0` means valid, `1` invalid
+or unavailable, and `2` invalid usage. Never commit unless the relevant check
+exits `0`.
 
 ## Preserve Work
 
-- Read exact staged, unstaged, and untracked diffs before deciding ownership.
-- Preserve unknown, unrelated, or user-authored changes. Isolate them in
-  another worktree or use an explicitly described stash only when needed.
-- Delete only paths created by the current operation or paths the user names
-  after reviewing the current diff.
-- Never use force-push, `reset --hard`, broad clean commands, or silent history
-  rewrites to satisfy guidance.
-- When instructions report an observed primary tip, use it as the expected
-  remote tip. On rejection or concurrent movement, call `whats-next` again;
-  never replay a stale approval or acceptance automatically.
+- Inspect all staged, unstaged, and untracked changes before acting. Preserve
+  unknown, unrelated, or user-authored work; isolate it or use only an
+  explicitly described stash when necessary.
+- Never use force-push, reset, broad clean, or silent history rewrites. Delete
+  only operation-owned paths or paths the user explicitly names.
+- Follow reported synchronization steps in order and use the reported primary
+  tip as the expected remote tip. On rejection or concurrent movement, preserve
+  both histories and reobserve; never replay a stale decision.
 
-## Follow Instructions
+## Create And Publish An Idea
 
-- For bare navigation, show the ordered active candidates and obtain one
-  explicit ULID or alias selection, or discuss a new goal and invoke
-  `create-idea`.
-- For an explicit `create-idea`, do not replace the user's create intent with
-  active-idea selection. After hygiene passes, the command creates one
-  self-contained idea
-  with structured `Idea.md`, `Implementation.md`, `Deployment.md`, and
-  `ledger.md` entries plus alias-less `status.yaml`. It never stages, commits,
-  pushes, or records a decision. Review every generated path before
-  publication. During initial preparation, replace the `Idea.md` guidance with
-  the requested Ideal World contract, but keep the Implementation, Deployment,
-  and matching ledger placeholders synchronized until their lifecycle actions.
-  An Agent may add a concise, unique alias derived from the user's request;
-  do not interrupt the user only to ask them to name it.
-  When the user explicitly requests a stable language for the new idea, pass
-  `--language <tag>`; otherwise omit it so the idea dynamically inherits the
-  project, user, or `en-US` default. Never add a language override to
-  `whats-next` or `check`.
-- For repository synchronization instructions, perform the reported Git
-  hygiene steps in order without discarding either history or unknown work.
-  A local branch name may differ from the configured primary branch, but its
-  upstream must identify the configured repository and branch.
-- For a preparing idea, edit the `Idea.md` ideal contract and supporting files
-  in the Ideal World (理想世界). Supporting files must serve `Idea.md`, never
-  replace it as a second contract. After lifecycle hygiene, use the reported
-  `ledgerPath` to resume relevant unfinished work. After explicit approval,
-  write the reported
-  `idealRevision` to `approvedRevision`.
-- For an implementing idea, edit the `Implementation.md` inner implementation
-  contract, its supporting Inner World (主体世界) files, and repository
-  deliverables. Do not change the nested Ideal World unless the ideal truly
-  changed and should return to preparing. After lifecycle hygiene, use the
-  reported `ledgerPath` to resume relevant unfinished work. After explicit
-  acceptance, write the reported
-  `implementationRevision` to `implementationAcceptedRevision`.
-- For a deploying idea, use the `Deployment.md` real-world deployment contract
-  and its supporting Outer World (现实世界) files to drive and verify the
-  external world. Do not change repository deliverables as deployment work or
-  modify a nested world unless that earlier contract truly changed.
-  Publish a newly authored or materially changed deployment contract first,
-  reobserve its stable `deploymentRevision`, then execute external checks
-  against that
-  revision and record their completion in the ledger. After lifecycle hygiene,
-  use the reported `ledgerPath` to resume relevant unfinished work. After
-  explicit acceptance, write the reported
-- For an abandoned idea, keep `abandoned: true`, remove it after an explicit human
-  decision, or create a different idea.
-- For a completed idea, revise the existing idea definition or create a new idea.
+`create-idea` creates only the scaffold: `Idea.md`, `Implementation.md`,
+`Deployment.md`, `ledger.md`, and `status.yaml`. It never stages, commits,
+pushes, or records a decision. Preserve explicit creation intent through
+hygiene retries: retry `create-idea`, not bare `whats-next`.
 
-## Author The Three Worlds
+During preparation, complete the `Idea.md` ideal contract. Keep the
+Implementation, Deployment, and matching ledger placeholders synchronized
+until their lifecycle actions. Review every generated path and validate the
+candidate, then commit and publish it to configured primary through the normal
+non-force path before asking the user to review or approve it. Verify the commit
+is reachable from refreshed primary and reobserve the exact `idealRevision`.
+If publication requires a pull request, wait until it reaches primary. If
+publication is blocked, say the candidate is not yet available for cross-device
+review; never ask for approval of unpublished content. Publication is not
+approval and must not change `status.yaml`.
 
-Every idea uses this fixed structure:
+An Agent may derive a concise, unique alias; do not ask for a name solely for
+the alias. Pass `--language <tag>` only when the user explicitly requests a
+stable language override. Do not use that option with `whats-next` or `check`.
+
+## Continue The Selected Idea
+
+Use the reported `ledgerPath` after lifecycle hygiene and continue only the
+selected world's unfinished work:
+
+- **Preparing:** Edit `Idea.md` and supporting Ideal World (理想世界) files.
+  Supporting files serve the contract, not replace it. After explicit approval,
+  record the reported `idealRevision` as `approvedRevision`.
+- **Implementing:** Edit `Implementation.md`, supporting Inner World (主体世界)
+  files, and repository deliverables. Change the ideal only if it truly changed
+  and the idea must return to preparing. After explicit acceptance, record the
+  reported `implementationRevision` as `implementationAcceptedRevision`.
+- **Deploying:** Use `Deployment.md` and supporting Outer World (现实世界) files
+  to drive and verify external outcomes; do not change repository deliverables.
+  Publish a new or materially changed deployment contract first, reobserve its
+  stable `deploymentRevision`, then run checks against it and record evidence
+  in the ledger. After explicit acceptance, record the reported
+  `deploymentRevision` as `deploymentAcceptedRevision`.
+- **Abandoned:** Keep canonical `abandoned: true`, remove it only after an
+  explicit reversal, or choose another idea.
+- **Completed:** Revise its definition or create a different idea.
+
+## Author Contracts And Continue From The Ledger
+
+Each idea has three canonical entries:
 
 ```text
 .silvermoon/ideas/<ULID>/
@@ -147,97 +117,55 @@ Every idea uses this fixed structure:
 `Idea.md` is the Ideal World (理想世界) ideal contract, `Implementation.md` is
 the Inner World (主体世界) inner implementation contract, and `Deployment.md`
 is the Outer World (现实世界) real-world deployment contract. Each world may
-contain additional files and nested directories, but those artifacts support
-their same-world entry and do not define a second contract.
+contain supporting files, but those artifacts serve the same-world entry and
+never define a second contract.
 
 In `Implementation.md` and `Deployment.md`, put plans under `## Steps` and
-outcome contracts under `## Acceptance criteria`. Give every step and criterion
-a stable level-three heading: `I-Sxx`, `I-ACxx`, `D-Sxx`, or `D-ACxx`. A
-criterion must describe both its observable outcome and the method that proves
-it; do not add a separate validation section. Keep checkboxes out of world
-contracts. World content changes its world revision and every containing world
-revision; `status.yaml` and `ledger.md` stay outside all three world trees.
+outcomes under `## Acceptance criteria`. Use stable level-three IDs: `I-Sxx`,
+`I-ACxx`, `D-Sxx`, and `D-ACxx`. Each criterion states an observable outcome
+and how to prove it. Do not put checkboxes in world contracts. World content
+changes its world revision and containing revisions; `status.yaml` and
+`ledger.md` are outside those trees.
 
-## Continue From The Ledger
+The required idea-root `ledger.md` is operational memory, not a fourth world,
+contract, or human decision. Mirror the stable IDs and short titles for
+Implementation and Deployment steps and criteria. Update ledger entries with
+their contract changes; add new items unchecked and reset completed items when
+requirements or proof change materially. If relevant entries remain unchecked,
+continue the reported work. If they are all checked, evidence remains valid,
+and the candidate is published, stop and request the appropriate explicit
+acceptance. A checked box records Agent work only; it never approves, accepts,
+changes status, or authorizes publication.
 
-Every idea has an Agent-owned `ledger.md` at the path reported by `whats-next`.
-It is operational state, not a fourth world, normative contract, or human
-decision. Silvermoon requires the regular file but does not parse its body or
-derive lifecycle state from it.
+## Record Decisions And Request Review
 
-Mirror stable IDs and short titles from both world contracts:
+Silvermoon has no approval, acceptance, or abandonment mutation commands. After
+an explicit human decision, reconfirm it applies to the selected idea and exact
+revision from `whats-next`; change only the corresponding status fact. Never
+infer a decision from silence, prose, Git activity, ledger checkboxes, or an
+outer command.
 
-```markdown
-# Ledger
+Before requesting approval or acceptance, identify the idea by alias and ULID,
+state the decision and exact reported world revision, and include a clickable
+permalink to the canonical entry at the published primary commit: `Idea.md`
+for ideal approval, `Implementation.md` for implementation acceptance, or
+`Deployment.md` for deployment acceptance. Prefer a commit-pinned web URL (for
+GitHub, `/blob/<commit>/<path>`), not a local path or moving branch link.
+Confirm the commit is reachable from refreshed primary. If no reliable
+permalink can be formed, give the commit and repository-relative path and
+explain why; never provide a misleading link. Publication and links enable
+review but do not constitute the user's decision.
 
-## Implementation
+For status changes, validate with `silvermoon check --worktree`, stage the
+candidate, then run `silvermoon check --staged`. Commit separately when
+practical and publish non-force using the latest reported primary tip.
 
-### Implementation steps
+## Advance Safely
 
-- [x] **I-S01:** Completed step
-- [ ] **I-S02:** Remaining step
-
-### Implementation acceptance criteria
-
-- [x] **I-AC01:** Proven criterion
-- [ ] **I-AC02:** Unproven criterion
-
-## Deployment
-
-### Deployment steps
-
-- [ ] **D-S01:** Deployment step
-
-### Deployment acceptance criteria
-
-- [ ] **D-AC01:** Deployment criterion
-```
-
-When adding or removing a world step or criterion, update the matching ledger
-entry in the same change. Keep its stable ID when only the title or details are
-refined. Add new entries unchecked. If a completed item's requirement or proof
-method changes materially, reset its checkbox and re-run the work or proof.
-Infer the next action from `whats-next`, the world contracts, and unchecked
-ledger entries; do not maintain duplicate Current or Next summaries.
-If relevant ledger entries remain unchecked, continue the reported world
-action. If all relevant entries are checked, their evidence remains valid, and
-the candidate is published, stop editing and request explicit acceptance for
-the exact revision reported by `whats-next`.
-
-`[x]` means only that the Agent recorded work or a check as complete. It never
-approves an Ideal World, accepts implementation or deployment, changes
-`status.yaml`, or authorizes publication. Record test names, commands,
-artifacts, and results in the corresponding world criterion or concise ledger
-notes without creating a separate evidence schema or public API contract.
-
-## Write Status Facts
-
-Silvermoon has no approval, acceptance, or abandonment mutation commands.
-Update the idea's `status.yaml` with ordinary file editing:
-
-1. Reconfirm the decision applies to the selected idea and current
-   world revision reported by `whats-next`.
-2. Add or update only the corresponding revision field, or add/remove canonical
-   `abandoned: true` after an explicit human decision.
-3. Run `silvermoon check --worktree` while reviewing the complete candidate,
-   then stage it and run `silvermoon check --staged`. Add `--json` only when a
-   programmatic consumer needs the envelope.
-4. Commit the status decision separately when practical, then non-force push
-   with the primary tip reported by the latest instructions as the expected
-   remote tip.
-
-Never infer a human decision from silence, prose, Git activity, or an outer
-command. Old revision values remain as history and become inactive naturally
-when the idea folder changes.
-
-## Advance The Loop
-
-Re-run the intent-preserving entry command only after an expected repository
-delta, an unexpected input change, or a newly arrived external result: use
-`create-idea` for a pending explicit creation and `whats-next` otherwise. End
-the current turn when waiting for human/external input. Report an actionable
-error with its recovery condition, or report no progress and stop if guidance
-completed without a delta. Never poll the same observation.
+Rerun the intent-preserving command only after an expected repository change,
+unexpected input, or new external result. Stop when waiting for a human or
+external result; do not poll an unchanged observation. Report actionable
+blockers and their recovery condition.
 
 Follow [adoption.md](./references/adoption.md) when creating or explicitly
 converting a repository to Silvermoon.
