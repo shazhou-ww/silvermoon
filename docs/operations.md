@@ -55,7 +55,12 @@ user, or `en-US` defaults. `whats-next` and `check` do not accept the option.
 
 The generated files remain untracked for review. Complete `Idea.md`, optionally
 add a concise unique alias, inspect every path, and publish the initial idea
-through ordinary Git.
+through ordinary Git. Validate and commit the complete prepared idea, then make
+that commit reachable from configured primary using the repository's normal
+non-force publication path before asking the user to review or approve it. If
+publication requires a pull request, wait until it reaches primary. Reobserve
+the exact `idealRevision` after publication; never ask for approval of an
+unpublished local candidate, and never treat publication as approval.
 
 ## Follow One Observation
 
@@ -133,6 +138,15 @@ their mismatch is what derives the idea's earlier lifecycle state.
 
 Prefer a status-only decision commit, publish through the repository's normal
 non-force path, and verify the commit is reachable from refreshed primary.
+
+When asking for approval or acceptance, identify the idea by alias and ULID,
+state the exact reported world revision, and link the corresponding canonical
+entry at the published primary commit: `Idea.md` for ideal approval,
+`Implementation.md` for implementation acceptance, or `Deployment.md` for
+deployment acceptance. Use a commit-pinned web permalink rather than a local
+workspace path or a branch name that can move. The linked revision and
+publication are review context only; the user must still make the decision
+explicitly.
 
 ## Publish Work
 
