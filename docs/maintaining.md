@@ -23,6 +23,10 @@ pnpm check             # complete release-grade validation
 pnpm check:skills      # skill discovery and structure
 ```
 
+`pnpm check` runs the independent release-grade checks concurrently and waits
+for all of them before reporting every failure. Run the narrower commands above
+while iterating, then use `pnpm check` before delivery.
+
 Edit the canonical skill only under `skills/silvermoon`, then run
 `pnpm sync:skills`. The checked-in `.agents/skills/silvermoon` directory is a
 generated copy so repository skill discovery works without symbolic-link
