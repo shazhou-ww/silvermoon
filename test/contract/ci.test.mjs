@@ -4,6 +4,8 @@ import { test } from "node:test";
 
 import { parseDocument } from "yaml";
 
+import { CHECK_SCRIPTS } from "../../scripts/run-checks.mjs";
+
 const packageUrl = new URL("../../package.json", import.meta.url);
 const workflowUrl = new URL("../../.github/workflows/ci.yml", import.meta.url);
 
@@ -24,10 +26,15 @@ test("runs fast layered validation in ordinary CI", async () => {
     manifest.scripts.test,
     "npm run test:unit && npm run test:contract",
   );
-  assert.equal(
-    manifest.scripts.check,
-    "npm run lint:markdown && npm run check:quick && npm run test:integration && npm run pack:check && npm run test:e2e && npm run check:skills",
-  );
+  assert.equal(manifest.scripts.check, "node scripts/run-checks.mjs");
+  assert.deepEqual(CHECK_SCRIPTS, [
+    "lint:markdown",
+    "check:quick",
+    "test:integration",
+    "pack:check",
+    "test:e2e",
+    "check:skills",
+  ]);
 
   const workflow = document.toJS();
   assert.deepEqual(Object.keys(workflow.jobs).sort(), ["contract", "integration", "unit"]);
