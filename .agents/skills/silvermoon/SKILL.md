@@ -23,8 +23,13 @@ and Git.
      otherwise read the default conversation.
 2. Treat `intention`, `observation`, `outcomes`, and `instructions` as one
    immutable report from a single invocation. Do not combine guidance from
-   different reports. The default text renders those same four sections; it is
-   not a second decision model.
+   different reports. Dialogue text renders `## Request`, `## Current state`,
+   and `## What to do next` (or their natural Chinese equivalents). Within
+   the current state, nonempty active ideas and problems have separate
+   `### Ideas you can continue` and `### Issues to address` headings.
+   `## Actions and results` appears only when an operation was attempted;
+   JSON retains `outcomes: []` otherwise.
+   Rendering is not a second decision model.
 3. Read every problem and all ordered instructions in the current layer.
    `project-setup-required` blocks repository and idea reasoning;
    `repository-sync-required` blocks idea routing. Execute instructions whose
@@ -44,6 +49,15 @@ Silvermoon dependency, or `node_modules`. The packaged skill is canonical;
 register or update it only at `.agents/skills/silvermoon` through the supported
 `npx skills add` universal target. Silvermoon reports configuration and skill
 problems but owns no setup mutation command.
+
+`check` is separate from dialogue: it validates only the selected project's
+snapshot, without `whats-next` repository synchronization or idea navigation.
+Its `--json` report contains `intention` and `observation` but no `outcomes`
+or `instructions`. Default `check` validates committed `HEAD`; use
+`check --worktree` for a full candidate and `check --staged` for the index in
+a pre-commit hook. Exit code `0` alone means valid; `1` means invalid or
+unavailable and `2` means invalid CLI usage. Never allow a commit because a
+report was produced without checking its exit status.
 
 ## Preserve Work
 

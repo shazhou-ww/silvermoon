@@ -308,21 +308,35 @@ try {
   const legacy = npmResult(["exec", "--", "silvermoon", "whatsnext"], consumer);
   assert.equal(legacy.status, 2, legacy.stderr);
   const checked = JSON.parse(npm(["exec", "--", "silvermoon", "check", "--json"], consumer));
-  assert.equal(checked.observation.state, "task-pending");
+  assert.deepEqual(Object.keys(checked).sort(), ["intention", "observation"]);
+  assert.equal(checked.observation.state, "project-ready");
   assert.equal(checked.observation.ideas.activeIdeas[0].alias, "installed-smoke");
+  const checkedText = npm(["exec", "--", "silvermoon", "check"], consumer);
+  assert.match(checkedText, /^## Check\n\n- Target: `head`/);
+  assert.match(checkedText, /- Result: valid/);
+  assert.doesNotMatch(checkedText, /## What to do next|## Actions and results/);
   const worktree = JSON.parse(
     npm(["exec", "--", "silvermoon", "check", "--worktree", "--json"], consumer),
   );
   const createdSummary = worktree.observation.ideas.activeIdeas.find(({ id: ideaId }) =>
     ideaId === createdId
   );
-  assert.equal(worktree.observation.state, "task-pending");
+  assert.equal(worktree.observation.state, "project-ready");
   assert.equal(Object.hasOwn(createdSummary, "alias"), false);
   const lifecycle = JSON.parse(
     npm(["exec", "--", "silvermoon", "whats-next", "installed-smoke", "--json"], consumer),
   );
   assert.equal(lifecycle.observation.state, "repository-sync-required");
   assert.equal(lifecycle.observation.problems[0].type, "worktree-changes");
+  assert.deepEqual(lifecycle.outcomes, []);
+  const lifecycleText = npm(
+    ["exec", "--", "silvermoon", "whats-next", "installed-smoke"],
+    consumer,
+  );
+  assert.match(lifecycleText, /^## Request\n\n/);
+  assert.match(lifecycleText, /\n\n### Ideas you can continue\n\n/);
+  assert.match(lifecycleText, /\n\n### Issues to address\n\n- \[worktree-changes\]/);
+  assert.doesNotMatch(lifecycleText, /## Actions and results/);
   await writeFile(
     join(consumer, ".agents", "skills", "silvermoon", "SKILL.md"),
     "drift\n",

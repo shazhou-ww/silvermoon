@@ -15,6 +15,7 @@ Use the smallest check that covers a change:
 
 ```sh
 pnpm sync:skills       # refresh the generated universal skill copy
+pnpm lint:markdown     # Markdown lint and link checks
 pnpm test              # fast unit and repository contract tests
 pnpm test:integration  # real filesystem and Git behavior
 pnpm test:e2e          # packed and installed CLI behavior
@@ -26,6 +27,8 @@ Edit the canonical skill only under `skills/silvermoon`, then run
 `pnpm sync:skills`. The checked-in `.agents/skills/silvermoon` directory is a
 generated copy so repository skill discovery works without symbolic-link
 support. `pnpm check:skills` rejects a stale or manually edited copy.
+For documentation and skill changes, run `pnpm lint:markdown`,
+`pnpm check:skills`, and `node --test test/contract/skill.test.mjs`.
 
 Run `pnpm check` after CLI, schema, repository model, release, or skill changes.
 Documentation work must also preserve Markdown links, package contents,

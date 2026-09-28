@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterEach, test } from "node:test";
@@ -31,7 +31,7 @@ async function fixture() {
   return repository;
 }
 
-test("checks HEAD with the shared envelope and resolved commit version", async () => {
+test("checks HEAD with a project-only observation and resolved commit version", async () => {
   const repository = await fixture();
   const commit = git(repository.root, "rev-parse", "HEAD");
 
@@ -41,10 +41,8 @@ test("checks HEAD with the shared envelope and resolved commit version", async (
   });
 
   assert.deepEqual(Object.keys(report).sort(), [
-    "instructions",
     "intention",
     "observation",
-    "outcomes",
   ]);
   assert.deepEqual(report.intention, {
     command: "check",
@@ -54,9 +52,9 @@ test("checks HEAD with the shared envelope and resolved commit version", async (
     type: "commit",
     commit,
   });
-  assert.equal(report.observation.state, "task-pending");
+  assert.equal(report.observation.state, "project-ready");
   assert.equal(report.observation.ideas.counts.preparing, 1);
-  assert.deepEqual(report.outcomes, []);
+  assert.deepEqual(report.observation.problems, []);
 });
 
 test("keeps the requested revision in intention and only the resolved commit in observation", async () => {
@@ -93,7 +91,7 @@ test("checks from a nested directory against the discovered Git root", async () 
     report.observation.root,
     resolve(git(nested, "rev-parse", "--show-toplevel")),
   );
-  assert.equal(report.observation.state, "task-pending");
+  assert.equal(report.observation.state, "project-ready");
 });
 
 test("validates isolated staged and worktree candidates without Git worktree commands", async () => {
@@ -124,7 +122,7 @@ test("validates isolated staged and worktree candidates without Git worktree com
     userHome: repository.base,
   });
 
-  assert.equal(head.observation.state, "task-pending");
+  assert.equal(head.observation.state, "project-ready");
   for (const report of [worktree, staged]) {
     assert.equal(report.observation.state, "project-setup-required");
     assert.equal(report.observation.observedThrough, "configuration");
@@ -140,7 +138,7 @@ test("validates isolated staged and worktree candidates without Git worktree com
   );
 });
 
-test("fetches and validates remote as an explicit success outcome", async () => {
+test("fetches and validates remote without a dialogue outcome", async () => {
   const repository = await fixture();
   const expected = git(repository.root, "rev-parse", "HEAD");
 
@@ -154,13 +152,61 @@ test("fetches and validates remote as an explicit success outcome", async () => 
     type: "remote",
     commit: expected,
   });
-  assert.deepEqual(
-    report.outcomes.map(({ type, status }) => [type, status]),
-    [["fetch-primary", "success"]],
+  assert.equal(report.observation.state, "project-ready");
+  assert.deepEqual(Object.keys(report).sort(), ["intention", "observation"]);
+});
+
+test("valid remote snapshot is not blocked by unrelated local HEAD skill damage", async () => {
+  const repository = await fixture();
+  const skill = join(repository.root, ".agents", "skills", "silvermoon");
+  await rm(skill, { recursive: true });
+  git(repository.root, "add", "--all");
+  git(repository.root, "commit", "-m", "Damage local skill");
+
+  const report = await checkRepository({
+    remote: true,
+    root: repository.root,
+    userHome: repository.base,
+  });
+
+  assert.equal(report.observation.state, "project-ready");
+  assert.equal(
+    report.observation.version.commit,
+    git(repository.root, "rev-parse", "HEAD~1"),
+  );
+  assert.deepEqual(report.observation.problems, []);
+});
+
+test("remote check reports invalid HEAD primary coordinates before fetching", async () => {
+  const repository = await fixture();
+  await writeFile(
+    join(repository.root, ".silvermoon", "config.yaml"),
+    "version: 1\nprimaryRepository: invalid\nprimaryBranch: main\n",
+  );
+  git(repository.root, "add", "--all");
+  git(repository.root, "commit", "-m", "Break local primary coordinates");
+  const commands = [];
+
+  const report = await observeGitCommands(
+    (args) => commands.push(args),
+    () => checkRepository({
+      remote: true,
+      root: repository.root,
+      userHome: repository.base,
+    }),
+  );
+
+  assert.equal(report.observation.state, "project-setup-required");
+  assert.equal(report.observation.observedThrough, "version");
+  assert.deepEqual(report.observation.version, { type: "remote", commit: null });
+  assert.equal(report.observation.problems[0].type, "config-invalid-primary-repository");
+  assert.equal(
+    commands.some(([name]) => name === "fetch" || name === "ls-remote"),
+    false,
   );
 });
 
-test("returns a trustworthy envelope for an unavailable commit", async () => {
+test("returns a check-unavailable observation for an unavailable commit", async () => {
   const repository = await fixture();
 
   const report = await checkRepository({
@@ -173,10 +219,9 @@ test("returns a trustworthy envelope for an unavailable commit", async () => {
     type: "commit",
     commit: null,
   });
-  assert.equal(report.observation.state, "project-setup-required");
-  assert.equal(report.observation.observedThrough, "version");
+  assert.equal(report.observation.state, "check-unavailable");
   assert.equal(report.observation.problems[0].type, "commit-unavailable");
-  assert.deepEqual(report.outcomes, []);
+  assert.deepEqual(Object.keys(report).sort(), ["intention", "observation"]);
 });
 
 test("uses the shared root-stage setup observation for every target outside Git", async () => {
@@ -205,7 +250,7 @@ test("uses the shared root-stage setup observation for every target outside Git"
   }
 });
 
-test("returns a failure outcome rather than throwing when remote fetch fails", async () => {
+test("returns check-unavailable when remote fetch fails", async () => {
   const repository = await fixture();
   await rm(repository.remote, { recursive: true });
 
@@ -215,12 +260,11 @@ test("returns a failure outcome rather than throwing when remote fetch fails", a
     userHome: repository.base,
   });
 
-  assert.equal(report.observation.state, "repository-sync-required");
+  assert.equal(report.observation.state, "check-unavailable");
   assert.deepEqual(report.observation.version, {
     type: "remote",
     commit: null,
   });
-  assert.equal(report.outcomes[0].status, "failure");
   assert.equal(report.observation.problems[0].type, "primary-fetch-failed");
 });
 

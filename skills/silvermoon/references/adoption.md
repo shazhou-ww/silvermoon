@@ -8,10 +8,11 @@ Start with a complete diagnosis, even in an unfamiliar repository:
 npx silvermoon@<version> whats-next
 ```
 
-The four-section report explains the invocation's intention, current
-observation, attempted side effects and outcomes, and ordered instructions.
-Add `--json` only when a programmatic consumer needs the same information as
-an `intention / observation / outcomes / instructions` envelope.
+The dialogue uses lightweight Markdown headings for intention, observation,
+and ordered instructions. It includes actions and outcomes only if side
+effects were attempted. Add `--json` only when a programmatic consumer needs
+the `intention / observation / outcomes / instructions` envelope (including
+`outcomes: []` when none were attempted).
 The command may fetch after local readiness passes, but it does not move the
 worktree, index, branches, or named refs.
 
@@ -48,6 +49,14 @@ silvermoon check --remote
 silvermoon create-idea
 silvermoon whats-next <ULID>
 ```
+
+`check` validates the selected project snapshot only; it does not navigate
+ideas or check worktree hygiene and upstream. Default `check` validates
+committed `HEAD`, whereas `check --staged` validates the index for pre-commit
+hooks. Its JSON contains only `intention` and `observation`; it does not
+include dialogue `outcomes` or `instructions`. Exit code `0` means valid,
+`1` means invalid or unavailable, and `2` means invalid CLI usage. A failed
+or unavailable check must not allow a commit.
 
 Create or repair configuration through ordinary reviewed file editing.
 Silvermoon reports every configuration finding but has no init or setup command.

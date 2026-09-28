@@ -62,3 +62,9 @@ branches.
   and `git diff --check` before delivery review.
 - Use `silvermoon check --commit HEAD` for checked-out CI and
   `silvermoon check --remote` for complete primary-history evidence.
+- Use `silvermoon check --staged` in pre-commit hooks: default `check` validates
+  committed `HEAD`, not the pending index. `check` validates only the chosen
+  project's snapshot, not repository synchronization or idea navigation.
+  Only exit code `0` permits the commit; `1` means invalid or unavailable and
+  `2` means invalid usage. Its JSON contains `intention` and `observation`,
+  not dialogue `outcomes` or `instructions`.

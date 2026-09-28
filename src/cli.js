@@ -7,7 +7,7 @@ import {
 } from "commander";
 
 import { canonicalizeLanguageTag } from "./language.js";
-import { renderDialogue } from "./dialogue.js";
+import { renderCheck, renderDialogue } from "./dialogue.js";
 import { checkRepository } from "./index.js";
 import { createIdea } from "./create-idea.js";
 import { withTraceFile } from "./trace.js";
@@ -30,7 +30,13 @@ function addCommonOptions(command) {
 }
 
 export function render(report, json, io) {
-  io.log(json ? JSON.stringify(report, null, 2) : renderDialogue(report));
+  io.log(
+    json
+      ? JSON.stringify(report, null, 2)
+      : report.intention.command === "check"
+        ? renderCheck(report)
+        : renderDialogue(report),
+  );
 }
 
 function languageArgument(value) {
@@ -130,7 +136,10 @@ Examples:
       }),
     );
     render(report, options.json, io);
-    program.setOptionValue("resultCode", 0);
+    program.setOptionValue(
+      "resultCode",
+      report.observation.state === "project-ready" ? 0 : 1,
+    );
   });
 
   return program;

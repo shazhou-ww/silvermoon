@@ -6,7 +6,8 @@ import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 
 import { runCli } from "../../src/cli.js";
-import { createRepository } from "../helpers/repository.js";
+import { ideaPaths } from "../../src/layout.js";
+import { createRepository, FIRST_ID, git } from "../helpers/repository.js";
 
 const repositoryRoot = fileURLToPath(new URL("../..", import.meta.url));
 
@@ -35,7 +36,7 @@ test("rejects legacy command spellings without changing the repository", async (
   assert.equal(gitStatus(), before);
 });
 
-test("returns zero when check reports a validation finding", async () => {
+test("returns one when check cannot validate a commit", async () => {
   const repository = await createRepository({
     prefix: "silvermoon-cli-exit-",
   });
@@ -57,9 +58,11 @@ test("returns zero when check reports a validation finding", async () => {
       },
     );
 
-    assert.equal(result, 0);
+    assert.equal(result, 1);
     assert.deepEqual(errors, []);
     const report = JSON.parse(logs[0]);
+    assert.deepEqual(Object.keys(report).sort(), ["intention", "observation"]);
+    assert.equal(report.observation.state, "check-unavailable");
     assert.equal(report.observation.problems[0].type, "commit-unavailable");
   } finally {
     await rm(repository.base, { recursive: true, force: true });
@@ -117,6 +120,26 @@ test("writes task and Git spans without changing the observed worktree", async (
       .map(({ attributes }) => attributes.subcommand);
     assert.ok(gitSubcommands.includes("ls-remote"));
     assert.ok(gitSubcommands.includes("fetch"));
+  } finally {
+    await rm(repository.base, { recursive: true, force: true });
+  }
+});
+
+test("pre-commit staged check fails while unchanged HEAD passes", async () => {
+  const repository = await createRepository({ prefix: "silvermoon-hook-" });
+  try {
+    const ledger = join(repository.root, ...ideaPaths(FIRST_ID).ledgerPath.split("/"));
+    await rm(ledger);
+    git(repository.root, "add", "--all");
+    const logs = [];
+    const io = { error: () => {}, log: (value) => logs.push(value) };
+    assert.equal(await runCli(["check", "--root", repository.root, "--json"], io), 0);
+    assert.equal(JSON.parse(logs.pop()).observation.state, "project-ready");
+    assert.equal(
+      await runCli(["check", "--root", repository.root, "--staged", "--json"], io),
+      1,
+    );
+    assert.equal(JSON.parse(logs.pop()).observation.state, "project-setup-required");
   } finally {
     await rm(repository.base, { recursive: true, force: true });
   }
