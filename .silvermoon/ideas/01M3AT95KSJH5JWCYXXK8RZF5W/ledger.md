@@ -30,8 +30,12 @@ e2e 1/1，且 package contents 与 skill 同步检查均通过。
 
 ### Deployment steps
 
-- [ ] **D-S01:** Step title
+- [ ] **D-S01:** 发布部署契约
+- [ ] **D-S02:** 验证精确 primary commit 的托管 CI
+- [ ] **D-S03:** 复核发布后的 Silvermoon 导航
 
 ### Deployment acceptance criteria
 
-- [ ] **D-AC01:** Criterion title
+- [ ] **D-AC01:** 已验收实现与部署契约存在于 configured primary
+- [ ] **D-AC02:** 精确部署候选的 GitHub Actions CI 成功
+- [ ] **D-AC03:** 发布后导航与部署 revision 一致
