@@ -78,6 +78,14 @@ test("derives three nested world tree revisions", async () => {
   const [idea] = inspected.ideas;
   assert.equal(idea.id, id);
   assert.equal(idea.state, "preparing");
+  assert.deepEqual(
+    Object.values(idea.worlds).map(({ name, displayName }) => [name, displayName]),
+    [
+      ["Ideal World", "理想世界"],
+      ["Inner World", "主体世界"],
+      ["Outer World", "现实世界"],
+    ],
+  );
   assert.equal(idea.idealRevision, git(root, "rev-parse", `HEAD:${paths.idealPath}`));
   assert.equal(
     idea.implementationRevision,

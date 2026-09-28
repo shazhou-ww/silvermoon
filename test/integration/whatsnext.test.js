@@ -187,6 +187,7 @@ test("resolves the repository root when invoked from a nested directory", async 
   assert.equal(report.observation.selectedIdea.state, "preparing");
   assert.equal(Object.hasOwn(report.observation, "ideas"), false);
   assert.match(report.instructions, /approvedRevision/);
+  assert.doesNotMatch(report.instructions, /道心|内景|现世/);
 });
 
 test("default navigation excludes completed and abandoned ideas while counting them", async () => {
@@ -251,6 +252,40 @@ test("default navigation excludes completed and abandoned ideas while counting t
     assert.equal(selected.observation.selectedIdea.id, id);
     assert.equal(Object.hasOwn(selected.observation, "ideas"), false);
     assert.match(selected.instructions, new RegExp(phrase));
+  }
+});
+
+test("uses formal world and contract names in localized lifecycle instructions", async () => {
+  const repository = await fixture({
+    preferredLanguage: "zh-CN",
+    ideas: [
+      { id: FIRST_ID, status: { alias: "preparing" } },
+      { id: SECOND_ID, status: { alias: "implementing" } },
+      { id: DEPLOYING_ID, status: { alias: "deploying" } },
+    ],
+  });
+  await setIdeaState(repository.root, SECOND_ID, "implementing", {
+    alias: "implementing",
+  });
+  await setIdeaState(repository.root, DEPLOYING_ID, "deploying", {
+    alias: "deploying",
+  });
+  git(repository.root, "add", ".");
+  git(repository.root, "commit", "-m", "Set localized lifecycle states");
+  git(repository.root, "push", "origin", "main");
+
+  for (const [id, phrase] of [
+    [FIRST_ID, "理想契约就绪"],
+    [SECOND_ID, "除非理想契约确实需要变化"],
+    [DEPLOYING_ID, "保留内层世界"],
+  ]) {
+    const selected = await whatsNext({
+      idea: id,
+      root: repository.root,
+      userHome: repository.base,
+    });
+    assert.match(selected.instructions, new RegExp(phrase));
+    assert.doesNotMatch(selected.instructions, /道心|内景|现世/);
   }
 });
 

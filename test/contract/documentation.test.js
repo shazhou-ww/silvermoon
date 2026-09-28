@@ -14,6 +14,20 @@ const reading = [
   "./docs/reference.md",
   "./docs/maintaining.md",
 ];
+const formalTerminologySources = [
+  "docs/core-concepts.md",
+  "docs/getting-started.md",
+  "docs/operations.md",
+  "docs/reference.md",
+  "docs/maintaining.md",
+  "docs/repository-tasks.md",
+  "schema/v1/idea-status.schema.json",
+  "skills/silvermoon/SKILL.md",
+  "skills/silvermoon/references/adoption.md",
+  "src/create-idea.js",
+  "src/idea-layout.js",
+  "src/whatsnext.js",
+];
 
 test("keeps both READMEs reader-first and structurally aligned", async () => {
   const [english, chinese] = await Promise.all([
@@ -75,6 +89,33 @@ test("keeps the approved biography bounded and accurate", async () => {
   assert.match(chinese, /- YouTube：\[第 150 话：外海风云 26\]/);
   assert.match(chinese, /- 哔哩哔哩：\[第 150 话：外海风云 26\]/);
   assert.doesNotMatch(chinese, /share_source=/);
+});
+
+test("limits cultivation aliases to the project READMEs", async () => {
+  const [english, chinese, ...formalSources] = await Promise.all([
+    readFile(resolve(repositoryRoot, "README.md"), "utf8"),
+    readFile(resolve(repositoryRoot, "README.zh-CN.md"), "utf8"),
+    ...formalTerminologySources.map((path) =>
+      readFile(resolve(repositoryRoot, path), "utf8")
+    ),
+  ]);
+
+  for (const source of [english, chinese]) {
+    assert.match(source, /道心/);
+    assert.match(source, /内景/);
+    assert.match(source, /现世/);
+  }
+  for (const source of formalSources) {
+    assert.doesNotMatch(source, /道心|内景|现世/);
+  }
+
+  const formal = formalSources.join("\n");
+  assert.match(formal, /Ideal World \(理想世界\)/);
+  assert.match(formal, /Inner World \(主体世界\)/);
+  assert.match(formal, /Outer World \(现实世界\)/);
+  assert.match(formal, /ideal contract/);
+  assert.match(formal, /inner implementation contract/);
+  assert.match(formal, /real-world deployment contract/);
 });
 
 test("resolves repository-local links in reader documentation", async () => {

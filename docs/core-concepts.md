@@ -27,16 +27,16 @@ the same primary history and continue from the same facts.
 
 ## Three Nested Worlds
 
-**Ideal World (道心)** is the canonical intent in `Idea.md`. It defines the
-outcome, scope, and constraints without prescribing implementation.
+**Ideal World (理想世界)** is defined by the ideal contract in `Idea.md`. It
+describes the outcome, scope, and constraints without prescribing
+implementation.
 
-**Inner World (内景)** is the canonical implementation contract in
+**Inner World (主体世界)** contains the inner implementation contract in
 `Implementation.md` plus the repository deliverables that give the ideal form.
 
-**Outer World (现世)** is the canonical deployment contract in `Deployment.md`
-plus evidence that the implementation is true where it must operate.
-
-> 道心立意，内景成形，现世验真。
+**Outer World (现实世界)** contains the real-world deployment contract in
+`Deployment.md` plus evidence that the implementation is true where it must
+operate.
 
 The directory structure makes the relationship concrete: the Inner World
 contains the Ideal World, and the Outer World contains both. Each world is an

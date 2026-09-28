@@ -87,9 +87,9 @@ test("exposes one consolidated silvermoon skill", async () => {
     "Preserve unknown, unrelated, or user-authored changes",
     "Never use force-push",
     "Silvermoon has no approval, acceptance, or abandonment mutation commands",
-    "Ideal World (道心)",
-    "Inner World (内景)",
-    "Outer World (现世)",
+    "Ideal World (理想世界)",
+    "Inner World (主体世界)",
+    "Outer World (现实世界)",
     "supporting files",
     ".silvermoon/ideas/<ULID>/",
     "## Steps",
@@ -187,6 +187,10 @@ test("documents explicit Silvermoon adoption and conversion", async () => {
     resolve(repositoryRoot, "docs", "operations.md"),
     "utf8",
   );
+  const coreConcepts = await readFile(
+    resolve(repositoryRoot, "docs", "core-concepts.md"),
+    "utf8",
+  );
   const reference = await readFile(
     resolve(repositoryRoot, "docs", "reference.md"),
     "utf8",
@@ -197,12 +201,17 @@ test("documents explicit Silvermoon adoption and conversion", async () => {
   );
   const normalized = adoption.replaceAll("\r\n", " ").replaceAll("\n", " ");
   assert.match(adoption, /version: 1/);
-  for (const source of [`${readme}\n${operations}\n${reference}`, adoption]) {
+  for (
+    const source of [
+      `${readme}\n${coreConcepts}\n${operations}\n${reference}`,
+      adoption,
+    ]
+  ) {
     assert.match(source, /opaque Git tree/);
     assert.match(source, /\.silvermoon\/config\.yaml/);
-    assert.match(source, /Ideal World \(道心\)/);
-    assert.match(source, /Inner World \(内景\)/);
-    assert.match(source, /Outer World \(现世\)/);
+    assert.match(source, /Ideal World \(理想世界\)/);
+    assert.match(source, /Inner World \(主体世界\)/);
+    assert.match(source, /Outer World \(现实世界\)/);
     assert.match(source, /## Steps/);
     assert.match(source, /## Acceptance criteria/);
     assert.match(source, /I-Sxx/);
@@ -213,6 +222,7 @@ test("documents explicit Silvermoon adoption and conversion", async () => {
     assert.match(source, /whats-next/);
     assert.doesNotMatch(source, /silvermoon whatsnext/);
   }
+  assert.doesNotMatch(adoption, /道心|内景|现世/);
   assert.match(normalized, /no runtime compatibility mode or in-place migration command/);
 });
 

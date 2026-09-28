@@ -101,25 +101,29 @@ report was produced without checking its exit status.
   hygiene steps in order without discarding either history or unknown work.
   A local branch name may differ from the configured primary branch, but its
   upstream must identify the configured repository and branch.
-- For a preparing idea, edit `Idea.md` and supporting files in the Ideal World
-  (道心). Supporting files must serve `Idea.md`, never replace it as a second
-  contract. After lifecycle hygiene, use the reported `ledgerPath` to resume
-  relevant unfinished work. After explicit approval, write the reported
+- For a preparing idea, edit the `Idea.md` ideal contract and supporting files
+  in the Ideal World (理想世界). Supporting files must serve `Idea.md`, never
+  replace it as a second contract. After lifecycle hygiene, use the reported
+  `ledgerPath` to resume relevant unfinished work. After explicit approval,
+  write the reported
   `idealRevision` to `approvedRevision`.
-- For an implementing idea, edit `Implementation.md`, its supporting Inner World
-  (内景) files, and repository deliverables. Do not change the nested Ideal
-  World unless the ideal truly changed and should return to preparing. After
-  lifecycle hygiene, use the reported `ledgerPath` to resume relevant
-  unfinished work. After explicit acceptance, write the reported
+- For an implementing idea, edit the `Implementation.md` inner implementation
+  contract, its supporting Inner World (主体世界) files, and repository
+  deliverables. Do not change the nested Ideal World unless the ideal truly
+  changed and should return to preparing. After lifecycle hygiene, use the
+  reported `ledgerPath` to resume relevant unfinished work. After explicit
+  acceptance, write the reported
   `implementationRevision` to `implementationAcceptedRevision`.
-- For a deploying idea, use `Deployment.md` and its supporting Outer World (现世)
-  files to drive and verify the external world. Do not change repository
-  deliverables as deployment work or modify a nested world unless that earlier
-  contract truly changed. Publish a newly authored or materially changed
-  deployment contract first, reobserve its stable `deploymentRevision`, then
-  execute external checks against that revision and record their completion in
-  the ledger. After lifecycle hygiene, use the reported `ledgerPath` to resume
-  relevant unfinished work. After explicit acceptance, write the reported
+- For a deploying idea, use the `Deployment.md` real-world deployment contract
+  and its supporting Outer World (现实世界) files to drive and verify the
+  external world. Do not change repository deliverables as deployment work or
+  modify a nested world unless that earlier contract truly changed.
+  Publish a newly authored or materially changed deployment contract first,
+  reobserve its stable `deploymentRevision`, then execute external checks
+  against that
+  revision and record their completion in the ledger. After lifecycle hygiene,
+  use the reported `ledgerPath` to resume relevant unfinished work. After
+  explicit acceptance, write the reported
 - For an abandoned idea, keep `abandoned: true`, remove it after an explicit human
   decision, or create a different idea.
 - For a completed idea, revise the existing idea definition or create a new idea.
@@ -140,11 +144,11 @@ Every idea uses this fixed structure:
             └── Idea.md
 ```
 
-`Idea.md` is the canonical Ideal World (道心) entry, `Implementation.md` is the
-canonical Inner World (内景) entry, and `Deployment.md` is the canonical Outer
-World (现世) entry: 道心立意，内景成形，现世验真. Each world may contain
-additional files and nested directories, but those artifacts support their
-same-world entry and do not define a second contract.
+`Idea.md` is the Ideal World (理想世界) ideal contract, `Implementation.md` is
+the Inner World (主体世界) inner implementation contract, and `Deployment.md`
+is the Outer World (现实世界) real-world deployment contract. Each world may
+contain additional files and nested directories, but those artifacts support
+their same-world entry and do not define a second contract.
 
 In `Implementation.md` and `Deployment.md`, put plans under `## Steps` and
 outcome contracts under `## Acceptance criteria`. Give every step and criterion

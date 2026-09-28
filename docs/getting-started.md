@@ -84,10 +84,11 @@ tip. When those checks pass, it creates one untracked idea scaffold with
 `Idea.md`, `Implementation.md`, `Deployment.md`, `ledger.md`, and
 `status.yaml`. It never stages, commits, pushes, or records a human decision.
 
-Replace the guidance in `Idea.md` with the desired outcome, scope, and
-constraints. Keep implementation and deployment placeholders synchronized
-until their lifecycle phases. Review every generated path and publish the
-prepared idea through ordinary Git.
+Replace the guidance in the `Idea.md` ideal contract with the desired outcome,
+scope, and constraints. Keep the `Implementation.md` inner implementation
+contract and `Deployment.md` real-world deployment contract placeholders
+synchronized until their lifecycle phases. Review every generated path and
+publish the prepared idea through ordinary Git.
 
 Then ask what comes next with the generated ULID or an exact unique alias:
 
