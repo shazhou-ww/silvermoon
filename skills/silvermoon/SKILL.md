@@ -23,8 +23,9 @@ and Git.
      otherwise read the default conversation.
 2. Treat `intention`, `observation`, `outcomes`, and `instructions` as one
    immutable report from a single invocation. Do not combine guidance from
-   different reports. Dialogue text renders `## Request`, `## Current state`,
-   and `## What to do next` (or their natural Chinese equivalents). Within
+   different reports. Dialogue text renders `## Current instruction`,
+   `## Project status`, and `## Suggested next steps` (in Chinese:
+   `## 本次指示`, `## 项目现状`, and `## 下一步建议`). Within
    the current state, nonempty active ideas and problems have separate
    `### Ideas you can continue` and `### Issues to address` headings.
    `## Actions and results` appears only when an operation was attempted;

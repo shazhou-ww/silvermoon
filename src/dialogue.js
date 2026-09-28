@@ -75,8 +75,8 @@ function renderIntention(intention, language) {
     return intention.args.idea === null
       ? localize(
         language,
-        "Determine the available next work without selecting an idea.",
-        "查看当前可推进的工作，但不替用户选择 idea。",
+        "Determine the available next work.",
+        "查看当前可推进的工作。",
       )
       : localize(
         language,
@@ -205,11 +205,11 @@ export function renderDialogue(report) {
     ?? "en-US";
   const sections = [
     [
-      localize(language, "Request", "本次请求"),
+      localize(language, "Current instruction", "本次指示"),
       renderIntention(report.intention, language),
     ],
     [
-      localize(language, "Current state", "当前情况"),
+      localize(language, "Project status", "项目现状"),
       renderObservation(report.observation, language),
     ],
     ...(report.outcomes.length > 0
@@ -219,7 +219,7 @@ export function renderDialogue(report) {
       ]]
       : []),
     [
-      localize(language, "What to do next", "接下来怎么做"),
+      localize(language, "Suggested next steps", "下一步建议"),
       report.instructions,
     ],
   ];

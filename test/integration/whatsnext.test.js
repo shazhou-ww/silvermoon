@@ -76,6 +76,7 @@ test("project setup uses cumulative observation variants and reports all setup f
     ["git-repository-missing", "config-missing", "canonical-skill-missing"],
   );
   assert.equal(missingGit.outcomes.length, 0);
+  assert.match(missingGit.instructions, /^1\. .*\n2\. .*\n3\. /);
 
   const configured = await fixture();
   await writeFile(
@@ -118,7 +119,8 @@ primaryBranch: main
     "canonical-skill-missing",
   );
   assert.match(observedIdeas.observation.problems[0].summary, /^Silvermoon 发现/);
-  assert.match(observedIdeas.instructions, /^1\. 处理/);
+  assert.match(observedIdeas.instructions, /^处理/);
+  assert.doesNotMatch(observedIdeas.instructions, /^\d+\. /m);
 });
 
 test("[selector-none] naked navigation lists one active idea without selecting it", async () => {
@@ -317,6 +319,8 @@ test("[dirty] reports local changes before any remote access and preserves selec
     commands.some(([name]) => name === "fetch" || name === "ls-remote"),
     false,
   );
+  assert.match(report.instructions, /^Inspect all paths /);
+  assert.doesNotMatch(report.instructions, /^\d+\. /m);
   assert.match(report.instructions, new RegExp(FIRST_ID));
 });
 
@@ -345,6 +349,8 @@ test("reports every observable local readiness problem before remote access", as
     false,
   );
   assert.match(report.instructions, /status --short/);
+  assert.match(report.instructions, /^1\. Inspect all paths /);
+  assert.match(report.instructions, /\n2\. Configure a named remote /);
   assert.match(report.instructions, /upstream/);
   assert.match(report.instructions, /silvermoon whats-next/);
 });

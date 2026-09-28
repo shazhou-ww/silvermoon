@@ -44,6 +44,14 @@ e2e 1/1；package contents、skill 同步及 Markdown lint 通过）。
 `test/e2e/installed-package.test.js` 断言安装后文本标题；
 `check --worktree --json` 返回 `project-ready`。
 
+后续文案复验：精简单个请求的意图说明；项目或仓库整备只有一条建议时
+不添加序号，多条仍按优先级编号；对话标题更新为「本次指示 / 项目现状 /
+下一步建议」及对应英文。`test/unit/cli-v1.test.js` 校验双语标题与请求文案，
+`test/integration/whatsnext.test.js` 校验单条与多条整备建议；
+`test/e2e/installed-package.test.js` 校验安装包标题。
+`pnpm check` 通过（unit、contract、integration、installed-package e2e、
+package contents、skill 同步及 Markdown lint）。
+
 ## Deployment
 
 ### Deployment steps

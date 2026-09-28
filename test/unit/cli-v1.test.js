@@ -88,12 +88,12 @@ test("renders JSON verbatim and omits the empty outcomes section in Markdown", (
 
   assert.deepEqual(JSON.parse(json.logs[0]), report);
   const text = human.logs[0];
-  assert.match(text, /^## Request\n\n/);
-  assert.match(text, /\n\n## Current state\n\n/);
+  assert.match(text, /^## Current instruction\n\nDetermine the available next work\.\n\n/);
+  assert.match(text, /\n\n## Project status\n\n/);
   assert.match(text, /\n\n### Ideas you can continue\n\n- `01M36QGPNTXEPP61DA4KP4AVZF` preparing/);
   assert.doesNotMatch(text, /### Issues to address/);
   assert.doesNotMatch(text, /Actions and results|No repository side effect was attempted/);
-  assert.match(text, /\n\n## What to do next\n\n/);
+  assert.match(text, /\n\n## Suggested next steps\n\n/);
   assert.match(text, /`01M36QGPNTXEPP61DA4KP4AVZF` preparing/);
   assert.doesNotMatch(text, /undefined|\(\)/);
   assert.match(text, /Choose an idea or run/);
@@ -111,11 +111,11 @@ test("uses localized section headings from resolved configuration", () => {
 
   render(report, false, output.io);
 
-  assert.match(output.logs[0], /^## 本次请求\n\n/);
-  assert.match(output.logs[0], /\n\n## 当前情况\n\n/);
+  assert.match(output.logs[0], /^## 本次指示\n\n查看当前可推进的工作。\n\n/);
+  assert.match(output.logs[0], /\n\n## 项目现状\n\n/);
   assert.match(output.logs[0], /\n\n### 可继续推进的想法\n\n/);
   assert.match(output.logs[0], /\n\n## 本次操作及结果\n\n- 成功 \[fetch-primary\]/);
-  assert.match(output.logs[0], /\n\n## 接下来怎么做\n\n/);
+  assert.match(output.logs[0], /\n\n## 下一步建议\n\n/);
 });
 
 test("renders observed problems under their own level-three heading", () => {
@@ -147,7 +147,7 @@ test("renders check as a verdict without dialogue actions or instructions", () =
   assert.match(output.logs[0], /^## Check\n\n- Target: `staged`/);
   assert.match(output.logs[0], /- Result: invalid or unavailable/);
   assert.match(output.logs[0], /\n\n### Issues to address\n\n- \[config-missing\] Missing configuration/);
-  assert.doesNotMatch(output.logs[0], /## What to do next|## Actions and results/);
+  assert.doesNotMatch(output.logs[0], /## Suggested next steps|## Actions and results/);
 });
 
 test("rejects conflicting targets and invalid language as CLI usage errors", async () => {

@@ -145,11 +145,11 @@ primary 坐标
 
 ### I-AC09: 默认文本保持分层轻量 Markdown 对话
 
-`whats-next` 和 `create-idea` 默认按请求、当前情况、可选操作及结果、下一步顺序
-输出 `##` 标题及简洁列表；英文标题分别为 `## Request`、
-`## Current state`、可选的 `## Actions and results`、`## What to do next`，
-中文标题分别为 `## 本次请求`、`## 当前情况`、可选的 `## 本次操作及结果`、
-`## 接下来怎么做`。在当前情况段落下，非空 active ideas 和
+`whats-next` 和 `create-idea` 默认按本次指示、项目现状、可选操作及结果、下一步建议
+输出 `##` 标题及简洁列表；英文标题分别为 `## Current instruction`、
+`## Project status`、可选的 `## Actions and results`、`## Suggested next steps`，
+中文标题分别为 `## 本次指示`、`## 项目现状`、可选的 `## 本次操作及结果`、
+`## 下一步建议`。在项目现状段落下，非空 active ideas 和
 observed problems 分别使用 `### Ideas you can continue` 与
 `### Issues to address`（中文分别为 `### 可继续推进的想法` 与
 `### 需要处理的问题`）标题及各自列表，空集合对应的小节省略，不将两类事实混入同一列表。没有副作用时省略
