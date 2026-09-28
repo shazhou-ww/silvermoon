@@ -108,8 +108,8 @@ silvermoon check [--remote | --commit <revision> | --staged | --worktree] [--tra
 
 - `intention` contains the command and normalized business arguments. Output
   format is not part of the intention.
-- `observation` describes one repository version, resolved configuration, idea
-  inventory, and project or repository readiness problems.
+- `observation` describes the reliable facts for the requested command and
+  intent, not a mandatory global idea inventory.
 - `outcomes` records only high-level repository side effects actually
   attempted by this invocation. Each item has `type`, `status` (`success` or
   `failure`), and `summary`. An empty array means no side effect was attempted.
@@ -120,11 +120,13 @@ silvermoon check [--remote | --commit <revision> | --staged | --worktree] [--tra
 Default dialogue output renders the same report with concise lists under
 `## Current instruction`, `## Project status`, and `## Suggested next steps`
 (in Chinese: `## 本次指示`, `## 项目现状`, `## 下一步建议`). The optional
-`## Actions and results` (`## 本次操作及结果`) appears only if `outcomes`
-is nonempty. JSON always retains `outcomes: []` when no side effect was attempted. `--json`
-serializes the same decision; there is no YAML output or second reasoning
-path. Within the current-state section, nonempty active ideas and observed
-problems appear under `### Ideas you can continue` and
+`## Actions and results` (`## 本次操作及结果`) appears only when a visible
+outcome remains. A successful fetch is omitted from text when local HEAD
+matches the fetched primary; failed fetches and synchronization problems remain
+visible. JSON always records attempted outcomes, even when text omits routine
+success. `--json` serializes the same decision; there is no YAML output or
+second reasoning path. Within the project-status section, nonempty navigation
+candidates and observed problems appear under `### Ideas you can continue` and
 `### Issues to address` (in Chinese: `### 可继续推进的想法` and
 `### 需要处理的问题`). Empty sections are omitted. Dialogue exit status `0` means a
 trustworthy report was formed, even when it reports readiness blocks or a
@@ -146,18 +148,26 @@ affect that invocation's worktree observation. The file is written after the
 measured command work finishes and uses exclusive creation, so an existing
 normalized target is never overwritten.
 
-Dialogue observation state is a discriminated union:
+Observations are discriminated by command intent and `state`:
 
 - `project-setup-required` uses `observedThrough` (`root`, `version`,
   `configuration`, or `ideas`) to identify the deepest reliable cumulative
   shape. Fields beyond that boundary are absent rather than null or fabricated.
 - `repository-sync-required` always includes `root`, `version`,
   `configuration`, `ideas`, and at least one `problem`.
-- `task-pending` includes all observation fields, no readiness problems, and
-  work that can be selected or continued.
-- `idle` has the same complete shape, no problems, and no active ideas.
+- Bare `whats-next` returns `navigation-ready` with `ideas.counts` and
+  `ideas.activeIdeas` (possibly empty). It never selects a candidate.
+- Selected `whats-next` returns `idea-selected` with only `selectedIdea`
+  (`id`, optional `alias`, lifecycle `state`), including terminal ideas.
+  Unknown selectors return `idea-not-found` with `candidates`, not a
+  fabricated selected idea.
+- After a successful `create-idea` preflight, `idea-created` carries
+  `createdIdea` (`id`, `state: "preparing"`). This confirms pre-creation
+  readiness, not a clean post-creation worktree. An attempted but failed
+  scaffold returns `idea-create-failed` without `createdIdea`; preflight
+  failures retain their setup or synchronization state.
 
-Dialogue versions have `version.type: "worktree"`. `ideas.counts` always has
+Dialogue versions have `version.type: "worktree"`. When present, `ideas.counts` has
 `preparing`, `implementing`, `deploying`, `completed`, and `abandoned`;
 `activeIdeas` contains only minimal references for the first three states.
 Problems have only stable `type` and natural-language `summary`; remediation

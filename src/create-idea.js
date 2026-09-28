@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 
 import {
   createEnvelope,
+  dialogueReadyObservation,
   localize,
   outcome,
 } from "./dialogue.js";
@@ -141,7 +142,7 @@ function failureEnvelope({
   ));
   return createEnvelope(
     intention,
-    observation,
+    dialogueReadyObservation(observation, "idea-create-failed"),
     outcomes,
     localize(
       language,
@@ -313,7 +314,9 @@ export async function createIdea({
       ));
       return createEnvelope(
         intention,
-        readiness.observation,
+        dialogueReadyObservation(readiness.observation, "idea-created", {
+          createdIdea: { id, state: "preparing" },
+        }),
         outcomes,
         localize(
           observed.language,

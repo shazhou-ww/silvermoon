@@ -26,10 +26,12 @@ and Git.
    different reports. Dialogue text renders `## Current instruction`,
    `## Project status`, and `## Suggested next steps` (in Chinese:
    `## 本次指示`, `## 项目现状`, and `## 下一步建议`). Within
-   the current state, nonempty active ideas and problems have separate
+   the current state, nonempty navigation candidates and problems have separate
    `### Ideas you can continue` and `### Issues to address` headings.
-   `## Actions and results` appears only when an operation was attempted;
-   JSON retains `outcomes: []` otherwise.
+   A selected idea instead reports its own lifecycle state; a created idea
+   reports its new identity. `## Actions and results` omits routine successful
+   fetch when HEAD matches primary, but JSON still records the fetch and any
+   other attempted outcome.
    Rendering is not a second decision model.
 3. Read every problem and all ordered instructions in the current layer.
    `project-setup-required` blocks repository and idea reasoning;

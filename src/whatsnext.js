@@ -2,6 +2,7 @@ import { resolve } from "node:path";
 
 import {
   createEnvelope,
+  dialogueReadyObservation,
   localize,
   outcome,
 } from "./dialogue.js";
@@ -527,14 +528,10 @@ export async function whatsNext({
     );
   }
 
-  let observation = readiness.observation;
-  if (selector !== undefined && observation.state === "idle") {
-    observation = { ...observation, state: "task-pending" };
-  }
   if (selector === undefined) {
     return createEnvelope(
       intention,
-      observation,
+      { ...readiness.observation, state: "navigation-ready" },
       outcomes,
       navigationInstruction(observed.layout.ideas, observed.language),
     );
@@ -542,7 +539,9 @@ export async function whatsNext({
   if (!selected) {
     return createEnvelope(
       intention,
-      observation,
+      dialogueReadyObservation(readiness.observation, "idea-not-found", {
+        candidates: readiness.observation.ideas.activeIdeas,
+      }),
       outcomes,
       joinInstructions([
         localize(
@@ -556,7 +555,13 @@ export async function whatsNext({
   }
   return createEnvelope(
     intention,
-    observation,
+    dialogueReadyObservation(readiness.observation, "idea-selected", {
+      selectedIdea: {
+        id: selected.id,
+        ...(selected.alias === undefined ? {} : { alias: selected.alias }),
+        state: selected.state,
+      },
+    }),
     outcomes,
     lifecycleInstruction(selected, observed.language),
   );

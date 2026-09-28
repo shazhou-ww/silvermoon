@@ -94,7 +94,9 @@ test("[unrelated-active-create] [publish-coordinates] creates an exact scaffold 
     command: "create-idea",
     args: { language: null },
   });
-  assert.equal(report.observation.ideas.counts.preparing, 1);
+  assert.equal(report.observation.state, "idea-created");
+  assert.deepEqual(report.observation.createdIdea, { id: createdId, state: "preparing" });
+  assert.equal(Object.hasOwn(report.observation, "ideas"), false);
   assert.deepEqual(
     report.outcomes.map(({ type, status }) => [type, status]),
     [
@@ -298,6 +300,8 @@ test("[partial-write-failure] cleans up operation-owned partial files", async ()
 
   assert.equal(report.outcomes.at(-1).type, "create-idea-scaffold");
   assert.equal(report.outcomes.at(-1).status, "failure");
+  assert.equal(report.observation.state, "idea-create-failed");
+  assert.equal(Object.hasOwn(report.observation, "createdIdea"), false);
   assert.match(report.outcomes.at(-1).summary, /injected write failure/);
   await assert.rejects(
     readFile(

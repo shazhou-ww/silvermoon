@@ -70,6 +70,11 @@ export function createEnvelope(intention, observation, outcomes, instructions) {
   return { intention, observation, outcomes, instructions };
 }
 
+export function dialogueReadyObservation(observation, state, details = {}) {
+  const { root, version, configuration, problems } = observation;
+  return { state, root, version, configuration, problems, ...details };
+}
+
 function renderIntention(intention, language) {
   if (intention.command === "whats-next") {
     return intention.args.idea === null
@@ -121,6 +126,29 @@ function codeSpan(value) {
 }
 
 function renderObservation(observation, language) {
+  if (observation.state === "idea-selected") {
+    const idea = observation.selectedIdea;
+    const alias = idea.alias === undefined ? "" : ` (${idea.alias})`;
+    return localize(
+      language,
+      `The project and repository are ready. Selected idea: ${codeSpan(idea.id)}${alias}; state: ${idea.state}.`,
+      `项目与 repository 已就绪。当前 idea：${codeSpan(idea.id)}${alias}；状态：${idea.state}。`,
+    );
+  }
+  if (observation.state === "idea-created") {
+    return localize(
+      language,
+      `The repository was ready before creation. Created idea: ${codeSpan(observation.createdIdea.id)}; state: preparing.`,
+      `创建前项目与 repository 已就绪。新建 idea：${codeSpan(observation.createdIdea.id)}；状态：preparing。`,
+    );
+  }
+  if (observation.state === "idea-create-failed") {
+    return localize(
+      language,
+      "The repository was ready before creation, but creating the idea failed.",
+      "创建前项目与 repository 已就绪，但创建 idea 失败。",
+    );
+  }
   const state = {
     "project-setup-required": localize(
       language,
@@ -132,15 +160,19 @@ function renderObservation(observation, language) {
       "The project is configured, but the repository requires synchronization.",
       "项目配置已就绪，但 repository 仍需整备或同步。",
     ),
-    "task-pending": localize(
+    "navigation-ready": localize(
       language,
-      "The project and repository are ready, and work is available.",
-      "项目与 repository 已就绪，当前有工作可以推进。",
+      observation.ideas?.activeIdeas.length > 0
+        ? "The project and repository are ready, and work is available."
+        : "The project and repository are ready, with no active idea.",
+      observation.ideas?.activeIdeas.length > 0
+        ? "项目与 repository 已就绪，当前有工作可以推进。"
+        : "项目与 repository 已就绪，当前没有 active idea。",
     ),
-    idle: localize(
+    "idea-not-found": localize(
       language,
-      "The project and repository are ready, with no active idea.",
-      "项目与 repository 已就绪，当前没有 active idea。",
+      "The project and repository are ready, but the requested idea was not found.",
+      "项目与 repository 已就绪，但未找到指定的 idea。",
     ),
   }[observation.state];
   const lines = [
@@ -172,8 +204,11 @@ function renderObservation(observation, language) {
     );
   }
   const sections = [`${lines[0]}\n\n${lines.slice(1).join("\n")}`];
-  if (observation.ideas?.activeIdeas.length > 0) {
-    const active = observation.ideas.activeIdeas.map((idea) => {
+  const candidates = observation.state === "idea-not-found"
+    ? observation.candidates
+    : observation.ideas?.activeIdeas;
+  if (candidates?.length > 0) {
+    const active = candidates.map((idea) => {
       const alias = idea.alias === undefined ? "" : ` (${idea.alias})`;
       return `- ${codeSpan(idea.id)}${alias} ${idea.state}`;
     });
@@ -203,6 +238,12 @@ export function renderDialogue(report) {
   const language =
     report.observation.configuration?.preferredLanguage
     ?? "en-US";
+  const visibleOutcomes = report.outcomes.filter((item) =>
+    !(item.type === "fetch-primary"
+      && item.status === "success"
+      && ["navigation-ready", "idea-selected", "idea-not-found", "idea-created", "idea-create-failed"]
+        .includes(report.observation.state))
+  );
   const sections = [
     [
       localize(language, "Current instruction", "本次指示"),
@@ -212,10 +253,10 @@ export function renderDialogue(report) {
       localize(language, "Project status", "项目现状"),
       renderObservation(report.observation, language),
     ],
-    ...(report.outcomes.length > 0
+    ...(visibleOutcomes.length > 0
       ? [[
         localize(language, "Actions and results", "本次操作及结果"),
-        renderOutcomes(report.outcomes, language),
+        renderOutcomes(visibleOutcomes, language),
       ]]
       : []),
     [

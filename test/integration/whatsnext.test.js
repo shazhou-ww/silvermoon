@@ -141,7 +141,7 @@ test("[selector-none] naked navigation lists one active idea without selecting i
     command: "whats-next",
     args: { idea: null },
   });
-  assert.equal(report.observation.state, "task-pending");
+  assert.equal(report.observation.state, "navigation-ready");
   assert.deepEqual(report.observation.ideas.activeIdeas, [{
     id: FIRST_ID,
     alias: "fixture",
@@ -151,6 +151,20 @@ test("[selector-none] naked navigation lists one active idea without selecting i
   assert.match(report.instructions, /silvermoon create-idea/);
   assert.equal(report.outcomes[0].type, "fetch-primary");
   assert.equal(report.outcomes[0].status, "success");
+});
+
+test("empty navigation stays ready without selecting an idea", async () => {
+  const repository = await fixture({ ideas: [] });
+  const report = await whatsNext({
+    root: repository.root,
+    userHome: repository.base,
+  });
+
+  assert.equal(report.observation.state, "navigation-ready");
+  assert.deepEqual(report.observation.ideas.activeIdeas, []);
+  assert.equal(report.observation.ideas.counts.completed, 0);
+  assert.equal(Object.hasOwn(report.observation, "selectedIdea"), false);
+  assert.match(report.instructions, /create-idea/);
 });
 
 test("resolves the repository root when invoked from a nested directory", async () => {
@@ -168,7 +182,9 @@ test("resolves the repository root when invoked from a nested directory", async 
     report.observation.root,
     resolve(git(nested, "rev-parse", "--show-toplevel")),
   );
-  assert.equal(report.observation.state, "task-pending");
+  assert.equal(report.observation.state, "idea-selected");
+  assert.equal(report.observation.selectedIdea.state, "preparing");
+  assert.equal(Object.hasOwn(report.observation, "ideas"), false);
   assert.match(report.instructions, /approvedRevision/);
 });
 
@@ -230,6 +246,9 @@ test("default navigation excludes completed and abandoned ideas while counting t
       userHome: repository.base,
     });
     assert.equal(selected.intention.args.idea, id);
+    assert.equal(selected.observation.state, "idea-selected");
+    assert.equal(selected.observation.selectedIdea.id, id);
+    assert.equal(Object.hasOwn(selected.observation, "ideas"), false);
     assert.match(selected.instructions, new RegExp(phrase));
   }
 });
@@ -244,6 +263,11 @@ test("[selector-unknown] reports an unknown selector without guessing", async ()
   });
 
   assert.deepEqual(report.observation.problems, []);
+  assert.equal(report.observation.state, "idea-not-found");
+  assert.deepEqual(report.observation.candidates, [{
+    id: FIRST_ID, alias: "fixture", state: "preparing",
+  }]);
+  assert.equal(Object.hasOwn(report.observation, "selectedIdea"), false);
   assert.match(report.instructions, /does not match/);
   assert.match(report.instructions, new RegExp(FIRST_ID));
   assert.match(report.instructions, /create-idea/);
@@ -260,9 +284,9 @@ test("[selector-known] [alias-absent] selects an alias-less idea only by explici
     userHome: repository.base,
   });
 
-  assert.equal(report.observation.state, "task-pending");
+  assert.equal(report.observation.state, "idea-selected");
   assert.equal(
-    Object.hasOwn(report.observation.ideas.activeIdeas[0], "alias"),
+    Object.hasOwn(report.observation.selectedIdea, "alias"),
     false,
   );
   assert.match(report.instructions, new RegExp(FIRST_ID));
@@ -443,7 +467,7 @@ test("[branch-mismatch] accepts any local branch with the configured primary ups
     userHome: repository.base,
   });
 
-  assert.equal(report.observation.state, "task-pending");
+  assert.equal(report.observation.state, "idea-selected");
   assert.match(report.instructions, /approvedRevision/);
 
   git(repository.root, "branch", "--unset-upstream");
@@ -496,7 +520,7 @@ primaryBranch: main
     userHome: repository.base,
   });
 
-  assert.equal(report.observation.state, "task-pending");
+  assert.equal(report.observation.state, "idea-selected");
   assert.equal(
     report.observation.configuration.primaryRepository,
     configured,
@@ -523,7 +547,7 @@ test("[behind] [ahead] [diverged] reports ancestry and safe remediation", async 
     root: behindRepository.root,
     userHome: behindRepository.base,
   });
-  assert.equal(aligned.observation.state, "task-pending");
+  assert.equal(aligned.observation.state, "navigation-ready");
 
   const aheadRepository = await fixture({ prefix: "silvermoon-ahead-" });
   await writeFile(join(aheadRepository.root, "ahead.txt"), "ahead\n");

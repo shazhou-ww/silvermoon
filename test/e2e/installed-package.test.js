@@ -251,6 +251,7 @@ try {
     "outcomes",
   ]);
   assert.equal(created.intention.command, "create-idea");
+  assert.equal(created.observation.state, "idea-created");
   assert.deepEqual(
     created.outcomes.map(({ type, status }) => [type, status]),
     [
@@ -261,6 +262,8 @@ try {
   const ideasAfter = await readdir(join(consumer, ".silvermoon", "ideas"));
   const createdId = ideasAfter.find((ideaId) => !ideasBefore.includes(ideaId));
   assert.match(createdId, /^[0-7][0-9A-HJKMNP-TV-Z]{25}$/);
+  assert.deepEqual(created.observation.createdIdea, { id: createdId, state: "preparing" });
+  assert.equal(Object.hasOwn(created.observation, "ideas"), false);
   const createdPaths = ideaPaths(createdId);
   assert.equal(
     await readFile(join(consumer, createdPaths.idea), "utf8"),

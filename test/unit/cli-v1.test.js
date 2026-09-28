@@ -28,7 +28,7 @@ function envelope() {
       args: { idea: null },
     },
     observation: {
-      state: "task-pending",
+      state: "navigation-ready",
       root: "C:\\repository",
       version: { type: "worktree" },
       configuration: {
@@ -146,8 +146,79 @@ test("uses localized section headings from resolved configuration", () => {
   assert.match(output.logs[0], /^## 本次指示\n\n查看当前可推进的工作。\n\n/);
   assert.match(output.logs[0], /\n\n## 项目现状\n\n/);
   assert.match(output.logs[0], /\n\n### 可继续推进的想法\n\n/);
-  assert.match(output.logs[0], /\n\n## 本次操作及结果\n\n- 成功 \[fetch-primary\]/);
+  assert.doesNotMatch(output.logs[0], /## 本次操作及结果/);
   assert.match(output.logs[0], /\n\n## 下一步建议\n\n/);
+});
+
+test("renders selected and missing ideas without duplicating the navigation inventory", () => {
+  const selected = envelope();
+  selected.intention.args.idea = "fixture";
+  selected.observation = {
+    state: "idea-selected",
+    root: "C:\\repository",
+    version: { type: "worktree" },
+    configuration: selected.observation.configuration,
+    problems: [],
+    selectedIdea: { id: "01M36QGPNTXEPP61DA4KP4AVZF", alias: "fixture", state: "completed" },
+  };
+  selected.outcomes.push({ type: "fetch-primary", status: "success", summary: "Fetched primary." });
+  const output = capture();
+  render(selected, false, output.io);
+  assert.match(output.logs[0], /Selected idea: `01M36QGPNTXEPP61DA4KP4AVZF` \(fixture\); state: completed/);
+  assert.doesNotMatch(output.logs[0], /ideas: preparing|### Ideas you can continue|## Actions and results/);
+
+  const missing = structuredClone(selected);
+  missing.observation = {
+    ...selected.observation,
+    state: "idea-not-found",
+    candidates: [{ id: "01M36QGPNTXEPP61DA4KP4AVZF", state: "preparing" }],
+  };
+  delete missing.observation.selectedIdea;
+  const missingOutput = capture();
+  render(missing, false, missingOutput.io);
+  assert.match(missingOutput.logs[0], /requested idea was not found/);
+  assert.match(missingOutput.logs[0], /### Ideas you can continue/);
+});
+
+test("retains fetch failures and scaffold results while hiding aligned fetch successes", () => {
+  const report = envelope();
+  report.observation.state = "idea-created";
+  delete report.observation.ideas;
+  report.observation.createdIdea = { id: "01M36QGPNTXEPP61DA4KP4AVZF", state: "preparing" };
+  report.outcomes = [
+    { type: "fetch-primary", status: "success", summary: "Fetched primary." },
+    { type: "create-idea-scaffold", status: "success", summary: "Created idea." },
+  ];
+  const success = capture();
+  render(report, false, success.io);
+  assert.match(success.logs[0], /The repository was ready before creation/);
+  assert.match(success.logs[0], /- success \[create-idea-scaffold\]: Created idea\./);
+  assert.doesNotMatch(success.logs[0], /Fetched primary/);
+
+  report.observation.state = "repository-sync-required";
+  report.observation.problems = [{ type: "primary-fetch-failed", summary: "Network error." }];
+  report.outcomes = [{ type: "fetch-primary", status: "failure", summary: "Network error." }];
+  const failure = capture();
+  render(report, false, failure.io);
+  assert.match(failure.logs[0], /- failure \[fetch-primary\]: Network error\./);
+
+  report.observation.problems = [{ type: "primary-behind", summary: "Primary moved." }];
+  report.outcomes = [{ type: "fetch-primary", status: "success", summary: "Fetched a newer primary." }];
+  const behind = capture();
+  render(report, false, behind.io);
+  assert.match(behind.logs[0], /- success \[fetch-primary\]: Fetched a newer primary\./);
+
+  report.observation.state = "idea-create-failed";
+  report.observation.problems = [];
+  report.outcomes = [
+    { type: "fetch-primary", status: "success", summary: "Fetched primary." },
+    { type: "create-idea-scaffold", status: "failure", summary: "Write failed." },
+  ];
+  const createFailure = capture();
+  render(report, false, createFailure.io);
+  assert.match(createFailure.logs[0], /creating the idea failed/);
+  assert.match(createFailure.logs[0], /- failure \[create-idea-scaffold\]: Write failed\./);
+  assert.doesNotMatch(createFailure.logs[0], /Fetched primary/);
 });
 
 test("renders observed problems under their own level-three heading", () => {
