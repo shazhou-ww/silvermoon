@@ -2,3 +2,4 @@ version: 1
 id: 01M3KG00VJ8AV81FG5CZSK4A5H
 alias: snapshot-only-check
 approvedRevision: 196189b3d504329ecaa8ed3698984c49f578c2d1
+implementationAcceptedRevision: f466ed4c7a44e7c2ac05b8b10004392b9dec6850
