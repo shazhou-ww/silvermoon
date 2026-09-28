@@ -170,8 +170,8 @@ ancestry 同步推演，也不输出任务导航或修复步骤。保留现有�
   再检查本次 fetch 解析出的 immutable primary commit；本地 HEAD 上与定位
   primary 无关的 skill/idea 问题不得提前阻止 remote snapshot 的检查。
 
-任何目标解析、配置定位、fetch 或 snapshot 检查失败，均应以具体 finding 报告
-“无法验证”，而非误报有效。`check` 不修改 caller 的 worktree、index 或 branch；
+任何目标解析、配置定位、fetch 或 snapshot 检查失败，均应以 observation problem
+报告“无法验证”，而非误报有效。`check` 不修改 caller 的 worktree、index 或 branch；
 `--remote` fetch 仍可能写入 Git object database，但验证输出不把它表述为对话
 outcome。无参数 `check` 的 HEAD 与 hook 所用的 staged 目标必须在帮助和文档中
 清楚区分。
@@ -184,7 +184,8 @@ outcome。无参数 `check` 的 HEAD 与 hook 所用的 staged 目标必须在�
 
 ### Dialogue JSON envelope
 
-`whats-next` 与 `create-idea` 的 `--json` 使用同一个顶层结构：
+三个命令的 `--json` 都以 `intention` 与 `observation` 为公共部分；
+`whats-next` 与 `create-idea` 在此基础上使用同一个对话 envelope：
 
 ```json
 {
@@ -201,9 +202,9 @@ outcome。无参数 `check` 的 HEAD 与 hook 所用的 staged 目标必须在�
 - `intention.command` 是 `whats-next` 或 `create-idea`；
   `intention.args` 是展开默认值并规范化后的目标与行为参数。`--json` 只选择输出
   格式，不属于业务意图，不能出现在 args 中。
-- `observation` 是两个对话命令共享的 repository observation。它记录观察对象、成功
-  读取的 Silvermoon 配置、idea inventory 和当前 problems；相同 repository
-  version 不因调用命令不同而产生不同 observation 形状。
+- `observation` 复用项目整备阶段的累进类型：root、version、成功读取的配置、
+  idea inventory 和当前 problems 采用同一字段语义。对话命令进一步进入仓库
+  整备与任务导航；`check` 只走项目整备，不复用其后两层的状态。
 - `outcomes` 按执行顺序记录本次调用实际尝试的高层 repo 副作用操作，例如
   `fetch-primary` 或 `create-idea-scaffold`。每项只有稳定 `type`、
   `success | failure` 状态和使用 effective language 的 `summary`；summary 说明
@@ -215,31 +216,50 @@ outcome。无参数 `check` 的 HEAD 与 hook 所用的 staged 目标必须在�
 
 ### Check JSON and exit status
 
-`check --json` 直接序列化一个独立的验证结果，例如：
+`check --json` 复用公共 `intention / observation`，但没有对话命令的
+`outcomes / instructions`，例如：
 
 ```json
 {
-  "target": { "type": "staged" },
-  "valid": false,
-  "findings": [
-    {
-      "code": "config.missing",
-      "path": ".silvermoon/config.yaml",
-      "message": "Missing Silvermoon configuration"
-    }
-  ]
+  "intention": {
+    "command": "check",
+    "args": { "target": { "type": "staged" } }
+  },
+  "observation": {
+    "state": "project-setup-required",
+    "observedThrough": "version",
+    "root": "D:\\Code\\silvermoon",
+    "version": { "type": "staged" },
+    "problems": [{
+      "type": "config-missing",
+      "summary": "Missing Silvermoon configuration (.silvermoon/config.yaml)"
+    }]
+  }
 }
 ```
 
-`target` 是规范化的目标：`head`、`staged`、`worktree`、`commit` 或 `remote`；
-`head`、`commit` 和 `remote` 目标都以 `resolvedCommit` 记录成功解析出的精确
-commit，无法解析时为 `null`；`commit` 还保留请求的 `revision`。`valid` 只有在
-完整检查目标且没有
-findings 时才为 `true`；`findings` 按稳定顺序列出可操作的验证问题和无法验证
-的原因，成功时为空。该结果不包含 `outcomes` 或 `instructions`；human-readable
-输出只显示目标、结论和逐项 findings。JSON 与文本必须来自同一次检查结果，不
-分别做判断。`check --remote` 的 fetch 错误是 finding；不要输出一个成功形状的
-结果或把无法验证当作通过。
+`intention.args.target` 规范化为 `head`、`staged`、`worktree`、`commit` 或
+`remote`；`--commit` 请求的原始 revision 只留在 intention。HEAD 和本地 commit
+成功解析后，observation.version 为 `{ type: "commit", commit: "<oid>" }`；
+remote fetch 成功则为 `{ type: "remote", commit: "<oid>" }`。解析或 fetch
+失败时相应的 commit 为 `null`，原因在 problems 中。staged 与 worktree 的
+version 仅含其 type。`check` 的 observation 是单独的判别 union：
+
+- 项目有问题时，复用对话命令的 `project-setup-required` 累进 variant，字段
+  随 `observedThrough` 保证可靠性，problems 非空；不凭空制造 configuration 或
+  idea 零值。
+- 已完成所选 snapshot 的全部项目检查时，使用新的 `project-ready` 状态，包含
+  root、version、resolved configuration、idea summary 和空 problems；不称其为
+  `task-pending` 或 `idle`，因为并未检查当前 checkout 与 primary 的同步关系。
+- 目标解析、fetch 或 snapshot materialization 失败，无法可靠取得要检查的
+  版本时，使用 `check-unavailable` 状态，报告已知 root、目标 version（commit
+  可为 null）与非空 problems，不伪装成项目配置错误或成功的检查。
+
+只有 `project-ready` 意味着有效检查且可以放行 hook；`project-setup-required`
+或 `check-unavailable` 都不放行。human-readable 输出只显示目标、结论和
+problems，不额外给动作段或下一步建议。JSON 与文本必须来自同一次检查结果，
+不分别做判断。`check --remote` 的 fetch 错误是 `check-unavailable` problem；
+不要输出一个成功形状的结果或把无法验证当作通过。
 
 对话命令的退出码描述 Silvermoon 是否成功形成可信对话：
 
@@ -250,14 +270,14 @@ findings 时才为 `true`；`findings` 按稳定顺序列出可操作的验证�
 - `1`：Silvermoon 内部故障使其无法形成完整可信 envelope。
 - `2`：未知命令、缺少必填参数或互斥参数等 CLI 用法错误。
 
-`check` 的退出码则用于 hook/CI：`0` 表示目标完整验证且有效；`1` 表示存在
-findings，包括目标无效、无法解析、无法读取、网络失败或内部故障，必须 fail
-closed；`2` 表示 CLI 用法错误。可解释故障尽可能输出 `valid: false` 与
-findings；内部故障即使无法形成可靠 JSON 也不得返回 `0`。不要让 hook 通过
+`check` 的退出码则用于 hook/CI：`0` 仅对应 `project-ready`；`1` 对应
+`project-setup-required`、`check-unavailable` 或内部故障，必须 fail closed；
+`2` 表示 CLI 用法错误。可解释故障尽可能输出含具体 problems 的 observation；
+内部故障即使无法形成可靠 JSON 也不得返回 `0`。不要让 hook 通过
 解析文本或仅判断是否成功生成报告来决定是否放行。
 
-对话 JSON 不包含顶层 `ok`。程序不能用 problems 是否为空或 outcome 是否失败
-推断对话命令的进程退出码。
+JSON 不包含顶层 `ok`。程序不能用 problems 是否为空或 outcome 是否失败推断
+对话命令的进程退出码；`check` 则以 state 判断是否验证通过。
 
 统一 observation 使用以下形状：
 
@@ -308,8 +328,9 @@ findings；内部故障即使无法形成可靠 JSON 也不得返回 `0`。不�
     形成，并包含非空 problems。
   - `task-pending` 和 `idle` 要求全部观察字段完整且 problems 为空；idle 还保证
     active idea 数量为零。
-- 两个对话命令的 `version` 是 `{ "type": "worktree" }`；指定 commit 或 remote
-  的检查目标及其解析出的 commit 仅存在于独立的 `check` 结果中。
+- 两个对话命令的 `version` 是 `{ "type": "worktree" }`；`check` 复用
+  version 字段表达 staged/worktree 或已解析的 commit/remote，但不会因此推断
+  后续的仓库同步状态。
 - `configuration` 包含 primary repository、primary branch 和按
   idea/project/user/default 优先级解析出的非空 preferred language；配置缺失、
   无效或 schema 不兼容时不产生 configuration 字段。
@@ -344,7 +365,7 @@ Agent 无需了解 JSON schema、猜测仓库状态或每完成一项建议就�
 安全推进完当前状态；它必须包含必要的 hygiene 摘要、
 分支与提交关系、发布保护值、world entry、decision field、revision、导航 option
 及命令，并在不应继续时明确停止条件和恢复条件。`check` 不使用上述对话模板，
-默认只显示检查目标、通过/未通过的结论和 findings。
+默认只显示检查目标、通过/未通过的结论和 problems。
 
 YAML 不在公共输出中：它没有提供独立能力，却引入隐式类型、缩进、多行字符串和
 解析器差异。
@@ -362,8 +383,8 @@ YAML 不在公共输出中：它没有提供独立能力，却引入隐式类型
   idea。
 - 两个对话命令统一的 intention/observation/outcomes/instructions envelope、
   轻量 Markdown renderer 与空 outcomes 段落省略规则。
-- `check` 的独立目标验证、hook/CI 退出码、简洁人类输出与 `{target, valid,
-  findings}` JSON 结果。
+- `check` 的独立目标验证、hook/CI 退出码、简洁人类输出与复用
+  `intention / observation` 公共部分的 JSON 结果。
 - 四状态 whats-next observation、完整 problems/instructions 报告，以及大型
   worktree 的有界 summary。
 - 项目就绪报告与 lifecycle/hygiene action 之间的统一边界。
@@ -386,7 +407,7 @@ YAML 不在公共输出中：它没有提供独立能力，却引入隐式类型
 
 - 同一次对话报告中的 intention、observation、outcomes 和 instructions 必须来自
   同一次不可混用的调用；instructions 不得引用 observation 中不存在的陈旧事实。
-- `check` 的结论与 findings 必须来自同一精确目标快照；无法验证时绝不让 hook
+- `check` 的结论与 problems 必须来自同一精确目标快照；无法验证时绝不让 hook
   以退出码 `0` 放行。
 - 层与层之间严格短路；任何路径都不能为到达 idea action 而跳过项目或仓库修复。
 - 保留未知与并发工作；不 force-push，不静默改写历史，不自动放弃本地修改。
