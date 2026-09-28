@@ -36,7 +36,8 @@ export interface Outcome {
 }
 
 /**
- * 三个公共命令共享的内部对话 envelope。
+ * whats-next 和 create-idea 共享的内部对话 envelope。
+ * 默认文本在 outcomes 为空时省略整个动作与结果段落；JSON 仍保留空数组。
  */
 export interface SilvermoonEnvelope<TIntention> {
   intention: TIntention;
@@ -52,27 +53,9 @@ export type SilvermoonState =
   | "idle";
 
 /**
- * 被观察的 repository version。
- *
- * commit.commit 是实际解析出的 commit；调用者请求的 revision 只存在于 intention。
- * remote.commit 是本次 remote observation 得到的 primary commit。
- * 无法解析或 fetch 时 commit 为 null，原因记录在 problems。
+ * 两个对话命令观察当前 worktree；检查器的目标版本不属于此 union。
  */
-export type ObservationVersion =
-  | {
-      type: "worktree";
-    }
-  | {
-      type: "staged";
-    }
-  | {
-      type: "commit";
-      commit: string | null;
-    }
-  | {
-      type: "remote";
-      commit: string | null;
-    };
+export type ObservationVersion = { type: "worktree" };
 
 /**
  * 当前 observation 中成功读取并理解的 Silvermoon project configuration。
@@ -213,7 +196,7 @@ export interface IdleObservation {
 }
 
 /**
- * 所有命令共享、按 Silvermoon 递进状态判别的 repository observation。
+ * 两个对话命令共享、按 Silvermoon 递进状态判别的 repository observation。
  *
  * problems 只包含项目整备与仓库整备问题。Idea 的存在、数量和 lifecycle state
  * 是正常事实，不作为 problem。
@@ -268,24 +251,52 @@ export type CheckTarget =
       type: "worktree";
     };
 
-export interface CheckIntention {
-  command: "check";
-  args: {
-    /**
-     * 未指定 target flag 时，展开为 { type: "head" }。
-     */
-    target: CheckTarget;
-  };
+export type CheckResultTarget =
+  | {
+      type: "head";
+      resolvedCommit: string | null;
+    }
+  | {
+      type: "remote";
+      resolvedCommit: string | null;
+    }
+  | {
+      type: "commit";
+      revision: string;
+      resolvedCommit: string | null;
+    }
+  | {
+      type: "staged";
+    }
+  | {
+      type: "worktree";
+    };
+
+export interface CheckFinding {
+  code: string;
+  path?: string;
+  message: string;
 }
 
-export type CheckOutput = SilvermoonEnvelope<CheckIntention>;
+/**
+ * 独立的项目契约验证结果；不属于对话 envelope。
+ * valid 仅在目标被完整验证且 findings 为空时为 true。
+ */
+export interface CheckOutput {
+  target: CheckResultTarget;
+  valid: boolean;
+  findings: CheckFinding[];
+}
 
 /**
- * Exit status:
+ * Conversation commands:
  *
  * 0: Silvermoon formed a complete, trustworthy conversation envelope.
  * 1: An internal Silvermoon failure prevented a trustworthy envelope.
  * 2: Invalid CLI usage prevented a valid intention from being formed.
  *
- * Observation problems and failed outcomes do not change exit status 0.
+ * check:
+ * 0: The requested snapshot was completely checked and is valid.
+ * 1: Invalid snapshot, inability to verify, or internal failure (fail closed).
+ * 2: Invalid CLI usage.
  */
