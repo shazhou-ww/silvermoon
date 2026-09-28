@@ -133,6 +133,7 @@ test("[unrelated-active-create] [create-no-remote] creates an exact scaffold wit
   assert.match(report.outcomes[0].summary, new RegExp(createdId));
   assert.match(report.instructions, new RegExp(ideaPaths(createdId).ideaDocumentPath));
   assert.match(report.instructions, /en-US/);
+  assert.doesNotMatch(report.instructions, /道心|内景|现世/);
 
   const paths = ideaPaths(createdId);
   for (const [path, source] of [
@@ -218,6 +219,8 @@ test("normalizes and persists an explicit idea language", async () => {
     report.observation.configuration.preferredLanguage,
     "zh-CN",
   );
+  assert.match(report.instructions, /理想契约/);
+  assert.doesNotMatch(report.instructions, /道心|内景|现世/);
   assert.equal(
     await readFile(
       join(repository.root, ...ideaPaths(createdId).statusPath.split("/")),

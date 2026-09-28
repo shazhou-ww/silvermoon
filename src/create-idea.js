@@ -332,7 +332,7 @@ export async function createIdea({
         localize(
           observed.language,
           `Use ${observed.language} for natural-language content while describing the requested Ideal World in ${paths.ideaDocumentPath}; keep the stable IDs and placeholders in ${paths.implementationDocumentPath}, ${paths.deploymentDocumentPath}, and ${paths.ledgerPath} synchronized.`,
-          `使用 ${observed.language} 在 ${paths.ideaDocumentPath} 中描述请求的道心，并保持 ${paths.implementationDocumentPath}、${paths.deploymentDocumentPath} 与 ${paths.ledgerPath} 中的稳定 ID 和占位同步。`,
+          `使用 ${observed.language} 在 ${paths.ideaDocumentPath} 中描述请求的理想契约，并保持 ${paths.implementationDocumentPath}、${paths.deploymentDocumentPath} 与 ${paths.ledgerPath} 中的稳定 ID 和占位同步。`,
         ),
       );
     } catch (caught) {
