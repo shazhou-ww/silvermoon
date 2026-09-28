@@ -67,3 +67,13 @@ e2e 1/1；package contents、skill 同步及 Markdown lint 通过）。
 `whats-next` 返回 `task-pending`、空 problems、成功的 `fetch-primary` outcome，
 并要求验收 deployment revision
 `b4841f50189b761ee2afddae1d21c680b353e29e`。
+
+双语标题部署复验：configured primary tip 为
+`f57048a7ca65d8fd23636d1dd1bfab67f5fb29ec`，包含实现 commit
+`da1acf681a0115450829d0c16cef7b0ecea6eb7e` 及验收 commit
+`f57048a7ca65d8fd23636d1dd1bfab67f5fb29ec`。
+GitHub Actions [CI run 36393042364](https://github.com/shazhou-ww/silvermoon/actions/runs/36393042364)
+在该精确 tip 上以 `completed/success` 结束，8 个 jobs 全部成功。
+发布后 `whats-next` 返回 `task-pending`、空 problems、成功的
+`fetch-primary` outcome，并要求验收 deployment revision
+`0017fb2214f96f5a73523780c56d34cc101efba6`。
