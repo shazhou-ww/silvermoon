@@ -25,8 +25,10 @@ failures, package-content checks, installed-package smoke tests, and skill sync.
 
 ### Deployment steps
 
-- [ ] **D-S01:** Step title
+- [ ] **D-S01:** Establish the exact primary deployment
+- [ ] **D-S02:** Verify behavior from a clean clone
 
 ### Deployment acceptance criteria
 
-- [ ] **D-AC01:** Criterion title
+- [ ] **D-AC01:** Primary contains the accepted implementation
+- [ ] **D-AC02:** Published source reproduces snapshot-only validation
