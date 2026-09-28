@@ -28,10 +28,20 @@ contents, installed-package smoke, and skill synchronization.
 
 ### Deployment steps
 
-- [ ] **D-S01:** Establish the exact primary deployment
-- [ ] **D-S02:** Verify optimized behavior from a clean clone
+- [x] **D-S01:** Establish the exact primary deployment
+- [x] **D-S02:** Verify optimized behavior from a clean clone
 
 ### Deployment acceptance criteria
 
-- [ ] **D-AC01:** Primary contains the accepted performance implementation
-- [ ] **D-AC02:** Published source reproduces the optimized observation
+- [x] **D-AC01:** Primary contains the accepted performance implementation
+- [x] **D-AC02:** Published source reproduces the optimized observation
+
+Primary proof: `origin/main` resolved to
+`bae91edfe778a259a4520473f6a2f0013c77a15e`; clean-clone ancestry checks
+confirmed implementation commit `7f6d202f7d3937a1ecbf2a0e4d42ef1bc65b06e7`
+and acceptance commit `14ac4b6cbe5e62accc0a724c110a9603492ce982`.
+Clean-clone proof: locked installation succeeded, focused tests passed 28/28,
+and `check --remote` validated the exact primary tip. A real tracking-branch
+`whats-next --trace deployment-proof` created the ignored
+`deployment-proof.trace.jsonl`, recorded four layout Git commands and one
+network `fetch`, and left `git status --porcelain` empty. The clone was removed.
