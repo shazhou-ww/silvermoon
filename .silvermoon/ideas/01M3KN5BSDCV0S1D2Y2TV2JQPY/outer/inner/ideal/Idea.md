@@ -37,6 +37,32 @@
   `idea-not-found`，直接由各自 `state` 判别，不额外叠加 `view`。
   `create-idea` 也使用自己的就绪结果类型。
 
+| 意图 | 可出现的 observation state | 就绪后的专属事实 |
+| --- | --- | --- |
+| `check` | `project-setup-required`、`check-unavailable`、`project-ready` | 经验证的目标快照与结论；不输出对话建议 |
+| `create-idea` | `project-setup-required`、`repository-sync-required`、`idea-created`、`idea-create-failed` | 成功时是新 idea；尝试创建失败时是可靠的失败结果 |
+| 裸 `whats-next` | `project-setup-required`、`repository-sync-required`、`navigation-ready` | 全局状态计数、全部活跃候选（可为空） |
+| 指定 idea 的 `whats-next` | `project-setup-required`、`repository-sync-required`、`idea-selected`、`idea-not-found` | 命中时为所选 idea；未命中时为活跃候选 |
+
+`project-setup-required` 沿用已有 `observedThrough` 累进保证；
+`repository-sync-required` 仍报告全部已知问题和整备建议，不生成尚未可信的
+导航或创建结果。就绪分支复用可靠的 root、version、resolved configuration
+和空 problems，但只携带该意图自己的任务事实：
+
+- `navigation-ready.ideas` 含五种状态的 counts 与全部 active ideas；
+  取代裸调用的 `task-pending` / `idle`，空候选由 `activeIdeas: []` 明示。
+- `idea-selected.selectedIdea` 含 ID、可选 alias、五种状态之一；不携带全局
+  `ideas`。指定终态 idea 也能够如实说明状态和下一步 review。
+- `idea-not-found` 只含活跃候选，不含 `selectedIdea`；请求的 selector 已在
+  `intention.args.idea` 中，不以猜测或空对象表示匹配成功。instructions 同时
+  给出重新选择或讨论新 idea 的选项。
+- `idea-created.createdIdea` 至少含已成功创建的 ID 与初始状态 `preparing`；
+  不把创建前 inventory 当成创建后观察。该结果中的仓库就绪只表示**创建前**
+  已通过检查，不能断言创建后 worktree 仍干净；文件创建属于 outcomes。
+- `idea-create-failed` 仅用于项目及仓库整备通过、实际尝试 scaffold 后失败，
+  不携带 `createdIdea`。失败 outcome 说明错误、可能保留的路径与清理结果，
+  instructions 说明保护现存工作和恢复条件。整备阶段阻止创建时不使用该状态。
+
 ## Desired outcome
 
 - 项目和仓库整备未通过时，两种调用共用可信的整备观察和全部 problems，
@@ -84,9 +110,3 @@
 - 当前没有外部 JSON 消费者；直接升级现有输出即可，不新增版本选项，也不保留
   旧形状的迁移兼容层。公开的 `schema/v1` 是配置和状态文件 schema，不是对话
   JSON schema；参考文档只需准确说明新契约，无须记录迁移历史。
-
-## Open questions
-
-- `create-idea` 的失败有文件系统失败、ID 冲突重试耗尽和不完整清理等情形；
-  失败 observation 如何表达可靠的已知事实与恢复条件，而不增加虚假的
-  `createdIdea`？是否需要区分“创建未尝试”与“尝试后失败”？
