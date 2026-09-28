@@ -92,3 +92,13 @@ GitHub Actions [CI run 36393042364](https://github.com/shazhou-ww/silvermoon/act
 发布后 `whats-next` 返回 `task-pending`、空 problems、成功的
 `fetch-primary` outcome，并要求验收 deployment revision
 `0017fb2214f96f5a73523780c56d34cc101efba6`。
+
+工具无关检查部署复验：configured primary tip 为
+`0a4b480b7da2fa6dd2137d5c952ff9470ce8b1d0`，包含实现 commit
+`79b97a1fd6a9cc0e70731791d0d1bccae698f0ff` 和 implementation
+acceptance commit `0a4b480b7da2fa6dd2137d5c952ff9470ce8b1d0`。
+GitHub Actions [CI run 36401383016](https://github.com/shazhou-ww/silvermoon/actions/runs/36401383016)
+在该精确 tip 上以 `completed/success` 结束，8 个 jobs 全部成功。
+clean checkout 的 `whats-next` 返回 `task-pending`、空 problems、成功的
+`fetch-primary` outcome，并要求验收 deployment revision
+`79b67ed13e5fc0fbfd03896a9bb2f8ed3ad2a96a`。
