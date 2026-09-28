@@ -29,15 +29,15 @@
       "const": true
     },
     "approvedRevision": {
-      "description": "Accepted Ideal World (道心) tree object ID.",
+      "description": "Accepted Ideal World (理想世界) tree object ID.",
       "$ref": "definitions.schema.json#/$defs/objectId"
     },
     "implementationAcceptedRevision": {
-      "description": "Accepted Inner World (内景) tree object ID.",
+      "description": "Accepted Inner World (主体世界) tree object ID.",
       "$ref": "definitions.schema.json#/$defs/objectId"
     },
     "deploymentAcceptedRevision": {
-      "description": "Accepted Outer World (现世) tree object ID.",
+      "description": "Accepted Outer World (现实世界) tree object ID.",
       "$ref": "definitions.schema.json#/$defs/objectId"
     }
   }

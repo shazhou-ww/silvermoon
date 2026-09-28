@@ -84,15 +84,16 @@ tip. When those checks pass, it creates one untracked idea scaffold with
 `Idea.md`, `Implementation.md`, `Deployment.md`, `ledger.md`, and
 `status.yaml`. It never stages, commits, pushes, or records a human decision.
 
-Replace the guidance in `Idea.md` with the desired outcome, scope, and
-constraints. Keep implementation and deployment placeholders synchronized
-until their lifecycle phases. Review every generated path, validate the complete
-candidate, and commit and publish the prepared idea to the configured primary
-through the repository's normal non-force publication path. Verify it is
-reachable from refreshed primary before asking the user to review or approve
-the exact reported ideal revision. If publication requires a pull request, wait
-until it reaches primary; do not ask for approval of an unpublished local
-candidate. Publication does not itself approve the idea.
+Replace the guidance in the `Idea.md` ideal contract with the desired outcome,
+scope, and constraints. Keep the `Implementation.md` inner implementation
+contract and `Deployment.md` real-world deployment contract placeholders
+synchronized until their lifecycle phases. Review every generated path,
+validate the complete candidate, and commit and publish the prepared idea to
+the configured primary through the repository's normal non-force publication
+path. Verify it is reachable from refreshed primary before asking the user to
+review or approve the exact reported ideal revision. If publication requires a
+pull request, wait until it reaches primary; never ask for approval of an
+unpublished local candidate. Publication does not itself approve the idea.
 
 Then ask what comes next with the generated ULID or an exact unique alias:
 

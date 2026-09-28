@@ -114,10 +114,11 @@ Each idea has three canonical entries:
             └── Idea.md
 ```
 
-`Idea.md` is the Ideal World's ideal contract, `Implementation.md` the Inner
-World's inner implementation contract, and `Deployment.md` the Outer World's
-real-world deployment contract. Supporting files belong to one of these worlds
-and never define a second contract.
+`Idea.md` is the Ideal World (理想世界) ideal contract, `Implementation.md` is
+the Inner World (主体世界) inner implementation contract, and `Deployment.md`
+is the Outer World (现实世界) real-world deployment contract. Each world may
+contain supporting files, but those artifacts serve the same-world entry and
+never define a second contract.
 
 In `Implementation.md` and `Deployment.md`, put plans under `## Steps` and
 outcomes under `## Acceptance criteria`. Use stable level-three IDs: `I-Sxx`,

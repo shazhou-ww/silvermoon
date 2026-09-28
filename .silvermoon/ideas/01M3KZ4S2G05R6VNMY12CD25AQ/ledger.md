@@ -31,7 +31,7 @@ skill 同步检查通过。另修复 README `--out` integration test 在并行�
 
 ### Deployment steps
 
-- [ ] **D-S01:** 发布稳定的 create-idea 契约
+- [x] **D-S01:** 发布稳定的 create-idea 契约
 - [ ] **D-S02:** 验证安装包的三类输出路径
 
 ### Deployment acceptance criteria
@@ -39,3 +39,9 @@ skill 同步检查通过。另修复 README `--out` integration test 在并行�
 - [ ] **D-AC01:** primary 上的候选可验证
 - [ ] **D-AC02:** 安装后的 create-idea 遵守收紧契约
 - [ ] **D-AC03:** whats-next 行为没有回归
+
+发布证据：configured primary `origin/main` 已发布 commit
+`2f3d4cde6fa960d7f41a18f868e6552c27189d28`，对应稳定 deployment
+revision `60657f64def499931c96079cf0bf23266c5c5c95`。`silvermoon check
+--remote --json` 对该 commit 返回 `project-ready` 且 `problems` 为空；
+指定本 idea 的 `whats-next --json` 返回 `deploying` 和上述 revision。

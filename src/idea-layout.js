@@ -338,19 +338,19 @@ export async function inspectIdeaLayout({
     const worlds = {
       idealRevision: {
         name: "Ideal World",
-        displayName: "道心",
+        displayName: "理想世界",
         path: paths.idealPath,
         documentPath: paths.ideaDocumentPath,
       },
       implementationRevision: {
         name: "Inner World",
-        displayName: "内景",
+        displayName: "主体世界",
         path: paths.innerPath,
         documentPath: paths.implementationDocumentPath,
       },
       deploymentRevision: {
         name: "Outer World",
-        displayName: "现世",
+        displayName: "现实世界",
         path: paths.outerPath,
         documentPath: paths.deploymentDocumentPath,
       },

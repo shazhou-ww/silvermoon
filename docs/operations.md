@@ -83,9 +83,10 @@ observation.
 
 ## Author World Contracts
 
-`Idea.md` is the Ideal World entry. `Implementation.md` and `Deployment.md`
-contain `## Steps` and `## Acceptance criteria`. Every item uses a stable
-level-three heading:
+`Idea.md` is the Ideal World's ideal contract. `Implementation.md` is the
+Inner World's inner implementation contract, and `Deployment.md` is the Outer
+World's real-world deployment contract. The latter two contain `## Steps` and
+`## Acceptance criteria`. Every item uses a stable level-three heading:
 
 - implementation steps: `I-Sxx`
 - implementation criteria: `I-ACxx`
