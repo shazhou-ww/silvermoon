@@ -36,43 +36,39 @@ export interface Outcome {
 }
 
 /**
- * 三个公共命令共享的内部对话 envelope。
+ * 所有公共命令的 JSON 共用意图与观察两层。
  */
-export interface SilvermoonEnvelope<TIntention> {
+export interface SilvermoonReport<TIntention, TObservation> {
   intention: TIntention;
-  observation: Observation;
+  observation: TObservation;
+}
+
+/**
+ * whats-next 和 create-idea 的对话 envelope。
+ * 默认文本在 outcomes 为空时省略整个动作与结果段落；JSON 仍保留空数组。
+ */
+export interface SilvermoonEnvelope<TIntention, TObservation>
+  extends SilvermoonReport<TIntention, TObservation> {
   outcomes: Outcome[];
   instructions: string;
 }
 
-export type SilvermoonState =
+export type DialogueState =
   | "project-setup-required"
   | "repository-sync-required"
   | "task-pending"
   | "idle";
 
 /**
- * 被观察的 repository version。
- *
- * commit.commit 是实际解析出的 commit；调用者请求的 revision 只存在于 intention。
- * remote.commit 是本次 remote observation 得到的 primary commit。
- * 无法解析或 fetch 时 commit 为 null，原因记录在 problems。
+ * 对话命令观察当前 worktree。check 的 head/commit/remote 只报告解析出的 commit；
+ * 用户请求的 revision 留在 intention。
  */
-export type ObservationVersion =
-  | {
-      type: "worktree";
-    }
-  | {
-      type: "staged";
-    }
-  | {
-      type: "commit";
-      commit: string | null;
-    }
-  | {
-      type: "remote";
-      commit: string | null;
-    };
+export type WorktreeVersion = { type: "worktree" };
+export type CheckVersion =
+  | { type: "worktree" }
+  | { type: "staged" }
+  | { type: "commit"; commit: string | null }
+  | { type: "remote"; commit: string | null };
 
 /**
  * 当前 observation 中成功读取并理解的 Silvermoon project configuration。
@@ -116,8 +112,7 @@ export interface IdeaStateCounts {
 
 /**
  * 当前 observed version 中的 idea inventory。
- *
- * 无法可靠检查 idea layout 时，Observation.ideas 为 null，而不是返回虚假的零值。
+ * 无法可靠检查 idea layout 时不产生 ideas 字段，而不是返回虚假的零值。
  */
 export interface IdeaSummary {
   counts: IdeaStateCounts;
@@ -144,7 +139,7 @@ export interface IdleIdeaSummary {
  * observedThrough 表示本次调用已经可靠形成的最深 observation，不限制 problems
  * 一次报告所有可独立观察的问题。
  */
-export type ProjectSetupRequiredObservation =
+export type ProjectSetupRequiredObservation<V> =
   | {
       state: "project-setup-required";
       observedThrough: "root";
@@ -155,14 +150,14 @@ export type ProjectSetupRequiredObservation =
       state: "project-setup-required";
       observedThrough: "version";
       root: AbsolutePath;
-      version: ObservationVersion;
+      version: V;
       problems: NonEmptyArray<Problem>;
     }
   | {
       state: "project-setup-required";
       observedThrough: "configuration";
       root: AbsolutePath;
-      version: ObservationVersion;
+      version: V;
       configuration: SilvermoonConfiguration;
       problems: NonEmptyArray<Problem>;
     }
@@ -170,11 +165,19 @@ export type ProjectSetupRequiredObservation =
       state: "project-setup-required";
       observedThrough: "ideas";
       root: AbsolutePath;
-      version: ObservationVersion;
+      version: V;
       configuration: SilvermoonConfiguration;
       ideas: IdeaSummary;
       problems: NonEmptyArray<Problem>;
     };
+
+export interface ProjectReadyFields<V> {
+  root: AbsolutePath;
+  version: V;
+  configuration: SilvermoonConfiguration;
+  ideas: IdeaSummary;
+  problems: [];
+}
 
 /**
  * 项目已整备，但 repository 尚未同步。
@@ -182,7 +185,7 @@ export type ProjectSetupRequiredObservation =
 export interface RepositorySyncRequiredObservation {
   state: "repository-sync-required";
   root: AbsolutePath;
-  version: ObservationVersion;
+  version: WorktreeVersion;
   configuration: SilvermoonConfiguration;
   ideas: IdeaSummary;
   problems: NonEmptyArray<Problem>;
@@ -191,38 +194,51 @@ export interface RepositorySyncRequiredObservation {
 /**
  * 项目和 repository 均已整备，当前有 task 需要处理。
  */
-export interface TaskPendingObservation {
+export interface TaskPendingObservation extends ProjectReadyFields<WorktreeVersion> {
   state: "task-pending";
-  root: AbsolutePath;
-  version: ObservationVersion;
-  configuration: SilvermoonConfiguration;
-  ideas: IdeaSummary;
-  problems: [];
 }
 
 /**
  * 项目和 repository 均已整备，裸导航时没有 active idea。
  */
-export interface IdleObservation {
+export interface IdleObservation extends ProjectReadyFields<WorktreeVersion> {
   state: "idle";
-  root: AbsolutePath;
-  version: ObservationVersion;
-  configuration: SilvermoonConfiguration;
   ideas: IdleIdeaSummary;
-  problems: [];
 }
 
 /**
- * 所有命令共享、按 Silvermoon 递进状态判别的 repository observation。
+ * 两个对话命令共享、按 Silvermoon 递进状态判别的 repository observation。
  *
  * problems 只包含项目整备与仓库整备问题。Idea 的存在、数量和 lifecycle state
  * 是正常事实，不作为 problem。
  */
-export type Observation =
-  | ProjectSetupRequiredObservation
+export type DialogueObservation =
+  | ProjectSetupRequiredObservation<WorktreeVersion>
   | RepositorySyncRequiredObservation
   | TaskPendingObservation
   | IdleObservation;
+
+/**
+ * check 完成项目整备检查后立即停止；不声称 repository 已同步或有待办任务。
+ */
+export interface CheckProjectReadyObservation extends ProjectReadyFields<CheckVersion> {
+  state: "project-ready";
+}
+
+/**
+ * 目标无法解析、fetch 或读取时，没有可信的候选内容可供项目检查。
+ */
+export interface CheckUnavailableObservation {
+  state: "check-unavailable";
+  root: AbsolutePath;
+  version: CheckVersion;
+  problems: NonEmptyArray<Problem>;
+}
+
+export type CheckObservation =
+  | ProjectSetupRequiredObservation<CheckVersion>
+  | CheckProjectReadyObservation
+  | CheckUnavailableObservation;
 
 export interface WhatsNextIntention {
   command: "whats-next";
@@ -235,7 +251,8 @@ export interface WhatsNextIntention {
   };
 }
 
-export type WhatsNextOutput = SilvermoonEnvelope<WhatsNextIntention>;
+export type WhatsNextOutput =
+  SilvermoonEnvelope<WhatsNextIntention, DialogueObservation>;
 
 export interface CreateIdeaIntention {
   command: "create-idea";
@@ -248,7 +265,8 @@ export interface CreateIdeaIntention {
   };
 }
 
-export type CreateIdeaOutput = SilvermoonEnvelope<CreateIdeaIntention>;
+export type CreateIdeaOutput =
+  SilvermoonEnvelope<CreateIdeaIntention, DialogueObservation>;
 
 export type CheckTarget =
   | {
@@ -270,22 +288,24 @@ export type CheckTarget =
 
 export interface CheckIntention {
   command: "check";
-  args: {
-    /**
-     * 未指定 target flag 时，展开为 { type: "head" }。
-     */
-    target: CheckTarget;
-  };
+  args: { target: CheckTarget };
 }
 
-export type CheckOutput = SilvermoonEnvelope<CheckIntention>;
+/**
+ * 复用 intention 和项目 observation；没有对话命令的 outcomes/instructions。
+ * 只有 observation.state === "project-ready" 才表示验证通过。
+ */
+export type CheckOutput = SilvermoonReport<CheckIntention, CheckObservation>;
 
 /**
- * Exit status:
+ * Conversation commands:
  *
  * 0: Silvermoon formed a complete, trustworthy conversation envelope.
  * 1: An internal Silvermoon failure prevented a trustworthy envelope.
  * 2: Invalid CLI usage prevented a valid intention from being formed.
  *
- * Observation problems and failed outcomes do not change exit status 0.
+ * check:
+ * 0: The requested snapshot was completely checked and is valid.
+ * 1: Invalid snapshot, inability to verify, or internal failure (fail closed).
+ * 2: Invalid CLI usage.
  */

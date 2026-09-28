@@ -30,8 +30,22 @@ e2e 1/1，且 package contents 与 skill 同步检查均通过。
 
 ### Deployment steps
 
-- [ ] **D-S01:** Step title
+- [x] **D-S01:** 发布部署契约
+- [x] **D-S02:** 验证精确 primary commit 的托管 CI
+- [x] **D-S03:** 复核发布后的 Silvermoon 导航
 
 ### Deployment acceptance criteria
 
-- [ ] **D-AC01:** Criterion title
+- [x] **D-AC01:** 已验收实现与部署契约存在于 configured primary
+- [x] **D-AC02:** 精确部署候选的 GitHub Actions CI 成功
+- [x] **D-AC03:** 发布后导航与部署 revision 一致
+
+部署验证记录：configured primary tip 为
+`396013cd7f75e626f530c613d6e1d66bda7f4cf8`，且 implementation commit
+`940b31dfae211a003aa13e6a36355abf03b52464` 与 acceptance commit
+`db5cfe026cf8e3d3a8b294c125bad0a773635464` 均为其祖先。GitHub Actions
+[CI run 36386282856](https://github.com/shazhou-ww/silvermoon/actions/runs/36386282856)
+在该 tip 上以 `completed/success` 结束，8 个 jobs 全部成功。发布后
+`whats-next` 返回 `task-pending`、空 problems、成功的 `fetch-primary` outcome，
+并要求验收 deployment revision
+`b4841f50189b761ee2afddae1d21c680b353e29e`。
