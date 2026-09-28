@@ -97,6 +97,15 @@ export function incompleteObservation({
   });
 }
 
+export function unavailableObservation({ root, version, problem }) {
+  return {
+    state: "check-unavailable",
+    root,
+    version,
+    problems: [problem],
+  };
+}
+
 export function repositoryProblemObservation(observation, problems) {
   return {
     ...observation,
@@ -112,6 +121,7 @@ export async function observeSnapshot({
   gitRoot,
   historyCommit,
   ideaLanguage,
+  projectOnly = false,
   root,
   snapshotTree,
   userHome,
@@ -256,7 +266,9 @@ export async function observeSnapshot({
     language,
     layout,
     observation: {
-      state: ideas.activeIdeas.length > 0 ? "task-pending" : "idle",
+      state: projectOnly
+        ? "project-ready"
+        : ideas.activeIdeas.length > 0 ? "task-pending" : "idle",
       root: adoption.root,
       version,
       configuration,

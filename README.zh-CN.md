@@ -50,8 +50,12 @@ silvermoon whats-next <idea>
 在生成的 `Idea.md` 中描述想要抵达的世界，审阅并批准这个精确 revision。此后，
 Silvermoon 会让目标、实现、仓库状态与现实结果始终相连。完整的首次工作流见英文
 [Getting Started](./docs/getting-started.md)。
-默认输出是一段包含意图、观察、动作与结果、下一步指示的四段对话；只有程序消费者需要
-同一份结构化 envelope 时才添加 `--json`。
+对话命令默认以轻量 Markdown 标题呈现意图、观察和下一步；只有实际尝试了操作，
+才出现动作与结果段落。程序消费者可使用 `--json` 获取
+`intention / observation / outcomes / instructions` envelope。提交前使用
+`silvermoon check --staged` 验证 index；无参数 `check` 只验证已提交的 `HEAD`，
+不能替代提交前检查。只有项目快照有效时检查才以退出码 `0` 放行，详见英文
+[Technical Reference](./docs/reference.md)。
 
 ## 为什么需要 Silvermoon
 

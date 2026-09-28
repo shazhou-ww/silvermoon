@@ -95,20 +95,24 @@ Then ask what comes next with the generated ULID or an exact unique alias:
 silvermoon whats-next <idea>
 ```
 
-The default report is one conversation with four sections: intent,
-observation, actions and outcomes, and ordered next instructions. Add `--json`
-only when a programmatic consumer needs the same structured envelope. Execute
-the applicable instructions in order and run the same command again only after
-an expected repository change, an unexpected input change, or a newly arrived
-external result.
+The default dialogue uses lightweight Markdown headings for intent,
+observation, and ordered next instructions; actions and outcomes appear only
+when an operation was attempted. Add `--json` only when a programmatic
+consumer needs the `intention / observation / outcomes / instructions`
+envelope. Execute the applicable instructions in order and run the same
+command again only after an expected repository change, an unexpected input
+change, or a newly arrived external result.
 
 ## Make Decisions Explicit
 
 Silvermoon never infers approval or acceptance. After a person explicitly
 approves the current ideal, accepts the current implementation, or accepts the
 current deployment, record the exact revision reported by `whats-next` in the
-corresponding `status.yaml` field. Validate the full candidate, stage it,
-validate the staged snapshot, and publish a normal non-force commit.
+corresponding `status.yaml` field. Validate the full candidate with
+`silvermoon check --worktree`, stage it, then run `silvermoon check --staged`
+to validate the index before publishing a normal non-force commit. Default
+`check` validates committed `HEAD`, not the pending commit; only a successful
+project validation exits `0`.
 
 Continue with [Core Concepts](./core-concepts.md) before changing lifecycle
 contracts, or use [Operating Silvermoon](./operations.md) for the routine

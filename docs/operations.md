@@ -54,8 +54,11 @@ through ordinary Git.
 ## Follow One Observation
 
 Treat `intention`, `observation`, `outcomes`, and `instructions` as one
-immutable conversation. Default output renders those four sections in natural
-language; `--json` serializes the same model.
+immutable dialogue report for `whats-next` and `create-idea`. Default output
+uses lightweight Markdown headings and lists for intent, observation, and
+next instructions, including actions and outcomes only if an operation was
+attempted. `--json` serializes the same model, retaining `outcomes: []` when
+none were attempted.
 
 Project setup takes precedence over repository synchronization, which takes
 precedence over lifecycle work. Instructions include every known remediation
@@ -103,6 +106,16 @@ silvermoon check --worktree
 git add .silvermoon/ideas/<ULID>/status.yaml
 silvermoon check --staged
 ```
+
+`check` is a project-only validator, not a navigation command. It does not
+check worktree hygiene, upstream, or ancestry and does not suggest next steps.
+Without a target it validates committed `HEAD`, not the pending commit.
+`--worktree` validates the full candidate, while `--staged` validates exactly
+the index and is the pre-commit hook target. Its JSON has `intention` and
+`observation` only; it has no `outcomes` or `instructions`. Exit status `0`
+means the chosen project snapshot is valid; `1` means invalid or unavailable
+and must block the commit; `2` means invalid CLI usage. Do not treat the
+existence of a report as permission to commit.
 
 Prefer a status-only decision commit, publish through the repository's normal
 non-force path, and verify the commit is reachable from refreshed primary.

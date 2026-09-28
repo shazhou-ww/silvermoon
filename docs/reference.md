@@ -89,7 +89,7 @@ silvermoon create-idea [--language <tag>]
 silvermoon check [--remote | --commit <revision> | --staged | --worktree]
 ```
 
-All three commands build one internal conversation envelope:
+`whats-next` and `create-idea` build one dialogue envelope:
 
 ```json
 {
@@ -115,11 +115,20 @@ All three commands build one internal conversation envelope:
 - `instructions` contains all ordered next-step guidance for the current
   readiness layer.
 
-Default output renders that same envelope as four natural-language sections:
-intent, observation, actions and outcomes, and next instructions. `--json`
-serializes it directly; there is no YAML output and no second reasoning path.
+Default dialogue output renders the same report with lightweight `##`
+Markdown headings and concise lists: intent, observation, and next
+instructions, with actions and outcomes only if `outcomes` is nonempty. JSON
+always retains `outcomes: []` when no side effect was attempted. `--json`
+serializes the same decision; there is no YAML output or second reasoning
+path. Within `## Observation`, nonempty active ideas and observed problems
+appear in separate level-three sections, `### Active ideas` and
+`### Problems`. Chinese dialogue localizes these to `### 活跃 ideas` and
+`### 问题`. Empty sections are omitted. Dialogue exit status `0` means a
+trustworthy report was formed, even when it reports readiness blocks or a
+failed operation; `1` means an internal failure prevented a trustworthy
+report; `2` means invalid CLI usage.
 
-Observation state is a discriminated union:
+Dialogue observation state is a discriminated union:
 
 - `project-setup-required` uses `observedThrough` (`root`, `version`,
   `configuration`, or `ideas`) to identify the deepest reliable cumulative
@@ -130,12 +139,11 @@ Observation state is a discriminated union:
   work that can be selected or continued.
 - `idle` has the same complete shape, no problems, and no active ideas.
 
-`version.type` is `worktree`, `staged`, `commit`, or `remote`. Commit and remote
-versions include the resolved commit, or `null` when resolution failed and a
-problem explains why. `ideas.counts` always has `preparing`, `implementing`,
-`deploying`, `completed`, and `abandoned`; `activeIdeas` contains only minimal
-references for the first three states. Problems have only stable `type` and
-natural-language `summary`; remediation belongs in `instructions`.
+Dialogue versions have `version.type: "worktree"`. `ideas.counts` always has
+`preparing`, `implementing`, `deploying`, `completed`, and `abandoned`;
+`activeIdeas` contains only minimal references for the first three states.
+Problems have only stable `type` and natural-language `summary`; remediation
+belongs in dialogue `instructions`.
 
 Project setup is ecosystem-neutral. It checks Git, configuration schema
 compatibility, and exact canonical skill content at
@@ -158,22 +166,82 @@ inherited. It does not stage, commit, push, or record approval.
 
 ## Validation Targets
 
-- `check` validates only the committed `HEAD` snapshot and reads primary
-  coordinates from that snapshot.
+- `check` validates only the committed `HEAD` snapshot. It is not a
+  pre-commit check.
 - `check --worktree` validates the hypothetical commit formed from `HEAD`, the
   index, unstaged changes, and nonignored untracked files.
-- `check --staged` validates the index snapshot.
+- `check --staged` validates the index snapshot for a pre-commit hook.
 - `check --commit <revision>` validates one local commit snapshot.
 - `check --remote` fetches primary using committed coordinates, validates its
   immutable tip, and proves retained revision facts against complete reachable
-  primary history.
+  primary history. Unrelated skill or idea findings in local `HEAD` do not
+  block locating and validating the remote snapshot.
 
 Targets are mutually exclusive and never change the caller's branch, index, or
-worktree. Exit status `0` means Silvermoon formed a complete trustworthy
-envelope, including validation findings, readiness blocks, and reported fetch
-or scaffold failures. Exit status `1` is reserved for an internal failure that
-prevents such an envelope. Exit status `2` means invalid CLI usage before a
-valid intention exists.
+worktree. `--remote` may fetch Git objects, but it does not produce dialogue
+outcomes. `check` validates the selected snapshot's project contract only:
+Git, configuration, canonical skill, idea layout, world revisions, and status.
+It does not check local worktree cleanliness, upstream, or ancestry readiness,
+route ideas, or give next-step instructions.
+
+Unlike dialogue commands, `check --json` contains **only** `intention` and
+`observation`:
+
+```json
+{
+  "intention": {
+    "command": "check",
+    "args": { "target": { "type": "staged" } }
+  },
+  "observation": {
+    "state": "project-ready",
+    "root": "D:\\Code\\silvermoon",
+    "version": { "type": "staged" },
+    "configuration": {
+      "primaryRepository": "https://example.com/owner/repository.git",
+      "primaryBranch": "main",
+      "preferredLanguage": "en-US"
+    },
+    "ideas": {
+      "counts": {
+        "preparing": 0,
+        "implementing": 0,
+        "deploying": 0,
+        "completed": 0,
+        "abandoned": 0
+      },
+      "activeIdeas": []
+    },
+    "problems": []
+  }
+}
+```
+
+`intention.args.target.type` is `head`, `staged`, `worktree`, `commit`, or
+`remote`; a requested `--commit` revision stays in intention. A resolved
+`HEAD` or local commit is reported in observation as
+`version: { type: "commit", commit: "<oid>" }`; a fetched remote tip is
+`{ type: "remote", commit: "<oid>" }`. Failed commit resolution or fetch
+reports `commit: null` and a problem. Staged and worktree versions only
+contain `type`.
+
+The `check` observation has its own discriminated states:
+
+- `project-ready` has root, version, resolved configuration, idea summary,
+  and empty problems. It says nothing about repository synchronization.
+- `project-setup-required` has nonempty problems and the same progressive
+  `observedThrough` variants as project setup in the dialogue.
+- `check-unavailable` has known root, target version, and nonempty problems
+  when the target cannot be resolved, fetched, or materialized; it does not
+  pretend the project was checked.
+
+There are no `outcomes` or `instructions` keys in a check report. Its default
+human-readable output gives only the target, validation conclusion, and
+problems, not the dialogue's four sections. Text and JSON derive from the same
+validation result. Exit code `0` means `project-ready` and is the **only**
+pre-commit/CI pass condition. Exit code `1` means invalid, unavailable, or an
+internal failure and must fail closed; `2` means invalid CLI usage. Do not
+infer success merely from a rendered report or empty-looking output.
 
 Runtime checks verify canonical YAML, fixed paths, the three world entries,
 unique aliases, Git object format, tree object types, per-world candidate

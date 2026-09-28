@@ -8,23 +8,34 @@
 - [x] **I-S02:** 重构生态无关的项目整备诊断
 - [x] **I-S03:** 规范仓库整备推演
 - [x] **I-S04:** 规范任务导航与 lifecycle instructions
-- [x] **I-S05:** 统一 create-idea 与 check 输出
+- [x] **I-S05:** 区分 create-idea 对话与 check 验证
 - [x] **I-S06:** 迁移 skill 与文档契约
 - [x] **I-S07:** 更新测试并完成 release-grade 验证
 
 ### Implementation acceptance criteria
 
-- [x] **I-AC01:** 三个命令共享一个可对话的输出契约
+- [x] **I-AC01:** 对话命令共享模型，检查器独立
 - [x] **I-AC02:** 项目整备不依赖目标项目技术栈
 - [x] **I-AC03:** 仓库整备安全、确定且有界
 - [x] **I-AC04:** 任务导航不替用户选择
-- [x] **I-AC05:** 副作用和退出码忠实表达本次对话
-- [x] **I-AC06:** Observation 在所有命令中语义一致
+- [x] **I-AC05:** 副作用和退出码忠实表达各命令结果
+- [x] **I-AC06:** 对话与检查的 Observation 各有字段保证
 - [x] **I-AC07:** 文档、skill、package 与实现一致
+- [x] **I-AC08:** 检查器只放行经过验证的目标快照
+- [x] **I-AC09:** 默认文本保持分层轻量 Markdown 对话
 
-验证记录：`pnpm check` 通过；其中 unit 39/39、contract 22/22、
+历史验证记录（修订前，不能证明本次未勾选条目）：`pnpm check` 通过；
+其中 unit 39/39、contract 22/22、
 integration 60/60（另有 2 项 Windows symlink 权限条件跳过）、installed-package
 e2e 1/1，且 package contents 与 skill 同步检查均通过。
+
+本次验证记录：`pnpm check` 通过（unit 41/41、contract 23/23、
+integration 63/63，另有 2 项 Windows symlink 权限条件跳过，installed-package
+e2e 1/1；package contents、skill 同步及 Markdown lint 通过）。新增的
+`test/contract/dialogue-output.test.mjs` 检查共享字段与独立检查结果；
+installed-package e2e 覆盖两种文本格式；远端配置定位 integration 和 Markdown
+单元测试覆盖失败/省略分支。
+`check --worktree --json` 返回 `project-ready`；`git diff --check` 通过。
 
 ## Deployment
 

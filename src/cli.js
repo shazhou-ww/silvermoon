@@ -7,7 +7,7 @@ import {
 } from "commander";
 
 import { canonicalizeLanguageTag } from "./language.js";
-import { renderDialogue } from "./dialogue.js";
+import { renderCheck, renderDialogue } from "./dialogue.js";
 import { checkRepository } from "./index.js";
 import { createIdea } from "./create-idea.js";
 import { whatsNext } from "./whatsnext.js";
@@ -28,7 +28,13 @@ function addCommonOptions(command) {
 }
 
 export function render(report, json, io) {
-  io.log(json ? JSON.stringify(report, null, 2) : renderDialogue(report));
+  io.log(
+    json
+      ? JSON.stringify(report, null, 2)
+      : report.intention.command === "check"
+        ? renderCheck(report)
+        : renderDialogue(report),
+  );
 }
 
 function languageArgument(value) {
@@ -110,18 +116,18 @@ Examples:
       .addOption(new Option("--staged", "validate the index snapshot").conflicts(["remote", "commit", "worktree"]))
       .addOption(new Option("--worktree", "validate HEAD plus staged, unstaged, and untracked changes").conflicts(["remote", "commit", "staged"])),
   ).action(async (options) => {
-    render(
-      await checkRepository({
-        commit: options.commit,
-        remote: options.remote,
-        root: options.root,
-        staged: options.staged,
-        worktree: options.worktree,
-      }),
-      options.json,
-      io,
+    const report = await checkRepository({
+      commit: options.commit,
+      remote: options.remote,
+      root: options.root,
+      staged: options.staged,
+      worktree: options.worktree,
+    });
+    render(report, options.json, io);
+    program.setOptionValue(
+      "resultCode",
+      report.observation.state === "project-ready" ? 0 : 1,
     );
-    program.setOptionValue("resultCode", 0);
   });
 
   return program;

@@ -1,10 +1,9 @@
 import { resolve } from "node:path";
 
 import {
-  createEnvelope,
-  localize,
-  outcome,
+  diagnosticProblem,
 } from "./dialogue.js";
+import { loadConfig } from "./config.js";
 import {
   fetchPrimary,
   indexSnapshot,
@@ -17,11 +16,9 @@ import {
   withTemporaryWorktree,
 } from "./git.js";
 import {
-  incompleteObservation,
   observeSnapshot,
-  repositoryProblemObservation,
+  unavailableObservation,
 } from "./observation.js";
-import { projectInstructions } from "./whatsnext.js";
 
 function targetArgument({ commit, remote, staged, worktree }) {
   if (remote) return { type: "remote" };
@@ -31,44 +28,16 @@ function targetArgument({ commit, remote, staged, worktree }) {
   return { type: "head" };
 }
 
-function recheckCommand(target) {
-  if (target.type === "remote") return "silvermoon check --remote";
-  if (target.type === "commit") {
-    return `silvermoon check --commit ${target.revision}`;
-  }
-  if (target.type === "staged") return "silvermoon check --staged";
-  if (target.type === "worktree") return "silvermoon check --worktree";
-  return "silvermoon check";
-}
-
-function checkedInstruction(observed, target) {
-  const version = observed.observation.version;
-  const commit = version.commit ? ` ${version.commit}` : "";
-  return localize(
-    observed.language,
-    `The ${target.type}${commit} snapshot satisfies the Silvermoon project contract. No repair is required.`,
-    `${target.type}${commit} snapshot 符合 Silvermoon 项目契约，无需修复。`,
-  );
-}
-
 function failureReport({
   intention,
-  language = "en-US",
-  outcomes = [],
   problem,
   root,
   version,
 }) {
-  return createEnvelope(
+  return {
     intention,
-    incompleteObservation({ problem, root, version }),
-    outcomes,
-    localize(
-      language,
-      `${problem.summary} Resolve the condition and retry ${recheckCommand(intention.args.target)}.`,
-      `${problem.summary} 解决该问题后重试 ${recheckCommand(intention.args.target)}。`,
-    ),
-  );
+    observation: unavailableObservation({ problem, root, version }),
+  };
 }
 
 async function inspectTree({
@@ -88,6 +57,7 @@ async function inspectTree({
       gitRoot,
       historyCommit,
       root,
+      projectOnly: true,
       snapshotTree: tree,
       userHome,
       validateCandidate,
@@ -96,21 +66,8 @@ async function inspectTree({
   );
 }
 
-function finishCheck(intention, observed, outcomes) {
-  const instructions = observed.projectReady
-    ? checkedInstruction(observed, intention.args.target)
-    : projectInstructions(
-      observed,
-      observed.observation.root,
-      observed.language,
-      recheckCommand(intention.args.target),
-    );
-  return createEnvelope(
-    intention,
-    observed.observation,
-    outcomes,
-    instructions,
-  );
+function finishCheck(intention, observed) {
+  return { intention, observation: observed.observation };
 }
 
 export async function checkRepository({
@@ -133,10 +90,10 @@ export async function checkRepository({
   }
   const target = targetArgument({ commit, remote, staged, worktree });
   const intention = { command: "check", args: { target } };
-  const outcomes = [];
   const repository = runGit(requestedRoot, ["rev-parse", "--show-toplevel"]);
   if (!repository.ok) {
     const observed = await observeSnapshot({
+      projectOnly: true,
       root: requestedRoot,
       userHome,
       version: target.type === "commit" || target.type === "head"
@@ -145,7 +102,7 @@ export async function checkRepository({
           ? { type: "remote", commit: null }
           : { type: target.type },
     });
-    return finishCheck(intention, observed, outcomes);
+    return finishCheck(intention, observed);
   }
   const repositoryRoot = resolve(repository.stdout);
 
@@ -169,15 +126,7 @@ export async function checkRepository({
       bootstrap = await withTemporaryWorktree(
         repositoryRoot,
         head,
-        (contentRoot, tree) => observeSnapshot({
-          contentRoot,
-          gitRoot: repositoryRoot,
-          historyCommit: head,
-          root: repositoryRoot,
-          snapshotTree: tree,
-          userHome,
-          version: { type: "commit", commit: head },
-        }),
+        (contentRoot) => loadConfig({ root: contentRoot }),
       );
     } catch (caught) {
       return failureReport({
@@ -190,63 +139,32 @@ export async function checkRepository({
         version: { type: "remote", commit: null },
       });
     }
-    if (!bootstrap.projectReady) {
-      const remoteObservation = {
-        ...bootstrap.observation,
-        version: { type: "remote", commit: null },
-      };
-      return createEnvelope(
+    if (!bootstrap.config) {
+      return {
         intention,
-        remoteObservation,
-        outcomes,
-        projectInstructions(
-          bootstrap,
-          repositoryRoot,
-          bootstrap.language,
-          recheckCommand(target),
-        ),
-      );
+        observation: {
+          state: "project-setup-required",
+          observedThrough: "version",
+          root: repositoryRoot,
+          version: { type: "remote", commit: null },
+          problems: bootstrap.diagnostics.map((diagnostic) =>
+            diagnosticProblem(diagnostic)
+          ),
+        },
+      };
     }
 
     let primary;
     try {
       primary = fetchPrimary(repositoryRoot, bootstrap.config);
-      outcomes.push(outcome(
-        "fetch-primary",
-        "success",
-        localize(
-          bootstrap.language,
-          `Fetched ${bootstrap.config.primaryRepository}#${bootstrap.config.primaryBranch} at ${primary} without moving the worktree, index, branch, or named refs.`,
-          `已 fetch ${bootstrap.config.primaryRepository}#${bootstrap.config.primaryBranch} 的 ${primary}，未移动 worktree、index、branch 或 named refs。`,
-        ),
-      ));
     } catch (caught) {
       const summary = sanitizeGitMessage(caught.message);
-      outcomes.push(outcome(
-        "fetch-primary",
-        "failure",
-        localize(
-          bootstrap.language,
-          `Could not fetch configured primary: ${summary}`,
-          `无法 fetch configured primary：${summary}`,
-        ),
-      ));
-      return createEnvelope(
+      return failureReport({
         intention,
-        repositoryProblemObservation(
-          {
-            ...bootstrap.observation,
-            version: { type: "remote", commit: null },
-          },
-          [{ type: "primary-fetch-failed", summary }],
-        ),
-        outcomes,
-        localize(
-          bootstrap.language,
-          `Check network access, authorization, repository URL, and primary branch, then retry ${recheckCommand(target)}.`,
-          `检查网络、授权、repository URL 和 primary branch，然后重试 ${recheckCommand(target)}。`,
-        ),
-      );
+        root: repositoryRoot,
+        version: { type: "remote", commit: null },
+        problem: { type: "primary-fetch-failed", summary },
+      });
     }
     try {
       const observed = await withTemporaryWorktree(
@@ -257,17 +175,16 @@ export async function checkRepository({
           gitRoot: repositoryRoot,
           historyCommit: primary,
           root: repositoryRoot,
+          projectOnly: true,
           snapshotTree: tree,
           userHome,
           version: { type: "remote", commit: primary },
         }),
       );
-      return finishCheck(intention, observed, outcomes);
+      return finishCheck(intention, observed);
     } catch (caught) {
       return failureReport({
         intention,
-        language: bootstrap.language,
-        outcomes,
         problem: {
           type: "snapshot-inspection-failed",
           summary: sanitizeGitMessage(caught.message),
@@ -304,13 +221,14 @@ export async function checkRepository({
           contentRoot,
           gitRoot: repositoryRoot,
           root: repositoryRoot,
+          projectOnly: true,
           snapshotTree: tree,
           userHome,
           validateCandidate: true,
           version: { type: "commit", commit: resolvedCommit },
         }),
       );
-      return finishCheck(intention, observed, outcomes);
+      return finishCheck(intention, observed);
     } catch (caught) {
       return failureReport({
         intention,
@@ -336,7 +254,7 @@ export async function checkRepository({
         validateCandidate: true,
         version: { type: "staged" },
       });
-      return finishCheck(intention, observed, outcomes);
+      return finishCheck(intention, observed);
     } catch (caught) {
       return failureReport({
         intention,
@@ -361,7 +279,7 @@ export async function checkRepository({
       validateCandidate: true,
       version: { type: "worktree" },
     });
-    return finishCheck(intention, observed, outcomes);
+    return finishCheck(intention, observed);
   } catch (caught) {
     return failureReport({
       intention,

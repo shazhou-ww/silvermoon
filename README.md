@@ -66,9 +66,14 @@ Describe the desired world in the generated `Idea.md`, review it, and approve
 that exact revision. From then on, Silvermoon keeps the goal, implementation,
 repository state, and real-world result connected. See
 [Getting Started](./docs/getting-started.md) for the complete first workflow.
-Default output is a four-part conversation: intent, observation, actions and
-outcomes, and next instructions. Add `--json` only when a programmatic consumer
-needs the same structured envelope.
+Default dialogue output uses lightweight Markdown headings for intent,
+observation, and next instructions, plus actions and outcomes only when an
+operation was attempted. Add `--json` only when a programmatic consumer needs
+the `intention / observation / outcomes / instructions` envelope. For
+pre-commit validation, run `silvermoon check --staged`: unlike the default
+`check` (committed `HEAD`), it checks the index and exits `0` only when the
+project snapshot is valid. See the [Technical Reference](./docs/reference.md)
+for validation targets and exit codes.
 
 ## Why Silvermoon
 

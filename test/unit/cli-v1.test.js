@@ -78,7 +78,7 @@ test("help lists exactly the three public subcommands", async () => {
   assert.doesNotMatch(help, /help \[command\]|\bwhatsnext\b|\bnewidea\b|\bnew-idea\b/);
 });
 
-test("renders JSON verbatim and derives four human sections from the same envelope", () => {
+test("renders JSON verbatim and omits the empty outcomes section in Markdown", () => {
   const report = envelope();
   const json = capture();
   const human = capture();
@@ -88,12 +88,13 @@ test("renders JSON verbatim and derives four human sections from the same envelo
 
   assert.deepEqual(JSON.parse(json.logs[0]), report);
   const text = human.logs[0];
-  assert.match(text, /^Intent\n/);
-  assert.match(text, /\n\nObservation\n/);
-  assert.match(text, /\n\nActions and outcomes\n/);
-  assert.match(text, /\n\nNext\n/);
-  assert.match(text, /No repository side effect was attempted/);
-  assert.match(text, /01M36QGPNTXEPP61DA4KP4AVZF preparing/);
+  assert.match(text, /^## Intent\n\n/);
+  assert.match(text, /\n\n## Observation\n\n/);
+  assert.match(text, /\n\n### Active ideas\n\n- `01M36QGPNTXEPP61DA4KP4AVZF` preparing/);
+  assert.doesNotMatch(text, /### Problems/);
+  assert.doesNotMatch(text, /Actions and outcomes|No repository side effect was attempted/);
+  assert.match(text, /\n\n## Next\n\n/);
+  assert.match(text, /`01M36QGPNTXEPP61DA4KP4AVZF` preparing/);
   assert.doesNotMatch(text, /undefined|\(\)/);
   assert.match(text, /Choose an idea or run/);
 });
@@ -101,14 +102,52 @@ test("renders JSON verbatim and derives four human sections from the same envelo
 test("uses localized section headings from resolved configuration", () => {
   const report = envelope();
   report.observation.configuration.preferredLanguage = "zh-CN";
+  report.outcomes.push({
+    type: "fetch-primary",
+    status: "success",
+    summary: "已 fetch primary。",
+  });
   const output = capture();
 
   render(report, false, output.io);
 
-  assert.match(output.logs[0], /^意图\n/);
-  assert.match(output.logs[0], /\n\n观察\n/);
-  assert.match(output.logs[0], /\n\n动作与结果\n/);
-  assert.match(output.logs[0], /\n\n下一步\n/);
+  assert.match(output.logs[0], /^## 意图\n\n/);
+  assert.match(output.logs[0], /\n\n## 观察\n\n/);
+  assert.match(output.logs[0], /\n\n### 活跃 ideas\n\n/);
+  assert.match(output.logs[0], /\n\n## 动作与结果\n\n- 成功 \[fetch-primary\]/);
+  assert.match(output.logs[0], /\n\n## 下一步\n\n/);
+});
+
+test("renders observed problems under their own level-three heading", () => {
+  const report = envelope();
+  report.observation.state = "repository-sync-required";
+  report.observation.problems.push({
+    type: "worktree-changes",
+    summary: "One untracked path.",
+  });
+  const output = capture();
+  render(report, false, output.io);
+  assert.match(output.logs[0], /\n\n### Active ideas\n\n/);
+  assert.match(output.logs[0], /\n\n### Problems\n\n- \[worktree-changes\] One untracked path\./);
+});
+
+test("renders check as a verdict without dialogue actions or instructions", () => {
+  const report = {
+    intention: { command: "check", args: { target: { type: "staged" } } },
+    observation: {
+      state: "project-setup-required",
+      observedThrough: "version",
+      root: "C:\\repository",
+      version: { type: "staged" },
+      problems: [{ type: "config-missing", summary: "Missing configuration." }],
+    },
+  };
+  const output = capture();
+  render(report, false, output.io);
+  assert.match(output.logs[0], /^## Check\n\n- Target: `staged`/);
+  assert.match(output.logs[0], /- Result: invalid or unavailable/);
+  assert.match(output.logs[0], /\n\n### Problems\n\n- \[config-missing\] Missing configuration/);
+  assert.doesNotMatch(output.logs[0], /## Next|## Actions/);
 });
 
 test("rejects conflicting targets and invalid language as CLI usage errors", async () => {
