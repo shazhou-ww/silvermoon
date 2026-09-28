@@ -37,6 +37,13 @@ installed-package e2e 覆盖两种文本格式；远端配置定位 integration 
 单元测试覆盖失败/省略分支。
 `check --worktree --json` 返回 `project-ready`；`git diff --check` 通过。
 
+双语标题打磨复验：`pnpm check` 通过（unit 41/41、contract 23/23、
+integration 63/63，另有 2 项 Windows symlink 权限条件跳过、installed-package
+e2e 1/1；package contents、skill 同步及 Markdown lint 通过）。
+`test/unit/cli-v1.test.js` 断言英中标题、非空问题小节和空操作段；
+`test/e2e/installed-package.test.js` 断言安装后文本标题；
+`check --worktree --json` 返回 `project-ready`。
+
 ## Deployment
 
 ### Deployment steps

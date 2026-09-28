@@ -145,10 +145,14 @@ primary 坐标
 
 ### I-AC09: 默认文本保持分层轻量 Markdown 对话
 
-`whats-next` 和 `create-idea` 默认按意图、观察、可选动作与结果、下一步顺序
-输出 `##` 标题及简洁列表；在 `## Observation` 下，非空 active ideas 和
-observed problems 分别使用 `### Active ideas` 与 `### Problems` 标题及各自
-列表，空集合对应的小节省略，不将两类事实混入同一列表。没有副作用时省略
+`whats-next` 和 `create-idea` 默认按请求、当前情况、可选操作及结果、下一步顺序
+输出 `##` 标题及简洁列表；英文标题分别为 `## Request`、
+`## Current state`、可选的 `## Actions and results`、`## What to do next`，
+中文标题分别为 `## 本次请求`、`## 当前情况`、可选的 `## 本次操作及结果`、
+`## 接下来怎么做`。在当前情况段落下，非空 active ideas 和
+observed problems 分别使用 `### Ideas you can continue` 与
+`### Issues to address`（中文分别为 `### 可继续推进的想法` 与
+`### 需要处理的问题`）标题及各自列表，空集合对应的小节省略，不将两类事实混入同一列表。没有副作用时省略
 整个动作段但 JSON 仍包含 `outcomes: []`，有副作用时逐项呈现。必要的路径、
 commit、revision、候选、命令和停止条件在文本中可读；`check` 文本仅显示目标、
 结论及 problems，不输出对话动作或下一步。Unit、contract 和 CLI e2e tests

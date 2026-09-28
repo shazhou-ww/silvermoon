@@ -177,13 +177,13 @@ function renderObservation(observation, language) {
       const alias = idea.alias === undefined ? "" : ` (${idea.alias})`;
       return `- ${codeSpan(idea.id)}${alias} ${idea.state}`;
     });
-    sections.push(`### ${localize(language, "Active ideas", "活跃 ideas")}\n\n${active.join("\n")}`);
+    sections.push(`### ${localize(language, "Ideas you can continue", "可继续推进的想法")}\n\n${active.join("\n")}`);
   }
   if (observation.problems.length > 0) {
     const problems = observation.problems.map((problem) =>
       `- [${problem.type}] ${problem.summary}`
     );
-    sections.push(`### ${localize(language, "Problems", "问题")}\n\n${problems.join("\n")}`);
+    sections.push(`### ${localize(language, "Issues to address", "需要处理的问题")}\n\n${problems.join("\n")}`);
   }
   return sections.join("\n\n");
 }
@@ -205,21 +205,21 @@ export function renderDialogue(report) {
     ?? "en-US";
   const sections = [
     [
-      localize(language, "Intent", "意图"),
+      localize(language, "Request", "本次请求"),
       renderIntention(report.intention, language),
     ],
     [
-      localize(language, "Observation", "观察"),
+      localize(language, "Current state", "当前情况"),
       renderObservation(report.observation, language),
     ],
     ...(report.outcomes.length > 0
       ? [[
-        localize(language, "Actions and outcomes", "动作与结果"),
+        localize(language, "Actions and results", "本次操作及结果"),
         renderOutcomes(report.outcomes, language),
       ]]
       : []),
     [
-      localize(language, "Next", "下一步"),
+      localize(language, "What to do next", "接下来怎么做"),
       report.instructions,
     ],
   ];
@@ -246,7 +246,7 @@ export function renderCheck(report) {
       : localize(language, "invalid or unavailable", "未通过或无法验证")}`,
   );
   if (report.observation.problems.length > 0) {
-    lines.push("", `### ${localize(language, "Problems", "问题")}`, "");
+    lines.push("", `### ${localize(language, "Issues to address", "需要处理的问题")}`, "");
     for (const problem of report.observation.problems) {
       lines.push(`- [${problem.type}] ${problem.summary}`);
     }

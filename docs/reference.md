@@ -115,15 +115,16 @@ silvermoon check [--remote | --commit <revision> | --staged | --worktree]
 - `instructions` contains all ordered next-step guidance for the current
   readiness layer.
 
-Default dialogue output renders the same report with lightweight `##`
-Markdown headings and concise lists: intent, observation, and next
-instructions, with actions and outcomes only if `outcomes` is nonempty. JSON
-always retains `outcomes: []` when no side effect was attempted. `--json`
+Default dialogue output renders the same report with concise lists under
+`## Request`, `## Current state`, and `## What to do next` (in Chinese:
+`## 本次请求`, `## 当前情况`, `## 接下来怎么做`). The optional
+`## Actions and results` (`## 本次操作及结果`) appears only if `outcomes`
+is nonempty. JSON always retains `outcomes: []` when no side effect was attempted. `--json`
 serializes the same decision; there is no YAML output or second reasoning
-path. Within `## Observation`, nonempty active ideas and observed problems
-appear in separate level-three sections, `### Active ideas` and
-`### Problems`. Chinese dialogue localizes these to `### 活跃 ideas` and
-`### 问题`. Empty sections are omitted. Dialogue exit status `0` means a
+path. Within the current-state section, nonempty active ideas and observed
+problems appear under `### Ideas you can continue` and
+`### Issues to address` (in Chinese: `### 可继续推进的想法` and
+`### 需要处理的问题`). Empty sections are omitted. Dialogue exit status `0` means a
 trustworthy report was formed, even when it reports readiness blocks or a
 failed operation; `1` means an internal failure prevented a trustworthy
 report; `2` means invalid CLI usage.

@@ -88,12 +88,12 @@ test("renders JSON verbatim and omits the empty outcomes section in Markdown", (
 
   assert.deepEqual(JSON.parse(json.logs[0]), report);
   const text = human.logs[0];
-  assert.match(text, /^## Intent\n\n/);
-  assert.match(text, /\n\n## Observation\n\n/);
-  assert.match(text, /\n\n### Active ideas\n\n- `01M36QGPNTXEPP61DA4KP4AVZF` preparing/);
-  assert.doesNotMatch(text, /### Problems/);
-  assert.doesNotMatch(text, /Actions and outcomes|No repository side effect was attempted/);
-  assert.match(text, /\n\n## Next\n\n/);
+  assert.match(text, /^## Request\n\n/);
+  assert.match(text, /\n\n## Current state\n\n/);
+  assert.match(text, /\n\n### Ideas you can continue\n\n- `01M36QGPNTXEPP61DA4KP4AVZF` preparing/);
+  assert.doesNotMatch(text, /### Issues to address/);
+  assert.doesNotMatch(text, /Actions and results|No repository side effect was attempted/);
+  assert.match(text, /\n\n## What to do next\n\n/);
   assert.match(text, /`01M36QGPNTXEPP61DA4KP4AVZF` preparing/);
   assert.doesNotMatch(text, /undefined|\(\)/);
   assert.match(text, /Choose an idea or run/);
@@ -111,11 +111,11 @@ test("uses localized section headings from resolved configuration", () => {
 
   render(report, false, output.io);
 
-  assert.match(output.logs[0], /^## 意图\n\n/);
-  assert.match(output.logs[0], /\n\n## 观察\n\n/);
-  assert.match(output.logs[0], /\n\n### 活跃 ideas\n\n/);
-  assert.match(output.logs[0], /\n\n## 动作与结果\n\n- 成功 \[fetch-primary\]/);
-  assert.match(output.logs[0], /\n\n## 下一步\n\n/);
+  assert.match(output.logs[0], /^## 本次请求\n\n/);
+  assert.match(output.logs[0], /\n\n## 当前情况\n\n/);
+  assert.match(output.logs[0], /\n\n### 可继续推进的想法\n\n/);
+  assert.match(output.logs[0], /\n\n## 本次操作及结果\n\n- 成功 \[fetch-primary\]/);
+  assert.match(output.logs[0], /\n\n## 接下来怎么做\n\n/);
 });
 
 test("renders observed problems under their own level-three heading", () => {
@@ -127,8 +127,8 @@ test("renders observed problems under their own level-three heading", () => {
   });
   const output = capture();
   render(report, false, output.io);
-  assert.match(output.logs[0], /\n\n### Active ideas\n\n/);
-  assert.match(output.logs[0], /\n\n### Problems\n\n- \[worktree-changes\] One untracked path\./);
+  assert.match(output.logs[0], /\n\n### Ideas you can continue\n\n/);
+  assert.match(output.logs[0], /\n\n### Issues to address\n\n- \[worktree-changes\] One untracked path\./);
 });
 
 test("renders check as a verdict without dialogue actions or instructions", () => {
@@ -146,8 +146,8 @@ test("renders check as a verdict without dialogue actions or instructions", () =
   render(report, false, output.io);
   assert.match(output.logs[0], /^## Check\n\n- Target: `staged`/);
   assert.match(output.logs[0], /- Result: invalid or unavailable/);
-  assert.match(output.logs[0], /\n\n### Problems\n\n- \[config-missing\] Missing configuration/);
-  assert.doesNotMatch(output.logs[0], /## Next|## Actions/);
+  assert.match(output.logs[0], /\n\n### Issues to address\n\n- \[config-missing\] Missing configuration/);
+  assert.doesNotMatch(output.logs[0], /## What to do next|## Actions and results/);
 });
 
 test("rejects conflicting targets and invalid language as CLI usage errors", async () => {

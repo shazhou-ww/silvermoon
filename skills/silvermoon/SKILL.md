@@ -23,11 +23,12 @@ and Git.
      otherwise read the default conversation.
 2. Treat `intention`, `observation`, `outcomes`, and `instructions` as one
    immutable report from a single invocation. Do not combine guidance from
-   different reports. Dialogue text renders lightweight Markdown headings for
-   intention, observation, and next instructions. Within observation, active
-   ideas and problems have separate level-three headings when present
-   (`### Active ideas` / `### Problems`, localized in Chinese). It includes
-   actions and outcomes only when attempted; JSON retains `outcomes: []`.
+   different reports. Dialogue text renders `## Request`, `## Current state`,
+   and `## What to do next` (or their natural Chinese equivalents). Within
+   the current state, nonempty active ideas and problems have separate
+   `### Ideas you can continue` and `### Issues to address` headings.
+   `## Actions and results` appears only when an operation was attempted;
+   JSON retains `outcomes: []` otherwise.
    Rendering is not a second decision model.
 3. Read every problem and all ordered instructions in the current layer.
    `project-setup-required` blocks repository and idea reasoning;
