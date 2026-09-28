@@ -203,7 +203,7 @@ test("rejects missing world entries, duplicate aliases, and mismatched status id
     "version: 1\n",
   );
   const second = "01M36QGPQ4H3R0K4N7Y6W2S8JC";
-  await writeIdea(root, second, { id, alias: "publish-documentation" });
+  await writeIdea(root, second, { id, alias: "publish-documentation"   });
 
   const inspected = await inspectIdeaLayout({ root });
   const codes = inspected.diagnostics.map(({ code }) => code);
@@ -211,6 +211,20 @@ test("rejects missing world entries, duplicate aliases, and mismatched status id
   assert.ok(codes.includes("idea.status.unexpected-file"));
   assert.ok(codes.includes("idea.status.id-mismatch"));
   assert.ok(codes.includes("idea.alias.duplicate"));
+});
+
+test("rejects an alias that collides with any exact idea ULID", async () => {
+  const root = await createRepository();
+  const second = "01M36QGPNTXEPP61DA4KP4AVG0";
+  await writeIdea(root, second, { alias: id });
+
+  const inspected = await inspectIdeaLayout({ root });
+
+  assert.ok(
+    inspected.diagnostics.some(
+      ({ code }) => code === "idea.alias.id-collision",
+    ),
+  );
 });
 
 test("validates each decision against its corresponding world in history", async () => {

@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import {
+  cp,
   mkdir,
   mkdtemp,
   readFile,
   rm,
-  symlink,
   writeFile,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -13,116 +13,101 @@ import { join } from "node:path";
 import { afterEach, test } from "node:test";
 
 import {
-  detectExecutionSource,
   inspectAdoption,
+  REPOSITORY_SKILL_PATH,
   SILVERMOON_VERSION,
 } from "../../src/adoption.js";
 
 const temporaryDirectories = [];
+const canonicalSkill = new URL("../../skills/silvermoon", import.meta.url);
 
 afterEach(async () => {
   await Promise.all(
     temporaryDirectories.splice(0).map((directory) =>
-      rm(directory, { recursive: true, force: true }),
+      rm(directory, { recursive: true, force: true })
     ),
   );
 });
 
-async function temporaryRepository() {
+async function temporaryDirectory() {
   const root = await mkdtemp(join(tmpdir(), "silvermoon-adoption-"));
   temporaryDirectories.push(root);
   return root;
 }
 
-test("reports every bootstrap requirement in one read-only observation", async () => {
-  const root = await temporaryRepository();
-  await mkdir(join(root, ".git"));
-  const before = await readFile(new URL("../../package.json", import.meta.url), "utf8");
+async function configure(root) {
+  await mkdir(join(root, ".silvermoon"), { recursive: true });
+  await writeFile(join(root, ".silvermoon", "config.yaml"), `version: 1
+primaryRepository: https://example.test/owner/repository.git
+primaryBranch: main
+`);
+}
+
+test("reports all independently observable setup problems in priority order", async () => {
+  const root = await temporaryDirectory();
 
   const report = await inspectAdoption({ root });
 
-  assert.equal(report.status, "blocked");
+  assert.equal(report.gitReady, false);
+  assert.equal(report.config, null);
   assert.deepEqual(
-    report.requirements.map(({ id }) => id),
+    report.problems.map(({ type }) => type),
     [
-      "repository.git",
-      "runtime.execution-source",
-      "package.manifest",
-      "package.installed",
-      "skill.repository-local",
-      "repository.configuration",
+      "git-repository-missing",
+      "config-missing",
+      "canonical-skill-missing",
     ],
   );
-  assert.ok(report.findings.length >= 5);
-  assert.equal(report.recheck.executable, "npx");
-  assert.equal(
-    await readFile(new URL("../../package.json", import.meta.url), "utf8"),
-    before,
+  assert.match(report.instructions[0], /git .* init/);
+  assert.match(report.instructions[1], /\.silvermoon\/config\.yaml/);
+  assert.match(report.instructions[2], /--agent universal/);
+  assert.doesNotMatch(
+    report.problems.map(({ summary }) => summary).join("\n"),
+    /Run `git|Create \.silvermoon|npx skills add/,
   );
 });
 
-test("classifies a symlinked project-local package by resolved path", async () => {
-  const root = await temporaryRepository();
-  const storePackage = join(root, ".pnpm-store", "silvermoon");
-  const localPackage = join(root, "node_modules", "silvermoon");
-  await mkdir(storePackage, { recursive: true });
-  await mkdir(join(root, "node_modules"), { recursive: true });
-  await symlink(
-    storePackage,
-    localPackage,
-    process.platform === "win32" ? "junction" : "dir",
+test("accepts an ecosystem-neutral Git repository with canonical configuration and skill", async () => {
+  const root = await temporaryDirectory();
+  const initialized = spawnSync(
+    "git",
+    ["-C", root, "init", "--initial-branch=main"],
+    { encoding: "utf8", windowsHide: true },
   );
-
-  const source = await detectExecutionSource({
-    root,
-    runtimeRoot: storePackage,
-  });
-  assert.equal(source.kind, "project-local");
-  assert.equal(source.kind, "project-local");
-});
-
-test("delegates skill registration to the supported npx skills interface", async () => {
-  const root = await temporaryRepository();
-  assert.equal(
-    spawnSync("git", ["-C", root, "init", "--initial-branch=main"], {
-      encoding: "utf8",
-      windowsHide: true,
-    }).status,
-    0,
-  );
-  await writeFile(
-    join(root, "package.json"),
-    `${JSON.stringify({ devDependencies: { silvermoon: SILVERMOON_VERSION } })}\n`,
-  );
-  await mkdir(join(root, "node_modules", "silvermoon"), { recursive: true });
-  await writeFile(
-    join(root, "node_modules", "silvermoon", "package.json"),
-    `${JSON.stringify({ name: "silvermoon", version: SILVERMOON_VERSION })}\n`,
+  assert.equal(initialized.status, 0, initialized.stderr);
+  await configure(root);
+  await cp(
+    canonicalSkill,
+    join(root, ...REPOSITORY_SKILL_PATH.split("/")),
+    { recursive: true },
   );
 
   const report = await inspectAdoption({ root });
-  const skill = report.requirements.find(({ id }) => id === "skill.repository-local");
 
-  assert.deepEqual(skill.remediation, {
-    kind: "command",
-    executable: "npx",
-    args: [
-      "skills",
-      "add",
-      "./node_modules/silvermoon/skills",
-      "--skill",
-      "silvermoon",
-      "--agent",
-      "github-copilot",
-      "--yes",
-      "--copy",
-    ],
-    description:
-      "Register the installed package's canonical skill through the supported npx skills interface.",
-  });
-  assert.equal(
-    report.requirements.find(({ id }) => id === "repository.configuration")
-      .remediation.kind,
-    "manual",
+  assert.deepEqual(report.problems, []);
+  assert.deepEqual(report.instructions, []);
+  assert.equal(report.config.version, 1);
+  await assert.rejects(readFile(join(root, "package.json")), { code: "ENOENT" });
+  await assert.rejects(readFile(join(root, "node_modules")), { code: "ENOENT" });
+});
+
+test("reports canonical skill drift against the running package", async () => {
+  const root = await temporaryDirectory();
+  const initialized = spawnSync(
+    "git",
+    ["-C", root, "init", "--initial-branch=main"],
+    { encoding: "utf8", windowsHide: true },
   );
+  assert.equal(initialized.status, 0, initialized.stderr);
+  await configure(root);
+  const skillRoot = join(root, ...REPOSITORY_SKILL_PATH.split("/"));
+  await cp(canonicalSkill, skillRoot, { recursive: true });
+  await writeFile(join(skillRoot, "SKILL.md"), "changed\n");
+
+  const report = await inspectAdoption({ root });
+
+  assert.equal(report.problems.at(-1).type, "canonical-skill-mismatched");
+  assert.match(report.problems.at(-1).summary, new RegExp(SILVERMOON_VERSION));
+  assert.match(report.instructions.at(-1), /--agent universal/);
+  assert.doesNotMatch(report.instructions.at(-1), /github-copilot/);
 });

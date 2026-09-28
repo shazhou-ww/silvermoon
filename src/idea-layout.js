@@ -246,7 +246,12 @@ export async function inspectIdeaLayout({
   const aliases = new Map();
   const ideas = [];
   const caseNames = new Map();
-  for (const entry of await readdir(ideasRoot, { withFileTypes: true })) {
+  const entries = (await readdir(ideasRoot, { withFileTypes: true }))
+    .sort((left, right) => left.name.localeCompare(right.name));
+  const ideaIds = new Set(
+    entries.filter((entry) => isValidUlid(entry.name)).map((entry) => entry.name),
+  );
+  for (const entry of entries) {
     const folderPath = resolve(ideasRoot, entry.name);
     const folderMetadata = await lstat(folderPath);
     const relativePath = displayPath(root, folderPath);
@@ -282,7 +287,9 @@ export async function inspectIdeaLayout({
     }
 
     const paths = ideaPaths(entry.name);
-    for (const child of await readdir(folderPath, { withFileTypes: true })) {
+    const children = (await readdir(folderPath, { withFileTypes: true }))
+      .sort((left, right) => left.name.localeCompare(right.name));
+    for (const child of children) {
       if (
         child.name === "status.yaml" ||
         child.name === "ledger.md" ||
@@ -351,6 +358,14 @@ export async function inspectIdeaLayout({
       ));
     }
     if (status.alias !== undefined) {
+      if (ideaIds.has(status.alias)) {
+        diagnostics.push(error(
+          "idea.alias.id-collision",
+          `${paths.statusPath}#alias`,
+          `Alias ${status.alias} collides with an idea ULID.`,
+          "Choose an alias that is distinct from every idea ULID.",
+        ));
+      }
       const aliasOwner = aliases.get(status.alias);
       if (aliasOwner) {
         diagnostics.push(error(

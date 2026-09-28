@@ -2,28 +2,32 @@
 
 ## New repositories
 
-Start with a complete, read-only diagnosis, even in an unfamiliar repository:
+Start with a complete diagnosis, even in an unfamiliar repository:
 
 ```sh
-npx silvermoon@<version> whats-next --json
+npx silvermoon@<version> whats-next
 ```
 
-The report distinguishes source checkout, project-local, temporary, global,
-and unknown execution; lists all requirements and findings with dependencies;
-and provides structured remediation plus a recheck command. Temporary
-execution is only a bootstrap authority. Adopt its exact version, install it
-project-locally, and thereafter use `npx --no-install silvermoon`.
+The four-section report explains the invocation's intention, current
+observation, attempted side effects and outcomes, and ordered instructions.
+Add `--json` only when a programmatic consumer needs the same information as
+an `intention / observation / outcomes / instructions` envelope.
+The command may fetch after local readiness passes, but it does not move the
+worktree, index, branches, or named refs.
 
-Install and synchronize explicitly:
+The target repository may use any language or build ecosystem. It does not
+need `package.json`, a package manager, a Silvermoon dependency, or
+`node_modules`. Use any compatible Silvermoon installation, and register the
+canonical skill bundled with that running installation:
 
 ```sh
-npm install --save-dev --save-exact silvermoon@<version>
-npx skills add ./node_modules/silvermoon/skills --skill silvermoon --agent github-copilot --yes --copy
+npx skills add <path-to-running-silvermoon>/skills --skill silvermoon --agent universal --yes --copy
 ```
 
-The npm package ships the canonical skill. Installation never writes tracked
-skill files. Registration and updates belong to `npx skills`; Silvermoon
-diagnoses the resulting repository-local content but never overwrites it.
+This writes the single repository-local registration at
+`.agents/skills/silvermoon`. Registration and updates belong to `npx skills`;
+Silvermoon compares that path with its bundled canonical skill but never
+overwrites it.
 
 Create `.silvermoon/config.yaml` with the fixed version 1 contract:
 
@@ -41,8 +45,8 @@ Commit the configuration, then run:
 ```sh
 silvermoon check --commit HEAD
 silvermoon check --remote
-silvermoon create-idea --json
-silvermoon whats-next <ULID> --json
+silvermoon create-idea
+silvermoon whats-next <ULID>
 ```
 
 Create or repair configuration through ordinary reviewed file editing.
@@ -98,7 +102,7 @@ Status may additionally contain canonical `abandoned: true`,
 `deploymentAcceptedRevision` in that order. Decisions must bind to their
 corresponding current world revision.
 
-For a new scaffold, run `silvermoon create-idea --json`. It generates the ULID,
+For a new scaffold, run `silvermoon create-idea`. It generates the ULID,
 four structured documents and alias-less status; it does not stage, commit,
 push, approve, or accept. During initial preparation, complete `Idea.md` while
 keeping the Implementation, Deployment, and ledger placeholders synchronized

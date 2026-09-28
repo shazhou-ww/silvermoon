@@ -1,6 +1,6 @@
 ---
 name: silvermoon
-description: "Navigate or create repository-owned ideas, execute one safe action, and reobserve only after an observable delta."
+description: "Navigate or create repository-owned ideas from layered observations and ordered safe instructions."
 argument-hint: "[new | idea ULID or alias]"
 user-invocable: true
 ---
@@ -16,32 +16,34 @@ and Git.
 
 1. Preserve the user's intent when choosing the entry command:
    - For `/silvermoon new` or any other explicit request to create a new idea,
-     run `silvermoon create-idea --json`.
-   - Otherwise run `silvermoon whats-next [idea] --json`. Pass the selector only
-     when the user supplied or previously selected one.
-2. Treat the command, request, `observedPrimaryCommit`, `selectedIdea`,
-   effective `language`, and action or created idea as one immutable
-   observation. Do not combine guidance from different reports. Use the
-   reported language for natural-language world content, supporting artifacts,
-   ledger text, and user-facing explanations; preserve commands, identifiers,
-   schema fields, protocol markers, and verbatim tool output.
-3. Read the complete `onboarding` doctor report. It lists every requirement,
-   status, blocking flag, dependency, structured remediation, recommended
-   action, and recheck command. For `adopt-silvermoon`, execute only the
-   recommended explicit remediation (or safely resolve its conflict), then
-   recheck; do not route idea work while blocking findings remain.
-4. Execute only the highest-priority action. Do not skip worktree, conflict,
-   sync, or selection guidance to reach a later idea-state action. An explicit
-   create request is not idea selection: after resolving a blocking hygiene
-   action, retry `create-idea`, not selector-less `whats-next`.
+     run `silvermoon create-idea`.
+   - Otherwise run `silvermoon whats-next [idea]`. Pass the selector only when
+     the user supplied or previously selected one.
+   - Use `--json` when a programmatic consumer needs the structured envelope;
+     otherwise read the default conversation.
+2. Treat `intention`, `observation`, `outcomes`, and `instructions` as one
+   immutable report from a single invocation. Do not combine guidance from
+   different reports. The default text renders those same four sections; it is
+   not a second decision model.
+3. Read every problem and all ordered instructions in the current layer.
+   `project-setup-required` blocks repository and idea reasoning;
+   `repository-sync-required` blocks idea routing. Execute instructions whose
+   prerequisites remain true, and reobserve after completing the layer or
+   encountering an unexpected result.
+4. Never infer selection from candidate count. Bare `whats-next` presents all
+   active ideas and the option to discuss and run `create-idea`, even when
+   exactly one idea is active. Only an explicit ULID or alias selects an idea.
+   After resolving hygiene for an explicit create request, retry `create-idea`,
+   not selector-less `whats-next`.
 
 `whats-next` may fetch and inspect. It never checkout, merges, edits, commits,
 stashes, deletes, resets, fast-forwards, or pushes. `create-idea` runs the same
 hygiene preflight and, only when it passes, creates the structured idea scaffold.
-Dependency installation and skill registration are separate explicit
-operations. The packaged skill is canonical, while registration and updates
-belong to the supported `npx skills add` interface. Silvermoon reports
-configuration and skill findings but owns no onboarding mutation command.
+The target repository does not need a package manifest, package manager,
+Silvermoon dependency, or `node_modules`. The packaged skill is canonical;
+register or update it only at `.agents/skills/silvermoon` through the supported
+`npx skills add` universal target. Silvermoon reports configuration and skill
+problems but owns no setup mutation command.
 
 ## Preserve Work
 
@@ -52,18 +54,18 @@ configuration and skill findings but owns no onboarding mutation command.
   after reviewing the current diff.
 - Never use force-push, `reset --hard`, broad clean commands, or silent history
   rewrites to satisfy guidance.
-- Publish with the observed primary tip as the expected remote tip. On rejection
-  or concurrent movement, fetch and call `whats-next` again; never replay a stale
-  approval or acceptance automatically.
+- When instructions report an observed primary tip, use it as the expected
+  remote tip. On rejection or concurrent movement, call `whats-next` again;
+  never replay a stale approval or acceptance automatically.
 
-## Execute Actions
+## Follow Instructions
 
-- `select-active-idea`: show the ordered candidates and obtain one explicit
-  ULID or alias selection.
-- `continue-active-idea`: call `whats-next <id>` to obtain state guidance.
-- `create-idea`: this action is internal to the explicit `create-idea` command's
-  preflight; do not replace the user's create intent with active-idea
-  selection. After hygiene passes, the command creates one self-contained idea
+- For bare navigation, show the ordered active candidates and obtain one
+  explicit ULID or alias selection, or discuss a new goal and invoke
+  `create-idea`.
+- For an explicit `create-idea`, do not replace the user's create intent with
+  active-idea selection. After hygiene passes, the command creates one
+  self-contained idea
   with structured `Idea.md`, `Implementation.md`, `Deployment.md`, and
   `ledger.md` entries plus alias-less `status.yaml`. It never stages, commits,
   pushes, or records a decision. Review every generated path before
@@ -76,21 +78,22 @@ configuration and skill findings but owns no onboarding mutation command.
   `--language <tag>`; otherwise omit it so the idea dynamically inherits the
   project, user, or `en-US` default. Never add a language override to
   `whats-next` or `check`.
-- `switch-to-primary`, `resolve-conflicts`, `inspect-worktree-changes`,
-  `fast-forward-primary`, `integrate-primary`, `publish-primary`: perform the
-  exact Git hygiene step without discarding either history or unknown work.
-- `prepare-idea`: edit `Idea.md` and supporting files in the Ideal World
+- For repository synchronization instructions, perform the reported Git
+  hygiene steps in order without discarding either history or unknown work.
+  A local branch name may differ from the configured primary branch, but its
+  upstream must identify the configured repository and branch.
+- For a preparing idea, edit `Idea.md` and supporting files in the Ideal World
   (道心). Supporting files must serve `Idea.md`, never replace it as a second
   contract. After lifecycle hygiene, use the reported `ledgerPath` to resume
   relevant unfinished work. After explicit approval, write the reported
   `idealRevision` to `approvedRevision`.
-- `implement-idea`: edit `Implementation.md`, its supporting Inner World
+- For an implementing idea, edit `Implementation.md`, its supporting Inner World
   (内景) files, and repository deliverables. Do not change the nested Ideal
   World unless the ideal truly changed and should return to preparing. After
   lifecycle hygiene, use the reported `ledgerPath` to resume relevant
   unfinished work. After explicit acceptance, write the reported
   `implementationRevision` to `implementationAcceptedRevision`.
-- `deploy-idea`: use `Deployment.md` and its supporting Outer World (现世)
+- For a deploying idea, use `Deployment.md` and its supporting Outer World (现世)
   files to drive and verify the external world. Do not change repository
   deliverables as deployment work or modify a nested world unless that earlier
   contract truly changed. Publish a newly authored or materially changed
@@ -98,10 +101,9 @@ configuration and skill findings but owns no onboarding mutation command.
   execute external checks against that revision and record their completion in
   the ledger. After lifecycle hygiene, use the reported `ledgerPath` to resume
   relevant unfinished work. After explicit acceptance, write the reported
-  `deploymentRevision` to `deploymentAcceptedRevision`.
-- `review-abandoned`: keep `abandoned: true`, remove it after an explicit human
+- For an abandoned idea, keep `abandoned: true`, remove it after an explicit human
   decision, or create a different idea.
-- `review-completed`: revise the existing idea definition or create a new idea.
+- For a completed idea, revise the existing idea definition or create a new idea.
 
 ## Author The Three Worlds
 
@@ -194,10 +196,12 @@ Update the idea's `status.yaml` with ordinary file editing:
    world revision reported by `whats-next`.
 2. Add or update only the corresponding revision field, or add/remove canonical
    `abandoned: true` after an explicit human decision.
-3. Run `silvermoon check --worktree --json` while reviewing the complete
-  candidate, then stage it and run `silvermoon check --staged --json`.
+3. Run `silvermoon check --worktree` while reviewing the complete candidate,
+   then stage it and run `silvermoon check --staged`. Add `--json` only when a
+   programmatic consumer needs the envelope.
 4. Commit the status decision separately when practical, then non-force push
-   with the observation's `observedPrimaryCommit` as expected tip.
+   with the primary tip reported by the latest instructions as the expected
+   remote tip.
 
 Never infer a human decision from silence, prose, Git activity, or an outer
 command. Old revision values remain as history and become inactive naturally

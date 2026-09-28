@@ -16,14 +16,50 @@ function capture() {
   };
 }
 
-test("registers only the approved vNext command surface", () => {
-  const { io } = capture();
-  const program = createProgram(io);
+function envelope() {
+  return {
+    intention: {
+      command: "whats-next",
+      args: { idea: null },
+    },
+    observation: {
+      state: "task-pending",
+      root: "C:\\repository",
+      version: { type: "worktree" },
+      configuration: {
+        primaryRepository: "https://example.test/owner/repository.git",
+        primaryBranch: "main",
+        preferredLanguage: "en-US",
+      },
+      ideas: {
+        counts: {
+          preparing: 1,
+          implementing: 0,
+          deploying: 0,
+          completed: 2,
+          abandoned: 1,
+        },
+        activeIdeas: [{
+          id: "01M36QGPNTXEPP61DA4KP4AVZF",
+          state: "preparing",
+        }],
+      },
+      problems: [],
+    },
+    outcomes: [],
+    instructions: "Choose an idea or run `silvermoon create-idea`.",
+  };
+}
+
+test("registers only the approved command surface", () => {
+  const program = createProgram(capture().io);
   assert.deepEqual(
     program.commands.map((command) => command.name()).sort(),
     ["check", "create-idea", "whats-next"],
   );
-  const create = program.commands.find((command) => command.name() === "create-idea");
+  const create = program.commands.find((command) =>
+    command.name() === "create-idea"
+  );
   assert.ok(create.options.some(({ long }) => long === "--language"));
   for (const name of ["check", "whats-next"]) {
     const command = program.commands.find((candidate) => candidate.name() === name);
@@ -42,213 +78,51 @@ test("help lists exactly the three public subcommands", async () => {
   assert.doesNotMatch(help, /help \[command\]|\bwhatsnext\b|\bnewidea\b|\bnew-idea\b/);
 });
 
-test("renders a created idea scaffold", () => {
-  const report = {
-    command: "create-idea",
-    ok: true,
-    root: "C:/repository",
-    diagnostics: [],
-    result: {
-      request: { kind: "create-idea" },
-      createdIdea: {
-        id: "01M38K00000000000000000001",
-        ideaPath: ".silvermoon/ideas/01M38K00000000000000000001",
-        ledgerPath: ".silvermoon/ideas/01M38K00000000000000000001/ledger.md",
-        statusPath: ".silvermoon/ideas/01M38K00000000000000000001/status.yaml",
-      },
-    },
-  };
-  const output = capture();
-
-  render(report, false, output.io);
-
-  assert.match(output.logs.join("\n"), /01M38K00000000000000000001/);
-  assert.match(
-    output.logs.join("\n"),
-    /\.silvermoon\/ideas\/01M38K00000000000000000001\/status\.yaml/,
-  );
-  assert.match(
-    output.logs.join("\n"),
-    /\.silvermoon\/ideas\/01M38K00000000000000000001\/ledger\.md/,
-  );
-});
-
-test("renders only actionable onboarding gaps", () => {
-  const report = {
-    command: "whats-next",
-    ok: true,
-    root: "C:/repository",
-    diagnostics: [],
-    result: {
-      observedPrimaryCommit: null,
-      language: { tag: "en-US", source: "default" },
-      selectedIdea: null,
-      onboarding: {
-        status: "blocked",
-        gaps: [{
-          id: "skill.repository-local",
-          title: "Repository-local canonical skill",
-          status: "missing",
-          blocking: true,
-          dependencies: ["package.installed"],
-          observed: { paths: [] },
-          remediation: {
-            kind: "command",
-            executable: "npx",
-            args: ["skills", "add", "./node_modules/silvermoon/skills"],
-            description: "Register the skill.",
-          },
-        }],
-        recommendedAction: null,
-        recheck: {
-          kind: "command",
-          executable: "npx",
-          args: ["--no-install", "silvermoon", "whats-next"],
-          description: "Recheck.",
-        },
-      },
-      action: { code: "adopt-silvermoon", message: "Adopt it.", details: {} },
-    },
-  };
-  const output = capture();
-
-  render(report, false, output.io);
-
-  const text = output.logs.join("\n");
-  assert.match(text, /skill\.repository-local \[blocking\]/);
-  assert.match(text, /depends  package\.installed/);
-  assert.match(text, /fix      npx skills add/);
-  assert.match(text, /recheck  npx --no-install silvermoon whats-next/);
-  assert.doesNotMatch(text, /runtime|satisfied|inapplicable/);
-});
-
-test("renders deterministic whats-next human and JSON output", () => {
-  const report = {
-    command: "whats-next",
-    ok: true,
-    root: "C:/repository",
-    diagnostics: [],
-    result: {
-      observedPrimaryCommit: "a".repeat(40),
-      language: { tag: "zh-CN", source: "project" },
-      selectedIdea: {
-        id: "01M36QGPNTXEPP61DA4KP4AVZF",
-        alias: "fixture",
-        idealRevision: "b".repeat(40),
-        implementationRevision: "c".repeat(40),
-        deploymentRevision: "d".repeat(40),
-        state: "preparing",
-      },
-      action: {
-        code: "prepare-idea",
-        message: "Prepare it.",
-        details: {
-          world: {
-            name: "Ideal World",
-            displayName: "道心",
-            documentPath: ".silvermoon/ideas/id/outer/inner/ideal/Idea.md",
-            auxiliaryRoot: ".silvermoon/ideas/id/outer/inner/ideal",
-            decisionField: "approvedRevision",
-            revision: "b".repeat(40),
-            cascade: "Changes cascade.",
-          },
-        },
-      },
-    },
-  };
-  const human = capture();
-  render(report, false, human.io);
-  assert.match(human.logs.join("\n"), /prepare-idea: Prepare it\./);
-  assert.match(human.logs.join("\n"), /language zh-CN \(project\)/);
-  assert.match(human.logs.join("\n"), /state    preparing/);
-  assert.match(human.logs.join("\n"), /world    Ideal World \(道心\)/);
-  assert.match(human.logs.join("\n"), /decision approvedRevision:/);
-  assert.doesNotMatch(human.logs.join("\n"), /onboarding/);
-
+test("renders JSON verbatim and derives four human sections from the same envelope", () => {
+  const report = envelope();
   const json = capture();
-  render(report, true, json.io);
-  assert.deepEqual(JSON.parse(json.logs[0]), report);
-});
-
-test("renders active idea options in human whats-next output", () => {
-  const report = {
-    command: "whats-next",
-    ok: true,
-    root: "C:/repository",
-    diagnostics: [],
-    result: {
-      observedPrimaryCommit: "a".repeat(40),
-      language: { tag: "en-US", source: "default" },
-      selectedIdea: null,
-      action: {
-        code: "select-active-idea",
-        message: "Select one active idea.",
-        details: {
-          ideas: [
-            {
-              id: "01M36QGPNTXEPP61DA4KP4AVG0",
-              alias: "first-idea",
-              revision: "b".repeat(40),
-              state: "preparing",
-            },
-            {
-              id: "01M36QGPNTXEPP61DA4KP4AVZF",
-              alias: "second-idea",
-              revision: "c".repeat(40),
-              state: "implementing",
-            },
-          ],
-        },
-      },
-    },
-  };
   const human = capture();
 
+  render(report, true, json.io);
   render(report, false, human.io);
 
-  assert.match(
-    human.logs.join("\n"),
-    /option   01M36QGPNTXEPP61DA4KP4AVG0 \(first-idea\)  preparing/,
-  );
-  assert.match(
-    human.logs.join("\n"),
-    /option   01M36QGPNTXEPP61DA4KP4AVZF \(second-idea\)  implementing/,
-  );
+  assert.deepEqual(JSON.parse(json.logs[0]), report);
+  const text = human.logs[0];
+  assert.match(text, /^Intent\n/);
+  assert.match(text, /\n\nObservation\n/);
+  assert.match(text, /\n\nActions and outcomes\n/);
+  assert.match(text, /\n\nNext\n/);
+  assert.match(text, /No repository side effect was attempted/);
+  assert.match(text, /01M36QGPNTXEPP61DA4KP4AVZF preparing/);
+  assert.doesNotMatch(text, /undefined|\(\)/);
+  assert.match(text, /Choose an idea or run/);
 });
 
-test("renders an alias-less idea without empty parentheses", () => {
-  const report = {
-    command: "whats-next",
-    ok: true,
-    root: "C:/repository",
-    diagnostics: [],
-    result: {
-      observedPrimaryCommit: "a".repeat(40),
-      language: { tag: "en-US", source: "default" },
-      request: { kind: "select-idea", selector: "01M36QGPNTXEPP61DA4KP4AVZF" },
-      selectedIdea: {
-        id: "01M36QGPNTXEPP61DA4KP4AVZF",
-        idealRevision: "b".repeat(40),
-        implementationRevision: "c".repeat(40),
-        deploymentRevision: "d".repeat(40),
-        state: "preparing",
-      },
-      action: { code: "prepare-idea", message: "Prepare it.", details: {} },
-    },
-  };
+test("uses localized section headings from resolved configuration", () => {
+  const report = envelope();
+  report.observation.configuration.preferredLanguage = "zh-CN";
   const output = capture();
 
   render(report, false, output.io);
 
-  assert.match(output.logs.join("\n"), /idea\s+01M36QGPNTXEPP61DA4KP4AVZF/);
-  assert.doesNotMatch(output.logs.join("\n"), /undefined|\(\)/);
+  assert.match(output.logs[0], /^意图\n/);
+  assert.match(output.logs[0], /\n\n观察\n/);
+  assert.match(output.logs[0], /\n\n动作与结果\n/);
+  assert.match(output.logs[0], /\n\n下一步\n/);
 });
 
-test("exposes worktree and rejects conflicting check targets", async () => {
-  const { io } = capture();
-  const program = createProgram(io);
-  const check = program.commands.find((command) => command.name() === "check");
-  assert.ok(check.options.some(({ long }) => long === "--worktree"));
-  assert.ok(!check.options.some(({ long }) => long === "--unstaged"));
-  assert.equal(await runCli(["check", "--remote", "--worktree"], io), 2);
+test("rejects conflicting targets and invalid language as CLI usage errors", async () => {
+  const first = capture();
+  const second = capture();
+
+  assert.equal(
+    await runCli(["check", "--remote", "--worktree"], first.io),
+    2,
+  );
+  assert.equal(
+    await runCli(["create-idea", "--language", "en_US"], second.io),
+    2,
+  );
+  assert.ok(first.errors.length > 0);
+  assert.ok(second.errors.length > 0);
 });

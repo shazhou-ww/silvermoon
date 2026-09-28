@@ -10,7 +10,7 @@ export function runGit(root, args, { env } = {}) {
   if (commandObserver) commandObserver([...args]);
   const result = spawnSync("git", ["-C", root, ...args], {
     encoding: "utf8",
-    env,
+    env: { ...process.env, GIT_TERMINAL_PROMPT: "0", ...env },
     windowsHide: true,
   });
   return {
@@ -193,6 +193,87 @@ export function parseWorktreeChanges(source) {
   }
   for (const changes of Object.values(result)) sortChanges(changes);
   return result;
+}
+
+export function inspectWorktreeChanges(root) {
+  const source = requireGit(
+    root,
+    ["status", "--porcelain=v2", "--untracked-files=all", "-z"],
+    "Cannot inspect worktree changes",
+  );
+  return parseWorktreeChanges(`${source}\0`);
+}
+
+export function resolveHead(root) {
+  const result = runGit(root, ["rev-parse", "--verify", "HEAD^{commit}"]);
+  return result.ok ? result.stdout : null;
+}
+
+export function inspectCurrentBranch(root) {
+  const branch = runGit(root, ["symbolic-ref", "--quiet", "--short", "HEAD"]);
+  if (!branch.ok) {
+    return { branch: null, remote: null, repository: null, upstreamBranch: null };
+  }
+  const remote = runGit(root, ["config", "--get", `branch.${branch.stdout}.remote`]);
+  const merge = runGit(root, ["config", "--get", `branch.${branch.stdout}.merge`]);
+  if (!remote.ok || !merge.ok || !merge.stdout.startsWith("refs/heads/")) {
+    return {
+      branch: branch.stdout,
+      remote: remote.ok ? remote.stdout : null,
+      repository: null,
+      upstreamBranch: merge.ok && merge.stdout.startsWith("refs/heads/")
+        ? merge.stdout.slice("refs/heads/".length)
+        : null,
+    };
+  }
+  const repository = remote.stdout === "."
+    ? null
+    : runGit(root, ["config", "--get", `remote.${remote.stdout}.url`]);
+  return {
+    branch: branch.stdout,
+    remote: remote.stdout,
+    repository: repository?.ok ? repository.stdout : null,
+    upstreamBranch: merge.stdout.slice("refs/heads/".length),
+  };
+}
+
+export function compareCommits(root, local, remote) {
+  if (local === remote) return "aligned";
+  const localAncestor = runGit(
+    root,
+    ["merge-base", "--is-ancestor", local, remote],
+  );
+  if (localAncestor.ok) {
+    return "behind";
+  }
+  if (localAncestor.status !== 1) {
+    throw new Error(
+      `Cannot compare local and primary commits: `
+      + `${sanitizeGitMessage(localAncestor.stderr || localAncestor.error?.message)}`,
+    );
+  }
+  const remoteAncestor = runGit(
+    root,
+    ["merge-base", "--is-ancestor", remote, local],
+  );
+  if (remoteAncestor.ok) {
+    return "ahead";
+  }
+  if (remoteAncestor.status !== 1) {
+    throw new Error(
+      `Cannot compare local and primary commits: `
+      + `${sanitizeGitMessage(remoteAncestor.stderr || remoteAncestor.error?.message)}`,
+    );
+  }
+  const shallow = runGit(root, ["rev-parse", "--is-shallow-repository"]);
+  if (!shallow.ok) {
+    throw new Error(
+      `Cannot determine repository history depth: `
+      + `${sanitizeGitMessage(shallow.stderr || shallow.error?.message)}`,
+    );
+  }
+  if (shallow.stdout === "true") return "unknown";
+  return "diverged";
 }
 
 export function resolveCommit(root, revision) {

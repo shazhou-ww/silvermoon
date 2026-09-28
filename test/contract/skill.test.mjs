@@ -9,7 +9,7 @@ import { parseDocument } from "yaml";
 const repositoryRoot = fileURLToPath(new URL("../..", import.meta.url));
 const generatedSkillRegistration = resolve(
   repositoryRoot,
-  ".github",
+  ".agents",
   "skills",
   "silvermoon",
 );
@@ -62,21 +62,28 @@ test("exposes one consolidated silvermoon skill", async () => {
   assert.deepEqual(document.toJS(), {
     name: "silvermoon",
     description:
-      "Navigate or create repository-owned ideas, execute one safe action, and reobserve only after an observable delta.",
+      "Navigate or create repository-owned ideas from layered observations and ordered safe instructions.",
     "argument-hint": "[new | idea ULID or alias]",
     "user-invocable": true,
   });
 
   for (const required of [
     "/silvermoon new",
-    "retry `create-idea`, not selector-less `whats-next`",
-    "silvermoon whats-next [idea] --json",
-    "silvermoon create-idea --json",
+    "retry `create-idea`,",
+    "silvermoon whats-next [idea]",
+    "silvermoon create-idea",
+    "`intention`, `observation`, `outcomes`, and `instructions`",
+    "project-setup-required",
+    "repository-sync-required",
+    "exactly one idea is active",
+    ".agents/skills/silvermoon",
+    "`npx skills add` universal target",
+    "does not need a package manifest",
     "keep the Implementation, Deployment,",
     "matching ledger placeholders synchronized until their lifecycle actions",
     "An Agent may add a concise, unique alias",
     "do not interrupt the user only to ask them to name it",
-    "Execute only the highest-priority action",
+    "all ordered instructions",
     "Preserve unknown, unrelated, or user-authored changes",
     "Never use force-push",
     "Silvermoon has no approval, acceptance, or abandonment mutation commands",
@@ -101,9 +108,9 @@ test("exposes one consolidated silvermoon skill", async () => {
     "stop editing and request explicit acceptance",
     "It never",
     "implementationRevision",
-    "silvermoon check --worktree --json",
-    "silvermoon check --staged --json",
-    "observedPrimaryCommit",
+    "silvermoon check --worktree",
+    "silvermoon check --staged",
+    "primary tip reported by the latest instructions",
     "Never infer a human decision",
     "Never poll the same observation",
   ]) {

@@ -14,7 +14,7 @@ pnpm install --frozen-lockfile
 Use the smallest check that covers a change:
 
 ```sh
-pnpm sync:skills       # refresh the generated GitHub Copilot skill copy
+pnpm sync:skills       # refresh the generated universal skill copy
 pnpm test              # fast unit and repository contract tests
 pnpm test:integration  # real filesystem and Git behavior
 pnpm test:e2e          # packed and installed CLI behavior
@@ -23,7 +23,7 @@ pnpm check:skills      # skill discovery and structure
 ```
 
 Edit the canonical skill only under `skills/silvermoon`, then run
-`pnpm sync:skills`. The checked-in `.github/skills/silvermoon` directory is a
+`pnpm sync:skills`. The checked-in `.agents/skills/silvermoon` directory is a
 generated copy so repository skill discovery works without symbolic-link
 support. `pnpm check:skills` rejects a stale or manually edited copy.
 

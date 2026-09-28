@@ -9,23 +9,28 @@ This guide is the authoritative setup and first-use path for Silvermoon.
 - Permission to fetch that branch and to publish ordinary non-force commits
   through the repository's normal collaboration path.
 
-## Install The Project Dependency
+## Run Silvermoon And Register Its Skill
 
-Install Silvermoon in the repository so every collaborator uses the declared
-version:
-
-```sh
-npm install --save-dev silvermoon
-```
-
-Register the canonical packaged skill through the supported `skills` interface:
+Install Silvermoon independently of the target project's dependency graph, or
+invoke a chosen version temporarily:
 
 ```sh
-npx skills add ./node_modules/silvermoon/skills --skill silvermoon --agent github-copilot --yes --copy
+npm install --global silvermoon
+silvermoon whats-next
+# or: npx silvermoon@<version> whats-next
 ```
 
-Silvermoon diagnoses whether the project dependency, installed package, and
-repository-local skill match. It does not install dependencies or mutate skill
+The setup report gives the exact path for the running installation. Use it to
+register the bundled canonical skill through the universal `skills` target:
+
+```sh
+npx skills add <path-to-running-silvermoon>/skills --skill silvermoon --agent universal --yes --copy
+```
+
+The registration lives only at `.agents/skills/silvermoon`. Silvermoon checks
+that its content exactly matches the running installation. It does not require
+the target repository to use Node, contain `package.json`, declare a
+Silvermoon dependency, or have `node_modules`, and it never mutates skill
 registration itself.
 
 ## Configure The Shared Primary
@@ -62,15 +67,15 @@ preferredLanguage: zh-CN
 
 Inherited values remain dynamic and are not copied into an idea. Use
 `create-idea --language <tag>` only when the new idea needs a stable override.
-`whats-next` reports both the effective tag and its source.
+The shared observation reports the resolved non-empty language tag.
 
 ## Create The First Idea
 
 Run:
 
 ```sh
-npx silvermoon create-idea --json
-npx silvermoon create-idea --language zh-cn --json
+silvermoon create-idea
+silvermoon create-idea --language zh-cn
 ```
 
 The command first applies the same repository, worktree, conflict, and ancestry
@@ -87,12 +92,15 @@ prepared idea through ordinary Git.
 Then ask what comes next with the generated ULID or an exact unique alias:
 
 ```sh
-npx silvermoon whats-next <idea> --json
+silvermoon whats-next <idea>
 ```
 
-The report contains one highest-priority action. Execute only that action. Run
-the same command again only after an expected repository change, an unexpected
-input change, or a newly arrived external result.
+The default report is one conversation with four sections: intent,
+observation, actions and outcomes, and ordered next instructions. Add `--json`
+only when a programmatic consumer needs the same structured envelope. Execute
+the applicable instructions in order and run the same command again only after
+an expected repository change, an unexpected input change, or a newly arrived
+external result.
 
 ## Make Decisions Explicit
 

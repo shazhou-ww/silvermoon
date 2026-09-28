@@ -10,8 +10,8 @@ The shared authority is `https://github.com/shazhou-ww/silvermoon.git` on
 optional transport and are not protocol state.
 
 ```sh
-silvermoon whats-next [idea] --json
-silvermoon create-idea --json
+silvermoon whats-next [idea]
+silvermoon create-idea
 silvermoon check
 silvermoon check --worktree
 silvermoon check --staged
@@ -19,25 +19,28 @@ silvermoon check --commit HEAD
 silvermoon check --remote
 ```
 
-Use the report's `observedPrimaryCommit` as the expected remote tip. When
+Use the primary commit stated in the report as the expected remote tip. When
 primary moves, reobserve instead of replaying approval or acceptance.
 
 Choose the entry command from the user's intent. Explicit new-idea requests use
-`silvermoon create-idea --json` even when unrelated active ideas exist; all
-navigation uses `silvermoon whats-next [idea] --json`. Both commands apply the
+`silvermoon create-idea` even when unrelated active ideas exist; all navigation
+uses `silvermoon whats-next [idea]`. Add `--json` only for a programmatic
+consumer. Both commands apply the
 same branch, conflict, worktree, and ancestry hygiene. If hygiene blocks an
 explicit creation, perform only that blocking action and then retry
 `create-idea` so active-idea selection cannot replace the pending create intent.
 
 ## Decisions And Publication
 
-`whats-next` is read-only. Human approvals, implementation acceptance,
-deployment acceptance, and abandonment are ordinary edits to one idea
-`status.yaml` after an explicit decision. Validate the candidate and publish a
-normal non-force commit. Prefer status-only decision commits when practical.
+`whats-next` may fetch after local readiness passes, but it does not move the
+worktree, index, branches, or named refs. Human approvals, implementation
+acceptance, deployment acceptance, and abandonment are ordinary edits to one
+idea `status.yaml` after an explicit decision. Validate the candidate and
+publish a normal non-force commit. Prefer status-only decision commits when
+practical.
 
 The required idea-root `ledger.md` is the Agent continuation surface. After
-repository hygiene and lifecycle routing, combine the reported action, world
+repository hygiene and lifecycle routing, combine the reported instructions, world
 contracts, and unchecked Implementation or Deployment ledger entries to infer
 the next work. Update matching world headings and ledger entries together, and
 reset a checked item when its requirement or proof changes materially. Ledger

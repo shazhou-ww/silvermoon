@@ -2,7 +2,11 @@ import { randomBytes } from "node:crypto";
 import { lstat, mkdir, readFile, rm, rmdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
-import { loadConfig } from "./config.js";
+import {
+  createEnvelope,
+  localize,
+  outcome,
+} from "./dialogue.js";
 import {
   DEPLOYMENT_TEMPLATE,
   IDEA_TEMPLATE,
@@ -12,7 +16,11 @@ import {
 import { isValidUlid, serializeIdeaStatus } from "./ideas.js";
 import { canonicalizeLanguageTag } from "./language.js";
 import { IDEAS_ROOT, ideaPaths } from "./layout.js";
-import { whatsNext } from "./whatsnext.js";
+import { observeSnapshot } from "./observation.js";
+import {
+  assessRepositoryReadiness,
+  projectInstructions,
+} from "./whatsnext.js";
 
 const ULID_ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
 const MAX_ID_ATTEMPTS = 32;
@@ -45,29 +53,31 @@ async function removeOwnedFile(path, expected, read, remove) {
   try {
     current = await read(path);
   } catch (caught) {
-    if (caught.code === "ENOENT") return;
+    if (caught.code === "ENOENT") return { path, status: "missing" };
     throw caught;
   }
   const expectedBytes = Buffer.from(expected);
-  if (
-    current.length <= expectedBytes.length &&
-    expectedBytes.subarray(0, current.length).equals(current)
-  ) {
+  if (current.equals(expectedBytes)) {
     await remove(path, { force: true });
+    return { path, status: "removed" };
   }
+  return { path, status: "preserved-modified" };
 }
 
 async function removeCreatedDirectories(created, removeDirectory) {
+  const results = [];
   for (const path of [...created].reverse()) {
     try {
       await removeDirectory(path);
-    } catch {
-      return;
+      results.push({ path, status: "removed" });
+    } catch (caught) {
+      results.push({ path, status: "preserved", error: caught.message });
     }
   }
+  return results;
 }
 
-async function ensureDirectoryPath(root, relativePath, inspect, makeDirectory, removeDirectory) {
+async function ensureDirectoryPath(root, relativePath, operations) {
   const created = [];
   let current = root;
   try {
@@ -75,7 +85,7 @@ async function ensureDirectoryPath(root, relativePath, inspect, makeDirectory, r
       current = resolve(current, segment);
       let metadata;
       try {
-        metadata = await inspect(current);
+        metadata = await operations.inspect(current);
       } catch (caught) {
         if (caught.code !== "ENOENT") throw caught;
       }
@@ -86,40 +96,59 @@ async function ensureDirectoryPath(root, relativePath, inspect, makeDirectory, r
         continue;
       }
       try {
-        await makeDirectory(current);
+        await operations.makeDirectory(current);
         created.push(current);
       } catch (caught) {
         if (caught.code !== "EEXIST") throw caught;
-        metadata = await inspect(current);
+        metadata = await operations.inspect(current);
         if (!metadata.isDirectory() || metadata.isSymbolicLink()) throw caught;
       }
     }
     return created;
   } catch (caught) {
-    await removeCreatedDirectories(created, removeDirectory);
+    caught.cleanup = await removeCreatedDirectories(
+      created,
+      operations.removeDirectory,
+    );
     throw caught;
   }
 }
 
-function failure(root, preflight, caught) {
-  return {
-    command: "create-idea",
-    ok: false,
-    root,
-    diagnostics: [{
-      code: "idea.create.failed",
-      level: "error",
-      message: caught.message,
-      remediation: "Preserve existing paths, resolve the filesystem error, and retry.",
-    }],
-    result: {
-      observedPrimaryCommit: preflight.result?.observedPrimaryCommit ?? null,
-      request: { kind: "create-idea" },
-      selectedIdea: null,
-      action: null,
-      createdIdea: null,
-    },
-  };
+function cleanupSummary(results) {
+  const preserved = results.filter(({ status }) => status.startsWith("preserved"));
+  return preserved.length === 0
+    ? "All paths still owned by this operation were removed."
+    : `Preserved ${preserved.length} path(s) because they changed or could not be removed: `
+      + preserved.map(({ path }) => path).join(", ");
+}
+
+function failureEnvelope({
+  caught,
+  intention,
+  observation,
+  outcomes,
+  cleanup = [],
+  language,
+}) {
+  outcomes.push(outcome(
+    "create-idea-scaffold",
+    "failure",
+    localize(
+      language,
+      `Idea creation failed: ${caught.message} ${cleanupSummary(cleanup)}`,
+      `创建 idea 失败：${caught.message} ${cleanupSummary(cleanup)}`,
+    ),
+  ));
+  return createEnvelope(
+    intention,
+    observation,
+    outcomes,
+    localize(
+      language,
+      "Preserve any reported paths, resolve the filesystem error, and retry `silvermoon create-idea`.",
+      "保留报告中的路径，解决文件系统错误后，再运行 `silvermoon create-idea`。",
+    ),
+  );
 }
 
 export async function createIdea({
@@ -129,42 +158,53 @@ export async function createIdea({
   root = process.cwd(),
   userHome,
 } = {}) {
-  const repositoryRoot = resolve(root);
-  let canonicalLanguage;
-  if (language !== undefined) {
-    try {
-      canonicalLanguage = canonicalizeLanguageTag(language);
-    } catch (caught) {
-      return {
-        command: "create-idea",
-        ok: false,
-        root: repositoryRoot,
-        diagnostics: [{
-          code: "idea.language.invalid",
-          level: "error",
-          message: caught.message,
-          remediation: "Use a valid BCP 47 tag such as en or zh-CN.",
-        }],
-        result: {
-          observedPrimaryCommit: null,
-          request: { kind: "create-idea" },
-          selectedIdea: null,
-          action: null,
-          createdIdea: null,
-        },
-      };
-    }
-  }
-  const preflight = await whatsNext({
-    create: true,
-    root: repositoryRoot,
+  const requestedRoot = resolve(root);
+  const canonicalLanguage = language === undefined
+    ? undefined
+    : canonicalizeLanguageTag(language);
+  const intention = {
+    command: "create-idea",
+    args: { language: canonicalLanguage ?? null },
+  };
+  const outcomes = [];
+  const observed = await observeSnapshot({
+    allowMissingIdeas: true,
+    ideaLanguage: canonicalLanguage,
+    root: requestedRoot,
     userHome,
+    version: { type: "worktree" },
   });
-  const routed = { ...preflight, command: "create-idea" };
-  if (!preflight.ok || preflight.result.action?.code !== "create-idea") return routed;
-
-  const loaded = await loadConfig({ root: repositoryRoot });
-  if (!loaded.config) return { ...routed, ok: false, diagnostics: loaded.diagnostics };
+  const recheckCommand = canonicalLanguage === undefined
+    ? "silvermoon create-idea"
+    : `silvermoon create-idea --language ${canonicalLanguage}`;
+  if (!observed.projectReady) {
+    return createEnvelope(
+      intention,
+      observed.observation,
+      outcomes,
+      projectInstructions(
+        observed,
+        observed.observation.root,
+        observed.language,
+        recheckCommand,
+      ),
+    );
+  }
+  const repositoryRoot = observed.observation.root;
+  const readiness = await assessRepositoryReadiness({
+    observed,
+    outcomes,
+    recheckCommand,
+    root: repositoryRoot,
+  });
+  if (!readiness.ready) {
+    return createEnvelope(
+      intention,
+      readiness.observation,
+      outcomes,
+      readiness.instructions,
+    );
+  }
 
   const inspect = operations.lstat ?? lstat;
   const makeDirectory = operations.mkdir ?? mkdir;
@@ -172,32 +212,55 @@ export async function createIdea({
   const remove = operations.rm ?? rm;
   const removeDirectory = operations.rmdir ?? rmdir;
   const write = operations.writeFile ?? writeFile;
+  const fileOperations = {
+    inspect,
+    makeDirectory,
+    removeDirectory,
+  };
   let rootDirectories;
   try {
     rootDirectories = await ensureDirectoryPath(
       repositoryRoot,
       IDEAS_ROOT,
-      inspect,
-      makeDirectory,
-      removeDirectory,
+      fileOperations,
     );
   } catch (caught) {
-    return failure(repositoryRoot, preflight, caught);
+    return failureEnvelope({
+      caught,
+      intention,
+      observation: readiness.observation,
+      outcomes,
+      cleanup: caught.cleanup,
+      language: observed.language,
+    });
   }
 
-  const failRoot = async (caught) => {
-    await removeCreatedDirectories(rootDirectories, removeDirectory);
-    return failure(repositoryRoot, preflight, caught);
-  };
-
   for (let attempt = 0; attempt < MAX_ID_ATTEMPTS; attempt += 1) {
-    const id = await generateId();
-    if (!isValidUlid(id)) {
-      return failRoot(new Error(`Generated idea id is not a canonical ULID: ${id}`));
+    let id;
+    let paths;
+    let folder;
+    try {
+      id = await generateId();
+      if (!isValidUlid(id)) {
+        throw new Error(`Generated idea id is not a canonical ULID: ${id}`);
+      }
+      paths = ideaPaths(id);
+      folder = resolve(repositoryRoot, paths.ideaPath);
+      if (await pathExists(folder, inspect)) continue;
+    } catch (caught) {
+      const cleanup = await removeCreatedDirectories(
+        rootDirectories,
+        removeDirectory,
+      );
+      return failureEnvelope({
+        caught,
+        intention,
+        observation: readiness.observation,
+        outcomes,
+        cleanup,
+        language: observed.language,
+      });
     }
-    const paths = ideaPaths(id);
-    const folder = resolve(repositoryRoot, paths.ideaPath);
-    if (await pathExists(folder, inspect)) continue;
 
     const directoryPaths = [
       paths.ideaPath,
@@ -218,6 +281,7 @@ export async function createIdea({
     ];
     const createdDirectories = [];
     const cleanupFiles = [];
+    let collisionPath = null;
     try {
       for (const relativePath of directoryPaths) {
         const absolutePath = resolve(repositoryRoot, relativePath);
@@ -231,42 +295,76 @@ export async function createIdea({
         try {
           await write(absolutePath, source, { flag: "wx" });
         } catch (caught) {
-          if (caught.code === "EEXIST") cleanupFiles.pop();
+          if (caught.code === "EEXIST") {
+            cleanupFiles.pop();
+            collisionPath = absolutePath;
+          }
           throw caught;
         }
       }
-      return {
-        command: "create-idea",
-        ok: true,
-        root: repositoryRoot,
-        diagnostics: [],
-        result: {
-          observedPrimaryCommit: preflight.result.observedPrimaryCommit,
-          request: { kind: "create-idea" },
-          selectedIdea: null,
-          createdIdea: {
-            id,
-            ideaPath: paths.ideaPath,
-            statusPath: paths.statusPath,
-            ideaDocumentPath: paths.ideaDocumentPath,
-            implementationDocumentPath: paths.implementationDocumentPath,
-            deploymentDocumentPath: paths.deploymentDocumentPath,
-            ledgerPath: paths.ledgerPath,
-            ...(canonicalLanguage === undefined ? {} : { language: canonicalLanguage }),
-          },
-        },
-      };
+      outcomes.push(outcome(
+        "create-idea-scaffold",
+        "success",
+        localize(
+          observed.language,
+          `Created idea ${id} at ${paths.ideaPath} with ${paths.ideaDocumentPath}, ${paths.implementationDocumentPath}, ${paths.deploymentDocumentPath}, ${paths.ledgerPath}, and ${paths.statusPath}.`,
+          `已在 ${paths.ideaPath} 创建 idea ${id}，包含 ${paths.ideaDocumentPath}、${paths.implementationDocumentPath}、${paths.deploymentDocumentPath}、${paths.ledgerPath} 和 ${paths.statusPath}。`,
+        ),
+      ));
+      return createEnvelope(
+        intention,
+        readiness.observation,
+        outcomes,
+        localize(
+          observed.language,
+          `Describe the requested Ideal World in ${paths.ideaDocumentPath}, keep the other world and ledger placeholders synchronized, inspect the complete candidate with \`silvermoon check --worktree\`, then stage and validate it with \`silvermoon check --staged\` before committing and publishing against observed primary ${readiness.primary}.`,
+          `在 ${paths.ideaDocumentPath} 中描述请求的道心，并保持其他 world 与 ledger 占位同步；先用 \`silvermoon check --worktree\` 检查完整候选，再 stage 并用 \`silvermoon check --staged\` 验证，然后基于已观察 primary ${readiness.primary} 提交并发布。`,
+        ),
+      );
     } catch (caught) {
+      const cleanup = [];
       for (const [path, source] of [...cleanupFiles].reverse()) {
-        await removeOwnedFile(path, source, read, remove).catch(() => { });
+        try {
+          cleanup.push(await removeOwnedFile(path, source, read, remove));
+        } catch (cleanupError) {
+          cleanup.push({
+            path,
+            status: "preserved",
+            error: cleanupError.message,
+          });
+        }
       }
-      await removeCreatedDirectories(createdDirectories, removeDirectory);
-      if (caught.code === "EEXIST") continue;
-      return failRoot(caught);
+      cleanup.push(...await removeCreatedDirectories(
+        createdDirectories,
+        removeDirectory,
+      ));
+      if (collisionPath) {
+        cleanup.push({ path: collisionPath, status: "preserved-existing" });
+      }
+      cleanup.push(...await removeCreatedDirectories(
+        rootDirectories,
+        removeDirectory,
+      ));
+      return failureEnvelope({
+        caught,
+        intention,
+        observation: readiness.observation,
+        outcomes,
+        cleanup,
+        language: observed.language,
+      });
     }
   }
 
-  return failRoot(
-    new Error(`Could not allocate a unique idea id after ${MAX_ID_ATTEMPTS} attempts.`),
-  );
+  const cleanup = await removeCreatedDirectories(rootDirectories, removeDirectory);
+  return failureEnvelope({
+    caught: new Error(
+      `Could not allocate a unique idea id after ${MAX_ID_ATTEMPTS} attempts.`,
+    ),
+    intention,
+    observation: readiness.observation,
+    outcomes,
+    cleanup,
+    language: observed.language,
+  });
 }

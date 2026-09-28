@@ -62,8 +62,10 @@ work, but a checked item is not approval or acceptance.
 
 ## One Project, Shared Facts
 
-`whats-next` observes the configured remote primary and returns the exact
-`observedPrimaryCommit` used for its guidance. Writers use that commit as the
-expected shared tip. If primary moves, they fetch and reobserve rather than
-replaying a stale decision. This is coordination through ordinary Git, not a
-distributed lock.
+`whats-next` first checks local worktree, HEAD, and upstream facts, then fetches
+the configured remote primary only when local hygiene permits it. Its
+observation and instructions report the exact local and remote commits used
+for ancestry guidance. Writers use the reported remote commit as the expected
+shared tip. If primary moves, they fetch and reobserve rather than replaying a
+stale decision. This is coordination through ordinary Git, not a distributed
+lock.

@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 
 const repositoryRoot = fileURLToPath(new URL("..", import.meta.url));
 const canonical = resolve(repositoryRoot, "skills", "silvermoon");
-const registration = resolve(repositoryRoot, ".github", "skills", "silvermoon");
+const registration = resolve(repositoryRoot, ".agents", "skills", "silvermoon");
 const args = process.argv.slice(2);
 const checkOnly = args.length === 1 && args[0] === "--check";
 

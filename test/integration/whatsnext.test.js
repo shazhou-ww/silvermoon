@@ -1,551 +1,545 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import {
+  mkdir,
+  mkdtemp,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { pathToFileURL } from "node:url";
+import { join, resolve } from "node:path";
 import { afterEach, test } from "node:test";
+import { pathToFileURL } from "node:url";
 
-import { serializeIdeaStatus } from "../../src/ideas.js";
 import { observeGitCommands } from "../../src/git.js";
-import { ideaPaths } from "../../src/layout.js";
-import { whatsNext } from "../../src/whatsnext.js";
+import {
+  CHANGE_SAMPLE_ITEM_LIMIT,
+  whatsNext,
+} from "../../src/whatsnext.js";
+import {
+  createRepository,
+  FIRST_ID,
+  git,
+  PRIMARY_REPOSITORY,
+  SECOND_ID,
+  setIdeaState,
+} from "../helpers/repository.js";
 
 const temporaryDirectories = [];
-const id = "01M36QGPNTXEPP61DA4KP4AVZF";
-
-function git(root, ...args) {
-  const result = spawnSync("git", ["-C", root, ...args], {
-    encoding: "utf8",
-    windowsHide: true,
-  });
-  assert.equal(result.status, 0, result.stderr);
-  return result.stdout.trim();
-}
+const DEPLOYING_ID = "01M36QGPNTXEPP61DA4KP4AVG1";
+const COMPLETED_ID = "01M36QGPNTXEPP61DA4KP4AVG2";
+const ABANDONED_ID = "01M36QGPNTXEPP61DA4KP4AVG3";
 
 afterEach(async () => {
   await Promise.all(
     temporaryDirectories.splice(0).map((directory) =>
-      rm(directory, { recursive: true, force: true }),
+      rm(directory, { recursive: true, force: true })
     ),
   );
 });
 
-async function writeIdea(root, ideaId, status = {}) {
-  const paths = ideaPaths(ideaId);
-  await mkdir(join(root, ...paths.idealPath.split("/")), { recursive: true });
-  await writeFile(join(root, ...paths.ideaDocumentPath.split("/")), "# Fixture\n");
-  await writeFile(join(root, ...paths.implementationDocumentPath.split("/")), "");
-  await writeFile(join(root, ...paths.deploymentDocumentPath.split("/")), "");
-  await writeFile(join(root, ...paths.ledgerPath.split("/")), "# Ledger\n");
-  await writeFile(
-    join(root, ...paths.statusPath.split("/")),
-    serializeIdeaStatus({ version: 1, id: ideaId, ...status }),
-  );
+async function fixture(options) {
+  const repository = await createRepository(options);
+  temporaryDirectories.push(repository.base);
+  return repository;
 }
 
-async function createRepository() {
-  const base = await mkdtemp(join(tmpdir(), "silvermoon-whatsnext-"));
-  temporaryDirectories.push(base);
-  const root = join(base, "work");
-  const remote = join(base, "remote.git");
-  await mkdir(root);
-  git(root, "init", "--initial-branch=main");
-  git(root, "config", "user.name", "silvermoon test");
-  git(root, "config", "user.email", "silvermoon@example.invalid");
-  git(root, "config", "core.autocrlf", "false");
-  const repository = pathToFileURL(remote).href;
-  await mkdir(join(root, ".silvermoon"), { recursive: true });
-  await writeFile(join(root, ".silvermoon", "config.yaml"), `version: 1
-primaryRepository: https://example.test/owner/repository.git
-primaryBranch: main
-`);
-  await writeIdea(root, id, { alias: "fixture" });
-  git(root, "add", ".");
-  git(root, "commit", "-m", "Create fixture idea");
-  git(root, "init", "--bare", "--initial-branch=main", remote);
-  git(root, "push", repository, "main");
-  git(root, "config", `url.${repository}.insteadOf`, "https://example.test/owner/repository.git");
-  return { base, remote, repository, root };
+function envelopeKeys(report) {
+  return Object.keys(report).sort();
 }
 
-async function writeUserConfig(home, preferredLanguage) {
-  const directory = join(home, ".config", "silvermoon");
-  await mkdir(directory, { recursive: true });
-  await writeFile(
-    join(directory, "config.yaml"),
-    `version: 1\npreferredLanguage: ${preferredLanguage}\n`,
-  );
-}
-
-test("[selector-none] selects a single active idea before state guidance", async () => {
-  const { root } = await createRepository();
-  const report = await whatsNext({ root });
-
-  assert.equal(report.ok, true);
-  assert.deepEqual(report.result.request, { kind: "navigate" });
-  assert.equal(report.result.selectedIdea.id, id);
-  assert.equal(report.result.action.code, "continue-active-idea");
-});
-
-test("observes primary without Git worktree commands", async () => {
-  const { root } = await createRepository();
-  const commands = [];
-
-  const report = await observeGitCommands(
-    (args) => commands.push(args),
-    () => whatsNext({ idea: id, root }),
-  );
-
-  assert.equal(report.ok, true);
-  assert.equal(commands.some(([command]) => command === "worktree"), false);
-});
-
-test("reports invalid primary layout without Git worktree commands", async () => {
-  const { repository, root } = await createRepository();
-  await rm(join(root, ".silvermoon", "ideas"), { recursive: true });
-  git(root, "add", "--all");
-  git(root, "commit", "-m", "Remove idea layout");
-  git(root, "push", repository, "main");
-  const commands = [];
-
-  const report = await observeGitCommands(
-    (args) => commands.push(args),
-    () => whatsNext({ root }),
-  );
-
-  assert.equal(report.ok, false);
-  assert.equal(report.diagnostics[0].code, "layout.ideas.missing");
-  assert.equal(commands.some(([command]) => command === "worktree"), false);
-});
-
-test("[dirty] prioritizes dirty worktree hygiene over idea state guidance", async () => {
-  const { root } = await createRepository();
-  await writeFile(join(root, "local.txt"), "preserve me\n");
-  const report = await whatsNext({ idea: "fixture", root });
-
-  assert.equal(report.ok, true);
-  assert.deepEqual(report.result.request, { kind: "select-idea", selector: "fixture" });
-  assert.equal(report.result.selectedIdea, null);
-  assert.equal(report.result.action.code, "inspect-worktree-changes");
-  assert.deepEqual(report.result.action.details, {
-    staged: [],
-    unstaged: [],
-    untracked: [{ path: "local.txt" }],
-    conflicted: [],
-  });
-});
-
-test("[structured-changes] reports staged, unstaged, and untracked changes as stable arrays", async () => {
-  const { repository, root } = await createRepository();
-  await writeFile(join(root, "old.txt"), "rename me\n");
-  await writeFile(join(root, "modified.txt"), "original\n");
-  git(root, "add", ".");
-  git(root, "commit", "-m", "Add change fixtures");
-  git(root, "push", repository, "main");
-  git(root, "mv", "old.txt", "renamed.txt");
-  await writeFile(join(root, "modified.txt"), "modified\n");
-  await writeFile(join(root, "new.txt"), "untracked\n");
-
-  const report = await whatsNext({ idea: id, root });
-
-  assert.equal(report.result.action.code, "inspect-worktree-changes");
-  assert.deepEqual(report.result.action.details, {
-    staged: [{ path: "renamed.txt", kind: "renamed", originalPath: "old.txt" }],
-    unstaged: [{ path: "modified.txt", kind: "modified" }],
-    untracked: [{ path: "new.txt" }],
-    conflicted: [],
-  });
-});
-
-test("[conflict] reports merge conflicts with structured conflict details", async () => {
-  const { repository, root } = await createRepository();
-  await writeFile(join(root, "conflict.txt"), "base\n");
-  git(root, "add", ".");
-  git(root, "commit", "-m", "Add conflict fixture");
-  git(root, "push", repository, "main");
-  git(root, "checkout", "-b", "other");
-  await writeFile(join(root, "conflict.txt"), "other\n");
-  git(root, "add", ".");
-  git(root, "commit", "-m", "Change other side");
-  git(root, "checkout", "main");
-  await writeFile(join(root, "conflict.txt"), "main\n");
-  git(root, "add", ".");
-  git(root, "commit", "-m", "Change main side");
-  const merged = spawnSync("git", ["-C", root, "merge", "other"], {
+async function pushPeerChange(repository, name) {
+  const peer = join(repository.base, `peer-${name}`);
+  const cloned = spawnSync("git", ["clone", repository.remote, peer], {
     encoding: "utf8",
     windowsHide: true,
   });
-  assert.notEqual(merged.status, 0);
+  assert.equal(cloned.status, 0, cloned.stderr);
+  git(peer, "config", "user.name", "silvermoon peer");
+  git(peer, "config", "user.email", "silvermoon@example.invalid");
+  await writeFile(join(peer, `${name}.txt`), `${name}\n`);
+  git(peer, "add", ".");
+  git(peer, "commit", "-m", `Add ${name}`);
+  git(peer, "push", "origin", "main");
+}
 
-  const report = await whatsNext({ idea: id, root });
+test("project setup uses cumulative observation variants and reports all setup fixes", async () => {
+  const root = await mkdtemp(join(tmpdir(), "silvermoon-unconfigured-"));
+  temporaryDirectories.push(root);
 
-  assert.equal(report.result.action.code, "resolve-conflicts");
-  assert.deepEqual(report.result.action.details, {
-    staged: [],
-    unstaged: [],
-    untracked: [],
-    conflicted: [{ path: "conflict.txt", kind: "both-modified" }],
+  const missingGit = await whatsNext({ root, userHome: root });
+  assert.equal(missingGit.observation.state, "project-setup-required");
+  assert.equal(missingGit.observation.observedThrough, "root");
+  assert.equal(Object.hasOwn(missingGit.observation, "version"), false);
+  assert.deepEqual(
+    missingGit.observation.problems.map(({ type }) => type),
+    ["git-repository-missing", "config-missing", "canonical-skill-missing"],
+  );
+  assert.equal(missingGit.outcomes.length, 0);
+
+  const configured = await fixture();
+  await writeFile(
+    join(configured.root, ".silvermoon", "config.yaml"),
+    `version: 2
+primaryRepository: ${PRIMARY_REPOSITORY}
+primaryBranch: main
+`,
+  );
+  git(configured.root, "add", ".");
+  git(configured.root, "commit", "-m", "Break configuration");
+  const invalidConfig = await whatsNext({
+    root: configured.root,
+    userHome: configured.base,
   });
-});
-
-test("[selector-known] renders preparing guidance for a clean synchronized primary", async () => {
-  const { root } = await createRepository();
-  const report = await whatsNext({ idea: id, root });
-
-  assert.equal(report.ok, true);
-  assert.equal(report.result.selectedIdea.state, "preparing");
-  assert.equal(report.result.selectedIdea.ledgerPath, ideaPaths(id).ledgerPath);
-  assert.equal(report.result.action.code, "prepare-idea");
-  assert.deepEqual(report.result.language, { tag: "en-US", source: "default" });
-  assert.match(report.result.action.message, /Use en-US for natural-language content/);
-  assert.equal(report.result.action.details.world.name, "Ideal World");
-  assert.equal(report.result.action.details.world.displayName, "道心");
+  assert.equal(invalidConfig.observation.observedThrough, "version");
+  assert.deepEqual(invalidConfig.observation.version, { type: "worktree" });
   assert.equal(
-    report.result.onboarding.gaps.some(({ status }) =>
-      ["satisfied", "inapplicable"].includes(status)
-    ),
+    Object.hasOwn(invalidConfig.observation, "configuration"),
     false,
   );
+  assert.ok(
+    invalidConfig.observation.problems.some(
+      ({ type }) => type === "config-unsupported-version",
+    ),
+  );
+
+  const missingSkill = await fixture({ preferredLanguage: "zh-CN" });
+  await rm(join(missingSkill.root, ".agents"), { recursive: true });
+  git(missingSkill.root, "add", "--all");
+  git(missingSkill.root, "commit", "-m", "Remove canonical skill");
+  const observedIdeas = await whatsNext({
+    root: missingSkill.root,
+    userHome: missingSkill.base,
+  });
+  assert.equal(observedIdeas.observation.observedThrough, "ideas");
+  assert.equal(observedIdeas.observation.ideas.counts.preparing, 1);
   assert.equal(
-    report.result.action.details.world.revision,
-    report.result.selectedIdea.idealRevision,
+    observedIdeas.observation.problems[0].type,
+    "canonical-skill-missing",
   );
-  assert.equal(report.result.action.details.world.decisionField, "approvedRevision");
+  assert.match(observedIdeas.observation.problems[0].summary, /^Silvermoon 发现/);
+  assert.match(observedIdeas.instructions, /^1\. 处理/);
+});
+
+test("[selector-none] naked navigation lists one active idea without selecting it", async () => {
+  const repository = await fixture();
+
+  const report = await whatsNext({
+    root: repository.root,
+    userHome: repository.base,
+  });
+
+  assert.deepEqual(envelopeKeys(report), [
+    "instructions",
+    "intention",
+    "observation",
+    "outcomes",
+  ]);
+  assert.deepEqual(report.intention, {
+    command: "whats-next",
+    args: { idea: null },
+  });
+  assert.equal(report.observation.state, "task-pending");
+  assert.deepEqual(report.observation.ideas.activeIdeas, [{
+    id: FIRST_ID,
+    alias: "fixture",
+    state: "preparing",
+  }]);
+  assert.match(report.instructions, new RegExp(FIRST_ID));
+  assert.match(report.instructions, /silvermoon create-idea/);
+  assert.equal(report.outcomes[0].type, "fetch-primary");
+  assert.equal(report.outcomes[0].status, "success");
+});
+
+test("resolves the repository root when invoked from a nested directory", async () => {
+  const repository = await fixture();
+  const nested = join(repository.root, "nested", "directory");
+  await mkdir(nested, { recursive: true });
+
+  const report = await whatsNext({
+    idea: FIRST_ID,
+    root: nested,
+    userHome: repository.base,
+  });
+
   assert.equal(
-    report.result.action.details.world.documentPath,
-    ideaPaths(id).ideaDocumentPath,
+    report.observation.root,
+    resolve(git(nested, "rev-parse", "--show-toplevel")),
   );
+  assert.equal(report.observation.state, "task-pending");
+  assert.match(report.instructions, /approvedRevision/);
 });
 
-test("resolves idea, project, global, and default language with reported sources", async () => {
-  const ideaFixture = await createRepository();
-  await writeUserConfig(ideaFixture.base, "de");
-  await writeFile(
-    join(ideaFixture.root, ".silvermoon", "config.yaml"),
-    `version: 1
-primaryRepository: https://example.test/owner/repository.git
-primaryBranch: main
-preferredLanguage: zh-CN
-`,
-  );
-  await writeIdea(ideaFixture.root, id, { alias: "fixture", language: "fr" });
-  git(ideaFixture.root, "add", ".");
-  git(ideaFixture.root, "commit", "-m", "Configure language layers");
-  git(ideaFixture.root, "push", ideaFixture.repository, "main");
-  const idea = await whatsNext({
-    idea: id,
-    root: ideaFixture.root,
-    userHome: ideaFixture.base,
-  });
-  assert.deepEqual(idea.result.language, { tag: "fr", source: "idea" });
-  assert.match(idea.result.action.message, /Use fr for natural-language content/);
-
-  const projectFixture = await createRepository();
-  await writeUserConfig(projectFixture.base, "de");
-  await writeFile(
-    join(projectFixture.root, ".silvermoon", "config.yaml"),
-    `version: 1
-primaryRepository: https://example.test/owner/repository.git
-primaryBranch: main
-preferredLanguage: zh-CN
-`,
-  );
-  git(projectFixture.root, "add", ".");
-  git(projectFixture.root, "commit", "-m", "Configure project language");
-  git(projectFixture.root, "push", projectFixture.repository, "main");
-  const project = await whatsNext({
-    idea: id,
-    root: projectFixture.root,
-    userHome: projectFixture.base,
-  });
-  assert.deepEqual(project.result.language, { tag: "zh-CN", source: "project" });
-
-  const globalFixture = await createRepository();
-  await writeUserConfig(globalFixture.base, "de");
-  const global = await whatsNext({
-    idea: id,
-    root: globalFixture.root,
-    userHome: globalFixture.base,
-  });
-  assert.deepEqual(global.result.language, { tag: "de", source: "global" });
-
-  const defaultFixture = await createRepository();
-  const fallback = await whatsNext({
-    idea: id,
-    root: defaultFixture.root,
-    userHome: defaultFixture.base,
-  });
-  assert.deepEqual(fallback.result.language, { tag: "en-US", source: "default" });
-});
-
-test("dynamically inherits changed user language without writing idea status", async () => {
-  const { base, root } = await createRepository();
-  const statusPath = join(root, ...ideaPaths(id).statusPath.split("/"));
-  const originalStatus = await readFile(statusPath, "utf8");
-  await writeUserConfig(base, "de");
-  const first = await whatsNext({ idea: id, root, userHome: base });
-  await writeUserConfig(base, "fr");
-  const second = await whatsNext({ idea: id, root, userHome: base });
-
-  assert.deepEqual(first.result.language, { tag: "de", source: "global" });
-  assert.deepEqual(second.result.language, { tag: "fr", source: "global" });
-  assert.equal(await readFile(statusPath, "utf8"), originalStatus);
-});
-
-test("rejects invalid explicit user language without falling back", async () => {
-  const { base, root } = await createRepository();
-  await writeUserConfig(base, "zh-cn");
-  const report = await whatsNext({ idea: id, root, userHome: base });
-
-  assert.equal(report.ok, false);
-  assert.equal(report.result.action, null);
-  assert.equal(report.diagnostics[0].code, "user-config.invalid-preferred-language");
-});
-
-test("[alias-absent] selects an alias-less idea by ULID without inventing display text", async () => {
-  const { repository, root } = await createRepository();
-  await writeFile(
-    join(root, ...ideaPaths(id).statusPath.split("/")),
-    serializeIdeaStatus({ version: 1, id }),
-  );
-  git(root, "add", ".");
-  git(root, "commit", "-m", "Remove fixture alias");
-  git(root, "push", repository, "main");
-
-  const report = await whatsNext({ idea: id, root });
-
-  assert.equal(report.ok, true);
-  assert.equal(Object.hasOwn(report.result.selectedIdea, "alias"), false);
-  assert.equal(report.result.action.code, "prepare-idea");
-  assert.match(report.result.action.message, new RegExp(id));
-  assert.doesNotMatch(report.result.action.message, /undefined/);
-
-  const missing = await whatsNext({ idea: "missing-alias", root });
-  assert.equal(missing.ok, false);
-  assert.equal(missing.diagnostics[0].code, "idea.not-found");
-});
-
-test("[selector-unknown] reports an unknown explicit idea without guessing", async () => {
-  const { root } = await createRepository();
-  const report = await whatsNext({ idea: "unknown", root });
-
-  assert.equal(report.ok, false);
-  assert.deepEqual(report.result.request, { kind: "select-idea", selector: "unknown" });
-  assert.equal(report.result.selectedIdea, null);
-  assert.equal(report.result.action, null);
-  assert.equal(report.diagnostics[0].code, "idea.not-found");
-});
-
-test("preserves an unknown selector behind dirty and branch hygiene", async () => {
-  {
-    const { root } = await createRepository();
-    await writeFile(join(root, "dirty.txt"), "dirty\n");
-    const report = await whatsNext({ idea: "unknown", root });
-    assert.deepEqual(report.result.request, { kind: "select-idea", selector: "unknown" });
-    assert.equal(report.result.selectedIdea, null);
-    assert.equal(report.result.action.code, "inspect-worktree-changes");
-    assert.deepEqual(report.diagnostics, []);
-  }
-  {
-    const { root } = await createRepository();
-    git(root, "checkout", "-b", "feature");
-    const report = await whatsNext({ idea: "unknown", root });
-    assert.deepEqual(report.result.request, { kind: "select-idea", selector: "unknown" });
-    assert.equal(report.result.selectedIdea, null);
-    assert.equal(report.result.action.code, "switch-to-primary");
-    assert.deepEqual(report.diagnostics, []);
-  }
-});
-
-test("explicit create intent bypasses active-idea selection after hygiene", async () => {
-  const { root } = await createRepository();
-
-  const report = await whatsNext({ create: true, root });
-
-  assert.equal(report.ok, true);
-  assert.deepEqual(report.result.request, { kind: "create-idea" });
-  assert.equal(report.result.selectedIdea, null);
-  assert.equal(report.result.action.code, "create-idea");
-});
-
-test("lists multiple active ideas and creates when none remain active", async () => {
-  const { repository, root } = await createRepository();
-  const second = "01M36QGPNTXEPP61DA4KP4AVG0";
-  await writeIdea(root, second, { alias: "second" });
-  git(root, "add", ".");
-  git(root, "commit", "-m", "Add second idea");
-  git(root, "push", repository, "main");
-
-  const multiple = await whatsNext({ root });
-  assert.equal(multiple.result.action.code, "select-active-idea");
-  assert.deepEqual(
-    multiple.result.action.details.ideas.map(({ id: ideaId }) => ideaId),
-    [id, second].sort(),
-  );
-
-  await writeFile(
-    join(root, ...ideaPaths(id).statusPath.split("/")),
-    serializeIdeaStatus({ version: 1, id, alias: "fixture", abandoned: true }),
-  );
-  await writeFile(
-    join(root, ...ideaPaths(second).statusPath.split("/")),
-    serializeIdeaStatus({ version: 1, id: second, alias: "second", abandoned: true }),
-  );
-  git(root, "add", ".");
-  git(root, "commit", "-m", "Abandon fixture ideas");
-  git(root, "push", repository, "main");
-
-  const none = await whatsNext({ root });
-  assert.equal(none.result.action.code, "create-idea");
-});
-
-test("runs worktree hygiene before creating an idea when none are active", async () => {
-  const { repository, root } = await createRepository();
-  await writeFile(
-    join(root, ...ideaPaths(id).statusPath.split("/")),
-    serializeIdeaStatus({ version: 1, id, alias: "fixture", abandoned: true }),
-  );
-  git(root, "add", ".");
-  git(root, "commit", "-m", "Abandon fixture idea");
-  git(root, "push", repository, "main");
-  await writeFile(join(root, "dirty.txt"), "preserve me\n");
-
-  const report = await whatsNext({ root });
-
-  assert.equal(report.ok, true);
-  assert.equal(report.result.action.code, "inspect-worktree-changes");
-});
-
-test("[branch-mismatch] prioritizes configured primary branch before state guidance", async () => {
-  const { root } = await createRepository();
-  git(root, "checkout", "-b", "feature");
-
-  const report = await whatsNext({ idea: id, root });
-
-  assert.equal(report.result.action.code, "switch-to-primary");
-});
-
-test("[primary-relocation] adopts relocated primary coordinates across two observations", async () => {
-  const { repository, root } = await createRepository();
-  const base = join(root, "..");
-  const secondary = join(base, "secondary.git");
-  const secondaryUrl = pathToFileURL(secondary).href;
-  const canonicalSecondary = "https://example.test/owner/secondary.git";
-  const original = git(root, "rev-parse", "HEAD");
-
-  await writeFile(join(root, ".silvermoon", "config.yaml"), `version: 1
-primaryRepository: ${canonicalSecondary}
-primaryBranch: trunk
-`);
-  git(root, "add", ".");
-  git(root, "commit", "-m", "Relocate primary");
-  const relocation = git(root, "rev-parse", "HEAD");
-  git(root, "push", repository, "main");
-
-  git(root, "init", "--bare", "--initial-branch=trunk", secondary);
-  git(root, "push", secondaryUrl, "HEAD:trunk");
-  await writeFile(join(root, "secondary.txt"), "secondary primary\n");
-  git(root, "add", ".");
-  git(root, "commit", "-m", "Advance relocated primary");
-  const relocatedTip = git(root, "rev-parse", "HEAD");
-  git(root, "push", secondaryUrl, "HEAD:trunk");
-  git(root, "reset", "--hard", original);
-  git(root, "config", `url.${secondaryUrl}.insteadOf`, canonicalSecondary);
-
-  const first = await whatsNext({ idea: id, root });
-  assert.equal(first.result.observedPrimaryCommit, relocation);
-  assert.equal(first.result.selectedIdea, null);
-  assert.equal(first.result.action.code, "fast-forward-primary");
-
-  git(root, "merge", "--ff-only", relocation);
-  const second = await whatsNext({ idea: id, root });
-  assert.equal(second.result.observedPrimaryCommit, relocatedTip);
-  assert.equal(second.result.action.code, "switch-to-primary");
-  assert.equal(second.result.action.details.expected, "refs/heads/trunk");
-});
-
-test("[ahead] [behind] [diverged] [publish-coordinates] routes clean primary ancestry", async () => {
-  {
-    const { root } = await createRepository();
-    const expectedRemoteTip = git(root, "rev-parse", "HEAD");
-    await writeFile(join(root, "ahead.txt"), "ahead\n");
-    git(root, "add", ".");
-    git(root, "commit", "-m", "Local ahead");
-    const commit = git(root, "rev-parse", "HEAD");
-    const report = await whatsNext({ idea: id, root });
-    assert.equal(report.result.action.code, "publish-primary");
-    assert.deepEqual(report.result.action.details, {
-      repository: "https://example.test/owner/repository.git",
-      branch: "main",
-      commit,
-      expectedRemoteTip,
-      validation: { target: "commit", revision: commit },
-    });
-  }
-
-  {
-    const { repository, root } = await createRepository();
-    const initial = git(root, "rev-parse", "HEAD");
-    await writeFile(join(root, "remote.txt"), "remote\n");
-    git(root, "add", ".");
-    git(root, "commit", "-m", "Remote ahead");
-    git(root, "push", repository, "main");
-    git(root, "reset", "--hard", initial);
-    const report = await whatsNext({ idea: id, root });
-    assert.equal(report.result.action.code, "fast-forward-primary");
-  }
-
-  {
-    const { repository, root } = await createRepository();
-    const initial = git(root, "rev-parse", "HEAD");
-    await writeFile(join(root, "remote.txt"), "remote\n");
-    git(root, "add", ".");
-    git(root, "commit", "-m", "Remote side");
-    git(root, "push", repository, "main");
-    git(root, "reset", "--hard", initial);
-    await writeFile(join(root, "local.txt"), "local\n");
-    git(root, "add", ".");
-    git(root, "commit", "-m", "Local side");
-    const report = await whatsNext({ idea: id, root });
-    assert.equal(report.result.action.code, "integrate-primary");
-  }
-});
-
-test("[publish-concurrent-move] rejects a stale ordinary push", async () => {
-  const { repository, root } = await createRepository();
-  const initial = git(root, "rev-parse", "HEAD");
-  await writeFile(join(root, "local.txt"), "local\n");
-  git(root, "add", ".");
-  git(root, "commit", "-m", "Local publication candidate");
-  const local = git(root, "rev-parse", "HEAD");
-  const report = await whatsNext({ idea: id, root });
-  assert.equal(report.result.action.code, "publish-primary");
-
-  git(root, "reset", "--hard", initial);
-  await writeFile(join(root, "competing.txt"), "competing\n");
-  git(root, "add", ".");
-  git(root, "commit", "-m", "Competing primary commit");
-  const competing = git(root, "rev-parse", "HEAD");
-  git(root, "push", repository, "main");
-  git(root, "reset", "--hard", local);
-
-  const pushed = spawnSync(
-    "git",
-    [
-      "-C",
-      root,
-      "push",
-      report.result.action.details.repository,
-      `${report.result.action.details.commit}:refs/heads/${report.result.action.details.branch}`,
+test("default navigation excludes completed and abandoned ideas while counting them", async () => {
+  const repository = await fixture({
+    ideas: [
+      { id: FIRST_ID, status: { alias: "preparing" } },
+      { id: SECOND_ID, status: { alias: "implementing" } },
+      { id: DEPLOYING_ID, status: { alias: "deploying" } },
+      { id: COMPLETED_ID, status: { alias: "completed" } },
+      { id: ABANDONED_ID, status: { alias: "abandoned" } },
     ],
+  });
+  await setIdeaState(repository.root, SECOND_ID, "implementing", {
+    alias: "implementing",
+  });
+  await setIdeaState(repository.root, DEPLOYING_ID, "deploying", {
+    alias: "deploying",
+  });
+  await setIdeaState(repository.root, COMPLETED_ID, "completed", {
+    alias: "completed",
+  });
+  await setIdeaState(repository.root, ABANDONED_ID, "abandoned", {
+    alias: "abandoned",
+  });
+  git(repository.root, "add", ".");
+  git(repository.root, "commit", "-m", "Set lifecycle states");
+  git(repository.root, "push", "origin", "main");
+
+  const report = await whatsNext({
+    root: repository.root,
+    userHome: repository.base,
+  });
+
+  assert.deepEqual(report.observation.ideas.counts, {
+    preparing: 1,
+    implementing: 1,
+    deploying: 1,
+    completed: 1,
+    abandoned: 1,
+  });
+  assert.deepEqual(
+    report.observation.ideas.activeIdeas.map(({ id }) => id),
+    [FIRST_ID, SECOND_ID, DEPLOYING_ID].sort(),
+  );
+  assert.doesNotMatch(report.instructions, new RegExp(COMPLETED_ID));
+  assert.doesNotMatch(report.instructions, new RegExp(ABANDONED_ID));
+
+  for (const [id, phrase] of [
+    [FIRST_ID, "approvedRevision"],
+    [SECOND_ID, "implementationAcceptedRevision"],
+    [DEPLOYING_ID, "deploymentAcceptedRevision"],
+    [COMPLETED_ID, "completed idea"],
+    [ABANDONED_ID, "abandoned idea"],
+  ]) {
+    const selected = await whatsNext({
+      idea: id,
+      root: repository.root,
+      userHome: repository.base,
+    });
+    assert.equal(selected.intention.args.idea, id);
+    assert.match(selected.instructions, new RegExp(phrase));
+  }
+});
+
+test("[selector-unknown] reports an unknown selector without guessing", async () => {
+  const repository = await fixture();
+
+  const report = await whatsNext({
+    idea: "unknown",
+    root: repository.root,
+    userHome: repository.base,
+  });
+
+  assert.deepEqual(report.observation.problems, []);
+  assert.match(report.instructions, /does not match/);
+  assert.match(report.instructions, new RegExp(FIRST_ID));
+  assert.match(report.instructions, /create-idea/);
+});
+
+test("[selector-known] [alias-absent] selects an alias-less idea only by explicit ULID", async () => {
+  const repository = await fixture({
+    ideas: [{ id: FIRST_ID, status: {} }],
+  });
+
+  const report = await whatsNext({
+    idea: FIRST_ID,
+    root: repository.root,
+    userHome: repository.base,
+  });
+
+  assert.equal(report.observation.state, "task-pending");
+  assert.equal(
+    Object.hasOwn(report.observation.ideas.activeIdeas[0], "alias"),
+    false,
+  );
+  assert.match(report.instructions, new RegExp(FIRST_ID));
+  assert.doesNotMatch(report.instructions, /undefined|\(\)/);
+});
+
+test("resolves preferred language for the selected idea without changing bare navigation", async () => {
+  const repository = await fixture({
+    ideas: [{
+      id: FIRST_ID,
+      status: { alias: "localized", language: "fr" },
+    }],
+  });
+
+  const selected = await whatsNext({
+    idea: FIRST_ID,
+    root: repository.root,
+    userHome: repository.base,
+  });
+  const bare = await whatsNext({
+    root: repository.root,
+    userHome: repository.base,
+  });
+
+  assert.equal(
+    selected.observation.configuration.preferredLanguage,
+    "fr",
+  );
+  assert.equal(
+    bare.observation.configuration.preferredLanguage,
+    "en-US",
+  );
+});
+
+test("[dirty] reports local changes before any remote access and preserves selector intent", async () => {
+  const repository = await fixture();
+  await writeFile(join(repository.root, "local.txt"), "preserve me\n");
+  const commands = [];
+
+  const report = await observeGitCommands(
+    (args) => commands.push(args),
+    () => whatsNext({
+      idea: FIRST_ID,
+      root: repository.root,
+      userHome: repository.base,
+    }),
+  );
+
+  assert.equal(report.observation.state, "repository-sync-required");
+  assert.equal(report.observation.problems[0].type, "worktree-changes");
+  assert.match(report.observation.problems[0].summary, /untracked=1/);
+  assert.equal(report.outcomes.length, 0);
+  assert.equal(
+    commands.some(([name]) => name === "fetch" || name === "ls-remote"),
+    false,
+  );
+  assert.match(report.instructions, new RegExp(FIRST_ID));
+});
+
+test("reports every observable local readiness problem before remote access", async () => {
+  const repository = await fixture();
+  await writeFile(join(repository.root, "local.txt"), "preserve me\n");
+  git(repository.root, "config", "--unset", "branch.main.remote");
+  git(repository.root, "config", "--unset", "branch.main.merge");
+  const commands = [];
+
+  const report = await observeGitCommands(
+    (args) => commands.push(args),
+    () => whatsNext({
+      root: repository.root,
+      userHome: repository.base,
+    }),
+  );
+
+  assert.deepEqual(
+    report.observation.problems.map(({ type }) => type),
+    ["worktree-changes", "primary-upstream-mismatch"],
+  );
+  assert.equal(report.outcomes.length, 0);
+  assert.equal(
+    commands.some(([name]) => name === "fetch" || name === "ls-remote"),
+    false,
+  );
+  assert.match(report.instructions, /status --short/);
+  assert.match(report.instructions, /upstream/);
+  assert.match(report.instructions, /silvermoon whats-next/);
+});
+
+test("[structured-changes] bounds large change summaries and provides exact inspection commands", async () => {
+  const repository = await fixture();
+  for (let index = 0; index < 50; index += 1) {
+    await writeFile(
+      join(repository.root, `untracked-${String(index).padStart(2, "0")}.txt`),
+      "fixture\n",
+    );
+  }
+
+  const report = await whatsNext({
+    root: repository.root,
+    userHome: repository.base,
+  });
+  const problem = report.observation.problems[0];
+  const sample = /samples=\[(.*)\]; omitted=(\d+)$/.exec(problem.summary);
+
+  assert.ok(sample);
+  assert.ok(sample[1].split(", ").length <= CHANGE_SAMPLE_ITEM_LIMIT);
+  assert.equal(Number(sample[2]), 50 - CHANGE_SAMPLE_ITEM_LIMIT);
+  assert.match(report.instructions, /git .* status --short/);
+  assert.match(report.instructions, /diff --cached/);
+  assert.match(report.instructions, /ls-files --others --exclude-standard/);
+});
+
+test("[conflict] prioritizes conflicts while still reporting all known changes", async () => {
+  const repository = await fixture();
+  await writeFile(join(repository.root, "conflict.txt"), "base\n");
+  git(repository.root, "add", ".");
+  git(repository.root, "commit", "-m", "Add conflict fixture");
+  git(repository.root, "push", "origin", "main");
+  git(repository.root, "checkout", "-b", "other");
+  await writeFile(join(repository.root, "conflict.txt"), "other\n");
+  git(repository.root, "add", ".");
+  git(repository.root, "commit", "-m", "Change other");
+  git(repository.root, "checkout", "main");
+  await writeFile(join(repository.root, "conflict.txt"), "main\n");
+  git(repository.root, "add", ".");
+  git(repository.root, "commit", "-m", "Change main");
+  const merged = spawnSync(
+    "git",
+    ["-C", repository.root, "merge", "other"],
     { encoding: "utf8", windowsHide: true },
   );
+  assert.notEqual(merged.status, 0);
+  await writeFile(join(repository.root, "extra.txt"), "extra\n");
 
-  assert.notEqual(pushed.status, 0);
-  assert.match(pushed.stderr, /rejected|non-fast-forward/i);
-  assert.equal(
-    git(root, "ls-remote", repository, "refs/heads/main").split(/\s+/)[0],
-    competing,
+  const report = await whatsNext({
+    root: repository.root,
+    userHome: repository.base,
+  });
+
+  assert.deepEqual(
+    report.observation.problems.map(({ type }) => type),
+    ["worktree-conflicts", "worktree-changes"],
   );
+  assert.match(report.observation.problems[0].summary, /conflict\.txt/);
+  assert.match(report.instructions, /diff --name-only --diff-filter=U/);
+  assert.match(report.instructions, /extra\.txt|status --short/);
+  assert.equal(report.outcomes.length, 0);
+});
+
+test("[branch-mismatch] accepts any local branch with the configured primary upstream", async () => {
+  const repository = await fixture();
+  git(repository.root, "checkout", "-b", "feature");
+  git(repository.root, "branch", "--set-upstream-to=origin/main", "feature");
+
+  const report = await whatsNext({
+    idea: FIRST_ID,
+    root: repository.root,
+    userHome: repository.base,
+  });
+
+  assert.equal(report.observation.state, "task-pending");
+  assert.match(report.instructions, /approvedRevision/);
+
+  git(repository.root, "branch", "--unset-upstream");
+  const commands = [];
+  const mismatch = await observeGitCommands(
+    (args) => commands.push(args),
+    () => whatsNext({
+      idea: FIRST_ID,
+      root: repository.root,
+      userHome: repository.base,
+    }),
+  );
+  assert.equal(
+    mismatch.observation.problems[0].type,
+    "primary-upstream-mismatch",
+  );
+  assert.match(mismatch.instructions, /'@\{upstream\}'/);
+  assert.equal(
+    commands.some(([name]) => name === "fetch" || name === "ls-remote"),
+    false,
+  );
+});
+
+test("[primary-relocation] follows newly configured primary coordinates after publication", async () => {
+  const repository = await fixture();
+  const relocated = join(repository.base, "relocated.git");
+  const configured = "https://example.test/new-owner/new-repository.git";
+  git(repository.root, "init", "--bare", "--initial-branch=main", relocated);
+  git(
+    repository.root,
+    "config",
+    `url.${pathToFileURL(relocated).href}.insteadOf`,
+    configured,
+  );
+  git(repository.root, "remote", "set-url", "origin", configured);
+  await writeFile(
+    join(repository.root, ".silvermoon", "config.yaml"),
+    `version: 1
+primaryRepository: ${configured}
+primaryBranch: main
+`,
+  );
+  git(repository.root, "add", ".");
+  git(repository.root, "commit", "-m", "Relocate primary");
+  git(repository.root, "push", "--set-upstream", "origin", "main");
+
+  const report = await whatsNext({
+    idea: FIRST_ID,
+    root: repository.root,
+    userHome: repository.base,
+  });
+
+  assert.equal(report.observation.state, "task-pending");
+  assert.equal(
+    report.observation.configuration.primaryRepository,
+    configured,
+  );
+  assert.equal(report.outcomes[0].status, "success");
+});
+
+test("[behind] [ahead] [diverged] reports ancestry and safe remediation", async () => {
+  const behindRepository = await fixture({ prefix: "silvermoon-behind-" });
+  await pushPeerChange(behindRepository, "behind");
+  const behind = await whatsNext({
+    root: behindRepository.root,
+    userHome: behindRepository.base,
+  });
+  assert.equal(behind.observation.problems[0].type, "primary-behind");
+  assert.match(behind.instructions, /Fast-forward/);
+  const primary = /observed primary is ([0-9a-f]+)/.exec(
+    behind.observation.problems[0].summary,
+  )[1];
+  assert.match(behind.instructions, new RegExp(primary));
+  assert.doesNotMatch(behind.instructions, /origin\/main/);
+  git(behindRepository.root, "merge", "--ff-only", primary);
+  const aligned = await whatsNext({
+    root: behindRepository.root,
+    userHome: behindRepository.base,
+  });
+  assert.equal(aligned.observation.state, "task-pending");
+
+  const aheadRepository = await fixture({ prefix: "silvermoon-ahead-" });
+  await writeFile(join(aheadRepository.root, "ahead.txt"), "ahead\n");
+  git(aheadRepository.root, "add", ".");
+  git(aheadRepository.root, "commit", "-m", "Advance locally");
+  const ahead = await whatsNext({
+    root: aheadRepository.root,
+    userHome: aheadRepository.base,
+  });
+  assert.equal(ahead.observation.problems[0].type, "primary-ahead");
+  assert.match(ahead.instructions, /without force/);
+  assert.match(ahead.instructions, /expected|still/);
+
+  const divergedRepository = await fixture({ prefix: "silvermoon-diverged-" });
+  await pushPeerChange(divergedRepository, "remote");
+  await writeFile(join(divergedRepository.root, "local.txt"), "local\n");
+  git(divergedRepository.root, "add", ".");
+  git(divergedRepository.root, "commit", "-m", "Advance locally");
+  const diverged = await whatsNext({
+    root: divergedRepository.root,
+    userHome: divergedRepository.base,
+  });
+  assert.equal(diverged.observation.problems[0].type, "primary-diverged");
+  assert.match(diverged.instructions, /both histories/);
+});
+
+test("records fetch failure as a failure outcome with a trustworthy envelope", async () => {
+  const repository = await fixture();
+  await rm(repository.remote, { recursive: true });
+
+  const report = await whatsNext({
+    root: repository.root,
+    userHome: repository.base,
+  });
+
+  assert.equal(report.observation.state, "repository-sync-required");
+  assert.equal(report.observation.problems[0].type, "primary-fetch-failed");
+  assert.equal(report.outcomes.at(-1).type, "fetch-primary");
+  assert.equal(report.outcomes.at(-1).status, "failure");
+  assert.match(report.instructions, /network|网络/);
 });

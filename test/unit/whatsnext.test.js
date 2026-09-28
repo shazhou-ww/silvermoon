@@ -1,70 +1,41 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { ideaPaths } from "../../src/layout.js";
-import { stateAction } from "../../src/whatsnext.js";
+import {
+  CHANGE_SAMPLE_BYTE_LIMIT,
+  CHANGE_SAMPLE_ITEM_LIMIT,
+  summarizeWorktreeChanges,
+} from "../../src/whatsnext.js";
 
-const id = "01M36QGPNTXEPP61DA4KP4AVZF";
-
-test("maps every derived state to one deterministic action", () => {
-  const paths = ideaPaths(id);
-  const idea = {
-    id,
-    alias: "fixture",
-    idealRevision: "a".repeat(40),
-    implementationRevision: "b".repeat(40),
-    deploymentRevision: "c".repeat(40),
-    revisions: {
-      idealRevision: "a".repeat(40),
-      implementationRevision: "b".repeat(40),
-      deploymentRevision: "c".repeat(40),
-    },
-    relativePath: paths.ideaPath,
-    statusPath: paths.statusPath,
-    ledgerPath: paths.ledgerPath,
-    worlds: {
-      idealRevision: {
-        name: "Ideal World",
-        displayName: "道心",
-        path: paths.idealPath,
-        documentPath: paths.ideaDocumentPath,
-      },
-      implementationRevision: {
-        name: "Inner World",
-        displayName: "内景",
-        path: paths.innerPath,
-        documentPath: paths.implementationDocumentPath,
-      },
-      deploymentRevision: {
-        name: "Outer World",
-        displayName: "现世",
-        path: paths.outerPath,
-        documentPath: paths.deploymentDocumentPath,
-      },
-    },
+test("bounds worktree path samples by item count and UTF-8 bytes", () => {
+  const changes = {
+    conflicted: [{ path: "冲突.md" }],
+    staged: Array.from({ length: 20 }, (_, index) => ({
+      path: `staged-${String(index).padStart(2, "0")}.txt`,
+    })),
+    unstaged: [{ path: "unstaged.txt" }],
+    untracked: [{ path: "untracked.txt" }],
   };
-  const expected = new Map([
-    ["preparing", "prepare-idea"],
-    ["implementing", "implement-idea"],
-    ["deploying", "deploy-idea"],
-    ["completed", "review-completed"],
-    ["abandoned", "review-abandoned"],
-  ]);
-  for (const [state, code] of expected) {
-    assert.equal(stateAction({ ...idea, state }).code, code);
-  }
-  const preparing = stateAction({ ...idea, state: "preparing" });
-  assert.match(preparing.message, /Ideal World \(道心\)/);
-  assert.equal(preparing.details.ledgerPath, paths.ledgerPath);
-  assert.equal(preparing.details.world.nestedWorldPath, undefined);
-  const implementing = stateAction({ ...idea, state: "implementing" });
-  assert.match(implementing.message, /Inner World \(内景\)/);
-  assert.equal(implementing.details.ledgerPath, paths.ledgerPath);
-  assert.equal(implementing.details.world.nestedWorldPath, paths.idealPath);
-  assert.match(implementing.details.world.cascade, /return to preparing/);
-  const deploying = stateAction({ ...idea, state: "deploying" });
-  assert.match(deploying.message, /Outer World \(现世\)/);
-  assert.equal(deploying.details.ledgerPath, paths.ledgerPath);
-  assert.equal(deploying.details.world.nestedWorldPath, paths.innerPath);
-  assert.match(deploying.details.world.cascade, /deployment acceptance only/);
+
+  const summary = summarizeWorktreeChanges(changes);
+  const samples = /\bsamples=\[(.*)\]; omitted=(\d+)$/.exec(summary);
+
+  assert.ok(samples);
+  const entries = samples[1].split(", ");
+  assert.ok(entries.length <= CHANGE_SAMPLE_ITEM_LIMIT);
+  assert.ok(Buffer.byteLength(samples[1], "utf8") <= CHANGE_SAMPLE_BYTE_LIMIT);
+  assert.equal(Number(samples[2]), 23 - entries.length);
+  assert.match(summary, /conflicted=1, staged=20, unstaged=1, untracked=1/);
+  assert.match(entries[0], /^conflicted:/);
+});
+
+test("uses a deterministic empty sample when all paths exceed the byte budget", () => {
+  const summary = summarizeWorktreeChanges({
+    conflicted: [],
+    staged: [],
+    unstaged: [],
+    untracked: [{ path: "界".repeat(CHANGE_SAMPLE_BYTE_LIMIT) }],
+  });
+
+  assert.match(summary, /samples=\[none\]; omitted=1$/);
 });

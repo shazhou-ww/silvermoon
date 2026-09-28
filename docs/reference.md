@@ -67,8 +67,8 @@ world revision and does not change lifecycle decisions. Explicit
 keys, YAML aliases or anchors, comments, and noncanonical YAML are rejected.
 
 Effective language resolves as `idea language > project preferredLanguage >
-user preferredLanguage > en-US`. JSON reports expose
-`language: { tag, source }`; human output shows the same values. Missing idea
+user preferredLanguage > en-US`. Every complete observation exposes the
+resolved non-empty tag as `configuration.preferredLanguage`. Missing idea
 language remains dynamically inherited and is never written back.
 
 State is derived in order:
@@ -89,20 +89,67 @@ silvermoon create-idea [--language <tag>]
 silvermoon check [--remote | --commit <revision> | --staged | --worktree]
 ```
 
-`whats-next` returns one highest-priority action after repository and onboarding
-diagnosis. JSON reports include `observedPrimaryCommit`, `language`,
-`selectedIdea`, and exactly one `action`. When onboarding passes without gaps,
-the report omits `onboarding`. Otherwise `onboarding.gaps` contains only unmet,
-conflicting, or unknown requirements, preserving their stable IDs, statuses,
-blocking flags, dependencies, observed facts, and structured remediation. The
-compact onboarding report also includes a recommended action and recheck
-command. Human-readable output follows the same quiet-success, actionable-gap
-semantics. Use `check` when a complete repository diagnostic is required.
+All three commands build one internal conversation envelope:
 
-Execution source is classified as `source-checkout`, `project-local`,
-`temporary`, `global`, or `unknown`. Temporary execution can bootstrap
-diagnosis; normal idea work requires the exact project dependency, installed
-package, and matching repository-local skill.
+```json
+{
+  "intention": {
+    "command": "whats-next",
+    "args": {
+      "idea": null
+    }
+  },
+  "observation": {},
+  "outcomes": [],
+  "instructions": ""
+}
+```
+
+- `intention` contains the command and normalized business arguments. Output
+  format is not part of the intention.
+- `observation` describes one repository version, resolved configuration, idea
+  inventory, and project or repository readiness problems.
+- `outcomes` records only high-level repository side effects actually
+  attempted by this invocation. Each item has `type`, `status` (`success` or
+  `failure`), and `summary`. An empty array means no side effect was attempted.
+- `instructions` contains all ordered next-step guidance for the current
+  readiness layer.
+
+Default output renders that same envelope as four natural-language sections:
+intent, observation, actions and outcomes, and next instructions. `--json`
+serializes it directly; there is no YAML output and no second reasoning path.
+
+Observation state is a discriminated union:
+
+- `project-setup-required` uses `observedThrough` (`root`, `version`,
+  `configuration`, or `ideas`) to identify the deepest reliable cumulative
+  shape. Fields beyond that boundary are absent rather than null or fabricated.
+- `repository-sync-required` always includes `root`, `version`,
+  `configuration`, `ideas`, and at least one `problem`.
+- `task-pending` includes all observation fields, no readiness problems, and
+  work that can be selected or continued.
+- `idle` has the same complete shape, no problems, and no active ideas.
+
+`version.type` is `worktree`, `staged`, `commit`, or `remote`. Commit and remote
+versions include the resolved commit, or `null` when resolution failed and a
+problem explains why. `ideas.counts` always has `preparing`, `implementing`,
+`deploying`, `completed`, and `abandoned`; `activeIdeas` contains only minimal
+references for the first three states. Problems have only stable `type` and
+natural-language `summary`; remediation belongs in `instructions`.
+
+Project setup is ecosystem-neutral. It checks Git, configuration schema
+compatibility, and exact canonical skill content at
+`.agents/skills/silvermoon`. It does not inspect execution source or require a
+package manager, `package.json`, project-local Silvermoon dependency, or
+`node_modules`.
+
+`whats-next` checks local conflicts and changes before remote access, then HEAD
+and upstream identity, then fetch and ancestry. A local branch may have any
+name, but its upstream must identify the configured repository and primary
+branch. Change summaries have fixed item and UTF-8 byte budgets and provide
+full counts, omitted counts, and exact inspection commands. Bare navigation
+never selects an idea: it always lists every active idea alongside the option
+to discuss and run `create-idea`.
 
 `create-idea` applies the same hygiene preflight and then creates one canonical
 scaffold. Its optional language override is normalized before preflight and is
@@ -122,9 +169,11 @@ inherited. It does not stage, commit, push, or record approval.
   primary history.
 
 Targets are mutually exclusive and never change the caller's branch, index, or
-worktree. Exit status `0` means success, `1` means validation or operational
-failure, and `2` means invalid CLI usage. `--json` emits the stable report
-envelope.
+worktree. Exit status `0` means Silvermoon formed a complete trustworthy
+envelope, including validation findings, readiness blocks, and reported fetch
+or scaffold failures. Exit status `1` is reserved for an internal failure that
+prevents such an envelope. Exit status `2` means invalid CLI usage before a
+valid intention exists.
 
 Runtime checks verify canonical YAML, fixed paths, the three world entries,
 unique aliases, Git object format, tree object types, per-world candidate

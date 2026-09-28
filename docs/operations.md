@@ -12,28 +12,30 @@ npx silvermoon whats-next publish-documentation --json
 ```
 
 Without a selector, Silvermoon asks for a choice among multiple active ideas,
-continues a single active idea, or reports that a new idea can be created. A
-selector is either a canonical uppercase ULID or an exact, unique,
-case-sensitive alias.
+and the option to discuss and create a new idea. This remains true with zero,
+one, or many active ideas: only a selector chooses work. Completed and abandoned
+ideas are excluded from default candidates. A selector is either a canonical
+uppercase ULID or an exact, unique, case-sensitive alias.
 
-Each successful report includes the effective `language` tag and its `idea`,
-`project`, `global`, or `default` source. Its action guidance requires the
-Agent to use that language for world entries, same-world supporting artifacts,
-the ledger, and user-facing explanations. Commands, identifiers, schema fields,
+The shared observation includes a resolved non-empty `preferredLanguage`.
+Instructions use it for world entries, same-world supporting artifacts, the
+ledger, and user-facing explanations. Commands, identifiers, schema fields,
 protocol markers, and verbatim tool output retain their original form.
 
-Every invocation first checks the configured primary branch, merge conflicts,
-worktree changes, and local/remote primary ancestry. It may fetch and inspect,
-but it never edits, checks out, merges, commits, stashes, deletes, resets,
-fast-forwards, or pushes.
+Every invocation follows three strict layers. It first checks Git,
+configuration compatibility, and `.agents/skills/silvermoon`. It then checks
+local conflicts, changes, HEAD, and upstream identity before any remote access.
+Only after those checks pass does it fetch primary, compare ancestry, and
+route idea work. It never edits, checks out, merges, commits, stashes, deletes,
+resets, fast-forwards, or pushes.
 
 ## Create An Idea
 
 Explicit creation uses:
 
 ```sh
-npx silvermoon create-idea --json
-npx silvermoon create-idea --language zh-cn --json
+silvermoon create-idea
+silvermoon create-idea --language zh-cn
 ```
 
 Creation intent is distinct from active-idea selection. If hygiene blocks the
@@ -49,15 +51,18 @@ The generated files remain untracked for review. Complete `Idea.md`, optionally
 add a concise unique alias, inspect every path, and publish the initial idea
 through ordinary Git.
 
-## Execute One Action
+## Follow One Observation
 
-Treat the command, request, `observedPrimaryCommit`, selected idea, and action
-as one immutable observation. Execute only the highest-priority action.
+Treat `intention`, `observation`, `outcomes`, and `instructions` as one
+immutable conversation. Default output renders those four sections in natural
+language; `--json` serializes the same model.
 
-Repository hygiene actions take precedence over lifecycle work. Inspect exact
-staged, unstaged, untracked, and conflicted paths; preserve unknown and
-concurrent work. Never force-push, use `reset --hard`, broadly clean the
-worktree, or silently rewrite history to satisfy guidance.
+Project setup takes precedence over repository synchronization, which takes
+precedence over lifecycle work. Instructions include every known remediation
+for the current layer in priority order. Large change sets report complete
+counts, bounded path samples, omitted counts, and exact commands for the full
+diff. Preserve unknown and concurrent work. Never force-push, use
+`reset --hard`, broadly clean the worktree, or silently rewrite history.
 
 After an observable change, run `whats-next` again. Do not poll an unchanged
 observation.
@@ -94,9 +99,9 @@ the current reported world revision. Edit only the corresponding status fact:
 Validate the complete candidate:
 
 ```sh
-npx silvermoon check --worktree --json
+silvermoon check --worktree
 git add .silvermoon/ideas/<ULID>/status.yaml
-npx silvermoon check --staged --json
+silvermoon check --staged
 ```
 
 Prefer a status-only decision commit, publish through the repository's normal

@@ -1,6 +1,13 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import {
+  mkdir,
+  mkdtemp,
+  readdir,
+  readFile,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -82,53 +89,45 @@ try {
     bootstrap,
   );
   assert.equal(bootstrapStatusAfter, bootstrapStatusBefore);
-  assert.equal(bootstrapReport.result.action.code, "adopt-silvermoon");
   assert.deepEqual(
-    bootstrapReport.result.onboarding.gaps.map(({ id: requirement }) => requirement),
+    Object.keys(bootstrapReport).sort(),
     [
-      "package.manifest",
-      "skill.repository-local",
-      "repository.configuration",
+      "instructions",
+      "intention",
+      "observation",
+      "outcomes",
     ],
   );
-  assert.ok(
-    bootstrapReport.result.onboarding.gaps.every(({ dependencies }) =>
-      Array.isArray(dependencies)
-    ),
-  );
-  assert.ok(
-    bootstrapReport.result.onboarding.gaps.every(({ blocking, remediation }) =>
-      blocking === true && remediation
-    ),
-  );
   assert.deepEqual(
-    bootstrapReport.result.action.details.gaps,
-    bootstrapReport.result.onboarding.gaps,
+    bootstrapReport.observation.problems.map(({ type }) => type),
+    ["config-missing", "canonical-skill-missing"],
   );
-  assert.ok(
-    bootstrapReport.result.onboarding.gaps.every((gap) =>
-      [
-        "id",
-        "title",
-        "status",
-        "blocking",
-        "dependencies",
-        "observed",
-        "remediation",
-      ].every((field) => Object.hasOwn(gap, field))
-    ),
+  assert.equal(bootstrapReport.observation.observedThrough, "version");
+  assert.match(bootstrapReport.instructions, /--agent universal/);
+  assert.doesNotMatch(
+    JSON.stringify(bootstrapReport),
+    /package\.manifest|execution-source|project-local/,
   );
-  assert.equal(
-    bootstrapReport.result.onboarding.gaps.some(({ status }) =>
-      ["satisfied", "inapplicable"].includes(status)
-    ),
-    false,
-  );
-  assert.equal(bootstrapReport.result.onboarding.recommendedAction.executable, "npm");
+
+  const nonNode = join(temporaryRoot, "non-node");
+  await mkdir(nonNode);
+  run("git", ["init", "--initial-branch=main"], nonNode);
+  const nonNodeReport = JSON.parse(run(
+    process.execPath,
+    [
+      join(bootstrap, "node_modules", "silvermoon", "bin", "silvermoon.js"),
+      "whats-next",
+      "--json",
+    ],
+    nonNode,
+  ));
   assert.deepEqual(
-    bootstrapReport.result.onboarding.recheck.args,
-    ["--no-install", "silvermoon", "whats-next", "--json"],
+    nonNodeReport.observation.problems.map(({ type }) => type),
+    ["config-missing", "canonical-skill-missing"],
   );
+  await assert.rejects(readFile(join(nonNode, "package.json")), {
+    code: "ENOENT",
+  });
 
   const consumer = join(temporaryRoot, "consumer");
   const primary = join(temporaryRoot, "primary.git");
@@ -171,7 +170,7 @@ try {
     "--skill",
     "silvermoon",
     "--agent",
-    "github-copilot",
+    "universal",
     "--yes",
     "--copy",
   ], consumer);
@@ -213,12 +212,17 @@ try {
   );
   run("git", ["commit", "-m", "Install packed Silvermoon"], consumer);
   run("git", ["init", "--bare", "--initial-branch=main", primary], consumer);
-  run("git", ["push", primary, "main"], consumer);
   run(
     "git",
     ["config", `url.${pathToFileURL(primary).href}.insteadOf`, "https://example.com/owner/repository.git"],
     consumer,
   );
+  run(
+    "git",
+    ["remote", "add", "origin", "https://example.com/owner/repository.git"],
+    consumer,
+  );
+  run("git", ["push", "--set-upstream", "origin", "main"], consumer);
   const help = npm(["exec", "--", "silvermoon", "--help"], consumer);
   assert.match(help, /silvermoon whats-next/);
   assert.match(help, /silvermoon create-idea/);
@@ -238,12 +242,28 @@ try {
     consumer,
   );
   assert.equal(exported, "function,function,function,function,function,function|false,false");
+  const ideasBefore = await readdir(join(consumer, ".silvermoon", "ideas"));
   const created = JSON.parse(npm(["exec", "--", "silvermoon", "create-idea", "--json"], consumer));
-  assert.equal(created.ok, true);
-  assert.equal(created.command, "create-idea");
-  assert.match(created.result.createdIdea.id, /^[0-7][0-9A-HJKMNP-TV-Z]{25}$/);
+  assert.deepEqual(Object.keys(created).sort(), [
+    "instructions",
+    "intention",
+    "observation",
+    "outcomes",
+  ]);
+  assert.equal(created.intention.command, "create-idea");
+  assert.deepEqual(
+    created.outcomes.map(({ type, status }) => [type, status]),
+    [
+      ["fetch-primary", "success"],
+      ["create-idea-scaffold", "success"],
+    ],
+  );
+  const ideasAfter = await readdir(join(consumer, ".silvermoon", "ideas"));
+  const createdId = ideasAfter.find((ideaId) => !ideasBefore.includes(ideaId));
+  assert.match(createdId, /^[0-7][0-9A-HJKMNP-TV-Z]{25}$/);
+  const createdPaths = ideaPaths(createdId);
   assert.equal(
-    await readFile(join(consumer, created.result.createdIdea.ideaDocumentPath), "utf8"),
+    await readFile(join(consumer, createdPaths.idea), "utf8"),
     `# Replace with a specific title for this idea
 
 ## Intent
@@ -278,30 +298,31 @@ try {
 `,
   );
   assert.match(
-    await readFile(join(consumer, created.result.createdIdea.ledgerPath), "utf8"),
+    await readFile(join(consumer, createdPaths.ledger), "utf8"),
     /## Implementation[\s\S]*### Implementation steps[\s\S]*I-S01[\s\S]*### Implementation acceptance criteria[\s\S]*I-AC01[\s\S]*## Deployment[\s\S]*### Deployment steps[\s\S]*D-S01[\s\S]*### Deployment acceptance criteria[\s\S]*D-AC01/,
   );
   assert.equal(
-    await readFile(join(consumer, created.result.createdIdea.statusPath), "utf8"),
-    `version: 1\nid: ${created.result.createdIdea.id}\n`,
+    await readFile(join(consumer, createdPaths.status), "utf8"),
+    `version: 1\nid: ${createdId}\n`,
   );
   const legacy = npmResult(["exec", "--", "silvermoon", "whatsnext"], consumer);
   assert.equal(legacy.status, 2, legacy.stderr);
   const checked = JSON.parse(npm(["exec", "--", "silvermoon", "check", "--json"], consumer));
-  assert.equal(checked.ok, true);
-  assert.equal(checked.result.ideas[0].alias, "installed-smoke");
+  assert.equal(checked.observation.state, "task-pending");
+  assert.equal(checked.observation.ideas.activeIdeas[0].alias, "installed-smoke");
   const worktree = JSON.parse(
     npm(["exec", "--", "silvermoon", "check", "--worktree", "--json"], consumer),
   );
-  const createdSummary = worktree.result.ideas.find(({ id: ideaId }) =>
-    ideaId === created.result.createdIdea.id
+  const createdSummary = worktree.observation.ideas.activeIdeas.find(({ id: ideaId }) =>
+    ideaId === createdId
   );
-  assert.equal(worktree.ok, true);
+  assert.equal(worktree.observation.state, "task-pending");
   assert.equal(Object.hasOwn(createdSummary, "alias"), false);
   const lifecycle = JSON.parse(
     npm(["exec", "--", "silvermoon", "whats-next", "installed-smoke", "--json"], consumer),
   );
-  assert.equal(Object.hasOwn(lifecycle.result, "onboarding"), false);
+  assert.equal(lifecycle.observation.state, "repository-sync-required");
+  assert.equal(lifecycle.observation.problems[0].type, "worktree-changes");
   await writeFile(
     join(consumer, ".agents", "skills", "silvermoon", "SKILL.md"),
     "drift\n",
@@ -309,12 +330,15 @@ try {
   const drift = JSON.parse(
     npm(["exec", "--", "silvermoon", "whats-next", "installed-smoke", "--json"], consumer),
   );
-  assert.equal(drift.result.action.code, "adopt-silvermoon");
   assert.equal(
-    drift.result.onboarding.gaps.find(({ id: finding }) =>
-      finding === "skill.repository-local"
-    ).status,
-    "mismatched",
+    drift.observation.state,
+    "project-setup-required",
+  );
+  assert.equal(
+    drift.observation.problems.find(({ type }) =>
+      type === "canonical-skill-mismatched"
+    ).type,
+    "canonical-skill-mismatched",
   );
   process.stdout.write(`PACK_SMOKE_OK name=${packed.name} version=${packed.version}\n`);
 } finally {

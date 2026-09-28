@@ -30,9 +30,15 @@ Silvermoon needs Node.js 22 or newer and Git access to the repository's primary
 branch.
 
 ```sh
-npm install --save-dev silvermoon
-npx skills add ./node_modules/silvermoon/skills --skill silvermoon --agent github-copilot --yes --copy
+npm install --global silvermoon
+silvermoon whats-next
 ```
+
+Silvermoon is ecosystem-neutral: the target repository does not need
+`package.json`, a package manager, a Silvermoon dependency, or `node_modules`.
+The first report lists every applicable setup step in order, including the
+exact `npx skills add ... --agent universal` command that registers the
+canonical skill at `.agents/skills/silvermoon`.
 
 Create `.silvermoon/config.yaml`:
 
@@ -52,14 +58,17 @@ Then create an idea and let the registered Silvermoon skill guide one safe
 next action at a time:
 
 ```sh
-npx silvermoon create-idea --json
-npx silvermoon whats-next <idea> --json
+silvermoon create-idea
+silvermoon whats-next <idea>
 ```
 
 Describe the desired world in the generated `Idea.md`, review it, and approve
 that exact revision. From then on, Silvermoon keeps the goal, implementation,
 repository state, and real-world result connected. See
 [Getting Started](./docs/getting-started.md) for the complete first workflow.
+Default output is a four-part conversation: intent, observation, actions and
+outcomes, and next instructions. Add `--json` only when a programmatic consumer
+needs the same structured envelope.
 
 ## Why Silvermoon
 

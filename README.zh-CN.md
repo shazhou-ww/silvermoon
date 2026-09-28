@@ -18,9 +18,14 @@
 Silvermoon 需要 Node.js 22 或更高版本，并且能够通过 Git 访问仓库的 primary branch。
 
 ```sh
-npm install --save-dev silvermoon
-npx skills add ./node_modules/silvermoon/skills --skill silvermoon --agent github-copilot --yes --copy
+npm install --global silvermoon
+silvermoon whats-next
 ```
+
+Silvermoon 不依赖目标仓库的技术栈：目标项目无需 `package.json`、package manager、
+Silvermoon dependency 或 `node_modules`。首次报告会按顺序列出所有适用的整备步骤，
+其中包括把 canonical skill 注册到 `.agents/skills/silvermoon` 的精确
+`npx skills add ... --agent universal` 命令。
 
 创建 `.silvermoon/config.yaml`：
 
@@ -38,13 +43,15 @@ preferredLanguage: zh-CN
 然后创建一个 idea，让已注册的 Silvermoon skill 每次引导一个安全的下一步行动：
 
 ```sh
-npx silvermoon create-idea --json
-npx silvermoon whats-next <idea> --json
+silvermoon create-idea
+silvermoon whats-next <idea>
 ```
 
 在生成的 `Idea.md` 中描述想要抵达的世界，审阅并批准这个精确 revision。此后，
 Silvermoon 会让目标、实现、仓库状态与现实结果始终相连。完整的首次工作流见英文
 [Getting Started](./docs/getting-started.md)。
+默认输出是一段包含意图、观察、动作与结果、下一步指示的四段对话；只有程序消费者需要
+同一份结构化 envelope 时才添加 `--json`。
 
 ## 为什么需要 Silvermoon
 
