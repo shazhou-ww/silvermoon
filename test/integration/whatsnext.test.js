@@ -147,7 +147,8 @@ test("[selector-none] naked navigation lists one active idea without selecting i
     alias: "fixture",
     state: "preparing",
   }]);
-  assert.match(report.instructions, new RegExp(FIRST_ID));
+  assert.doesNotMatch(report.instructions, new RegExp(FIRST_ID));
+  assert.match(report.instructions, /silvermoon whats-next <ULID-or-alias>/);
   assert.match(report.instructions, /silvermoon create-idea/);
   assert.equal(report.outcomes[0].type, "fetch-primary");
   assert.equal(report.outcomes[0].status, "success");
@@ -269,7 +270,7 @@ test("[selector-unknown] reports an unknown selector without guessing", async ()
   }]);
   assert.equal(Object.hasOwn(report.observation, "selectedIdea"), false);
   assert.match(report.instructions, /does not match/);
-  assert.match(report.instructions, new RegExp(FIRST_ID));
+  assert.doesNotMatch(report.instructions, new RegExp(FIRST_ID));
   assert.match(report.instructions, /create-idea/);
 });
 

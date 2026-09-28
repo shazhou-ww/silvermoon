@@ -128,10 +128,11 @@ success. `--json` serializes the same decision; there is no YAML output or
 second reasoning path. Within the project-status section, nonempty navigation
 candidates and observed problems appear under `### Ideas you can continue` and
 `### Issues to address` (in Chinese: `### 可继续推进的想法` and
-`### 需要处理的问题`). Empty sections are omitted. Dialogue exit status `0` means a
-trustworthy report was formed, even when it reports readiness blocks or a
-failed operation; `1` means an internal failure prevented a trustworthy
-report; `2` means invalid CLI usage.
+`### 需要处理的问题`). Suggested next steps refer to these candidates without
+repeating their inventory. Empty sections are omitted. Dialogue exit status
+`0` means a trustworthy report was formed, even when it reports readiness
+blocks or a failed operation; `1` means an internal failure prevented a
+trustworthy report; `2` means invalid CLI usage.
 
 All commands accept `--trace <file.trace.jsonl>`. If the supplied path does not
 end with the exact lowercase `.trace.jsonl` suffix, Silvermoon appends it while

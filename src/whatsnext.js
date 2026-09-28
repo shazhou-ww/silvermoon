@@ -189,22 +189,18 @@ function lifecycleInstruction(idea, language) {
 }
 
 function navigationInstruction(ideas, language) {
-  const active = ideas.filter(({ state }) =>
+  const hasActiveIdea = ideas.some(({ state }) =>
     state === "preparing" || state === "implementing" || state === "deploying"
-  ).sort((left, right) => left.id.localeCompare(right.id));
-  const candidates = active.length === 0
-    ? localize(language, "No active ideas are available.", "当前没有 active idea。")
-    : active.map((idea) => {
-      const alias = idea.alias === undefined ? "" : ` (${idea.alias})`;
-      return `- ${idea.id}${alias}: ${idea.state}`;
-    }).join("\n");
+  );
   return joinInstructions([
     localize(
       language,
       "Choose explicitly whether to continue an active idea or create a new one.",
       "请明确选择继续一个 active idea，或创建一个新 idea。",
     ),
-    candidates,
+    hasActiveIdea
+      ? null
+      : localize(language, "No active ideas are available.", "当前没有 active idea。"),
     localize(
       language,
       "To continue, run `silvermoon whats-next <ULID-or-alias>`. To start something else, discuss the goal and run `silvermoon create-idea`.",

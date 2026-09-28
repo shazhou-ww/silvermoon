@@ -126,7 +126,10 @@ test("renders JSON verbatim and omits the empty outcomes section in Markdown", (
   assert.doesNotMatch(text, /### Issues to address/);
   assert.doesNotMatch(text, /Actions and results|No repository side effect was attempted/);
   assert.match(text, /\n\n## Suggested next steps\n\n/);
-  assert.match(text, /`01M36QGPNTXEPP61DA4KP4AVZF` preparing/);
+  assert.equal(
+    text.match(/01M36QGPNTXEPP61DA4KP4AVZF/g)?.length,
+    1,
+  );
   assert.doesNotMatch(text, /undefined|\(\)/);
   assert.match(text, /Choose an idea or run/);
 });
