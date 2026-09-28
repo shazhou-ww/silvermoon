@@ -30,8 +30,10 @@ package contents、skill 同步与 Markdown lint 通过）。
 
 ### Deployment steps
 
-- [ ] **D-S01:** Step title
+- [ ] **D-S01:** 发布稳定的验真契约
+- [ ] **D-S02:** 验证 primary 与安装包消费者
 
 ### Deployment acceptance criteria
 
-- [ ] **D-AC01:** Criterion title
+- [ ] **D-AC01:** primary 可验证
+- [ ] **D-AC02:** 已安装消费者遵守输出契约
