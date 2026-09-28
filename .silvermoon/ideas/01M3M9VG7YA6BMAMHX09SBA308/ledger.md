@@ -28,10 +28,16 @@
 
 ### Deployment steps
 
-- [ ] **D-S01:** 在 CI 环境验证完整检查
-- [ ] **D-S02:** 合并后观察反馈稳定性
+- [x] **D-S01:** 在 CI 环境验证完整检查
+- [x] **D-S02:** 合并后观察反馈稳定性
 
 ### Deployment acceptance criteria
 
-- [ ] **D-AC01:** 候选 CI 保持全绿且无明显性能退化
-- [ ] **D-AC02:** 主分支优化稳定生效
+- [x] **D-AC01:** 候选 CI 保持全绿且无明显性能退化
+- [x] **D-AC02:** 主分支优化稳定生效
+
+### Deployment notes
+
+- 针对稳定 deployment revision `098a8829` 对应提交 `f978cce` 的三次 CI 均首尾完成且全绿：[feature attempt 1](https://github.com/shazhou-ww/silvermoon/actions/runs/36449835320/attempts/1) 最长 job 25s、总墙钟 29s；[main attempt 1](https://github.com/shazhou-ww/silvermoon/actions/runs/36449877313/attempts/1) 最长 job 35s、总墙钟 68s；[主动 rerun attempt 2](https://github.com/shazhou-ww/silvermoon/actions/runs/36449835320/attempts/2) 最长 job 31s、总墙钟 35s。
+- 紧邻实现基线 [9877b10](https://github.com/shazhou-ww/silvermoon/actions/runs/36448862620/attempts/1)、[aaff86d](https://github.com/shazhou-ww/silvermoon/actions/runs/36449135176/attempts/1)、[62605c6](https://github.com/shazhou-ww/silvermoon/actions/runs/36449296748/attempts/1) 的最长 job 分别为 32、30、51s，中位数 32s；候选为 25、35、31s，中位数 31s，改善 3.1%。总墙钟中位数从 54s 降至 35s，单次 68s 显示的排队噪声未影响 job 执行门槛。
+- 实现进入 main 后的前三次 CI 均在首次 attempt 成功，没有重试掩盖的失败；上述 attempt 2 是 deployment contract 发布后主动补充的同 revision 验证。所有矩阵 job 均成功，未发现临时目录、Git 资源泄漏或平台特有警告。
