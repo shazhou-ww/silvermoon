@@ -27,6 +27,8 @@ Edit the canonical skill only under `skills/silvermoon`, then run
 `pnpm sync:skills`. The checked-in `.agents/skills/silvermoon` directory is a
 generated copy so repository skill discovery works without symbolic-link
 support. `pnpm check:skills` rejects a stale or manually edited copy.
+The repository-only publish skill is maintained directly under
+`.agents/skills/publish`; it is not part of the generated copy or npm package.
 For documentation and skill changes, run `pnpm lint:markdown`,
 `pnpm check:skills`, and `node --test test/contract/skill.test.mjs`.
 

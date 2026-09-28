@@ -314,7 +314,7 @@ try {
   const checkedText = npm(["exec", "--", "silvermoon", "check"], consumer);
   assert.match(checkedText, /^## Check\n\n- Target: `head`/);
   assert.match(checkedText, /- Result: valid/);
-  assert.doesNotMatch(checkedText, /## What to do next|## Actions and results/);
+  assert.doesNotMatch(checkedText, /## Suggested next steps|## Actions and results/);
   const worktree = JSON.parse(
     npm(["exec", "--", "silvermoon", "check", "--worktree", "--json"], consumer),
   );
@@ -333,7 +333,7 @@ try {
     ["exec", "--", "silvermoon", "whats-next", "installed-smoke"],
     consumer,
   );
-  assert.match(lifecycleText, /^## Request\n\n/);
+  assert.match(lifecycleText, /^## Current instruction\n\n/);
   assert.match(lifecycleText, /\n\n### Ideas you can continue\n\n/);
   assert.match(lifecycleText, /\n\n### Issues to address\n\n- \[worktree-changes\]/);
   assert.doesNotMatch(lifecycleText, /## Actions and results/);

@@ -6,7 +6,7 @@ import { parseDocument } from "yaml";
 
 const releaseGuideUrl = new URL("../../docs/npm-package-releases.md", import.meta.url);
 const workflowUrl = new URL("../../.github/workflows/publish-npm.yml", import.meta.url);
-const publishSkillUrl = new URL("../../.github/skills/publish/SKILL.md", import.meta.url);
+const publishSkillUrl = new URL("../../.agents/skills/publish/SKILL.md", import.meta.url);
 
 test("uses a protected, least-privilege trusted-publishing workflow", async () => {
   const source = await readFile(workflowUrl, "utf8");

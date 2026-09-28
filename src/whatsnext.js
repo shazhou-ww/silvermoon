@@ -35,6 +35,12 @@ function joinInstructions(lines) {
   return lines.filter(Boolean).join("\n");
 }
 
+function formatInstructionSteps(steps) {
+  return steps.length === 1
+    ? steps
+    : steps.map((step, index) => `${index + 1}. ${step}`);
+}
+
 export function projectInstructions(
   observed,
   root,
@@ -42,9 +48,7 @@ export function projectInstructions(
   recheckCommand = "silvermoon whats-next",
 ) {
   return joinInstructions([
-    ...observed.findings.map(({ instruction }, index) =>
-      `${index + 1}. ${instruction}`
-    ),
+    ...formatInstructionSteps(observed.findings.map(({ instruction }) => instruction)),
     localize(
       language,
       `After completing the applicable steps, run ${command(root, recheckCommand)} again.`,
@@ -130,7 +134,7 @@ function worktreeInstructionSteps(root, changes, language) {
 
 function localRepositoryInstructions(root, steps, language, recheckCommand) {
   return joinInstructions([
-    ...steps.map((step, index) => `${index + 1}. ${step}`),
+    ...formatInstructionSteps(steps),
     localize(
       language,
       `After completing every applicable step, run ${command(root, recheckCommand)} again.`,

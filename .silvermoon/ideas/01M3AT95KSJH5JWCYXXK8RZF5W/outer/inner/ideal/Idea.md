@@ -54,9 +54,10 @@ details 之间重复相同事实。
   `project-setup-required`、`repository-sync-required`、`task-pending` 和
   `idle` 四种状态；一个状态隐含前序层已通过及后续层尚未进入。
 - JSON 中 observation、outcomes 和 instructions 各守边界；文本不遗漏执行当前
-  建议所需的路径、提交、revision、候选项或命令。
+  建议所需的路径、提交、revision、候选项或必要的操作命令。检查修改的工具由
+  Agent 自选，不强制逐条使用特定 Git 查看命令。
 - 大型 worktree 只内联有固定预算的路径样例，同时报告完整 counts、omitted 数和
-  精确检查命令，不能让返回大小随文件数量无限增长。
+  覆盖完整修改集的检查要求，不能让返回大小随文件数量无限增长。
 - 项目就绪判断不假定目标仓库使用 npm 或任何其他语言生态的 package manager，
   也不要求项目声明或安装 Silvermoon dependency。
 
@@ -110,10 +111,11 @@ failure outcome；只要 Silvermoon 能准确说明事实并给出恢复建议�
 
 1. 在访问 remote 之前检查当前 worktree；冲突优先于普通修改。
 2. 若存在 staged、unstaged 或 untracked 内容，报告每类完整 count，并在固定
-   item/byte 预算内按稳定顺序内联路径样例；超出部分报告 `omitted`，同时提供
-   结构化 Git 命令用于读取完整路径和精确 diff。Agent 随后提交、隔离，或在获得
-   明确授权后放弃；Silvermoon 不得自动丢弃未知工作。尚无首个 commit 的仓库也
-   在这里审查候选内容并形成初始 commit。
+   item/byte 预算内按稳定顺序内联路径样例；超出部分报告 `omitted`。instructions
+   要求 Agent 检查全部路径及其修改内容（包括冲突），不能把有界样例当作完整
+   修改集，也不指定查看 diff 的工具或逐条列出 Git 检查命令。Agent 随后提交、
+   隔离，或在获得明确授权后放弃；Silvermoon 不得自动丢弃未知工作。尚无首个
+   commit 的仓库也在这里审查候选内容并形成初始 commit。
 3. 若 worktree 已干净但仍没有可用 HEAD，给出建立初始 primary commit 的明确
    action，不把它误报为项目未配置或笼统 fatal error。
 4. 本地 checkout 就绪后，确保它是非 detached branch，且其 upstream 指向
@@ -343,7 +345,8 @@ JSON 不包含顶层 `ok`。程序不能用 problems 是否为空或 outcome 是
   remediation，全部建议只在 instructions 中。problems 仅表达项目整备和仓库
   整备问题；idea 数量和 lifecycle state 是正常事实。
 - 大型集合使用公共、确定且有契约测试的 item/UTF-8 byte budget；problem summary
-  报告总数、内联样例和 omitted 数，instructions 提供读取完整事实的精确命令。
+  报告总数、内联样例和 omitted 数，instructions 明确要求检查全部路径及修改内容，
+  但由 Agent 自行选择查看工具。
 
 ### Default human-readable output
 

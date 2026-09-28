@@ -114,11 +114,12 @@ silvermoon check [--remote | --commit <revision> | --staged | --worktree] [--tra
   attempted by this invocation. Each item has `type`, `status` (`success` or
   `failure`), and `summary`. An empty array means no side effect was attempted.
 - `instructions` contains all ordered next-step guidance for the current
-  readiness layer.
+  readiness layer. A single remediation is plain text; multiple remediations
+  are numbered in priority order.
 
 Default dialogue output renders the same report with concise lists under
-`## Request`, `## Current state`, and `## What to do next` (in Chinese:
-`## 本次请求`, `## 当前情况`, `## 接下来怎么做`). The optional
+`## Current instruction`, `## Project status`, and `## Suggested next steps`
+(in Chinese: `## 本次指示`, `## 项目现状`, `## 下一步建议`). The optional
 `## Actions and results` (`## 本次操作及结果`) appears only if `outcomes`
 is nonempty. JSON always retains `outcomes: []` when no side effect was attempted. `--json`
 serializes the same decision; there is no YAML output or second reasoning
