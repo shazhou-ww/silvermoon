@@ -51,7 +51,9 @@ silvermoon whats-next <idea>
 Silvermoon 会让目标、实现、仓库状态与现实结果始终相连。完整的首次工作流见英文
 [Getting Started](./docs/getting-started.md)。
 默认输出是一段包含意图、观察、动作与结果、下一步指示的四段对话；只有程序消费者需要
-同一份结构化 envelope 时才添加 `--json`。
+同一份结构化 envelope 时才添加 `--json`。任何命令都可以添加
+`--trace <trace.jsonl>`，写出用于性能分析的成对任务与 Git 计时 span。trace 文件只在
+待测命令工作完成后创建，并且绝不覆盖已有文件。
 
 ## 为什么需要 Silvermoon
 

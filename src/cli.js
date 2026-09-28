@@ -10,6 +10,7 @@ import { canonicalizeLanguageTag } from "./language.js";
 import { renderDialogue } from "./dialogue.js";
 import { checkRepository } from "./index.js";
 import { createIdea } from "./create-idea.js";
+import { withTraceFile } from "./trace.js";
 import { whatsNext } from "./whatsnext.js";
 
 const { version: VERSION } = JSON.parse(
@@ -24,6 +25,7 @@ function write(method, value) {
 function addCommonOptions(command) {
   return command
     .option("--json", "serialize the conversation envelope as JSON")
+    .option("--trace <trace-jsonl-file-name>", "write task timing spans as JSONL")
     .option("-r, --root <path>", "repository root", process.cwd());
 }
 
@@ -60,6 +62,7 @@ Examples:
   $ silvermoon whats-next
   $ silvermoon whats-next <idea>
   $ silvermoon whats-next <idea> --json
+  $ silvermoon whats-next <idea> --trace trace.jsonl
   $ silvermoon create-idea
   $ silvermoon check
   $ silvermoon check --worktree
@@ -72,11 +75,13 @@ Examples:
       .command("whats-next [idea]")
       .description("observe project, repository, and idea readiness"),
   ).action(async (idea, options) => {
-    render(
-      await whatsNext({ idea, root: options.root }),
-      options.json,
-      io,
+    const report = await withTraceFile(
+      options.trace,
+      "command.whats-next",
+      { command: "whats-next", processId: process.pid },
+      () => whatsNext({ idea, root: options.root }),
     );
+    render(report, options.json, io);
     program.setOptionValue("resultCode", 0);
   });
 
@@ -90,14 +95,16 @@ Examples:
         languageArgument,
       ),
   ).action(async (options) => {
-    render(
-      await createIdea({
+    const report = await withTraceFile(
+      options.trace,
+      "command.create-idea",
+      { command: "create-idea", processId: process.pid },
+      () => createIdea({
         language: options.language,
         root: options.root,
       }),
-      options.json,
-      io,
     );
+    render(report, options.json, io);
     program.setOptionValue("resultCode", 0);
   });
 
@@ -110,17 +117,19 @@ Examples:
       .addOption(new Option("--staged", "validate the index snapshot").conflicts(["remote", "commit", "worktree"]))
       .addOption(new Option("--worktree", "validate HEAD plus staged, unstaged, and untracked changes").conflicts(["remote", "commit", "staged"])),
   ).action(async (options) => {
-    render(
-      await checkRepository({
+    const report = await withTraceFile(
+      options.trace,
+      "command.check",
+      { command: "check", processId: process.pid },
+      () => checkRepository({
         commit: options.commit,
         remote: options.remote,
         root: options.root,
         staged: options.staged,
         worktree: options.worktree,
       }),
-      options.json,
-      io,
     );
+    render(report, options.json, io);
     program.setOptionValue("resultCode", 0);
   });
 

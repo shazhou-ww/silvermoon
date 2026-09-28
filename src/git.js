@@ -4,15 +4,32 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+import { traceAsync, traceSync } from "./trace.js";
+
 let commandObserver = null;
 
 export function runGit(root, args, { env } = {}) {
   if (commandObserver) commandObserver([...args]);
-  const result = spawnSync("git", ["-C", root, ...args], {
-    encoding: "utf8",
-    env: { ...process.env, GIT_TERMINAL_PROMPT: "0", ...env },
-    windowsHide: true,
-  });
+  const result = traceSync(
+    "git.command",
+    {
+      argumentCount: args.length - 1,
+      network: args[0] === "fetch" || args[0] === "ls-remote",
+      subcommand: args[0] ?? null,
+    },
+    () => spawnSync("git", ["-C", root, ...args], {
+      encoding: "utf8",
+      env: { ...process.env, GIT_TERMINAL_PROMPT: "0", ...env },
+      windowsHide: true,
+    }),
+    (completed) => ({
+      attributes: {
+        exitCode: completed.status,
+        signal: completed.signal,
+      },
+      status: completed.status === 0 ? "ok" : "error",
+    }),
+  );
   return {
     error: result.error ?? null,
     ok: result.status === 0,
@@ -345,21 +362,23 @@ export async function withTemporaryWorktree(root, commit, callback) {
 }
 
 export async function withTemporaryTree(root, tree, callback) {
-  const temporaryRoot = await mkdtemp(join(tmpdir(), "silvermoon-tree-"));
-  const directory = join(temporaryRoot, "snapshot");
-  const env = { ...process.env, GIT_INDEX_FILE: join(temporaryRoot, "index") };
-  try {
-    await mkdir(directory);
-    requireGit(root, ["read-tree", tree], "Cannot populate isolated index", { env });
-    const prefix = `${directory.replaceAll("\\", "/")}/`;
-    requireGit(
-      root,
-      ["checkout-index", "--all", "--force", `--prefix=${prefix}`],
-      "Cannot populate isolated tree snapshot",
-      { env },
-    );
-    return await callback(directory, tree);
-  } finally {
-    await rm(temporaryRoot, { recursive: true, force: true });
-  }
+  return traceAsync("snapshot.materialize", {}, async () => {
+    const temporaryRoot = await mkdtemp(join(tmpdir(), "silvermoon-tree-"));
+    const directory = join(temporaryRoot, "snapshot");
+    const env = { ...process.env, GIT_INDEX_FILE: join(temporaryRoot, "index") };
+    try {
+      await mkdir(directory);
+      requireGit(root, ["read-tree", tree], "Cannot populate isolated index", { env });
+      const prefix = `${directory.replaceAll("\\", "/")}/`;
+      requireGit(
+        root,
+        ["checkout-index", "--all", "--force", `--prefix=${prefix}`],
+        "Cannot populate isolated tree snapshot",
+        { env },
+      );
+      return await callback(directory, tree);
+    } finally {
+      await rm(temporaryRoot, { recursive: true, force: true });
+    }
+  });
 }

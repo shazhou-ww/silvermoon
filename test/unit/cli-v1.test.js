@@ -61,6 +61,9 @@ test("registers only the approved command surface", () => {
     command.name() === "create-idea"
   );
   assert.ok(create.options.some(({ long }) => long === "--language"));
+  for (const command of program.commands) {
+    assert.ok(command.options.some(({ long }) => long === "--trace"));
+  }
   for (const name of ["check", "whats-next"]) {
     const command = program.commands.find((candidate) => candidate.name() === name);
     assert.ok(!command.options.some(({ long }) => long === "--language"));

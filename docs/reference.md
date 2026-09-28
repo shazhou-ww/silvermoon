@@ -84,9 +84,9 @@ State is derived in order:
 ## Public Commands
 
 ```sh
-silvermoon whats-next [idea]
-silvermoon create-idea [--language <tag>]
-silvermoon check [--remote | --commit <revision> | --staged | --worktree]
+silvermoon whats-next [idea] [--trace <trace-jsonl-file-name>]
+silvermoon create-idea [--language <tag>] [--trace <trace-jsonl-file-name>]
+silvermoon check [--remote | --commit <revision> | --staged | --worktree] [--trace <trace-jsonl-file-name>]
 ```
 
 All three commands build one internal conversation envelope:
@@ -118,6 +118,18 @@ All three commands build one internal conversation envelope:
 Default output renders that same envelope as four natural-language sections:
 intent, observation, actions and outcomes, and next instructions. `--json`
 serializes it directly; there is no YAML output and no second reasoning path.
+
+All commands accept `--trace <trace-jsonl-file-name>`. The trace is newline-
+delimited JSON with paired `span-start` and `span-end` events, UTC timestamps,
+monotonic `durationMs`, parent span IDs, and success or error status. It covers
+the command, snapshot observation, adoption, user configuration, idea layout,
+repository readiness, temporary snapshot materialization, and individual Git
+commands. Git events record the subcommand and result but not command arguments,
+stdout, or stderr. The path is relative to the caller's working directory when
+not absolute. Events are buffered so a trace inside the repository cannot
+affect that invocation's worktree observation. The file is written after the
+measured command work finishes and uses exclusive creation, so an existing
+file is never overwritten.
 
 Observation state is a discriminated union:
 

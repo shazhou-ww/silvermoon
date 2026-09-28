@@ -8,6 +8,7 @@ import {
 } from "./dialogue.js";
 import { inspectIdeaLayout } from "./idea-layout.js";
 import { resolveLanguage } from "./language.js";
+import { traceAsync } from "./trace.js";
 import { loadUserConfig } from "./user-config.js";
 
 function projectObservation({
@@ -105,7 +106,7 @@ export function repositoryProblemObservation(observation, problems) {
   };
 }
 
-export async function observeSnapshot({
+async function observeSnapshotInternal({
   allowMissingIdeas = false,
   baseRevision,
   contentRoot,
@@ -118,8 +119,16 @@ export async function observeSnapshot({
   validateCandidate = false,
   version,
 }) {
-  const adoption = await inspectAdoption({ contentRoot, root });
-  const user = await loadUserConfig({ home: userHome });
+  const adoption = await traceAsync(
+    "adoption.inspect",
+    {},
+    () => inspectAdoption({ contentRoot, root }),
+  );
+  const user = await traceAsync(
+    "user-config.load",
+    {},
+    () => loadUserConfig({ home: userHome }),
+  );
   const userFindings = user.diagnostics.map((diagnostic) => ({
     priority: 30,
     problem: diagnosticProblem(diagnostic),
@@ -180,15 +189,19 @@ export async function observeSnapshot({
   );
   let layout;
   try {
-    layout = await inspectIdeaLayout({
-      baseRevision,
-      config: adoption.config,
-      gitRoot: gitRoot ?? adoption.root,
-      historyCommit,
-      root: contentRoot ?? adoption.root,
-      snapshotTree,
-      validateCandidate,
-    });
+    layout = await traceAsync(
+      "idea-layout.inspect",
+      {},
+      () => inspectIdeaLayout({
+        baseRevision,
+        config: adoption.config,
+        gitRoot: gitRoot ?? adoption.root,
+        historyCommit,
+        root: contentRoot ?? adoption.root,
+        snapshotTree,
+        validateCandidate,
+      }),
+    );
   } catch (caught) {
     layout = {
       diagnostics: [{
@@ -265,6 +278,14 @@ export async function observeSnapshot({
     },
     projectReady: true,
   };
+}
+
+export async function observeSnapshot(options) {
+  return traceAsync(
+    "snapshot.observe",
+    {},
+    () => observeSnapshotInternal(options),
+  );
 }
 
 export function withObservationLanguage(observed, ideaLanguage) {

@@ -68,7 +68,10 @@ repository state, and real-world result connected. See
 [Getting Started](./docs/getting-started.md) for the complete first workflow.
 Default output is a four-part conversation: intent, observation, actions and
 outcomes, and next instructions. Add `--json` only when a programmatic consumer
-needs the same structured envelope.
+needs the same structured envelope. Add `--trace <trace.jsonl>` to any command
+to write paired task and Git timing spans for performance analysis. Trace
+files are created only after the measured command work completes and never
+overwrite an existing file.
 
 ## Why Silvermoon
 
