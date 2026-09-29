@@ -1,10 +1,10 @@
 import { AsyncLocalStorage } from "node:async_hooks";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { constants } from "node:fs";
 import { access, lstat, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 
-const TRACE_SCHEMA_VERSION = 1;
+export const TRACE_SCHEMA_VERSION = 2;
 const traceContext = new AsyncLocalStorage();
 
 function durationMilliseconds(started) {
@@ -44,6 +44,7 @@ class Trace {
     };
     this.nextSpanId += 1;
     this.emit({
+      channel: "telemetry",
       event: "span-start",
       spanId: span.id,
       parentSpanId,
@@ -55,6 +56,7 @@ class Trace {
 
   end(span, status, attributes = {}) {
     this.emit({
+      channel: "telemetry",
       event: "span-end",
       spanId: span.id,
       parentSpanId: span.parentSpanId,
@@ -86,7 +88,12 @@ async function requireAvailableTracePath(path) {
   throw new Error(`Trace file already exists: ${path}`);
 }
 
-export async function traceAsync(name, attributes, callback) {
+export async function traceAsync(
+  name,
+  attributes,
+  callback,
+  summarize = () => ({}),
+) {
   const context = traceContext.getStore();
   if (!context) return callback();
 
@@ -96,7 +103,12 @@ export async function traceAsync(name, attributes, callback) {
     async () => {
       try {
         const result = await callback();
-        context.trace.end(span, "ok");
+        const summary = summarize(result);
+        context.trace.end(
+          span,
+          summary.status ?? "ok",
+          summary.attributes ?? {},
+        );
         return result;
       } catch (caught) {
         context.trace.end(span, "error", { errorName: errorName(caught) });
@@ -104,6 +116,80 @@ export async function traceAsync(name, attributes, callback) {
       }
     },
   );
+}
+
+function hash(value) {
+  return createHash("sha256")
+    .update(JSON.stringify(value))
+    .digest("hex");
+}
+
+function projectDomainMessage(message) {
+  const base = {
+    channel: "domain",
+    event: message.type,
+    messageSequence: message.sequence,
+  };
+  if (message.type === "intention.accepted") {
+    return {
+      ...base,
+      command: message.intention.command,
+      argumentNames: Object.keys(message.intention.args ?? {}).sort(),
+      intentionHash: hash(message.intention),
+    };
+  }
+  if (message.type === "observation.fact") {
+    return {
+      ...base,
+      factType: message.fact.type,
+      progress: message.fact.progress,
+      state: message.fact.observation.state,
+      problemCount: message.fact.observation.problems?.length ?? 0,
+      problemTypes: (message.fact.observation.problems ?? [])
+        .map(({ type }) => type),
+      ...(message.fact.observation.selectedIdea?.id === undefined
+        ? {}
+        : { selectedIdeaId: message.fact.observation.selectedIdea.id }),
+      ...(message.fact.observation.createdIdea?.id === undefined
+        ? {}
+        : { createdIdeaId: message.fact.observation.createdIdea.id }),
+    };
+  }
+  if (message.type === "action.requested") {
+    return {
+      ...base,
+      actionId: message.actionId,
+      actionType: message.action.type,
+    };
+  }
+  if (message.type === "action.finished") {
+    return {
+      ...base,
+      actionId: message.actionId,
+      actionType: message.actionType,
+      status: message.status,
+      ...(message.problem?.type === undefined
+        ? {}
+        : { problemType: message.problem.type }),
+      resultFields: Object.keys(message.result ?? {}).sort(),
+    };
+  }
+  if (message.type === "response.created") {
+    return {
+      ...base,
+      kind: message.kind,
+      responseHash: message.metadata.hash,
+      nextStepCount: message.metadata.nextStepCount,
+      itemCount: message.metadata.itemCount,
+    };
+  }
+  throw new Error(`Cannot trace unknown domain message type: ${message.type}`);
+}
+
+export function emitDomainMessage(message) {
+  const context = traceContext.getStore();
+  if (!context) return;
+  context.trace.emit(projectDomainMessage(message));
 }
 
 export function traceSync(name, attributes, callback, summarize = () => ({})) {

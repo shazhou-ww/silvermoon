@@ -1,0 +1,122 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/shazhou-ww/silvermoon/raw/refs/heads/main/schema/v2/trace-event.schema.json",
+  "title": "Silvermoon trace event v2",
+  "description": "A safe domain or telemetry event in a unified command trace.",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "traceId",
+    "sequence",
+    "timestamp",
+    "channel",
+    "event"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 2
+    },
+    "traceId": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
+    "sequence": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "timestamp": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z$"
+    },
+    "channel": {
+      "enum": [
+        "domain",
+        "telemetry"
+      ]
+    },
+    "event": {
+      "type": "string",
+      "minLength": 1
+    },
+    "messageSequence": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "spanId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "parentSpanId": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "durationMs": {
+      "type": "number",
+      "minimum": 0
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "channel": {
+            "const": "domain"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "event": {
+            "enum": [
+              "intention.accepted",
+              "observation.fact",
+              "action.requested",
+              "action.finished",
+              "response.created"
+            ]
+          },
+          "messageSequence": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "messageSequence"
+        ]
+      },
+      "else": {
+        "properties": {
+          "event": {
+            "enum": [
+              "span-start",
+              "span-end"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "spanId": {
+            "type": "string"
+          },
+          "parentSpanId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "name",
+          "spanId",
+          "parentSpanId"
+        ]
+      }
+    }
+  ]
+}

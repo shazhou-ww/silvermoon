@@ -64,8 +64,9 @@ Each file is optional, repository-owned Markdown for only its named phase.
 `whats-next <idea>` returns the applicable file only after that actionable
 phase becomes the highest-priority next action. A successful `create-idea`
 returns only preparing guidance after local preflight and before relying on
-the new scaffold. The report includes the fixed path, exact Git blob
-`contentRevision`, and captured content, so consumers must not reread the file.
+the new scaffold. `observation.guidance` includes the fixed path and exact Git
+blob `contentRevision`; `response.guidance` carries that provenance plus the
+captured content, so consumers must not reread the file.
 
 Keep each file at most 32 KiB of valid UTF-8 without a BOM or NUL byte, with at
 least one non-whitespace character. Use regular files and no extra entries in
@@ -149,13 +150,13 @@ Then ask what comes next with the generated ULID or an exact unique alias:
 silvermoon whats-next <idea>
 ```
 
-The default dialogue uses lightweight Markdown headings for intent,
-observation, and ordered next instructions; actions and outcomes appear only
-when an operation was attempted. Add `--json` only when a programmatic
-consumer needs the `intention / observation / outcomes / instructions`
-envelope. Execute the applicable instructions in order and run the same
-command again only after an expected repository change, an unexpected input
-change, or a newly arrived external result.
+Default Markdown renders only the self-contained response. Add `--json` when a
+programmatic consumer needs the complete
+`intention / observation / actions / response` report. Read every problem and
+execute applicable `response.nextSteps` in order; `actions` contains only
+side effects Silvermoon already attempted. Run the same command again only
+after an expected repository change, an unexpected input change, or a newly
+arrived external result.
 
 ## Make Decisions Explicit
 

@@ -46,8 +46,10 @@ test("checks HEAD with a project-only observation and resolved commit version", 
   });
 
   assert.deepEqual(Object.keys(report).sort(), [
+    "actions",
     "intention",
     "observation",
+    "response",
   ]);
   assert.deepEqual(report.intention, {
     command: "check",
@@ -288,7 +290,16 @@ test("fetches and validates remote without a dialogue outcome", async () => {
     commit: expected,
   });
   assert.equal(report.observation.state, "project-ready");
-  assert.deepEqual(Object.keys(report).sort(), ["intention", "observation"]);
+  assert.deepEqual(Object.keys(report).sort(), [
+    "actions",
+    "intention",
+    "observation",
+    "response",
+  ]);
+  assert.deepEqual(
+    report.actions.map(({ type, status }) => [type, status]),
+    [["fetch-primary", "success"]],
+  );
 });
 
 test("valid remote snapshot is not blocked by unrelated local HEAD skill damage", async () => {
@@ -359,7 +370,12 @@ test("returns a check-unavailable observation for an unavailable commit", async 
   });
   assert.equal(report.observation.state, "check-unavailable");
   assert.equal(report.observation.problems[0].type, "commit-unavailable");
-  assert.deepEqual(Object.keys(report).sort(), ["intention", "observation"]);
+  assert.deepEqual(Object.keys(report).sort(), [
+    "actions",
+    "intention",
+    "observation",
+    "response",
+  ]);
 });
 
 test("keeps an output override when the requested check snapshot is unavailable", async () => {

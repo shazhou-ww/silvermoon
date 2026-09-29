@@ -3,12 +3,11 @@ import { lstat, mkdir, readFile, rm, rmdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
 import {
-  createEnvelope,
   diagnosticProblem,
   dialogueReadyObservation,
   localize,
-  outcome,
 } from "./dialogue.js";
+import { createCommandRun } from "./domain.js";
 import { inspectPhaseGuidance } from "./guidance.js";
 import {
   DEPLOYMENT_TEMPLATE,
@@ -110,10 +109,7 @@ async function ensureDirectoryPath(root, relativePath, operations) {
     }
     return created;
   } catch (caught) {
-    caught.cleanup = await removeCreatedDirectories(
-      created,
-      operations.removeDirectory,
-    );
+    caught.createdDirectories = created;
     throw caught;
   }
 }
@@ -126,32 +122,41 @@ function cleanupSummary(results) {
       + preserved.map(({ path }) => path).join(", ");
 }
 
-function failureEnvelope({
-  caught,
-  intention,
+function cleanupResult(results) {
+  return {
+    removed: results.filter(({ status }) => status === "removed").length,
+    preserved: results.filter(({ status }) => status.startsWith("preserved")).length,
+    items: results,
+  };
+}
+
+function failureReport({
+  cleanup,
+  problem: actionProblem,
   observation,
-  outcomes,
-  cleanup = [],
+  runtime,
   language,
 }) {
-  outcomes.push(outcome(
-    "create-idea-scaffold",
-    "failure",
-    localize(
+  const problem = {
+    type: "idea-scaffold-failed",
+    summary: localize(
       language,
-      `Idea creation failed: ${caught.message} ${cleanupSummary(cleanup)}`,
-      `创建 idea 失败：${caught.message} ${cleanupSummary(cleanup)}`,
+      `Idea creation failed: ${actionProblem.summary} ${cleanupSummary(cleanup.items)}`,
+      `创建 idea 失败：${actionProblem.summary} ${cleanupSummary(cleanup.items)}`,
     ),
-  ));
-  return createEnvelope(
-    intention,
-    dialogueReadyObservation(observation, "idea-create-failed"),
-    outcomes,
-    localize(
-      language,
-      "Preserve any reported paths, resolve the filesystem error, and retry `silvermoon create-idea`.",
-      "保留报告中的路径，解决文件系统错误后，再运行 `silvermoon create-idea`。",
-    ),
+  };
+  return runtime.complete(
+    dialogueReadyObservation(observation, "idea-create-failed", {
+      cleanup,
+      problems: [...observation.problems, problem],
+    }),
+    {
+      nextSteps: localize(
+        language,
+        "Preserve any reported paths, resolve the filesystem error, and retry `silvermoon create-idea`.",
+        "保留报告中的路径，解决文件系统错误后，再运行 `silvermoon create-idea`。",
+      ),
+    },
   );
 }
 
@@ -163,102 +168,57 @@ function projectCreationObservation(observation) {
   return project;
 }
 
-export async function createIdea({
-  generateId = generateUlid,
-  guidanceReader = inspectPhaseGuidance,
-  language,
-  operations = {},
-  root = process.cwd(),
-  userHome,
-} = {}) {
-  const requestedRoot = resolve(root);
-  const canonicalLanguage = language === undefined
-    ? undefined
-    : canonicalizeLanguageTag(language);
-  const intention = {
-    command: "create-idea",
-    args: { language: canonicalLanguage ?? null },
-  };
-  const outcomes = [];
-  const observed = await observeSnapshot({
-    allowMissingIdeas: true,
-    ideaLanguage: canonicalLanguage,
-    root: requestedRoot,
-    userHome,
-    version: { type: "worktree" },
-  });
-  const recheckCommand = canonicalLanguage === undefined
-    ? "silvermoon create-idea"
-    : `silvermoon create-idea --language ${canonicalLanguage}`;
-  if (!observed.projectReady) {
-    return createEnvelope(
-      intention,
-      projectCreationObservation(observed.observation),
-      outcomes,
-      projectInstructions(
-        observed,
-        observed.observation.root,
-        observed.outputLanguage,
-        recheckCommand,
-      ),
-    );
-  }
-  const repositoryRoot = observed.observation.root;
-  const readiness = await assessIdeaCreationReadiness({
-    observed,
-    outcomes,
-    recheckCommand,
-    root: repositoryRoot,
-  });
-  if (!readiness.ready) {
-    return createEnvelope(
-      intention,
-      dialogueReadyObservation(
-        readiness.observation,
-        "repository-preparation-required",
-      ),
-      outcomes,
-      readiness.instructions,
-    );
-  }
+function withCleanupPlan(caught, cleanupPlan) {
+  const error = caught instanceof Error ? caught : new Error(String(caught));
+  error.cleanupPlan = cleanupPlan;
+  return error;
+}
 
-  const inspectedGuidance = await guidanceReader({
-    gitRoot: repositoryRoot,
-    phase: "preparing",
-    snapshotTree: readiness.head,
-  });
-  if (inspectedGuidance.state === "invalid") {
-    return createEnvelope(
-      intention,
-      dialogueReadyObservation(
-        readiness.observation,
-        "phase-guidance-invalid",
-        {
-          problems: inspectedGuidance.diagnostics.map((diagnostic) =>
-            diagnosticProblem(diagnostic, observed.outputLanguage)
-          ),
-        },
-      ),
-      outcomes,
-      phaseGuidanceInstructions(
-        inspectedGuidance.diagnostics,
-        repositoryRoot,
-        observed.outputLanguage,
-        recheckCommand,
-      ),
-    );
-  }
-
-  const inspect = operations.lstat ?? lstat;
-  const makeDirectory = operations.mkdir ?? mkdir;
+async function cleanupScaffold(cleanupPlan, operations) {
   const read = operations.readFile ?? readFile;
   const remove = operations.rm ?? rm;
   const removeDirectory = operations.rmdir ?? rmdir;
+  const results = [];
+  for (const [path, source] of [...cleanupPlan.cleanupFiles].reverse()) {
+    try {
+      results.push(await removeOwnedFile(path, source, read, remove));
+    } catch (caught) {
+      results.push({
+        path,
+        status: "preserved",
+        error: caught.message,
+      });
+    }
+  }
+  results.push(...await removeCreatedDirectories(
+    cleanupPlan.createdDirectories,
+    removeDirectory,
+  ));
+  if (cleanupPlan.collisionPath) {
+    results.push({
+      path: cleanupPlan.collisionPath,
+      status: "preserved-existing",
+    });
+  }
+  results.push(...await removeCreatedDirectories(
+    cleanupPlan.rootDirectories,
+    removeDirectory,
+  ));
+  return cleanupResult(results);
+}
+
+async function createScaffold({
+  canonicalLanguage,
+  generateId,
+  operations,
+  repositoryRoot,
+}) {
+  const inspect = operations.lstat ?? lstat;
+  const makeDirectory = operations.mkdir ?? mkdir;
   const write = operations.writeFile ?? writeFile;
   const fileOperations = {
     inspect,
     makeDirectory,
-    removeDirectory,
   };
   let rootDirectories;
   try {
@@ -268,13 +228,11 @@ export async function createIdea({
       fileOperations,
     );
   } catch (caught) {
-    return failureEnvelope({
-      caught,
-      intention,
-      observation: readiness.observation,
-      outcomes,
-      cleanup: caught.cleanup,
-      language: observed.outputLanguage,
+    throw withCleanupPlan(caught, {
+      cleanupFiles: [],
+      collisionPath: null,
+      createdDirectories: [],
+      rootDirectories: caught.createdDirectories ?? [],
     });
   }
 
@@ -291,17 +249,11 @@ export async function createIdea({
       folder = resolve(repositoryRoot, paths.ideaPath);
       if (await pathExists(folder, inspect)) continue;
     } catch (caught) {
-      const cleanup = await removeCreatedDirectories(
+      throw withCleanupPlan(caught, {
+        cleanupFiles: [],
+        collisionPath: null,
+        createdDirectories: [],
         rootDirectories,
-        removeDirectory,
-      );
-      return failureEnvelope({
-        caught,
-        intention,
-        observation: readiness.observation,
-        outcomes,
-        cleanup,
-        language: observed.outputLanguage,
       });
     }
 
@@ -345,74 +297,189 @@ export async function createIdea({
           throw caught;
         }
       }
-      outcomes.push(outcome(
-        "create-idea-scaffold",
-        "success",
-        localize(
-          observed.outputLanguage,
-          `Created idea ${id} at ${paths.ideaPath}.`,
-          `已在 ${paths.ideaPath} 创建 idea ${id}。`,
-        ),
-      ));
-      return createEnvelope(
-        intention,
-        dialogueReadyObservation(readiness.observation, "idea-created", {
-          createdIdea: { id, path: paths.ideaPath, state: "preparing" },
-          ...(inspectedGuidance.guidance === undefined
-            ? {}
-            : { guidance: inspectedGuidance.guidance }),
-        }),
-        outcomes,
-        localize(
-          observed.outputLanguage,
-          `Use ${observed.contentLanguage} for natural-language content while describing the requested Ideal World in ${paths.ideaDocumentPath}; keep the stable IDs and placeholders in ${paths.implementationDocumentPath}, ${paths.deploymentDocumentPath}, and ${paths.ledgerPath} synchronized.`,
-          `使用 ${observed.contentLanguage} 在 ${paths.ideaDocumentPath} 中描述请求的理想契约，并保持 ${paths.implementationDocumentPath}、${paths.deploymentDocumentPath} 与 ${paths.ledgerPath} 中的稳定 ID 和占位同步。`,
-        ),
-      );
+      return {
+        createdIdea: {
+          id,
+          path: paths.ideaPath,
+          state: "preparing",
+        },
+        paths,
+      };
     } catch (caught) {
-      const cleanup = [];
-      for (const [path, source] of [...cleanupFiles].reverse()) {
-        try {
-          cleanup.push(await removeOwnedFile(path, source, read, remove));
-        } catch (cleanupError) {
-          cleanup.push({
-            path,
-            status: "preserved",
-            error: cleanupError.message,
-          });
-        }
-      }
-      cleanup.push(...await removeCreatedDirectories(
+      throw withCleanupPlan(caught, {
+        cleanupFiles,
+        collisionPath,
         createdDirectories,
-        removeDirectory,
-      ));
-      if (collisionPath) {
-        cleanup.push({ path: collisionPath, status: "preserved-existing" });
-      }
-      cleanup.push(...await removeCreatedDirectories(
         rootDirectories,
-        removeDirectory,
-      ));
-      return failureEnvelope({
-        caught,
-        intention,
-        observation: readiness.observation,
-        outcomes,
-        cleanup,
-        language: observed.outputLanguage,
       });
     }
   }
 
-  const cleanup = await removeCreatedDirectories(rootDirectories, removeDirectory);
-  return failureEnvelope({
-    caught: new Error(
-      `Could not allocate a unique idea id after ${MAX_ID_ATTEMPTS} attempts.`,
-    ),
-    intention,
-    observation: readiness.observation,
-    outcomes,
-    cleanup,
-    language: observed.outputLanguage,
+  throw withCleanupPlan(
+    new Error(`Could not allocate a unique idea id after ${MAX_ID_ATTEMPTS} attempts.`),
+    {
+      cleanupFiles: [],
+      collisionPath: null,
+      createdDirectories: [],
+      rootDirectories,
+    },
+  );
+}
+
+export async function createIdea({
+  generateId = generateUlid,
+  guidanceReader = inspectPhaseGuidance,
+  language,
+  operations = {},
+  root = process.cwd(),
+  userHome,
+} = {}) {
+  const requestedRoot = resolve(root);
+  const canonicalLanguage = language === undefined
+    ? undefined
+    : canonicalizeLanguageTag(language);
+  const intention = {
+    command: "create-idea",
+    args: { language: canonicalLanguage ?? null },
+  };
+  const runtime = createCommandRun(intention);
+  const observed = await observeSnapshot({
+    allowMissingIdeas: true,
+    ideaLanguage: canonicalLanguage,
+    root: requestedRoot,
+    userHome,
+    version: { type: "worktree" },
   });
+  runtime.observe(projectCreationObservation(observed.observation), {
+    factType: "project.snapshot",
+  });
+  const recheckCommand = canonicalLanguage === undefined
+    ? "silvermoon create-idea"
+    : `silvermoon create-idea --language ${canonicalLanguage}`;
+  if (!observed.projectReady) {
+    return runtime.complete(
+      projectCreationObservation(observed.observation),
+      {
+        nextSteps: projectInstructions(
+          observed,
+          observed.observation.root,
+          observed.outputLanguage,
+          recheckCommand,
+        ),
+      },
+    );
+  }
+  const repositoryRoot = observed.observation.root;
+  const readiness = await assessIdeaCreationReadiness({
+    observed,
+    runtime,
+    recheckCommand,
+    root: repositoryRoot,
+  });
+  if (!readiness.ready) {
+    return runtime.complete(
+      dialogueReadyObservation(
+        readiness.observation,
+        "repository-preparation-required",
+      ),
+      { nextSteps: readiness.instructions },
+    );
+  }
+
+  const inspectedGuidance = await guidanceReader({
+    gitRoot: repositoryRoot,
+    phase: "preparing",
+    snapshotTree: readiness.head,
+  });
+  if (inspectedGuidance.state === "invalid") {
+    return runtime.complete(
+      dialogueReadyObservation(
+        readiness.observation,
+        "phase-guidance-invalid",
+        {
+          problems: inspectedGuidance.diagnostics.map((diagnostic) =>
+            diagnosticProblem(diagnostic, observed.outputLanguage)
+          ),
+        },
+      ),
+      {
+        nextSteps: phaseGuidanceInstructions(
+          inspectedGuidance.diagnostics,
+          repositoryRoot,
+          observed.outputLanguage,
+          recheckCommand,
+        ),
+      },
+    );
+  }
+
+  const completion = await runtime.performAction(
+    {
+      type: "create-idea-scaffold",
+      contentLanguage: observed.contentLanguage,
+    },
+    () => createScaffold({
+      canonicalLanguage,
+      generateId,
+      operations,
+      repositoryRoot,
+    }),
+    (caught) => ({
+      problem: {
+        type: "idea-scaffold-failed",
+        summary: caught.message,
+      },
+      internal: { cleanupPlan: caught.cleanupPlan },
+    }),
+  );
+  if (completion.status === "failure") {
+    const cleanupCompletion = await runtime.performAction(
+      { type: "remove-owned-creation-paths" },
+      () => cleanupScaffold(
+        completion.internal.cleanupPlan,
+        operations,
+      ),
+      (caught) => ({
+        problem: {
+          type: "idea-cleanup-failed",
+          summary: caught.message,
+        },
+      }),
+    );
+    const cleanup = cleanupCompletion.status === "success"
+      ? cleanupCompletion.result
+      : {
+        removed: 0,
+        preserved: 1,
+        items: [{
+          path: repositoryRoot,
+          status: "preserved",
+          error: cleanupCompletion.problem.summary,
+        }],
+      };
+    return failureReport({
+      cleanup,
+      problem: completion.problem,
+      observation: readiness.observation,
+      runtime,
+      language: observed.outputLanguage,
+    });
+  }
+
+  const { createdIdea, paths } = completion.result;
+  return runtime.complete(
+    dialogueReadyObservation(readiness.observation, "idea-created", {
+      createdIdea,
+      ...(inspectedGuidance.guidance === undefined
+        ? {}
+        : { guidance: inspectedGuidance.guidance }),
+    }),
+    {
+      nextSteps: localize(
+        observed.outputLanguage,
+        `Use ${observed.contentLanguage} for natural-language content while describing the requested Ideal World in ${paths.ideaDocumentPath}; keep the stable IDs and placeholders in ${paths.implementationDocumentPath}, ${paths.deploymentDocumentPath}, and ${paths.ledgerPath} synchronized.`,
+        `使用 ${observed.contentLanguage} 在 ${paths.ideaDocumentPath} 中描述请求的理想契约，并保持 ${paths.implementationDocumentPath}、${paths.deploymentDocumentPath} 与 ${paths.ledgerPath} 中的稳定 ID 和占位同步。`,
+      ),
+    },
+  );
 }

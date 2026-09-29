@@ -5,6 +5,8 @@ import { join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 
+import Ajv2020 from "ajv/dist/2020.js";
+
 import { runCli } from "../../src/cli.js";
 import { ideaPaths } from "../../src/layout.js";
 import { createRepository, FIRST_ID, git } from "../helpers/repository.js";
@@ -61,7 +63,12 @@ test("returns one when check cannot validate a commit", async () => {
     assert.equal(result, 1);
     assert.deepEqual(errors, []);
     const report = JSON.parse(logs[0]);
-    assert.deepEqual(Object.keys(report).sort(), ["intention", "observation"]);
+    assert.deepEqual(Object.keys(report).sort(), [
+      "actions",
+      "intention",
+      "observation",
+      "response",
+    ]);
     assert.equal(report.observation.state, "check-unavailable");
     assert.equal(report.observation.problems[0].type, "commit-unavailable");
   } finally {
@@ -69,13 +76,31 @@ test("returns one when check cannot validate a commit", async () => {
   }
 });
 
-test("writes task and Git spans without changing the observed worktree", async () => {
+test("writes schema-valid domain and telemetry events without changing the report", async () => {
   const repository = await createRepository({
     prefix: "silvermoon-cli-trace-",
   });
   const requestedTracePath = join(repository.root, "whats-next");
   const tracePath = `${requestedTracePath}.trace.jsonl`;
   try {
+    const baselineLogs = [];
+    const baselineResult = await runCli(
+      [
+        "whats-next",
+        "fixture",
+        "--language",
+        "ZH-cn",
+        "--root",
+        repository.root,
+        "--json",
+      ],
+      {
+        error: () => {},
+        log: (value) => baselineLogs.push(value),
+      },
+    );
+    assert.equal(baselineResult, 0);
+
     const logs = [];
     const errors = [];
     const result = await runCli(
@@ -102,11 +127,33 @@ test("writes task and Git spans without changing the observed worktree", async (
     assert.deepEqual(report.observation.problems, []);
     assert.equal(report.intention.args.language, "zh-CN");
     assert.equal(report.observation.outputLanguage, "zh-CN");
+    assert.deepEqual(report, JSON.parse(baselineLogs[0]));
 
     const events = (await readFile(tracePath, "utf8"))
       .trim()
       .split("\n")
       .map((line) => JSON.parse(line));
+    const traceSchema = JSON.parse(
+      await readFile(
+        new URL("../../schema/v2/trace-event.schema.json", import.meta.url),
+        "utf8",
+      ),
+    );
+    const validateTraceEvent = new Ajv2020({
+      allErrors: true,
+      strict: true,
+    }).compile(traceSchema);
+    for (const event of events) {
+      assert.equal(
+        validateTraceEvent(event),
+        true,
+        JSON.stringify(validateTraceEvent.errors),
+      );
+    }
+    assert.deepEqual(
+      events.map(({ sequence }) => sequence),
+      Array.from({ length: events.length }, (_, index) => index + 1),
+    );
     assert.equal(events[0].event, "span-start");
     assert.equal(events[0].name, "command.whats-next");
     assert.equal(events[0].attributes.outputLanguage, "zh-CN");
@@ -119,6 +166,30 @@ test("writes task and Git spans without changing the observed worktree", async (
     assert.ok(events.some(({ name }) =>
       name === "repository.assess-readiness"
     ));
+    const domainEvents = events.filter(({ channel }) => channel === "domain");
+    assert.deepEqual(
+      domainEvents.map(({ messageSequence }) => messageSequence),
+      Array.from({ length: domainEvents.length }, (_, index) => index + 1),
+    );
+    assert.equal(domainEvents[0].event, "intention.accepted");
+    assert.equal(domainEvents.at(-1).event, "response.created");
+    const requestedAction = domainEvents.find(({ event }) =>
+      event === "action.requested"
+    );
+    const finishedAction = domainEvents.find(({ event }) =>
+      event === "action.finished"
+    );
+    assert.equal(requestedAction.actionId, finishedAction.actionId);
+    assert.ok(events.some(({ channel, event, name, attributes }) =>
+      channel === "telemetry"
+      && event === "span-start"
+      && name === `action.${requestedAction.actionType}`
+      && attributes.actionId === requestedAction.actionId
+    ));
+    assert.doesNotMatch(
+      events.map((event) => JSON.stringify(event)).join("\n"),
+      /"idea":"fixture"|"root":/,
+    );
     const gitSubcommands = events
       .filter(({ event, name }) =>
         event === "span-start" && name === "git.command"

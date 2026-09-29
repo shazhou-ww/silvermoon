@@ -3,6 +3,14 @@ export const OUTPUT_LANGUAGES = Object.freeze(["en-US", "zh-CN"]);
 
 const OUTPUT_LANGUAGE_SET = new Set(OUTPUT_LANGUAGES);
 
+export function isChinese(language) {
+  return language?.toLowerCase().startsWith("zh") ?? false;
+}
+
+export function localize(language, english, chinese) {
+  return isChinese(language) ? chinese : english;
+}
+
 export function canonicalizeLanguageTag(value) {
   if (typeof value !== "string" || value.length === 0 || value.trim() !== value) {
     throw new Error("language tag must be a non-empty trimmed string");

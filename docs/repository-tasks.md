@@ -52,21 +52,23 @@ publish a normal non-force commit. Prefer status-only decision commits when
 practical.
 
 The required idea-root `ledger.md` is the Agent continuation surface. After
-repository hygiene and lifecycle routing, combine the reported instructions, world
-contracts, and unchecked Implementation or Deployment ledger entries to infer
-the next work. Update matching world headings and ledger entries together, and
-reset a checked item when its requirement or proof changes materially. Ledger
-checkboxes are Agent notes only and never imply approval or acceptance.
+repository hygiene and lifecycle routing, combine the reported
+`response.nextSteps`, world contracts, and unchecked Implementation or
+Deployment ledger entries to infer the next work. Update matching world
+headings and ledger entries together, and reset a checked item when its
+requirement or proof changes materially. Ledger checkboxes are Agent notes only
+and never imply approval or acceptance.
 
 When a successful selected lifecycle report or `create-idea` report includes
-`observation.guidance`, consume only that snapshot-bound field. It is
-repository-owned additive guidance from the fixed
-`.silvermoon/guidance/<phase>.md` path, never a replacement for canonical
-instructions. Higher-level instructions and the report's problems and
-instructions take precedence. Treat the body as inert Markdown, do not reread
-the path after the command, and materialize applicable requirements into the
-current world contract and matching ledger IDs. Guidance is not a fourth
-contract, a status fact, a human decision, or proof that a check ran.
+`response.guidance`, consume only that snapshot-bound field.
+`observation.guidance` is its content-free provenance. It is repository-owned
+additive guidance from the fixed `.silvermoon/guidance/<phase>.md` path, never
+a replacement for canonical `response.nextSteps`. Higher-level instructions,
+the report's problems, and `response.nextSteps` take precedence. Treat the body
+as inert Markdown, do not reread the path after the command, and materialize
+applicable requirements into the current world contract and matching ledger
+IDs. Guidance is not a fourth contract, a status fact, a human decision, or
+proof that a check ran.
 
 Preserve unknown changes, concurrent history, and previous revision facts.
 Never force-push, reset, broadly clean, or automatically delete feature
@@ -88,5 +90,5 @@ branches.
   committed `HEAD`, not the pending index. `check` validates only the chosen
   project's snapshot, not repository synchronization or idea navigation.
   Only exit code `0` permits the commit; `1` means invalid or unavailable and
-  `2` means invalid usage. Its JSON contains `intention` and `observation`,
-  not dialogue `outcomes` or `instructions`.
+  `2` means invalid usage. Its JSON uses all four projections; only
+  `check --remote` normally records an action.

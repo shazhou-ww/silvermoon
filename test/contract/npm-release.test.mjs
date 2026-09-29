@@ -281,7 +281,7 @@ test("documents trusted-publisher setup and the protected release procedure", as
     "Environment: `npm`",
     "Allowed action: direct `npm publish`",
     "tag ruleset targeting `npm/**`",
-    "git tag npm/silvermoon/v0.1.3 origin/main",
+    "git tag npm/silvermoon/v0.2.0-rc.1 origin/main",
     "RELEASE_PACKAGES",
     "Do not move or recreate the tag",
     "pnpm test:unit",

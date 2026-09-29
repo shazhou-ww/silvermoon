@@ -131,3 +131,47 @@ package E2E 证明。
 installed E2E、Markdown links、`git diff --check` 和 Silvermoon
 worktree/staged/remote checks 全部通过。候选提交从 `origin/main` 可达，但 npm
 和 release tag 均未因实现完成自动产生。
+
+## Verification evidence
+
+- `src/domain.js` 现以 version 1 discriminated messages 维护单一 ordered
+  stream；immutable reducer、intention/actions/report projectors、纯
+  `respond` 边界、injected probe/action driver、terminal response metadata
+  和 sequence/action invariants 均由 `test/unit/domain.test.js` 覆盖。生成式
+  action sequence、deterministic replay、非法 transition、fake-port call
+  count 以及改变 incidental action history 的 metamorphic case 均通过。
+- `whats-next`、`create-idea` 与全部 `check` targets 已迁移到同一
+  `CommandRun`。Fetch、scaffold 与 owned-path cleanup 都形成唯一
+  `action.requested`/`action.finished` pair；snapshot、readiness、selection、
+  guidance、validation、created idea 与 cleanup consequence 均作为 typed
+  observation fact 进入 reducer。成功和可信 blocker 的 public report 恰好为
+  `intention/observation/actions/response`。
+- `src/response.js` 是唯一默认 Markdown renderer；CLI 默认只传入
+  `report.response`，而 `--json` 返回完整四 projection。Guidance 正文只保留在
+  internal observation 与 response，public observation 只暴露 phase、path 和
+  content revision。unit、contract、integration 与 installed-package E2E
+  覆盖中英文输出、stderr/exit code、JSON/text semantic parity 和 hostile
+  guidance 隔离。
+- `src/trace.js` 与 `schema/v2/trace-event.schema.json` 在同一 trace ID 和全局
+  sequence 中交错 `domain`/`telemetry` channel。实际 CLI trace 逐 event 通过
+  strict schema，并验证 message sequence、nested spans、action ID correlation、
+  duration/failure、trace-on/off report 等价、buffered exclusive write，以及
+  intention、credential、path、guidance、Git output 与超长 error canary 不泄露。
+- `schema/v1/command-report.schema.json` 与
+  `schema/v1/domain-message.schema.json` 随 package 发布；strict AJV tests
+  验证 runtime 真实生成的 report 和每条 domain message。Public API、README、
+  core concepts、operations、reference、repository tasks、release docs 和
+  canonical/generated skills 已同步。
+- `list-ideas` idea `01M3NDKZT9RTHDEN0JS053F1YB` 在此 candidate 基线尚未公开，
+  且其 approved revision `ec5dee9bc34dec81903b72b3380f75eccea0239d`
+  仍描述旧两字段 JSON。此次只在 event model、schema 与 response union 中保留
+  `list-ideas`/`idea-list` integration surface，没有合入或改写该独立批准事实；
+  该 idea 发布前必须在自身 lifecycle 重新协调四 projection contract。
+- 2026-09-29 已准备 manifest `0.2.0-rc.1`。npm registry 返回该版本不存在，
+  local/remote `npm/silvermoon/v0.2.0-rc.1` tag 均不存在；未创建 tag、未调用
+  publish workflow、未发布 npm package。候选通过 unit、contract、integration、
+  pack、installed-package E2E、skill sync 与针对性 schema/trace checks。最终
+  `pnpm check` 通过 60 unit、29 contract、103 integration（101 pass、2 个
+  Windows privilege skip）及 1 installed-package E2E；candidate CLI worktree
+  check 与 `git diff --check` 通过。发布同一 candidate 时继续执行 staged 与
+  refreshed remote snapshot checks。

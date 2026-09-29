@@ -2,13 +2,12 @@ import { resolve } from "node:path";
 
 import {
   ACTIVE_STATES,
-  createEnvelope,
   diagnosticInstruction,
   diagnosticProblem,
   dialogueReadyObservation,
   localize,
-  outcome,
 } from "./dialogue.js";
+import { createCommandRun } from "./domain.js";
 import { inspectPhaseGuidance } from "./guidance.js";
 import {
   compareCommits,
@@ -236,7 +235,7 @@ function navigationInstruction(ideas, language) {
 
 async function assessRepositoryReadinessInternal({
   observed,
-  outcomes,
+  runtime,
   requirePrimaryBranch = false,
   recheckCommand = "silvermoon whats-next",
   root,
@@ -364,22 +363,22 @@ async function assessRepositoryReadinessInternal({
       branch.repository !== observed.config.primaryRepository
       || branch.upstreamBranch !== observed.config.primaryBranch
     ) {
-    const actual = branch.remote === null
-      ? localize(language, "none", "无")
-      : `${branch.repository ?? branch.remote}#${branch.upstreamBranch ?? localize(language, "unknown", "未知")}`;
-    localProblems.push({
-      type: "primary-upstream-mismatch",
-      summary: localize(
+      const actual = branch.remote === null
+        ? localize(language, "none", "无")
+        : `${branch.repository ?? branch.remote}#${branch.upstreamBranch ?? localize(language, "unknown", "未知")}`;
+      localProblems.push({
+        type: "primary-upstream-mismatch",
+        summary: localize(
+          language,
+          `Branch ${branch.branch} has upstream ${actual}; expected ${observed.config.primaryRepository}#${observed.config.primaryBranch}.`,
+          `分支 ${branch.branch} 的 upstream 是 ${actual}；预期为 ${observed.config.primaryRepository}#${observed.config.primaryBranch}。`,
+        ),
+      });
+      localSteps.push(localize(
         language,
-        `Branch ${branch.branch} has upstream ${actual}; expected ${observed.config.primaryRepository}#${observed.config.primaryBranch}.`,
-        `分支 ${branch.branch} 的 upstream 是 ${actual}；预期为 ${observed.config.primaryRepository}#${observed.config.primaryBranch}。`,
-      ),
-    });
-    localSteps.push(localize(
-      language,
-      `Configure a named remote for ${observed.config.primaryRepository}, then set branch ${branch.branch} to track that remote's ${observed.config.primaryBranch} branch. Verify with ${command(root, 'git -C "<root>" rev-parse --abbrev-ref --symbolic-full-name \'@{upstream}\'')}.`,
-      `为 ${observed.config.primaryRepository} 配置 named remote，再将分支 ${branch.branch} 的 upstream 设为该 remote 的 ${observed.config.primaryBranch}。使用 ${command(root, 'git -C "<root>" rev-parse --abbrev-ref --symbolic-full-name \'@{upstream}\'')} 验证。`,
-    ));
+        `Configure a named remote for ${observed.config.primaryRepository}, then set branch ${branch.branch} to track that remote's ${observed.config.primaryBranch} branch. Verify with ${command(root, 'git -C "<root>" rev-parse --abbrev-ref --symbolic-full-name \'@{upstream}\'')}.`,
+        `为 ${observed.config.primaryRepository} 配置 named remote，再将分支 ${branch.branch} 的 upstream 设为该 remote 的 ${observed.config.primaryBranch}。使用 ${command(root, 'git -C "<root>" rev-parse --abbrev-ref --symbolic-full-name \'@{upstream}\'')} 验证。`,
+      ));
     }
   }
 
@@ -412,29 +411,24 @@ async function assessRepositoryReadinessInternal({
     };
   }
 
-  let primary;
-  try {
-    primary = fetchPrimary(root, observed.config);
-    outcomes.push(outcome(
-      "fetch-primary",
-      "success",
-      localize(
-        language,
-        `Fetched ${observed.config.primaryRepository}#${observed.config.primaryBranch} at ${primary} without moving the worktree, index, branch, or named refs.`,
-        `已 fetch ${observed.config.primaryRepository}#${observed.config.primaryBranch} 的 ${primary}，未移动 worktree、index、branch 或 named refs。`,
-      ),
-    ));
-  } catch (caught) {
-    const message = sanitizeGitMessage(caught.message);
-    outcomes.push(outcome(
-      "fetch-primary",
-      "failure",
-      localize(
-        language,
-        `Could not fetch configured primary: ${message}`,
-        `无法 fetch configured primary：${message}`,
-      ),
-    ));
+  const fetched = await runtime.performAction(
+    {
+      type: "fetch-primary",
+      repository: observed.config.primaryRepository,
+      branch: observed.config.primaryBranch,
+    },
+    () => ({
+      commit: fetchPrimary(root, observed.config),
+    }),
+    (caught) => ({
+      problem: {
+        type: "primary-fetch-failed",
+        summary: sanitizeGitMessage(caught.message),
+      },
+    }),
+  );
+  if (fetched.status === "failure") {
+    const message = fetched.problem.summary;
     return {
       observation: repositoryProblemObservation(observed.observation, [{
         type: "primary-fetch-failed",
@@ -448,6 +442,7 @@ async function assessRepositoryReadinessInternal({
       ready: false,
     };
   }
+  const primary = fetched.result.commit;
 
   let relation;
   try {
@@ -556,30 +551,31 @@ export async function whatsNext({
       language: canonicalLanguage ?? null,
     },
   };
+  const runtime = createCommandRun(intention);
   const baseRecheckCommand = selector === undefined
     ? "silvermoon whats-next"
     : `silvermoon whats-next ${JSON.stringify(selector)}`;
   const recheckCommand = canonicalLanguage === undefined
     ? baseRecheckCommand
     : `${baseRecheckCommand} --language ${canonicalLanguage}`;
-  const outcomes = [];
   let observed = await observeSnapshot({
     outputLanguage: canonicalLanguage,
     root: requestedRoot,
     userHome,
     version: { type: "worktree" },
   });
+  runtime.observe(observed.observation, { factType: "project.snapshot" });
   if (!observed.projectReady) {
-    return createEnvelope(
-      intention,
+    return runtime.complete(
       observed.observation,
-      outcomes,
-      projectInstructions(
-        observed,
-        observed.observation.root,
-        observed.outputLanguage,
-        recheckCommand,
-      ),
+      {
+        nextSteps: projectInstructions(
+          observed,
+          observed.observation.root,
+          observed.outputLanguage,
+          recheckCommand,
+        ),
+      },
     );
   }
 
@@ -589,42 +585,43 @@ export async function whatsNext({
   }
   const readiness = await assessRepositoryReadiness({
     observed,
-    outcomes,
+    runtime,
     recheckCommand,
     root: observed.observation.root,
   });
   if (!readiness.ready) {
-    return createEnvelope(
-      intention,
+    return runtime.complete(
       readiness.observation,
-      outcomes,
-      readiness.instructions,
+      { nextSteps: readiness.instructions },
     );
   }
 
   if (selector === undefined) {
-    return createEnvelope(
-      intention,
+    return runtime.complete(
       { ...readiness.observation, state: "navigation-ready" },
-      outcomes,
-      navigationInstruction(observed.layout.ideas, observed.outputLanguage),
+      {
+        nextSteps: navigationInstruction(
+          observed.layout.ideas,
+          observed.outputLanguage,
+        ),
+      },
     );
   }
   if (!selected) {
-    return createEnvelope(
-      intention,
+    return runtime.complete(
       dialogueReadyObservation(readiness.observation, "idea-not-found", {
         candidates: readiness.observation.ideas.activeIdeas,
       }),
-      outcomes,
-      joinInstructions([
-        localize(
-          observed.outputLanguage,
-          `Idea ${selector} does not match an observed ULID or unique alias.`,
-          `Idea ${selector} 未匹配任何已观察到的 ULID 或唯一 alias。`,
-        ),
-        navigationInstruction(observed.layout.ideas, observed.outputLanguage),
-      ]),
+      {
+        nextSteps: joinInstructions([
+          localize(
+            observed.outputLanguage,
+            `Idea ${selector} does not match an observed ULID or unique alias.`,
+            `Idea ${selector} 未匹配任何已观察到的 ULID 或唯一 alias。`,
+          ),
+          navigationInstruction(observed.layout.ideas, observed.outputLanguage),
+        ]),
+      },
     );
   }
 
@@ -641,8 +638,7 @@ export async function whatsNext({
       snapshotTree: readiness.primary,
     });
     if (inspected.state === "invalid") {
-      return createEnvelope(
-        intention,
+      return runtime.complete(
         dialogueReadyObservation(
           readiness.observation,
           "phase-guidance-invalid",
@@ -653,24 +649,25 @@ export async function whatsNext({
             ),
           },
         ),
-        outcomes,
-        phaseGuidanceInstructions(
-          inspected.diagnostics,
-          readiness.observation.root,
-          observed.outputLanguage,
-          recheckCommand,
-        ),
+        {
+          nextSteps: phaseGuidanceInstructions(
+            inspected.diagnostics,
+            readiness.observation.root,
+            observed.outputLanguage,
+            recheckCommand,
+          ),
+        },
       );
     }
     guidance = inspected.guidance;
   }
-  return createEnvelope(
-    intention,
+  return runtime.complete(
     dialogueReadyObservation(readiness.observation, "idea-selected", {
       selectedIdea,
       ...(guidance === undefined ? {} : { guidance }),
     }),
-    outcomes,
-    lifecycleInstruction(selected, observed.outputLanguage),
+    {
+      nextSteps: lifecycleInstruction(selected, observed.outputLanguage),
+    },
   );
 }

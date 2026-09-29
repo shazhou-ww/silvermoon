@@ -4,6 +4,7 @@ import { test } from "node:test";
 
 import Ajv2020 from "ajv/dist/2020.js";
 
+import { createCommandRun } from "../../src/domain.js";
 import { isValidUlid } from "../../src/ideas.js";
 import { validRepository } from "../../src/repository.js";
 
@@ -14,10 +15,26 @@ async function readSchema(name) {
 }
 
 async function validators() {
-  const [definitions, config, ideaStatus, userConfig] = await Promise.all([
+  const [
+    commandReport,
+    definitions,
+    domainMessage,
+    config,
+    ideaStatus,
+    traceEvent,
+    userConfig,
+  ] = await Promise.all([
+    readSchema("command-report"),
     readSchema("definitions"),
+    readSchema("domain-message"),
     readSchema("config"),
     readSchema("idea-status"),
+    JSON.parse(
+      await readFile(
+        new URL("../../schema/v2/trace-event.schema.json", import.meta.url),
+        "utf8",
+      ),
+    ),
     readSchema("user-config"),
   ]);
   const ajv = new Ajv2020({
@@ -27,9 +44,12 @@ async function validators() {
   });
   ajv.addSchema(definitions);
   return {
+    commandReport: ajv.compile(commandReport),
     config: ajv.compile(config),
     definitions,
+    domainMessage: ajv.compile(domainMessage),
     ideaStatus: ajv.compile(ideaStatus),
+    traceEvent: ajv.compile(traceEvent),
     userConfig: ajv.compile(userConfig),
   };
 }
@@ -66,6 +86,76 @@ test("publishes independently compilable version 1 schema entrypoints", async ()
   );
 
   assert.equal(Object.hasOwn(definitions.$defs, "ideasDirectory"), false);
+});
+
+test("publishes command report, domain message, and trace event schemas", async () => {
+  const { commandReport, domainMessage, traceEvent } = await validators();
+  const intention = {
+    command: "whats-next",
+    args: { idea: null, language: null },
+  };
+  assert.equal(domainMessage({
+    schemaVersion: 1,
+    sequence: 1,
+    type: "intention.accepted",
+    intention,
+  }), true, JSON.stringify(domainMessage.errors));
+  assert.equal(commandReport({
+    intention,
+    observation: {
+      state: "navigation-ready",
+      problems: [],
+    },
+    actions: [],
+    response: {
+      kind: "choice-required",
+      language: "en-US",
+      summary: "Choose an idea.",
+      nextSteps: [],
+    },
+  }), true, JSON.stringify(commandReport.errors));
+  assert.equal(traceEvent({
+    schemaVersion: 2,
+    traceId: "d9428888-122b-4c26-b27c-00a0c5f20d11",
+    sequence: 1,
+    timestamp: "2026-09-29T00:00:00.000Z",
+    channel: "domain",
+    event: "intention.accepted",
+    messageSequence: 1,
+  }), true, JSON.stringify(traceEvent.errors));
+
+  const runtime = createCommandRun(intention);
+  runtime.observe({
+    state: "task-pending",
+    outputLanguage: "en-US",
+    problems: [],
+  }, { factType: "project.snapshot" });
+  const actionId = runtime.requestAction({ type: "fetch-primary" });
+  runtime.finishAction(actionId, "fetch-primary", {
+    status: "success",
+    result: { commit: "a".repeat(40) },
+  });
+  const producedReport = runtime.complete(
+    {
+      state: "navigation-ready",
+      outputLanguage: "en-US",
+      ideas: { activeIdeas: [] },
+      problems: [],
+    },
+    { nextSteps: "Create an idea." },
+  );
+  assert.equal(
+    commandReport(producedReport),
+    true,
+    JSON.stringify(commandReport.errors),
+  );
+  for (const message of runtime.events) {
+    assert.equal(
+      domainMessage(message),
+      true,
+      JSON.stringify(domainMessage.errors),
+    );
+  }
 });
 
 test("rejects invalid repository configuration through its public schema", async () => {

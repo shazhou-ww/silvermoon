@@ -4,25 +4,39 @@
 
 ### Implementation steps
 
-- [ ] **I-S01:** 定义 domain message 与 projection contracts
-- [ ] **I-S02:** 实现 observation reducer 与 actions projector
-- [ ] **I-S03:** 建立 functional core 与 imperative effect driver
-- [ ] **I-S04:** 以纯函数生成并渲染 response
-- [ ] **I-S05:** 整合 domain messages 与 performance trace
-- [ ] **I-S06:** 迁移 feature integrations、文档与测试
-- [ ] **I-S07:** 准备 0.2.0 RC implementation candidate
+- [x] **I-S01:** 定义 domain message 与 projection contracts
+- [x] **I-S02:** 实现 observation reducer 与 actions projector
+- [x] **I-S03:** 建立 functional core 与 imperative effect driver
+- [x] **I-S04:** 以纯函数生成并渲染 response
+- [x] **I-S05:** 整合 domain messages 与 performance trace
+- [x] **I-S06:** 迁移 feature integrations、文档与测试
+- [x] **I-S07:** 准备 0.2.0 RC implementation candidate
 
 ### Implementation acceptance criteria
 
-- [ ] **I-AC01:** 同一 domain stream 可确定性重建 report
-- [ ] **I-AC02:** Response 只依赖 intention 与 internal observation
-- [ ] **I-AC03:** Effect 执行与 action history 精确对应
-- [ ] **I-AC04:** 四字段 public report 覆盖全部命令
-- [ ] **I-AC05:** 默认输出 answer-first 且 stderr 保持纯净
-- [ ] **I-AC06:** Unified trace 保留性能并解释业务路径
-- [ ] **I-AC07:** Trace 不泄露完整 domain payload
-- [ ] **I-AC08:** 现有行为完成一致迁移
-- [ ] **I-AC09:** 0.2.0-rc.1 candidate 可供明确验收
+- [x] **I-AC01:** 同一 domain stream 可确定性重建 report
+- [x] **I-AC02:** Response 只依赖 intention 与 internal observation
+- [x] **I-AC03:** Effect 执行与 action history 精确对应
+- [x] **I-AC04:** 四字段 public report 覆盖全部命令
+- [x] **I-AC05:** 默认输出 answer-first 且 stderr 保持纯净
+- [x] **I-AC06:** Unified trace 保留性能并解释业务路径
+- [x] **I-AC07:** Trace 不泄露完整 domain payload
+- [x] **I-AC08:** 现有行为完成一致迁移
+- [x] **I-AC09:** 0.2.0-rc.1 candidate 可供明确验收
+
+### Implementation evidence
+
+- 2026-09-29: ordered domain runtime、immutable reducer、actions projector、
+  pure response、response-only renderer、四 projection schemas 与
+  domain/telemetry unified trace 已完成；详细证据记录于
+  `outer/inner/Implementation.md`。
+- 2026-09-29: unit、contract、integration、pack、installed-package E2E、
+  skill sync、schema fixtures、trace correlation/redaction 与 trace-on/off
+  differential checks 通过；聚合 `pnpm check` 通过 60 unit、29 contract、
+  103 integration（101 pass、2 skip）及 1 installed-package E2E，candidate
+  CLI worktree check 与 `git diff --check` 通过。
+- 2026-09-29: `0.2.0-rc.1` npm version 及 local/remote release tag 均不存在；
+  candidate 未创建 tag、未执行 publish、未发布到 npm。
 
 ## Deployment
 

@@ -138,7 +138,15 @@ silvermoon create-idea [--language <tag>] [--trace <file.trace.jsonl>]
 silvermoon check [--remote | --commit <revision> | --staged | --worktree] [--language <en-US|zh-CN>] [--trace <file.trace.jsonl>]
 ```
 
-`whats-next` and `create-idea` build one dialogue envelope:
+Every valid invocation starts one ordered domain-message stream with
+`intention.accepted`. Observation facts are folded through one immutable
+reducer. Side effects are represented by exactly one `action.requested` and
+one `action.finished` message with the same run-local action ID. A final
+`response.created` message is emitted only after the observation is terminal
+and no action is pending.
+
+All successful and trustworthy blocked commands return exactly four
+projections:
 
 ```json
 {
@@ -152,8 +160,14 @@ silvermoon check [--remote | --commit <revision> | --staged | --worktree] [--lan
   "observation": {
     "outputLanguage": "en-US"
   },
-  "outcomes": [],
-  "instructions": ""
+  "actions": [],
+  "response": {
+    "kind": "choice-required",
+    "language": "en-US",
+    "summary": "No active ideas are available.",
+    "choices": [],
+    "nextSteps": []
+  }
 }
 ```
 
@@ -163,67 +177,67 @@ silvermoon check [--remote | --commit <revision> | --staged | --worktree] [--lan
 - `observation` describes the reliable facts for the requested command and
   intent, not a mandatory global idea inventory. `outputLanguage` is present
   even when Git, configuration, or a requested snapshot is unavailable.
-- `outcomes` records only high-level repository side effects actually
-  attempted by this invocation. Each item has `type`, `status` (`success` or
-  `failure`), and `summary`. An empty array means no side effect was attempted.
-- `instructions` contains all ordered next-step guidance for the current
-  readiness layer. A single remediation is plain text; multiple remediations
-  are numbered in priority order.
+- `actions` projects only side effects already attempted by this invocation.
+  Each item has a unique `id`, stable `type`, `success` or `failure` status,
+  and a structured `result` or `problem`. An empty array means no side effect
+  was attempted. Probes and future work do not appear here.
+- `response` is a command-specific discriminated union produced only from the
+  intention and final internal observation. Its variants are `blocked`,
+  `choice-required`, `idea-created`, `idea-list`, `next-steps`, and
+  `validation-result`. It contains the localized summary and any ordered
+  `nextSteps`, choices, items, validation result, or guidance needed by the
+  caller.
 
 After readiness, an actionable selected idea or successful creation may add
-`guidance` to the command-specific observation:
+content-free `guidance` provenance to the public observation:
 
 ```json
 {
   "guidance": {
     "phase": "implementing",
     "path": ".silvermoon/guidance/implementing.md",
-    "contentRevision": "<git-blob-object-id>",
-    "content": "Repository-owned Markdown captured from the snapshot.\n"
+    "contentRevision": "<git-blob-object-id>"
   }
 }
 ```
 
-`path`, `contentRevision`, and `content` come from one Git snapshot. The object
-ID follows the repository's SHA-1 or SHA-256 object format. Guidance never
-appears at the top level or inside canonical `instructions`, and an absent file
-does not produce an empty field.
+The matching `response.guidance` carries the same three provenance fields plus
+the captured `content`. All fields come from one Git snapshot, and the object
+ID follows the repository's SHA-1 or SHA-256 format. An absent file produces
+neither field. The public observation intentionally omits content so the
+response is the only rendered payload while still remaining a deterministic
+projection.
 
-Default dialogue output renders the same report with concise lists under
-`## Current instruction`, `## Project status`, and `## Suggested next steps`
-(in Chinese: `## 本次指示`, `## 项目现状`, `## 下一步建议`). The optional
-`## Actions and results` (`## 本次操作及结果`) appears only when a visible
-outcome remains. A successful fetch is omitted from text when local HEAD
-matches the fetched primary; failed fetches and synchronization problems remain
-visible. JSON always records attempted outcomes, even when text omits routine
-success. `--json` serializes the same decision; there is no YAML output or
-second reasoning path. Within the project-status section, nonempty navigation
-candidates and observed problems appear under `### Ideas you can continue` and
-`### Issues to address` (in Chinese: `### 可继续推进的想法` and
-`### 需要处理的问题`). Suggested next steps refer to these candidates without
-repeating their inventory. When guidance is present, a separate
-`## Project phase guidance` section follows suggested next steps, identifies
-its project provenance and metadata, and blockquotes every content line.
-Empty sections are omitted. Dialogue exit status `0` means a trustworthy
-report was formed, even when it reports readiness blocks or a failed
-operation; `1` means an internal failure prevented a trustworthy report; `2`
-means invalid CLI usage.
+Default Markdown renders only `response`, never the intention, observation, or
+action history. It begins with the answer, then includes only relevant idea
+references, validation details, problems, next steps, and blockquoted guidance.
+`--json` serializes the four projections from the same domain stream; there is
+no YAML output or second reasoning path. A trustworthy blocked report still
+exits `0` for `whats-next` and `create-idea`; `1` means an internal failure
+prevented a trustworthy report, and `2` means invalid CLI usage.
 
 All commands accept `--trace <file.trace.jsonl>`. If the supplied path does not
 end with the exact lowercase `.trace.jsonl` suffix, Silvermoon appends it while
 preserving the directory and original name. Repository-local `*.trace.jsonl`
 files are ignored by the canonical repository. The trace is newline-delimited
-JSON with paired `span-start` and `span-end` events, UTC timestamps, monotonic
-`durationMs`, parent span IDs, and success or error status. It covers the
-command, snapshot observation, adoption, user configuration, idea layout,
-repository readiness, temporary snapshot materialization, and individual Git
-commands. Git events record the subcommand and result but not command arguments,
-stdout, or stderr. The path is relative to the caller's working directory when
-not absolute. Events are buffered so a trace inside the repository cannot
-affect that invocation's worktree observation. The file is written after the
-measured command work finishes and uses exclusive creation, so an existing
-normalized target is never overwritten. The top command span records the
-canonical output-language override or `null` for `whats-next` and `check`.
+JSON using trace schema version 2. Every record shares one `traceId`, global
+monotonic `sequence`, and UTC timestamp:
+
+- `channel: "domain"` records allowlisted summaries of intention,
+  observation transitions, action lifecycle, and response metadata. It
+  includes domain `messageSequence` for replay correlation.
+- `channel: "telemetry"` records paired `span-start` and `span-end` events,
+  parent span IDs, monotonic `durationMs`, and success or error status.
+
+Action telemetry carries the corresponding action ID. Trace projection never
+includes guidance or file content, Git arguments/stdout/stderr, environment
+data, credentials, tokens, or unbounded error text. Turning trace off, replacing
+the domain sink with a no-op, or deleting every telemetry event does not change
+the domain stream or final report. The path is relative to the caller's working
+directory when not absolute. Events are buffered so a trace inside the
+repository cannot affect that invocation's worktree observation. The file is
+written after measured command work finishes and uses exclusive creation, so
+an existing normalized target is never overwritten.
 
 Unsupported output locales, empty values, and invalid BCP 47 tags are usage
 errors with exit status `2`, before repository inspection or fetch.
@@ -244,7 +258,7 @@ Observations are discriminated by command intent and `state`:
   (`id`, optional `alias`, lifecycle `state`), including terminal ideas.
   Unknown selectors return `idea-not-found` with `candidates`, not a
   fabricated selected idea. An actionable selection may also contain
-  snapshot-bound `guidance`.
+  snapshot-bound guidance provenance; captured content is in the response.
 - `phase-guidance-invalid` means command readiness reached the current
   actionable phase, but that phase's optional file exists and is invalid. It
   contains problems and repair instructions, not lifecycle instructions or
@@ -252,15 +266,16 @@ Observations are discriminated by command intent and `state`:
 - After a successful `create-idea` preflight, `idea-created` carries
   `createdIdea` (`id`, `path`, `state: "preparing"`). This confirms
   pre-creation readiness, not a clean post-creation worktree, and may also
-  contain captured preparing `guidance`. An attempted but failed scaffold
-  returns `idea-create-failed` without `createdIdea`; preflight failures retain
-  their setup or local preparation state.
+  contain preparing-guidance provenance. An attempted but failed scaffold
+  returns `idea-create-failed` without `createdIdea`, records separate
+  scaffold and cleanup actions, and exposes cleanup facts; preflight failures
+  retain their setup or local preparation state.
 
 Dialogue versions have `version.type: "worktree"`. When present, `ideas.counts` has
 `preparing`, `implementing`, `deploying`, `completed`, and `abandoned`;
 `activeIdeas` contains only minimal references for the first three states.
 Problems have only stable `type` and natural-language `summary`; remediation
-belongs in dialogue `instructions`.
+belongs in `response.nextSteps`.
 
 Project setup is ecosystem-neutral. It checks Git, configuration schema
 compatibility, and exact canonical skill content at
@@ -299,8 +314,8 @@ dynamically inherited. It does not stage, commit, push, or record approval.
   locating and validating the remote snapshot.
 
 Targets are mutually exclusive and never change the caller's branch, index, or
-worktree. `--remote` may fetch Git objects, but it does not produce dialogue
-outcomes. `check` validates the selected snapshot's project contract only:
+worktree. `--remote` may fetch Git objects and records that attempt as an
+action. `check` validates the selected snapshot's project contract only:
 Git, configuration, canonical skill, idea layout, world revisions, status, and
 the complete optional phase guidance directory.
 Its result depends on the materialized tree, not commit parents, parent order,
@@ -310,8 +325,7 @@ fact and naturally derives an earlier lifecycle state; it need not still exist
 in the local object database. `check` does not check local worktree cleanliness,
 upstream, or ancestry readiness, route ideas, or give next-step instructions.
 
-Unlike dialogue commands, `check --json` contains **only** `intention` and
-`observation`:
+Like every public command, `check --json` contains all four projections:
 
 ```json
 {
@@ -343,6 +357,18 @@ Unlike dialogue commands, `check --json` contains **only** `intention` and
       "activeIdeas": []
     },
     "problems": []
+  },
+  "actions": [],
+  "response": {
+    "kind": "validation-result",
+    "language": "en-US",
+    "summary": "The requested Silvermoon snapshot is valid.",
+    "validation": {
+      "target": { "type": "staged" },
+      "valid": true,
+      "version": { "type": "staged" }
+    },
+    "problems": []
   }
 }
 ```
@@ -369,13 +395,13 @@ The `check` observation has its own discriminated states:
   when the target cannot be resolved, fetched, or materialized; it does not
   pretend the project was checked.
 
-There are no `outcomes` or `instructions` keys in a check report. Its default
-human-readable output gives only the target, validation conclusion, and
-problems, not the dialogue's four sections. Text and JSON derive from the same
-validation result. Exit code `0` means `project-ready` and is the **only**
-pre-commit/CI pass condition. Exit code `1` means invalid, unavailable, or an
-internal failure and must fail closed; `2` means invalid CLI usage. Do not
-infer success merely from a rendered report or empty-looking output.
+Its default human-readable output renders only the validation response. Text
+and JSON derive from the same validation result. `actions` is empty for local
+targets and contains the paired fetch result for `--remote`. Exit code `0`
+means `project-ready` and is the **only** pre-commit/CI pass condition. Exit
+code `1` means invalid, unavailable, or an internal failure and must fail
+closed; `2` means invalid CLI usage. Do not infer success merely from a
+rendered report or empty-looking output.
 
 Runtime checks verify canonical YAML, fixed paths, the three world entries,
 unique aliases, Git object format, current world tree resolution, phase
@@ -385,10 +411,13 @@ decision provenance through history.
 
 ## Schemas
 
+- [Command report](../schema/v1/command-report.schema.json)
+- [Domain message](../schema/v1/domain-message.schema.json)
 - [Repository configuration](../schema/v1/config.schema.json)
 - [User configuration](../schema/v1/user-config.schema.json)
 - [Idea status](../schema/v1/idea-status.schema.json)
 - [Shared definitions](../schema/v1/definitions.schema.json)
+- [Unified trace event](../schema/v2/trace-event.schema.json)
 
 Phase guidance has no schema or configuration key. Its fixed filenames,
 Git-entry constraints, and Markdown byte rules are the complete contract.

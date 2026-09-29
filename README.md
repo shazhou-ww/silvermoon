@@ -70,24 +70,32 @@ Describe the desired world in the generated `Idea.md`, review it, and approve
 that exact revision. From then on, Silvermoon keeps the goal, implementation,
 repository state, and real-world result connected. See
 [Getting Started](./docs/getting-started.md) for the complete first workflow.
-Default dialogue output uses lightweight Markdown headings for intent,
-observation, and next instructions, plus actions and outcomes only when an
-operation was attempted. Add `--json` only when a programmatic consumer needs
-the `intention / observation / outcomes / instructions` envelope. For
-pre-commit validation, run `silvermoon check --staged`: unlike the default
-`check` (committed `HEAD`), it checks the index and exits `0` only when the
-project snapshot is valid. See the [Technical Reference](./docs/reference.md)
-for validation targets and exit codes. Add `--trace <file.trace.jsonl>` to any
-command to write paired task and Git timing spans for performance analysis.
-If the argument does not end with the exact lowercase `.trace.jsonl` suffix,
+Every command processes one ordered, versioned domain-message stream. Add
+`--json` when a programmatic consumer needs its four deterministic projections:
+`intention`, `observation`, `actions`, and `response`. Actions are side effects
+already attempted; future work belongs only to `response.nextSteps`. Default
+Markdown renders only the self-contained response instead of exposing the
+internal projections. For pre-commit validation, run
+`silvermoon check --staged`: unlike the default `check` (committed `HEAD`), it
+checks the index and exits `0` only when the project snapshot is valid. See the
+[Technical Reference](./docs/reference.md) for validation targets and exit
+codes.
+
+Add `--trace <file.trace.jsonl>` to any command to write one schema-versioned
+JSONL timeline. Its `domain` channel contains allowlisted message summaries,
+and its `telemetry` channel contains paired performance spans; both share one
+trace ID and global sequence. Trace output never includes guidance or file
+content, Git arguments/output, environment data, or credentials. If the
+argument does not end with the exact lowercase `.trace.jsonl` suffix,
 Silvermoon appends it. Repository-local `*.trace.jsonl` files are ignored.
-Trace files are created only after the measured command work completes and
-never overwrite an existing file.
+Trace files are buffered, created only after command work completes, and never
+overwrite an existing file.
 
 Projects may optionally add `.silvermoon/guidance/preparing.md`,
 `implementing.md`, and `deploying.md`. Silvermoon returns only the current
-actionable phase's snapshot-bound, repository-owned Markdown after canonical
-instructions; `create-idea` can return preparing guidance. This guidance is
+actionable phase's snapshot-bound, repository-owned Markdown in
+`response.guidance`; `observation.guidance` carries its provenance without
+content. `create-idea` can return preparing guidance. This guidance is
 additive, never a fourth contract or decision fact, and `check` validates the
 complete fixed directory. See [Core Concepts](./docs/core-concepts.md).
 

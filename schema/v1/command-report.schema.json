@@ -1,0 +1,178 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/shazhou-ww/silvermoon/raw/refs/heads/main/schema/v1/command-report.schema.json",
+  "title": "Silvermoon command report v1",
+  "description": "The four public projections returned by every trustworthy Silvermoon command.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "intention",
+    "observation",
+    "actions",
+    "response"
+  ],
+  "properties": {
+    "intention": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "command",
+        "args"
+      ],
+      "properties": {
+        "command": {
+          "enum": [
+            "whats-next",
+            "create-idea",
+            "check",
+            "list-ideas"
+          ]
+        },
+        "args": {
+          "type": "object"
+        }
+      }
+    },
+    "observation": {
+      "type": "object",
+      "required": [
+        "state",
+        "problems"
+      ],
+      "properties": {
+        "state": {
+          "type": "string",
+          "minLength": 1
+        },
+        "problems": {
+          "type": "array"
+        }
+      }
+    },
+    "actions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "type",
+          "status"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^action-[1-9][0-9]*$"
+          },
+          "type": {
+            "type": "string",
+            "minLength": 1
+          },
+          "status": {
+            "enum": [
+              "success",
+              "failure"
+            ]
+          },
+          "result": {
+            "type": "object"
+          },
+          "problem": {
+            "type": "object",
+            "required": [
+              "type"
+            ],
+            "properties": {
+              "type": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "status": {
+                  "const": "success"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "result": {
+                  "type": "object"
+                }
+              },
+              "required": [
+                "result"
+              ]
+            },
+            "else": {
+              "properties": {
+                "problem": {
+                  "type": "object"
+                }
+              },
+              "required": [
+                "problem"
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "response": {
+      "type": "object",
+      "required": [
+        "kind",
+        "language",
+        "summary"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "blocked",
+            "choice-required",
+            "idea-created",
+            "idea-list",
+            "next-steps",
+            "validation-result"
+          ]
+        },
+        "language": {
+          "enum": [
+            "en-US",
+            "zh-CN"
+          ]
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1
+        },
+        "nextSteps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "type",
+              "text"
+            ],
+            "properties": {
+              "type": {
+                "type": "string",
+                "minLength": 1
+              },
+              "text": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

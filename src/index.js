@@ -4,6 +4,7 @@ import {
   diagnosticProblem,
 } from "./dialogue.js";
 import { loadConfig } from "./config.js";
+import { createCommandRun } from "./domain.js";
 import {
   fetchPrimary,
   indexSnapshot,
@@ -32,21 +33,22 @@ function targetArgument({ commit, remote, staged, worktree }) {
 }
 
 function failureReport({
-  intention,
+  runtime,
   outputLanguage,
   problem,
   root,
   version,
 }) {
-  return {
-    intention,
-    observation: unavailableObservation({
+  return runtime.complete(
+    unavailableObservation({
       outputLanguage,
       problem,
       root,
       version,
     }),
-  };
+    {},
+    { factType: "validation.failed" },
+  );
 }
 
 async function inspectTree({
@@ -71,8 +73,12 @@ async function inspectTree({
   );
 }
 
-function finishCheck(intention, observed) {
-  return { intention, observation: observed.observation };
+function finishCheck(runtime, observed) {
+  return runtime.complete(
+    observed.observation,
+    {},
+    { factType: "validation.completed" },
+  );
 }
 
 export async function checkRepository({
@@ -106,6 +112,7 @@ export async function checkRepository({
       language: canonicalLanguage ?? null,
     },
   };
+  const runtime = createCommandRun(intention);
   const repository = runGit(requestedRoot, ["rev-parse", "--show-toplevel"]);
   if (!repository.ok) {
     const observed = await observeSnapshot({
@@ -119,7 +126,7 @@ export async function checkRepository({
           ? { type: "remote", commit: null }
           : { type: target.type },
     });
-    return finishCheck(intention, observed);
+    return finishCheck(runtime, observed);
   }
   const repositoryRoot = resolve(repository.stdout);
 
@@ -129,7 +136,7 @@ export async function checkRepository({
       head = resolveCommit(repositoryRoot, "HEAD");
     } catch (caught) {
       return failureReport({
-        intention,
+        runtime,
         outputLanguage: fallbackOutputLanguage,
         problem: {
           type: "head-unavailable",
@@ -148,7 +155,7 @@ export async function checkRepository({
       );
     } catch (caught) {
       return failureReport({
-        intention,
+        runtime,
         outputLanguage: fallbackOutputLanguage,
         problem: {
           type: "snapshot-inspection-failed",
@@ -159,9 +166,7 @@ export async function checkRepository({
       });
     }
     if (!bootstrap.config) {
-      return {
-        intention,
-        observation: {
+      return runtime.complete({
           state: "project-setup-required",
           observedThrough: "version",
           root: repositoryRoot,
@@ -170,23 +175,35 @@ export async function checkRepository({
           problems: bootstrap.diagnostics.map((diagnostic) =>
             diagnosticProblem(diagnostic, fallbackOutputLanguage)
           ),
-        },
-      };
+        });
     }
 
-    let primary;
-    try {
-      primary = fetchPrimary(repositoryRoot, bootstrap.config);
-    } catch (caught) {
-      const summary = sanitizeGitMessage(caught.message);
+    const fetched = await runtime.performAction(
+      {
+        type: "fetch-primary",
+        repository: bootstrap.config.primaryRepository,
+        branch: bootstrap.config.primaryBranch,
+      },
+      () => ({
+        commit: fetchPrimary(repositoryRoot, bootstrap.config),
+      }),
+      (caught) => ({
+        problem: {
+          type: "primary-fetch-failed",
+          summary: sanitizeGitMessage(caught.message),
+        },
+      }),
+    );
+    if (fetched.status === "failure") {
       return failureReport({
-        intention,
+        runtime,
         outputLanguage: fallbackOutputLanguage,
         root: repositoryRoot,
         version: { type: "remote", commit: null },
-        problem: { type: "primary-fetch-failed", summary },
+        problem: fetched.problem,
       });
     }
+    const primary = fetched.result.commit;
     try {
       const observed = await withTemporaryWorktree(
         repositoryRoot,
@@ -202,10 +219,10 @@ export async function checkRepository({
           version: { type: "remote", commit: primary },
         }),
       );
-      return finishCheck(intention, observed);
+      return finishCheck(runtime, observed);
     } catch (caught) {
       return failureReport({
-        intention,
+        runtime,
         outputLanguage: fallbackOutputLanguage,
         problem: {
           type: "snapshot-inspection-failed",
@@ -224,7 +241,7 @@ export async function checkRepository({
       resolvedCommit = resolveCommit(repositoryRoot, revision);
     } catch (caught) {
       return failureReport({
-        intention,
+        runtime,
         outputLanguage: fallbackOutputLanguage,
         problem: {
           type: "commit-unavailable",
@@ -249,10 +266,10 @@ export async function checkRepository({
           version: { type: "commit", commit: resolvedCommit },
         }),
       );
-      return finishCheck(intention, observed);
+      return finishCheck(runtime, observed);
     } catch (caught) {
       return failureReport({
-        intention,
+        runtime,
         outputLanguage: fallbackOutputLanguage,
         problem: {
           type: "snapshot-inspection-failed",
@@ -275,10 +292,10 @@ export async function checkRepository({
         userHome,
         version: { type: "staged" },
       });
-      return finishCheck(intention, observed);
+      return finishCheck(runtime, observed);
     } catch (caught) {
       return failureReport({
-        intention,
+        runtime,
         outputLanguage: fallbackOutputLanguage,
         problem: {
           type: "snapshot-inspection-failed",
@@ -300,10 +317,10 @@ export async function checkRepository({
       userHome,
       version: { type: "worktree" },
     });
-    return finishCheck(intention, observed);
+    return finishCheck(runtime, observed);
   } catch (caught) {
     return failureReport({
-      intention,
+      runtime,
       outputLanguage: fallbackOutputLanguage,
       problem: {
         type: "snapshot-inspection-failed",
@@ -327,4 +344,22 @@ export {
   inspectAdoption,
   SILVERMOON_VERSION,
 } from "./adoption.js";
+export {
+  CommandRun,
+  DOMAIN_MESSAGE_SCHEMA_VERSION,
+  DomainInvariantError,
+  driveCommand,
+  initialInternalObservation,
+  projectActions,
+  projectIntention,
+  projectPublicObservation,
+  projectReport,
+  reduceObservation,
+  replayObservation,
+} from "./domain.js";
+export {
+  renderResponse,
+  respond,
+} from "./response.js";
+export { TRACE_SCHEMA_VERSION } from "./trace.js";
 export { whatsNext } from "./whatsnext.js";

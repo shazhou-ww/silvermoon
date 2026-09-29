@@ -55,10 +55,25 @@ implementation, acceptance of the deployment, and abandonment. Silvermoon has
 no mutation command for these decisions and never infers them from prose,
 checklists, Git activity, or silence.
 
-Agents own continuation. The project skill combines `whats-next`, the world
-contracts, the idea ledger, and Git facts to choose one safe action. The ledger
-is operational memory: it mirrors stable contract IDs and records completed
-work, but a checked item is not approval or acceptance.
+Agents own continuation. The project skill combines `whats-next`,
+`response.nextSteps`, the world contracts, the idea ledger, and Git facts to
+choose one safe action. The ledger is operational memory: it mirrors stable
+contract IDs and records completed work, but a checked item is not approval or
+acceptance.
+
+## Command Event Model
+
+A normalized intention starts one ordered, versioned domain-message stream.
+Observation facts are folded by one immutable reducer, while requested and
+finished side effects are paired by action ID into the actions projection.
+The final response is a pure function of intention and internal observation;
+it never reads action history, trace state, clocks, randomness, Git, or the
+filesystem.
+
+Every trustworthy JSON result has exactly four top-level projections:
+`intention`, `observation`, `actions`, and `response`. Default Markdown renders
+only `response`. This keeps operational history available to machines without
+making people read an internal execution transcript to find the answer.
 
 ## Project Phase Guidance
 
@@ -69,18 +84,20 @@ phase's file, after higher-priority project and repository readiness checks,
 and identifies its exact Git blob as `contentRevision`.
 
 Phase guidance is additive: it supplements rather than replaces the canonical
-skill and CLI instructions. An Agent treats it as inert repository-owned
-Markdown and materializes applicable idea-specific requirements into the
-current world contract and matching ledger entries. The guidance file is not a
-fourth contract, does not change a world revision, records no human decision,
-and is not evidence that any work or validation completed.
+skill and `response.nextSteps`. Public observation carries only provenance;
+the self-contained response carries the captured content. An Agent treats it
+as inert repository-owned Markdown and materializes applicable idea-specific
+requirements into the current world contract and matching ledger entries. The
+guidance file is not a fourth contract, does not change a world revision,
+records no human decision, and is not evidence that any work or validation
+completed.
 
 ## One Project, Shared Facts
 
 `whats-next` first checks local worktree, HEAD, and upstream facts, then fetches
 the configured remote primary only when local hygiene permits it. Its
-observation and instructions report the exact local and remote commits used
-for ancestry guidance. Writers use the reported remote commit as the expected
+observation and response report the exact local and remote commits used for
+ancestry guidance. Writers use the reported remote commit as the expected
 shared tip. If primary moves, they fetch and reobserve rather than replaying a
 stale decision. This is coordination through ordinary Git, not a distributed
 lock.

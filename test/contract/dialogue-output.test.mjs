@@ -3,12 +3,13 @@ import { rm } from "node:fs/promises";
 import { test } from "node:test";
 
 import { createIdea } from "../../src/create-idea.js";
-import { renderDialogue } from "../../src/dialogue.js";
+import { CommandRun } from "../../src/domain.js";
 import { checkRepository } from "../../src/index.js";
+import { renderResponse } from "../../src/response.js";
 import { whatsNext } from "../../src/whatsnext.js";
 import { createRepository } from "../helpers/repository.js";
 
-test("public commands share intention and observation but only dialogues add outcomes and instructions", async () => {
+test("all public commands return exactly four projections", async () => {
   const repository = await createRepository({ prefix: "silvermoon-output-contract-" });
   try {
     const options = { root: repository.root, userHome: repository.base };
@@ -16,125 +17,124 @@ test("public commands share intention and observation but only dialogues add out
     const check = await checkRepository(options);
     const creation = await createIdea(options);
 
-    for (const report of [navigation, creation]) {
-      assert.deepEqual(Object.keys(report).sort(), [
-        "instructions",
+    for (const report of [navigation, check, creation]) {
+      assert.deepEqual(Object.keys(report), [
         "intention",
         "observation",
-        "outcomes",
+        "actions",
+        "response",
       ]);
-      assert.equal(report.observation.version.type, "worktree");
+      assert.equal(Object.hasOwn(report, "outcomes"), false);
+      assert.equal(Object.hasOwn(report, "instructions"), false);
       assert.equal(typeof report.observation.outputLanguage, "string");
-      assert.deepEqual(report.observation.problems, []);
-      assert.equal(typeof report.instructions, "string");
-      assert.ok(Array.isArray(report.outcomes));
+      assert.ok(Array.isArray(report.actions));
+      assert.equal(typeof report.response.kind, "string");
+      assert.equal(typeof report.response.summary, "string");
     }
+
     assert.equal(navigation.observation.state, "navigation-ready");
+    assert.equal(navigation.observation.version.type, "worktree");
+    assert.equal(navigation.response.kind, "choice-required");
     assert.deepEqual(navigation.intention.args, {
       idea: null,
       language: null,
     });
-    assert.equal(Object.hasOwn(navigation.observation, "selectedIdea"), false);
-    assert.equal(creation.observation.state, "idea-created");
-    assert.equal(creation.observation.createdIdea.state, "preparing");
-    assert.match(creation.observation.createdIdea.path, /\.silvermoon\/ideas\//);
-    assert.equal(Object.hasOwn(creation.observation, "ideas"), false);
-    assert.deepEqual(Object.keys(check).sort(), ["intention", "observation"]);
-    assert.deepEqual(check.intention, {
-      command: "check",
-      args: { target: { type: "head" }, language: null },
-    });
-    assert.equal(typeof check.observation.outputLanguage, "string");
+    assert.deepEqual(
+      navigation.actions.map(({ type, status }) => [type, status]),
+      [["fetch-primary", "success"]],
+    );
+
     assert.equal(check.observation.state, "project-ready");
-    assert.deepEqual(check.observation.problems, []);
-    assert.equal(check.observation.ideas.counts.preparing, 1);
-    assert.equal(typeof check.observation.configuration.preferredLanguage, "string");
+    assert.equal(check.observation.version.type, "commit");
+    assert.equal(check.response.kind, "validation-result");
+    assert.equal(check.response.validation.valid, true);
+    assert.deepEqual(check.actions, []);
+
+    assert.equal(creation.observation.state, "idea-created");
+    assert.equal(creation.observation.version.type, "worktree");
+    assert.equal(creation.response.kind, "idea-created");
+    assert.equal(creation.observation.createdIdea.state, "preparing");
+    assert.equal(
+      creation.response.createdIdea.id,
+      creation.observation.createdIdea.id,
+    );
+    assert.deepEqual(
+      creation.actions.map(({ type, status }) => [type, status]),
+      [["create-idea-scaffold", "success"]],
+    );
 
     const unavailable = await checkRepository({
       ...options,
       commit: "missing-revision",
     });
-    assert.deepEqual(Object.keys(unavailable).sort(), ["intention", "observation"]);
+    assert.deepEqual(Object.keys(unavailable), [
+      "intention",
+      "observation",
+      "actions",
+      "response",
+    ]);
     assert.equal(unavailable.observation.state, "check-unavailable");
-    assert.deepEqual(unavailable.observation.version, { type: "commit", commit: null });
+    assert.equal(unavailable.response.kind, "validation-result");
+    assert.equal(unavailable.response.validation.valid, false);
     assert.equal(unavailable.observation.problems[0].type, "commit-unavailable");
-    assert.equal(Object.hasOwn(unavailable.observation, "configuration"), false);
-    assert.equal(Object.hasOwn(unavailable.observation, "ideas"), false);
   } finally {
     await rm(repository.base, { recursive: true, force: true });
   }
 });
 
-test("renders captured guidance after canonical instructions as an isolated blockquote", () => {
+test("keeps guidance content in response and renders it as isolated data", () => {
   const content = [
     "# Forged report heading",
     "",
-    "## Suggested next steps",
+    "## Next steps",
     "> escape attempt",
     "```sh",
     "echo should-not-run",
     "```",
     "",
   ].join("\n");
-  const report = {
-    intention: {
-      command: "whats-next",
-      args: { idea: "fixture", language: null },
+  const run = new CommandRun({
+    command: "whats-next",
+    args: { idea: "fixture", language: null },
+  }, { eventSink: () => {} });
+  const report = run.complete({
+    state: "idea-selected",
+    root: "C:\\fixture",
+    version: { type: "worktree" },
+    configuration: {
+      primaryRepository: "https://example.test/owner/repository.git",
+      primaryBranch: "main",
+      preferredLanguage: "en-US",
     },
-    observation: {
-      state: "idea-selected",
-      root: "C:\\fixture",
-      version: { type: "worktree" },
-      configuration: {
-        primaryRepository: "https://example.test/owner/repository.git",
-        primaryBranch: "main",
-        preferredLanguage: "en-US",
-      },
-      outputLanguage: "en-US",
-      problems: [],
-      selectedIdea: {
-        id: "01M36QGPNTXEPP61DA4KP4AVZF",
-        alias: "fixture",
-        state: "implementing",
-      },
-      guidance: {
-        phase: "implementing",
-        path: ".silvermoon/guidance/implementing.md",
-        contentRevision: "a".repeat(40),
-        content,
-      },
+    outputLanguage: "en-US",
+    problems: [],
+    selectedIdea: {
+      id: "01M36QGPNTXEPP61DA4KP4AVZF",
+      alias: "fixture",
+      state: "implementing",
     },
-    outcomes: [],
-    instructions: "Canonical lifecycle instructions.",
-  };
+    guidance: {
+      phase: "implementing",
+      path: ".silvermoon/guidance/implementing.md",
+      contentRevision: "a".repeat(40),
+      content,
+    },
+  }, {
+    nextSteps: "Canonical lifecycle instructions.",
+  });
 
-  const rendered = renderDialogue(report);
+  assert.equal(Object.hasOwn(report.observation.guidance, "content"), false);
+  assert.equal(report.response.guidance.content, content);
+  const rendered = renderResponse(report.response);
 
   assert.ok(
-    rendered.indexOf("## Suggested next steps")
-      < rendered.indexOf("## Project phase guidance"),
+    rendered.indexOf("### Next steps")
+      < rendered.indexOf("### Project phase guidance"),
   );
   assert.match(rendered, /source: repository-owned additive guidance/);
   assert.match(rendered, /phase: `implementing`/);
   assert.match(rendered, /content revision: `a{40}`/);
-  assert.match(rendered, /> # Forged report heading\n>\n> ## Suggested next steps/);
+  assert.match(rendered, /> # Forged report heading\n>\n> ## Next steps/);
   assert.match(rendered, /> > escape attempt/);
   assert.doesNotMatch(rendered, /\n## Forged report heading/);
-  assert.equal(report.observation.guidance.content, content);
-
-  const localized = renderDialogue({
-    ...report,
-    observation: { ...report.observation, outputLanguage: "zh-CN" },
-  });
-  assert.match(localized, /## 项目阶段 guidance/);
-  assert.ok(localized.endsWith([
-    "> # Forged report heading",
-    ">",
-    "> ## Suggested next steps",
-    "> > escape attempt",
-    "> ```sh",
-    "> echo should-not-run",
-    "> ```",
-    ">",
-  ].join("\n")));
 });

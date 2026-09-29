@@ -54,6 +54,10 @@ function envelopeKeys(report) {
   return Object.keys(report).sort();
 }
 
+function responseText(report) {
+  return report.response.nextSteps?.map(({ text }) => text).join("\n") ?? "";
+}
+
 async function pushPeerChange(repository, name) {
   const peer = join(repository.base, `peer-${name}`);
   const cloned = spawnSync("git", ["clone", repository.remote, peer], {
@@ -87,9 +91,9 @@ test("project setup uses cumulative observation variants and reports all setup f
     missingGit.observation.problems.map(({ type }) => type),
     ["git-repository-missing", "config-missing", "canonical-skill-missing"],
   );
-  assert.equal(missingGit.outcomes.length, 0);
-  assert.match(missingGit.instructions, /^1\. .*\n2\. .*\n3\. /);
-  assert.match(missingGit.instructions, /处理/);
+  assert.equal(missingGit.actions.length, 0);
+  assert.match(responseText(missingGit), /^1\. .*\n2\. .*\n3\. /);
+  assert.match(responseText(missingGit), /处理/);
 
   const configured = await fixture();
   await writeFile(
@@ -132,8 +136,8 @@ primaryBranch: main
     "canonical-skill-missing",
   );
   assert.match(observedIdeas.observation.problems[0].summary, /^Silvermoon 发现/);
-  assert.match(observedIdeas.instructions, /^处理/);
-  assert.doesNotMatch(observedIdeas.instructions, /^\d+\. /m);
+  assert.match(responseText(observedIdeas), /^处理/);
+  assert.doesNotMatch(responseText(observedIdeas), /^\d+\. /m);
 });
 
 test("[selector-none] naked navigation lists one active idea without selecting it", async () => {
@@ -145,10 +149,10 @@ test("[selector-none] naked navigation lists one active idea without selecting i
   });
 
   assert.deepEqual(envelopeKeys(report), [
-    "instructions",
+    "actions",
     "intention",
     "observation",
-    "outcomes",
+    "response",
   ]);
   assert.deepEqual(report.intention, {
     command: "whats-next",
@@ -161,11 +165,11 @@ test("[selector-none] naked navigation lists one active idea without selecting i
     alias: "fixture",
     state: "preparing",
   }]);
-  assert.doesNotMatch(report.instructions, new RegExp(FIRST_ID));
-  assert.match(report.instructions, /silvermoon whats-next <ULID-or-alias>/);
-  assert.match(report.instructions, /silvermoon create-idea/);
-  assert.equal(report.outcomes[0].type, "fetch-primary");
-  assert.equal(report.outcomes[0].status, "success");
+  assert.doesNotMatch(responseText(report), new RegExp(FIRST_ID));
+  assert.match(responseText(report), /silvermoon whats-next <ULID-or-alias>/);
+  assert.match(responseText(report), /silvermoon create-idea/);
+  assert.equal(report.actions[0].type, "fetch-primary");
+  assert.equal(report.actions[0].status, "success");
 
   const localized = await whatsNext({
     language: "zh-cn",
@@ -178,8 +182,9 @@ test("[selector-none] naked navigation lists one active idea without selecting i
     localized.observation.configuration.preferredLanguage,
     "en-US",
   );
-  assert.match(localized.instructions, /^请明确选择/);
-  assert.match(localized.outcomes[0].summary, /^已 fetch /);
+  assert.match(responseText(localized), /^请明确选择/);
+  assert.match(localized.actions[0].result.commit, /^[0-9a-f]{40}$/);
+  assert.equal(Object.hasOwn(localized.actions[0], "summary"), false);
 });
 
 test("empty navigation stays ready without selecting an idea", async () => {
@@ -193,7 +198,7 @@ test("empty navigation stays ready without selecting an idea", async () => {
   assert.deepEqual(report.observation.ideas.activeIdeas, []);
   assert.equal(report.observation.ideas.counts.completed, 0);
   assert.equal(Object.hasOwn(report.observation, "selectedIdea"), false);
-  assert.match(report.instructions, /create-idea/);
+  assert.match(responseText(report), /create-idea/);
 });
 
 test("resolves the repository root when invoked from a nested directory", async () => {
@@ -215,8 +220,8 @@ test("resolves the repository root when invoked from a nested directory", async 
   assert.equal(report.observation.selectedIdea.state, "preparing");
   assert.equal(Object.hasOwn(report.observation, "ideas"), false);
   assert.equal(Object.hasOwn(report.observation, "guidance"), false);
-  assert.match(report.instructions, /approvedRevision/);
-  assert.doesNotMatch(report.instructions, /道心|内景|现世/);
+  assert.match(responseText(report), /approvedRevision/);
+  assert.doesNotMatch(responseText(report), /道心|内景|现世/);
 });
 
 test("default navigation excludes completed and abandoned ideas while counting them", async () => {
@@ -261,8 +266,8 @@ test("default navigation excludes completed and abandoned ideas while counting t
     report.observation.ideas.activeIdeas.map(({ id }) => id),
     [FIRST_ID, SECOND_ID, DEPLOYING_ID].sort(),
   );
-  assert.doesNotMatch(report.instructions, new RegExp(COMPLETED_ID));
-  assert.doesNotMatch(report.instructions, new RegExp(ABANDONED_ID));
+  assert.doesNotMatch(responseText(report), new RegExp(COMPLETED_ID));
+  assert.doesNotMatch(responseText(report), new RegExp(ABANDONED_ID));
 
   for (const [id, phrase] of [
     [FIRST_ID, "approvedRevision"],
@@ -280,7 +285,7 @@ test("default navigation excludes completed and abandoned ideas while counting t
     assert.equal(selected.observation.state, "idea-selected");
     assert.equal(selected.observation.selectedIdea.id, id);
     assert.equal(Object.hasOwn(selected.observation, "ideas"), false);
-    assert.match(selected.instructions, new RegExp(phrase));
+    assert.match(responseText(selected), new RegExp(phrase));
   }
 });
 
@@ -330,8 +335,8 @@ test("uses formal world and contract names in localized lifecycle instructions",
       selected.observation.configuration.preferredLanguage,
       "fr-FR",
     );
-    assert.match(selected.instructions, new RegExp(phrase));
-    assert.doesNotMatch(selected.instructions, /道心|内景|现世/);
+    assert.match(responseText(selected), new RegExp(phrase));
+    assert.doesNotMatch(responseText(selected), /道心|内景|现世/);
   }
 });
 
@@ -352,9 +357,9 @@ test("[selector-unknown] reports an unknown selector without guessing", async ()
   }]);
   assert.equal(report.observation.outputLanguage, "zh-CN");
   assert.equal(Object.hasOwn(report.observation, "selectedIdea"), false);
-  assert.match(report.instructions, /未匹配/);
-  assert.doesNotMatch(report.instructions, new RegExp(FIRST_ID));
-  assert.match(report.instructions, /create-idea/);
+  assert.match(responseText(report), /未匹配/);
+  assert.doesNotMatch(responseText(report), new RegExp(FIRST_ID));
+  assert.match(responseText(report), /create-idea/);
 });
 
 test("[selector-known] [alias-absent] selects an alias-less idea only by explicit ULID", async () => {
@@ -373,8 +378,8 @@ test("[selector-known] [alias-absent] selects an alias-less idea only by explici
     Object.hasOwn(report.observation.selectedIdea, "alias"),
     false,
   );
-  assert.match(report.instructions, new RegExp(FIRST_ID));
-  assert.doesNotMatch(report.instructions, /undefined|\(\)/);
+  assert.match(responseText(report), new RegExp(FIRST_ID));
+  assert.doesNotMatch(responseText(report), /undefined|\(\)/);
 });
 
 test("resolves preferred language for the selected idea without changing bare navigation", async () => {
@@ -441,8 +446,8 @@ test("uses a canonical output override without changing content language or pers
     selected.observation.configuration.preferredLanguage,
     "fr-FR",
   );
-  assert.match(selected.instructions, /^继续在 /);
-  assert.match(selected.outcomes[0].summary, /^已 fetch /);
+  assert.match(responseText(selected), /^继续在 /);
+  assert.match(selected.actions[0].result.commit, /^[0-9a-f]{40}$/);
   assert.equal(await readFile(statusPath, "utf8"), before);
   assert.equal(await readFile(configPath, "utf8"), configBefore);
 
@@ -455,9 +460,9 @@ test("uses a canonical output override without changing content language or pers
   });
 
   assert.equal(blocked.observation.outputLanguage, "zh-CN");
-  assert.match(blocked.instructions, /^检查全部 staged、unstaged 和 untracked 路径/);
+  assert.match(responseText(blocked), /^检查全部 staged、unstaged 和 untracked 路径/);
   assert.match(
-    blocked.instructions,
+    responseText(blocked),
     /silvermoon whats-next "localized" --language zh-CN/,
   );
 });
@@ -479,15 +484,15 @@ test("[dirty] reports local changes before any remote access and preserves selec
   assert.equal(report.observation.state, "repository-sync-required");
   assert.equal(report.observation.problems[0].type, "worktree-changes");
   assert.match(report.observation.problems[0].summary, /untracked=1/);
-  assert.equal(report.outcomes.length, 0);
+  assert.equal(report.actions.length, 0);
   assert.equal(
     commands.some(([name]) => name === "fetch" || name === "ls-remote"),
     false,
   );
-  assert.match(report.instructions, /^Inspect all staged, unstaged, and untracked paths and their changes/);
-  assert.doesNotMatch(report.instructions, /git -C|diff --cached|status --short/);
-  assert.doesNotMatch(report.instructions, /^\d+\. /m);
-  assert.match(report.instructions, new RegExp(FIRST_ID));
+  assert.match(responseText(report), /^Inspect all staged, unstaged, and untracked paths and their changes/);
+  assert.doesNotMatch(responseText(report), /git -C|diff --cached|status --short/);
+  assert.doesNotMatch(responseText(report), /^\d+\. /m);
+  assert.match(responseText(report), new RegExp(FIRST_ID));
 });
 
 test("localized worktree guidance covers all changes without prescribing diff commands", async () => {
@@ -500,9 +505,9 @@ test("localized worktree guidance covers all changes without prescribing diff co
   });
 
   assert.equal(report.observation.state, "repository-sync-required");
-  assert.match(report.instructions, /^检查全部 staged、unstaged 和 untracked 路径及其修改内容/);
-  assert.match(report.instructions, /不要只依据上述样例/);
-  assert.doesNotMatch(report.instructions, /git -C|diff --cached|status --short/);
+  assert.match(responseText(report), /^检查全部 staged、unstaged 和 untracked 路径及其修改内容/);
+  assert.match(responseText(report), /不要只依据上述样例/);
+  assert.doesNotMatch(responseText(report), /git -C|diff --cached|status --short/);
 });
 
 test("reports every observable local readiness problem before remote access", async () => {
@@ -524,15 +529,15 @@ test("reports every observable local readiness problem before remote access", as
     report.observation.problems.map(({ type }) => type),
     ["worktree-changes", "primary-upstream-mismatch"],
   );
-  assert.equal(report.outcomes.length, 0);
+  assert.equal(report.actions.length, 0);
   assert.equal(
     commands.some(([name]) => name === "fetch" || name === "ls-remote"),
     false,
   );
-  assert.match(report.instructions, /^1\. Inspect all staged, unstaged, and untracked paths and their changes/);
-  assert.match(report.instructions, /\n2\. Configure a named remote /);
-  assert.match(report.instructions, /upstream/);
-  assert.match(report.instructions, /silvermoon whats-next/);
+  assert.match(responseText(report), /^1\. Inspect all staged, unstaged, and untracked paths and their changes/);
+  assert.match(responseText(report), /\n2\. Configure a named remote /);
+  assert.match(responseText(report), /upstream/);
+  assert.match(responseText(report), /silvermoon whats-next/);
 });
 
 test("[structured-changes] bounds large change summaries and requires full inspection", async () => {
@@ -554,9 +559,9 @@ test("[structured-changes] bounds large change summaries and requires full inspe
   assert.ok(sample);
   assert.ok(sample[1].split(", ").length <= CHANGE_SAMPLE_ITEM_LIMIT);
   assert.equal(Number(sample[2]), 50 - CHANGE_SAMPLE_ITEM_LIMIT);
-  assert.match(report.instructions, /Inspect all staged, unstaged, and untracked paths and their changes/);
-  assert.match(report.instructions, /not just the samples above/);
-  assert.doesNotMatch(report.instructions, /git -C|diff --cached|status --short/);
+  assert.match(responseText(report), /Inspect all staged, unstaged, and untracked paths and their changes/);
+  assert.match(responseText(report), /not just the samples above/);
+  assert.doesNotMatch(responseText(report), /git -C|diff --cached|status --short/);
 });
 
 test("[conflict] prioritizes conflicts while still reporting all known changes", async () => {
@@ -591,10 +596,10 @@ test("[conflict] prioritizes conflicts while still reporting all known changes",
     ["worktree-conflicts", "worktree-changes"],
   );
   assert.match(report.observation.problems[0].summary, /conflict\.txt/);
-  assert.match(report.instructions, /^1\. Inspect every conflicted path and its contents/);
-  assert.match(report.instructions, /\n2\. Inspect all staged, unstaged, and untracked paths and their changes/);
-  assert.doesNotMatch(report.instructions, /git -C|diff --name-only|status --short/);
-  assert.equal(report.outcomes.length, 0);
+  assert.match(responseText(report), /^1\. Inspect every conflicted path and its contents/);
+  assert.match(responseText(report), /\n2\. Inspect all staged, unstaged, and untracked paths and their changes/);
+  assert.doesNotMatch(responseText(report), /git -C|diff --name-only|status --short/);
+  assert.equal(report.actions.length, 0);
 });
 
 test("[branch-mismatch] accepts any local branch with the configured primary upstream", async () => {
@@ -609,7 +614,7 @@ test("[branch-mismatch] accepts any local branch with the configured primary ups
   });
 
   assert.equal(report.observation.state, "idea-selected");
-  assert.match(report.instructions, /approvedRevision/);
+  assert.match(responseText(report), /approvedRevision/);
 
   git(repository.root, "branch", "--unset-upstream");
   const commands = [];
@@ -625,7 +630,7 @@ test("[branch-mismatch] accepts any local branch with the configured primary ups
     mismatch.observation.problems[0].type,
     "primary-upstream-mismatch",
   );
-  assert.match(mismatch.instructions, /'@\{upstream\}'/);
+  assert.match(responseText(mismatch), /'@\{upstream\}'/);
   assert.equal(
     commands.some(([name]) => name === "fetch" || name === "ls-remote"),
     false,
@@ -666,7 +671,7 @@ primaryBranch: main
     report.observation.configuration.primaryRepository,
     configured,
   );
-  assert.equal(report.outcomes[0].status, "success");
+  assert.equal(report.actions[0].status, "success");
 });
 
 test("[behind] [ahead] [diverged] reports ancestry and safe remediation", async () => {
@@ -677,12 +682,12 @@ test("[behind] [ahead] [diverged] reports ancestry and safe remediation", async 
     userHome: behindRepository.base,
   });
   assert.equal(behind.observation.problems[0].type, "primary-behind");
-  assert.match(behind.instructions, /Fast-forward/);
+  assert.match(responseText(behind), /Fast-forward/);
   const primary = /observed primary is ([0-9a-f]+)/.exec(
     behind.observation.problems[0].summary,
   )[1];
-  assert.match(behind.instructions, new RegExp(primary));
-  assert.doesNotMatch(behind.instructions, /origin\/main/);
+  assert.match(responseText(behind), new RegExp(primary));
+  assert.doesNotMatch(responseText(behind), /origin\/main/);
   git(behindRepository.root, "merge", "--ff-only", primary);
   const aligned = await whatsNext({
     root: behindRepository.root,
@@ -699,8 +704,8 @@ test("[behind] [ahead] [diverged] reports ancestry and safe remediation", async 
     userHome: aheadRepository.base,
   });
   assert.equal(ahead.observation.problems[0].type, "primary-ahead");
-  assert.match(ahead.instructions, /without force/);
-  assert.match(ahead.instructions, /expected|still/);
+  assert.match(responseText(ahead), /without force/);
+  assert.match(responseText(ahead), /expected|still/);
 
   const divergedRepository = await fixture({ prefix: "silvermoon-diverged-" });
   await pushPeerChange(divergedRepository, "remote");
@@ -712,7 +717,7 @@ test("[behind] [ahead] [diverged] reports ancestry and safe remediation", async 
     userHome: divergedRepository.base,
   });
   assert.equal(diverged.observation.problems[0].type, "primary-diverged");
-  assert.match(diverged.instructions, /both histories/);
+  assert.match(responseText(diverged), /both histories/);
 });
 
 test("records fetch failure as a failure outcome with a trustworthy envelope", async () => {
@@ -726,9 +731,9 @@ test("records fetch failure as a failure outcome with a trustworthy envelope", a
 
   assert.equal(report.observation.state, "repository-sync-required");
   assert.equal(report.observation.problems[0].type, "primary-fetch-failed");
-  assert.equal(report.outcomes.at(-1).type, "fetch-primary");
-  assert.equal(report.outcomes.at(-1).status, "failure");
-  assert.match(report.instructions, /network|网络/);
+  assert.equal(report.actions.at(-1).type, "fetch-primary");
+  assert.equal(report.actions.at(-1).status, "failure");
+  assert.match(responseText(report), /network|网络/);
 });
 
 test("rejects an unsupported programmatic output language before repository inspection", async () => {
@@ -794,8 +799,8 @@ test("attaches only the selected actionable phase guidance from primary", async 
       phase,
       path,
       contentRevision: git(repository.root, "rev-parse", `HEAD:${path}`),
-      content,
     });
+    assert.equal(report.response.guidance.content, content);
     assert.equal(
       fixtures
         .filter(([, candidate]) => candidate !== phase)
@@ -804,8 +809,8 @@ test("attaches only the selected actionable phase guidance from primary", async 
         ),
       false,
     );
-    assert.match(report.instructions, /revision/);
-    assert.doesNotMatch(report.instructions, /Preparing only|Implementing only|Deploying only/);
+    assert.match(responseText(report), /revision/);
+    assert.doesNotMatch(responseText(report), /Preparing only|Implementing only|Deploying only/);
   }
 });
 
@@ -946,7 +951,11 @@ test("current guidance failures block lifecycle instructions without cross-phase
   });
 
   assert.equal(preparing.observation.state, "idea-selected");
-  assert.equal(preparing.observation.guidance.content, "Prepare safely.\n");
+  assert.equal(preparing.response.guidance.content, "Prepare safely.\n");
+  assert.equal(
+    Object.hasOwn(preparing.observation.guidance, "content"),
+    false,
+  );
   assert.equal(implementing.observation.state, "phase-guidance-invalid");
   assert.deepEqual(
     implementing.observation.problems.map(({ type }) => type),
@@ -954,10 +963,10 @@ test("current guidance failures block lifecycle instructions without cross-phase
   );
   assert.equal(Object.hasOwn(implementing.observation, "guidance"), false);
   assert.doesNotMatch(
-    implementing.instructions,
+    responseText(implementing),
     /implementationAcceptedRevision/,
   );
-  assert.match(implementing.instructions, /implementing\.md/);
+  assert.match(responseText(implementing), /implementing\.md/);
 });
 
 test("keeps a formed guidance report bound to the inspected snapshot", async () => {
@@ -987,7 +996,7 @@ test("keeps a formed guidance report bound to the inspected snapshot", async () 
   });
 
   assert.equal(report.observation.state, "idea-selected");
-  assert.equal(report.observation.guidance.content, "Original guidance.\n");
+  assert.equal(report.response.guidance.content, "Original guidance.\n");
   assert.equal(
     report.observation.guidance.contentRevision,
     expectedRevision,

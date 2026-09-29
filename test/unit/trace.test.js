@@ -7,8 +7,10 @@ import { afterEach, test } from "node:test";
 import {
   traceAsync,
   traceSync,
+  TRACE_SCHEMA_VERSION,
   withTraceFile,
 } from "../../src/trace.js";
+import { CommandRun } from "../../src/domain.js";
 
 const temporaryDirectories = [];
 
@@ -51,7 +53,12 @@ test("writes paired nested spans with wall-clock timestamps and monotonic durati
     [1, 2, 3, 4, 5, 6],
   );
   assert.equal(new Set(events.map(({ traceId }) => traceId)).size, 1);
-  assert.ok(events.every(({ schemaVersion }) => schemaVersion === 1));
+  assert.ok(
+    events.every(
+      ({ schemaVersion }) => schemaVersion === TRACE_SCHEMA_VERSION,
+    ),
+  );
+  assert.ok(events.every(({ channel }) => channel === "telemetry"));
   assert.ok(events.every(({ timestamp }) => !Number.isNaN(Date.parse(timestamp))));
 
   const starts = new Map(
@@ -79,6 +86,80 @@ test("writes paired nested spans with wall-clock timestamps and monotonic durati
     assert.equal(end.status, "ok");
     assert.ok(end.durationMs >= 0);
   }
+});
+
+test("interleaves redacted domain events and correlated action spans", async () => {
+  const path = await temporaryTrace("domain.trace.jsonl");
+  const canary = "secret-token-canary";
+
+  const report = await withTraceFile(
+    path,
+    "command.whats-next",
+    { command: "whats-next" },
+    async () => {
+      const run = new CommandRun({
+        command: "whats-next",
+        args: { idea: canary, language: null },
+      });
+      await run.performAction(
+        { type: "fetch-primary", credential: canary },
+        async () => ({ commit: "a".repeat(40), output: canary }),
+      );
+      await run.performAction(
+        { type: "remove-owned-creation-paths", paths: [`C:\\${canary}`] },
+        async () => {
+          throw new Error(canary.repeat(1_000));
+        },
+        (caught) => ({
+          problem: {
+            type: "idea-cleanup-failed",
+            summary: caught.message,
+          },
+        }),
+      );
+      return run.complete({
+        state: "idea-not-found",
+        root: `C:\\${canary}`,
+        version: { type: "worktree" },
+        configuration: {
+          primaryRepository: `https://${canary}@example.test/repository.git`,
+          primaryBranch: "main",
+          preferredLanguage: "en-US",
+        },
+        outputLanguage: "en-US",
+        problems: [],
+        candidates: [],
+      }, {
+        nextSteps: `Do not persist ${canary}.`,
+      });
+    },
+  );
+
+  assert.equal(report.actions[0].status, "success");
+  const source = await readFile(path, "utf8");
+  assert.doesNotMatch(source, new RegExp(canary));
+  const events = await readEvents(path);
+  assert.deepEqual(
+    events.map(({ sequence }) => sequence),
+    events.map((_, index) => index + 1),
+  );
+  assert.ok(events.some(({ channel }) => channel === "domain"));
+  assert.ok(events.some(({ channel }) => channel === "telemetry"));
+  const requested = events.find(
+    ({ channel, event }) =>
+      channel === "domain" && event === "action.requested",
+  );
+  const actionSpan = events.find(
+    ({ channel, event, name }) =>
+      channel === "telemetry"
+      && event === "span-start"
+      && name === "action.fetch-primary",
+  );
+  assert.equal(actionSpan.attributes.actionId, requested.actionId);
+  assert.equal(
+    new Set(events.map(({ traceId }) => traceId)).size,
+    1,
+  );
 });
 
 test("records command failures and never overwrites an existing trace", async () => {

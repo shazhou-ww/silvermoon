@@ -60,6 +60,10 @@ function repositoryState(root, repository) {
   };
 }
 
+function responseText(report) {
+  return report.response.nextSteps?.map(({ text }) => text).join("\n") ?? "";
+}
+
 async function pushPeerChange(repository) {
   const peer = join(repository.base, "peer");
   const cloned = spawnSync("git", ["clone", repository.remote, peer], {
@@ -115,10 +119,10 @@ test("[unrelated-active-create] [create-no-remote] creates an exact scaffold wit
   );
 
   assert.deepEqual(Object.keys(report).sort(), [
-    "instructions",
+    "actions",
     "intention",
     "observation",
-    "outcomes",
+    "response",
   ]);
   assert.deepEqual(report.intention, {
     command: "create-idea",
@@ -133,13 +137,13 @@ test("[unrelated-active-create] [create-no-remote] creates an exact scaffold wit
   assert.equal(Object.hasOwn(report.observation, "ideas"), false);
   assert.equal(Object.hasOwn(report.observation, "guidance"), false);
   assert.deepEqual(
-    report.outcomes.map(({ type, status }) => [type, status]),
+    report.actions.map(({ type, status }) => [type, status]),
     [["create-idea-scaffold", "success"]],
   );
-  assert.match(report.outcomes[0].summary, new RegExp(createdId));
-  assert.match(report.instructions, new RegExp(ideaPaths(createdId).ideaDocumentPath));
-  assert.match(report.instructions, /en-US/);
-  assert.doesNotMatch(report.instructions, /道心|内景|现世/);
+  assert.equal(report.actions[0].result.createdIdea.id, createdId);
+  assert.match(responseText(report), new RegExp(ideaPaths(createdId).ideaDocumentPath));
+  assert.match(responseText(report), /en-US/);
+  assert.doesNotMatch(responseText(report), /道心|内景|现世/);
 
   const paths = ideaPaths(createdId);
   for (const [path, source] of [
@@ -178,7 +182,7 @@ test("creates the first idea when the ideas directory does not yet exist", async
     userHome: repository.base,
   });
 
-  assert.equal(report.outcomes.at(-1).status, "success");
+  assert.equal(report.actions.at(-1).status, "success");
   assert.equal(
     await readFile(
       join(repository.root, ...ideaPaths(createdId).statusPath.split("/")),
@@ -203,7 +207,7 @@ test("creates at the Git root when invoked from a nested directory", async () =>
     report.observation.root,
     resolve(git(nested, "rev-parse", "--show-toplevel")),
   );
-  assert.equal(report.outcomes.at(-1).status, "success");
+  assert.equal(report.actions.at(-1).status, "success");
   await readFile(
     join(repository.root, ...ideaPaths(createdId).statusPath.split("/")),
     "utf8",
@@ -225,8 +229,8 @@ test("normalizes and persists an explicit idea language", async () => {
     report.observation.configuration.preferredLanguage,
     "zh-CN",
   );
-  assert.match(report.instructions, /理想契约/);
-  assert.doesNotMatch(report.instructions, /道心|内景|现世/);
+  assert.match(responseText(report), /理想契约/);
+  assert.doesNotMatch(responseText(report), /道心|内景|现世/);
   assert.equal(
     await readFile(
       join(repository.root, ...ideaPaths(createdId).statusPath.split("/")),
@@ -252,7 +256,7 @@ test("keeps arbitrary canonical content languages outside the output allowlist",
     "fr-FR",
   );
   assert.equal(report.observation.outputLanguage, "en-US");
-  assert.match(report.instructions, /^Use fr-FR /);
+  assert.match(responseText(report), /^Use fr-FR /);
   assert.equal(
     await readFile(
       join(repository.root, ...ideaPaths(createdId).statusPath.split("/")),
@@ -280,9 +284,9 @@ test("preserves create intent and does not mutate a dirty repository", async () 
 
   assert.equal(report.observation.state, "repository-preparation-required");
   assert.equal(Object.hasOwn(report.observation, "ideas"), false);
-  assert.deepEqual(report.outcomes, []);
-  assert.match(report.instructions, /silvermoon create-idea/);
-  assert.doesNotMatch(report.instructions, /--json/);
+  assert.deepEqual(report.actions, []);
+  assert.match(responseText(report), /silvermoon create-idea/);
+  assert.doesNotMatch(responseText(report), /--json/);
   assert.equal(
     git(repository.root, "status", "--porcelain=v1", "--untracked-files=all"),
     before,
@@ -310,8 +314,8 @@ test("[ulid-collision] retries without changing the colliding idea", async () =>
     userHome: repository.base,
   });
 
-  assert.equal(report.outcomes.at(-1).status, "success");
-  assert.match(report.outcomes.at(-1).summary, new RegExp(secondId));
+  assert.equal(report.actions.at(-1).status, "success");
+  assert.equal(report.actions.at(-1).result.createdIdea.id, secondId);
   assert.equal(await readFile(existingStatus, "utf8"), original);
 });
 
@@ -397,11 +401,17 @@ test("[partial-write-failure] cleans up operation-owned partial files", async ()
     userHome: repository.base,
   });
 
-  assert.equal(report.outcomes.at(-1).type, "create-idea-scaffold");
-  assert.equal(report.outcomes.at(-1).status, "failure");
+  assert.deepEqual(
+    report.actions.map(({ type, status }) => [type, status]),
+    [
+      ["create-idea-scaffold", "failure"],
+      ["remove-owned-creation-paths", "success"],
+    ],
+  );
   assert.equal(report.observation.state, "idea-create-failed");
   assert.equal(Object.hasOwn(report.observation, "createdIdea"), false);
-  assert.match(report.outcomes.at(-1).summary, /injected write failure/);
+  assert.match(report.actions[0].problem.summary, /injected write failure/);
+  assert.equal(report.actions[1].result.preserved, 0);
   await assert.rejects(
     readFile(
       join(repository.root, ...ideaPaths(createdId).ideaDocumentPath.split("/")),
@@ -442,8 +452,10 @@ test("preserves a concurrently modified created file and reports incomplete clea
     userHome: repository.base,
   });
 
-  assert.equal(report.outcomes.at(-1).status, "failure");
-  assert.match(report.outcomes.at(-1).summary, /Preserved [1-9]\d* path/);
+  assert.equal(report.actions[0].status, "failure");
+  assert.equal(report.actions[1].status, "success");
+  assert.ok(report.actions[1].result.preserved > 0);
+  assert.match(report.response.problems[0].summary, /Preserved [1-9]\d* path/);
   assert.equal(await readFile(ideaDocument, "utf8"), IDEA_TEMPLATE.slice(0, 12));
 });
 
@@ -467,8 +479,9 @@ test("returns an envelope when candidate inspection fails", async () => {
     userHome: repository.base,
   });
 
-  assert.equal(report.outcomes.at(-1).status, "failure");
-  assert.match(report.outcomes.at(-1).summary, /injected access failure/);
+  assert.equal(report.actions[0].status, "failure");
+  assert.equal(report.actions[1].status, "success");
+  assert.match(report.actions[0].problem.summary, /injected access failure/);
 });
 
 test("does not retry after a concurrent file collision leaves another writer's path", async () => {
@@ -493,8 +506,10 @@ test("does not retry after a concurrent file collision leaves another writer's p
     userHome: repository.base,
   });
 
-  assert.equal(report.outcomes.at(-1).status, "failure");
-  assert.match(report.outcomes.at(-1).summary, /Preserved [1-9]\d* path/);
+  assert.equal(report.actions[0].status, "failure");
+  assert.equal(report.actions[1].status, "success");
+  assert.ok(report.actions[1].result.preserved > 0);
+  assert.match(report.response.problems[0].summary, /Preserved [1-9]\d* path/);
   assert.equal(
     await readFile(
       join(repository.root, ...paths.implementationDocumentPath.split("/")),
@@ -524,8 +539,9 @@ test("returns a failure outcome for an invalid generated identity", async () => 
     userHome: repository.base,
   });
 
-  assert.equal(report.outcomes.at(-1).status, "failure");
-  assert.match(report.outcomes.at(-1).summary, /canonical ULID/);
+  assert.equal(report.actions[0].status, "failure");
+  assert.equal(report.actions[1].status, "success");
+  assert.match(report.actions[0].problem.summary, /canonical ULID/);
   assert.equal(
     spawnSync(
       "git",
@@ -571,10 +587,13 @@ test("attaches preparing guidance before creating a scaffold", async () => {
     phase: "preparing",
     path: preparingPath,
     contentRevision: git(repository.root, "rev-parse", `HEAD:${preparingPath}`),
-    content: "Prepare this project-specific contract.\n",
   });
-  assert.match(report.instructions, /Ideal World/);
-  assert.doesNotMatch(report.instructions, /project-specific contract/);
+  assert.equal(
+    report.response.guidance.content,
+    "Prepare this project-specific contract.\n",
+  );
+  assert.match(responseText(report), /Ideal World/);
+  assert.doesNotMatch(responseText(report), /project-specific contract/);
 });
 
 test("invalid preparing guidance stops before any scaffold write", async () => {
@@ -608,14 +627,14 @@ test("invalid preparing guidance stops before any scaffold write", async () => {
     report.observation.problems.map(({ type }) => type),
     ["guidance-file-empty"],
   );
-  assert.equal(report.outcomes.length, 0);
+  assert.equal(report.actions.length, 0);
   assert.equal(directoryWrites, 0);
   assert.deepEqual(
     await readdir(join(repository.root, ".silvermoon", "ideas")),
     ideasBefore,
   );
-  assert.doesNotMatch(report.instructions, /Ideal World/);
-  assert.match(report.instructions, /preparing\.md/);
+  assert.doesNotMatch(responseText(report), /Ideal World/);
+  assert.match(responseText(report), /preparing\.md/);
 });
 
 test("does not inspect preparing guidance before creation preflight succeeds", async () => {

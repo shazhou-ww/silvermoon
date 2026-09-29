@@ -11,10 +11,11 @@ The current release mapping is:
 | --- | --- | --- |
 | `silvermoon` | `silvermoon` | `.` |
 
-A stable tag such as `npm/silvermoon/v0.1.3` publishes with the npm `latest`
-dist-tag. A named prerelease such as `npm/silvermoon/v0.2.0-beta.1` publishes
-with the `beta` dist-tag. Numeric-only prerelease channels are intentionally
-rejected.
+A stable tag such as `npm/silvermoon/v0.2.0` publishes with the npm `latest`
+dist-tag. A named prerelease such as `npm/silvermoon/v0.2.0-rc.1` publishes
+with the `rc` dist-tag. Numeric-only prerelease channels are intentionally
+rejected. Preparing a manifest candidate does not authorize tag creation or
+publication.
 
 ## One-time configuration
 
@@ -76,12 +77,12 @@ the release namespace.
 5. Fetch the current primary branch and tags.
 6. Create the package-specific tag at `origin/main` and push that exact tag.
 
-For `silvermoon@0.1.3`:
+For an explicitly authorized `silvermoon@0.2.0-rc.1` release:
 
 ```sh
 git fetch origin main --tags
-git tag npm/silvermoon/v0.1.3 origin/main
-git push origin refs/tags/npm/silvermoon/v0.1.3
+git tag npm/silvermoon/v0.2.0-rc.1 origin/main
+git push origin refs/tags/npm/silvermoon/v0.2.0-rc.1
 ```
 
 The tag version must exactly equal [`package.json`](../package.json). The

@@ -54,22 +54,27 @@ silvermoon whats-next <idea> --language zh-CN
 在生成的 `Idea.md` 中描述想要抵达的世界，审阅并批准这个精确 revision。此后，
 Silvermoon 会让目标、实现、仓库状态与现实结果始终相连。完整的首次工作流见英文
 [Getting Started](./docs/getting-started.md)。
-对话命令默认以轻量 Markdown 标题呈现意图、观察和下一步；只有实际尝试了操作，
-才出现动作与结果段落。程序消费者可使用 `--json` 获取
-`intention / observation / outcomes / instructions` envelope。提交前使用
-`silvermoon check --staged` 验证 index；无参数 `check` 只验证已提交的 `HEAD`，
-不能替代提交前检查。只有项目快照有效时检查才以退出码 `0` 放行，详见英文
-[Technical Reference](./docs/reference.md)。任何命令都可以添加
-`--trace <file.trace.jsonl>`，写出用于性能分析的成对任务与 Git 计时 span。参数若
-没有以精确的小写 `.trace.jsonl` 结尾，Silvermoon 会自动追加；repository 内的
-`*.trace.jsonl` 会被忽略。trace 文件只在待测命令工作完成后创建，并且绝不覆盖
-已有文件。
+每个命令都处理一条有序且带版本的 domain-message stream。程序消费者可使用
+`--json` 获取四个确定性 projection：`intention`、`observation`、`actions` 与
+`response`。`actions` 只记录已经尝试的副作用，未来工作只位于
+`response.nextSteps`。默认 Markdown 只渲染自足的 response，不暴露内部
+projection。提交前使用 `silvermoon check --staged` 验证 index；无参数 `check`
+只验证已提交的 `HEAD`，不能替代提交前检查。只有项目快照有效时检查才以退出码
+`0` 放行，详见英文 [Technical Reference](./docs/reference.md)。
+
+任何命令都可以添加 `--trace <file.trace.jsonl>`，写出一条 schema-versioned
+JSONL timeline。`domain` channel 保存经过 allowlist 的 message 摘要，
+`telemetry` channel 保存成对 performance span；两者共享同一个 trace ID 和全局
+sequence。Trace 不记录 guidance/文件正文、Git 参数或输出、环境数据或
+credential。参数若没有以精确的小写 `.trace.jsonl` 结尾，Silvermoon 会自动追加；
+repository 内的 `*.trace.jsonl` 会被忽略。trace 文件采用缓冲写入，只在命令工作
+完成后创建，并且绝不覆盖已有文件。
 
 项目可按需添加 `.silvermoon/guidance/preparing.md`、`implementing.md` 与
-`deploying.md`。Silvermoon 只会在 canonical instructions 之后返回当前可行动
-阶段中与 snapshot 绑定的 repository-owned Markdown；`create-idea` 可返回
-preparing guidance。这些 guidance 只能追加约束，不是第四份 contract 或 decision
-fact；`check` 会验证完整的固定目录。详见英文
+`deploying.md`。Silvermoon 只会在 `response.guidance` 中返回当前可行动阶段里
+与 snapshot 绑定的 repository-owned Markdown；`observation.guidance` 仅保留
+provenance。`create-idea` 可返回 preparing guidance。这些 guidance 只能追加
+约束，不是第四份 contract 或 decision fact；`check` 会验证完整的固定目录。详见英文
 [Core Concepts](./docs/core-concepts.md)。
 
 ## 为什么需要 Silvermoon

@@ -10,9 +10,9 @@ import {
   canonicalizeLanguageTag,
   canonicalizeOutputLanguage,
 } from "./language.js";
-import { renderCheck, renderDialogue } from "./dialogue.js";
 import { checkRepository } from "./index.js";
 import { createIdea } from "./create-idea.js";
+import { renderResponse } from "./response.js";
 import { withTraceFile } from "./trace.js";
 import { whatsNext } from "./whatsnext.js";
 
@@ -35,10 +35,10 @@ export function normalizeTraceFileName(value) {
 
 function addCommonOptions(command) {
   return command
-    .option("--json", "serialize the conversation envelope as JSON")
+    .option("--json", "serialize all four command projections as JSON")
     .option(
       "--trace <file.trace.jsonl>",
-      "write task timing spans as JSONL (suffix is appended when omitted)",
+      "write domain and timing events as JSONL (suffix is appended when omitted)",
       normalizeTraceFileName,
     )
     .option("-r, --root <path>", "repository root", process.cwd());
@@ -48,9 +48,7 @@ export function render(report, json, io) {
   io.log(
     json
       ? JSON.stringify(report, null, 2)
-      : report.intention.command === "check"
-        ? renderCheck(report)
-        : renderDialogue(report),
+      : renderResponse(report.response),
   );
 }
 
@@ -117,7 +115,6 @@ Examples:
       {
         command: "whats-next",
         outputLanguage: options.language ?? null,
-        processId: process.pid,
       },
       () => whatsNext({
         idea,
@@ -145,7 +142,6 @@ Examples:
       {
         command: "create-idea",
         contentLanguage: options.language ?? null,
-        processId: process.pid,
       },
       () => createIdea({
         language: options.language,
@@ -176,7 +172,6 @@ Examples:
       {
         command: "check",
         outputLanguage: options.language ?? null,
-        processId: process.pid,
       },
       () => checkRepository({
         commit: options.commit,

@@ -20,6 +20,10 @@ const npmCli = configuredNpmCli && /^npm-cli\.js$/i.test(basename(configuredNpmC
   : resolve(dirname(process.execPath), "node_modules", "npm", "bin", "npm-cli.js");
 const id = "01M36QGPNTXEPP61DA4KP4AVZF";
 
+function responseText(report) {
+  return report.response.nextSteps?.map(({ text }) => text).join("\n") ?? "";
+}
+
 function ideaPaths(ideaId) {
   const idea = join(".silvermoon", "ideas", ideaId);
   return {
@@ -108,10 +112,10 @@ try {
   assert.deepEqual(
     Object.keys(bootstrapReport).sort(),
     [
-      "instructions",
+      "actions",
       "intention",
       "observation",
-      "outcomes",
+      "response",
     ],
   );
   assert.deepEqual(
@@ -119,7 +123,7 @@ try {
     ["config-missing", "canonical-skill-missing"],
   );
   assert.equal(bootstrapReport.observation.observedThrough, "version");
-  assert.match(bootstrapReport.instructions, /--agent universal/);
+  assert.match(responseText(bootstrapReport), /--agent universal/);
   assert.doesNotMatch(
     JSON.stringify(bootstrapReport),
     /package\.manifest|execution-source|project-local/,
@@ -273,11 +277,14 @@ try {
     [
       "--input-type=module",
       "-e",
-      "import * as silvermoon from 'silvermoon'; const names = ['checkRepository', 'createIdea', 'deriveIdeaState', 'generateUlid', 'parseIdeaStatus', 'whatsNext']; console.log(`${names.map((name) => typeof silvermoon[name]).join(',')}|${Object.hasOwn(silvermoon, 'implementationCriterionIds')},${Object.hasOwn(silvermoon, 'verifyCriteriaEvidence')}`);",
+      "import * as silvermoon from 'silvermoon'; const names = ['CommandRun', 'checkRepository', 'createIdea', 'deriveIdeaState', 'driveCommand', 'generateUlid', 'parseIdeaStatus', 'renderResponse', 'respond', 'whatsNext']; console.log(`${names.map((name) => typeof silvermoon[name]).join(',')}|${silvermoon.DOMAIN_MESSAGE_SCHEMA_VERSION},${silvermoon.TRACE_SCHEMA_VERSION}|${Object.hasOwn(silvermoon, 'implementationCriterionIds')},${Object.hasOwn(silvermoon, 'verifyCriteriaEvidence')}`);",
     ],
     consumer,
   );
-  assert.equal(exported, "function,function,function,function,function,function|false,false");
+  assert.equal(
+    exported,
+    "function,function,function,function,function,function,function,function,function,function|1,2|false,false",
+  );
   const localizedCheck = JSON.parse(
     npm(
       ["exec", "--", "silvermoon", "check", "--language", "ZH-cn", "--json"],
@@ -296,7 +303,7 @@ try {
       consumer,
     ),
   );
-  assert.deepEqual(guidedLifecycle.observation.guidance, {
+  const publicGuidance = {
     phase: "preparing",
     path: ".silvermoon/guidance/preparing.md",
     contentRevision: run(
@@ -304,12 +311,12 @@ try {
       ["rev-parse", "HEAD:.silvermoon/guidance/preparing.md"],
       consumer,
     ),
+  };
+  assert.deepEqual(guidedLifecycle.observation.guidance, publicGuidance);
+  assert.deepEqual(guidedLifecycle.response.guidance, {
+    ...publicGuidance,
     content: "Installed preparing guidance.\n",
   });
-  assert.doesNotMatch(
-    guidedLifecycle.instructions,
-    /Installed preparing guidance/,
-  );
   const guidedLifecycleText = npm(
     ["exec", "--", "silvermoon", "whats-next", "installed-smoke"],
     consumer,
@@ -320,7 +327,10 @@ try {
     ["exec", "--", "silvermoon", "check", "--language", "zh-CN"],
     consumer,
   );
-  assert.match(localizedCheckText, /^## 检查\n\n- 目标: `head`/);
+  assert.match(
+    localizedCheckText,
+    /^## 检查\n\n请求的 Silvermoon snapshot 验证通过。\n\n- 目标: `head`/,
+  );
   assert.match(localizedCheckText, /- 结果: 通过/);
   const statusBeforeInvalidLanguage = run(
     "git",
@@ -340,10 +350,10 @@ try {
   const ideasBefore = await readdir(join(consumer, ".silvermoon", "ideas"));
   const created = JSON.parse(npm(["exec", "--", "silvermoon", "create-idea", "--json"], consumer));
   assert.deepEqual(Object.keys(created).sort(), [
-    "instructions",
+    "actions",
     "intention",
     "observation",
-    "outcomes",
+    "response",
   ]);
   assert.equal(created.intention.command, "create-idea");
   assert.equal(created.observation.state, "idea-created");
@@ -352,7 +362,7 @@ try {
     guidedLifecycle.observation.guidance,
   );
   assert.deepEqual(
-    created.outcomes.map(({ type, status }) => [type, status]),
+    created.actions.map(({ type, status }) => [type, status]),
     [["create-idea-scaffold", "success"]],
   );
   const ideasAfter = await readdir(join(consumer, ".silvermoon", "ideas"));
@@ -411,11 +421,19 @@ try {
   const legacy = npmResult(["exec", "--", "silvermoon", "whatsnext"], consumer);
   assert.equal(legacy.status, 2, legacy.stderr);
   const checked = JSON.parse(npm(["exec", "--", "silvermoon", "check", "--json"], consumer));
-  assert.deepEqual(Object.keys(checked).sort(), ["intention", "observation"]);
+  assert.deepEqual(Object.keys(checked).sort(), [
+    "actions",
+    "intention",
+    "observation",
+    "response",
+  ]);
   assert.equal(checked.observation.state, "project-ready");
   assert.equal(checked.observation.ideas.activeIdeas[0].alias, "installed-smoke");
   const checkedText = npm(["exec", "--", "silvermoon", "check"], consumer);
-  assert.match(checkedText, /^## Check\n\n- Target: `head`/);
+  assert.match(
+    checkedText,
+    /^## Check\n\nThe requested Silvermoon snapshot is valid\.\n\n- Target: `head`/,
+  );
   assert.match(checkedText, /- Result: valid/);
   assert.doesNotMatch(checkedText, /## Suggested next steps|## Actions and results/);
   const worktree = JSON.parse(
@@ -450,14 +468,17 @@ try {
   assert.equal(lifecycle.observation.state, "repository-sync-required");
   assert.equal(lifecycle.observation.problems[0].type, "worktree-changes");
   assert.match(lifecycle.observation.problems[0].summary, /未跟踪=5/);
-  assert.deepEqual(lifecycle.outcomes, []);
+  assert.deepEqual(lifecycle.actions, []);
   const lifecycleText = npm(
     ["exec", "--", "silvermoon", "whats-next", "installed-smoke"],
     consumer,
   );
-  assert.match(lifecycleText, /^## Current instruction\n\n/);
-  assert.match(lifecycleText, /\n\n### Ideas you can continue\n\n/);
+  assert.match(
+    lifecycleText,
+    /^## Blocked\n\nThe repository must be synchronized before this command can continue\./,
+  );
   assert.match(lifecycleText, /\n\n### Issues to address\n\n- \[worktree-changes\]/);
+  assert.doesNotMatch(lifecycleText, /### Ideas you can continue/);
   assert.doesNotMatch(lifecycleText, /## Actions and results/);
   await writeFile(
     join(consumer, ".agents", "skills", "silvermoon", "SKILL.md"),

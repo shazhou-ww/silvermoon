@@ -172,6 +172,7 @@ test("documents fixed additive phase guidance and snapshot validation", async ()
   assert.match(operations, /\.silvermoon\/guidance\/<phase>\.md/);
   assert.match(operations, /additive/);
   assert.match(operations, /fourth contract/);
+  assert.match(operations, /response\.guidance/);
   assert.match(operations, /observation\.guidance/);
   assert.match(operations, /Materialize\s+applicable requirements/);
   assert.match(reference, /contentRevision/);
@@ -180,4 +181,36 @@ test("documents fixed additive phase guidance and snapshot validation", async ()
   assert.match(reference, /HEAD, worktree, index, commit, or remote/);
   assert.match(reference, /no schema or configuration key/);
   assert.match(gettingStarted, /before any\s+scaffold path is written/);
+});
+
+test("documents the four projections and unified event trace", async () => {
+  const paths = [
+    "README.md",
+    "README.zh-CN.md",
+    "docs/core-concepts.md",
+    "docs/getting-started.md",
+    "docs/operations.md",
+    "docs/reference.md",
+    "docs/repository-tasks.md",
+    "skills/silvermoon/SKILL.md",
+    "skills/silvermoon/references/adoption.md",
+  ];
+  const sources = await Promise.all(
+    paths.map((path) => readFile(resolve(repositoryRoot, path), "utf8")),
+  );
+  const combined = sources.join("\n");
+
+  for (const field of ["intention", "observation", "actions", "response"]) {
+    assert.match(combined, new RegExp(`\\\`${field}\\\``));
+  }
+  assert.match(combined, /response\.nextSteps/);
+  assert.match(combined, /response\.guidance/);
+  assert.match(combined, /domain-message stream/);
+  assert.match(combined, /channel: "domain"/);
+  assert.match(combined, /channel: "telemetry"/);
+  assert.match(combined, /schema version 2/);
+  assert.doesNotMatch(
+    combined,
+    /intention\s*\/\s*observation\s*\/\s*outcomes\s*\/\s*instructions/,
+  );
 });

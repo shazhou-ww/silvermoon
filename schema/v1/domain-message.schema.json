@@ -1,0 +1,278 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/shazhou-ww/silvermoon/raw/refs/heads/main/schema/v1/domain-message.schema.json",
+  "title": "Silvermoon domain message v1",
+  "description": "A versioned message in one in-memory command run.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "sequence",
+    "type"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "sequence": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "type": {
+      "enum": [
+        "intention.accepted",
+        "observation.fact",
+        "action.requested",
+        "action.finished",
+        "response.created"
+      ]
+    },
+    "intention": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "command",
+        "args"
+      ],
+      "properties": {
+        "command": {
+          "enum": [
+            "whats-next",
+            "create-idea",
+            "check",
+            "list-ideas"
+          ]
+        },
+        "args": {
+          "type": "object"
+        }
+      }
+    },
+    "fact": {
+      "$ref": "#/$defs/fact"
+    },
+    "actionId": {
+      "type": "string",
+      "pattern": "^action-[1-9][0-9]*$"
+    },
+    "action": {
+      "type": "object",
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "actionType": {
+      "type": "string",
+      "minLength": 1
+    },
+    "status": {
+      "enum": [
+        "success",
+        "failure"
+      ]
+    },
+    "result": {
+      "type": "object"
+    },
+    "problem": {
+      "type": "object"
+    },
+    "facts": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/fact"
+      }
+    },
+    "kind": {
+      "type": "string",
+      "minLength": 1
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "hash",
+        "nextStepCount",
+        "itemCount"
+      ],
+      "properties": {
+        "hash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "nextStepCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "itemCount": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    }
+  },
+  "oneOf": [
+    {
+      "properties": {
+        "type": {
+          "const": "intention.accepted"
+        },
+        "intention": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "intention"
+      ]
+    },
+    {
+      "properties": {
+        "type": {
+          "const": "observation.fact"
+        },
+        "fact": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "fact"
+      ]
+    },
+    {
+      "properties": {
+        "type": {
+          "const": "action.requested"
+        },
+        "actionId": {
+          "type": "string"
+        },
+        "action": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "actionId",
+        "action"
+      ]
+    },
+    {
+      "properties": {
+        "type": {
+          "const": "action.finished"
+        },
+        "actionId": {
+          "type": "string"
+        },
+        "actionType": {
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "success",
+            "failure"
+          ]
+        },
+        "facts": {
+          "type": "array"
+        },
+        "result": {
+          "type": "object"
+        },
+        "problem": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "actionId",
+        "actionType",
+        "status",
+        "facts"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "success"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "result": {
+                "type": "object"
+              }
+            },
+            "required": [
+              "result"
+            ]
+          },
+          "else": {
+            "properties": {
+              "problem": {
+                "type": "object"
+              }
+            },
+            "required": [
+              "problem"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "properties": {
+        "type": {
+          "const": "response.created"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "metadata": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "kind",
+        "metadata"
+      ]
+    }
+  ],
+  "$defs": {
+    "fact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "observation",
+        "progress",
+        "responseContext"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "minLength": 1
+        },
+        "observation": {
+          "type": "object"
+        },
+        "progress": {
+          "enum": [
+            "observing",
+            "ready",
+            "blocked"
+          ]
+        },
+        "responseContext": {
+          "type": "object"
+        }
+      }
+    }
+  }
+}
