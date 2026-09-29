@@ -1,29 +1,29 @@
-# Ledger
+# 账本
 
-## Implementation
+## 实现
 
 ### Implementation steps
 
-- [x] **I-S01:** Replace fixed setup instructions with Agent navigation
-- [x] **I-S02:** Expose navigation readiness in default output
-- [x] **I-S03:** Protect the workflow with regression coverage and issue traceability
+- [x] **I-S01:** 用 Agent 导航替代固定整备指令
+- [x] **I-S02:** 在默认输出中展示导航就绪状态
+- [x] **I-S03:** 以回归覆盖和 issue 可追踪性保护工作流
 
 ### Implementation acceptance criteria
 
-- [x] **I-AC01:** Quick Starts delegate setup to the project Agent
-- [x] **I-AC02:** Human-readable readiness matches the observation
-- [x] **I-AC03:** The output gap remains jointly trackable
-- [x] **I-AC04:** Repository validation passes
+- [x] **I-AC01:** Quick Start 将整备委托给项目 Agent
+- [x] **I-AC02:** 人类可读就绪状态与 observation 一致
+- [x] **I-AC03:** 输出缺口保持共同可追踪
+- [x] **I-AC04:** 仓库验证通过
 
 ## 部署
 
-### 部署步骤
+### Deployment steps
 
 - [ ] **D-S01:** 发布仓库验证契约
 - [ ] **D-S02:** 验证已发布的 primary snapshot
 - [ ] **D-S03:** 验证真实的默认导航输出
 
-### 部署验收标准
+### Deployment acceptance criteria
 
 - [ ] **D-AC01:** Primary 包含已验证的候选
 - [ ] **D-AC02:** 仓库 release-grade 检查通过
