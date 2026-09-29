@@ -8,7 +8,7 @@
 - [x] **I-S02:** 生成 commit 固定的 jsDelivr README
 - [x] **I-S03:** 构建并发布单一 tarball
 - [x] **I-S04:** 加强发布编排与外部核验
-- [ ] **I-S05:** 覆盖发布合同并完成仓库验证
+- [x] **I-S05:** 覆盖发布合同并完成仓库验证
 
 ### Implementation acceptance criteria
 
@@ -16,7 +16,7 @@
 - [x] **I-AC02:** 发布 README 只引用不可变资源
 - [x] **I-AC03:** 验证与发布使用同一 tarball
 - [x] **I-AC04:** 主分支发布信任边界保持不变
-- [ ] **I-AC05:** 完整候选通过 release-grade 验证
+- [x] **I-AC05:** 完整候选通过 release-grade 验证
 
 ### 实现证据
 
@@ -47,6 +47,14 @@
   integrity、文件数、npm package-level README、两份 tarball README、npm
   publish/SLSA attestations、tag commit 及两个 jsDelivr SVG。发布 workflow、
   维护文档和 publish skill 已同步，15 项聚焦 release 测试通过。
+- 2026-09-29：最终覆盖显式拒绝 registry `gitHead` 或 SLSA provenance
+  dependency 指向不同 commit。`pnpm check` 通过 55 项 unit、24 项 contract、
+  80 项 integration（78 通过，2 项因 Windows 权限按预期跳过）及 1 项安装后
+  E2E；独立执行 `pnpm check:skills`、`pnpm lint:markdown`、
+  `pnpm pack:check` 和 `pnpm test:e2e` 也全部通过。包内容检查确认 38 个文件
+  及 SHA-512 integrity，最终候选同时通过 `git diff --check` 与
+  `silvermoon check --worktree --json`，既有 CLI、schema 与 lifecycle 测试
+  均保持通过。
 
 ## Deployment
 

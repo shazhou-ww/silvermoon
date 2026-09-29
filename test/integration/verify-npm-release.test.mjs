@@ -255,6 +255,15 @@ test("verifies registry identity, READMEs, provenance, and jsDelivr assets", asy
   await assert.rejects(
     () =>
       verifyNpmRelease(release, {
+        fetchImpl: fetchFor({
+          versionMetadata: { gitHead: "b".repeat(40) },
+        }),
+      }),
+    /npm gitHead mismatch/,
+  );
+  await assert.rejects(
+    () =>
+      verifyNpmRelease(release, {
         fetchImpl: fetchFor({ asset: Buffer.from("<svg>different</svg>") }),
       }),
     /jsDelivr asset .* does not match/,
@@ -269,6 +278,25 @@ test("verifies registry identity, READMEs, provenance, and jsDelivr assets", asy
         }),
       }),
     /npm publish and SLSA provenance attestations are both required/,
+  );
+
+  const mismatchedProvenance = structuredClone(attestations);
+  const provenanceEnvelope =
+    mismatchedProvenance.attestations[1].bundle.dsseEnvelope;
+  const provenancePayload = JSON.parse(
+    Buffer.from(provenanceEnvelope.payload, "base64").toString("utf8"),
+  );
+  provenancePayload.predicate.buildDefinition
+    .resolvedDependencies[0].digest.gitCommit = "b".repeat(40);
+  provenanceEnvelope.payload = Buffer.from(
+    JSON.stringify(provenancePayload),
+  ).toString("base64");
+  await assert.rejects(
+    () =>
+      verifyNpmRelease(release, {
+        fetchImpl: fetchFor({ attestations: mismatchedProvenance }),
+      }),
+    /SLSA provenance does not resolve the expected release commit/,
   );
 
   const retries = [];
