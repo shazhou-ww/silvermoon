@@ -11,7 +11,7 @@
 - [x] **I-S05:** 整合 domain messages 与 performance trace
 - [x] **I-S06:** 迁移 feature integrations、文档与测试
 - [x] **I-S07:** 准备 0.2.0 RC implementation candidate
-- [ ] **I-S08:** 准备已验证 RC 之后的 stable implementation candidate
+- [x] **I-S08:** 准备已验证 RC 之后的 stable implementation candidate
 
 ### Implementation acceptance criteria
 
@@ -24,7 +24,7 @@
 - [x] **I-AC07:** Trace 不泄露完整 domain payload
 - [x] **I-AC08:** 现有行为完成一致迁移
 - [x] **I-AC09:** 0.2.0-rc.1 candidate 可供明确验收
-- [ ] **I-AC10:** Stable 0.2.0 implementation candidate 独立通过第二次验收门
+- [x] **I-AC10:** Stable 0.2.0 implementation candidate 独立通过第二次验收门
 
 ### Implementation evidence
 
@@ -42,6 +42,19 @@
 - 2026-09-29: RC `0.2.0-rc.1` 已按 Deployment evidence 发布和验证。用户明确同意
   返回 implementing 准备 stable candidate；新增 I-S08/I-AC10 以限定版本变更、
   验证和再次 acceptance gate。Stable manifest 与发布尚未处理。
+- 2026-09-29: Stable implementation candidate 将 manifest 更新为 `0.2.0`；
+  经检索没有额外 exact-version install assertion 需要同步，RC 发布命令示例保留为
+  历史 prerelease 指令。Candidate commit
+  `b768aeda26508b5651ae7211d84d6cbae77c1e98` 已发布到 `main`，Silvermoon
+  remote snapshot 通过且仍报告 implementing；精确 Implementation revision 为
+  `4d8bd5c4bf990096602f9b6e60a34bbac61fb7cf`，对应
+  [Implementation.md](https://github.com/shazhou-ww/silvermoon/blob/b768aeda26508b5651ae7211d84d6cbae77c1e98/.silvermoon/ideas/01M3NM5KSVV303Z8T9P63Q2JZ8/outer/inner/Implementation.md)。
+  Frozen install、完整
+  `pnpm check`（65 unit、30 contract、113 integration；111 pass、2 Windows
+  symlink permission skips）、pack（46 files）及 installed-package E2E 通过。
+  Stable release planner 对该 main commit 返回 `publicationState: absent`、
+  `distTag: latest`；未创建 `npm/silvermoon/v0.2.0` tag、未执行 stable publish，
+  也未记录新的 implementation acceptance。
 
 ## Deployment
 
