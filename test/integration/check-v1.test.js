@@ -1,11 +1,12 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterEach, test } from "node:test";
 
 import { observeGitCommands } from "../../src/git.js";
 import { checkRepository } from "../../src/index.js";
+import { REPOSITORY_SKILL_PATH } from "../../src/adoption.js";
 import { serializeIdeaStatus } from "../../src/ideas.js";
 import {
   GUIDANCE_ROOT,
@@ -61,6 +62,41 @@ test("checks HEAD with a project-only observation and resolved commit version", 
   assert.equal(report.observation.state, "project-ready");
   assert.equal(report.observation.ideas.counts.preparing, 1);
   assert.deepEqual(report.observation.problems, []);
+});
+
+test("accepts canonical skill line endings across every snapshot target", async () => {
+  const repository = await fixture();
+  const skillPath = join(
+    repository.root,
+    ...REPOSITORY_SKILL_PATH.split("/"),
+    "SKILL.md",
+  );
+  const source = await readFile(skillPath, "utf8");
+  const lf = source.replaceAll("\r\n", "\n");
+  await writeFile(
+    skillPath,
+    source.includes("\r\n") ? lf : lf.replaceAll("\n", "\r\n"),
+  );
+  git(repository.root, "add", ".");
+  git(repository.root, "commit", "-m", "Use alternate skill line endings");
+  git(repository.root, "push", "origin", "main");
+
+  for (const target of [
+    {},
+    { commit: "HEAD" },
+    { remote: true },
+    { staged: true },
+    { worktree: true },
+  ]) {
+    const report = await checkRepository({
+      ...target,
+      root: repository.root,
+      userHome: repository.base,
+    });
+
+    assert.equal(report.observation.state, "project-ready");
+    assert.deepEqual(report.observation.problems, []);
+  }
 });
 
 test("keeps the requested revision in intention and only the resolved commit in observation", async () => {
