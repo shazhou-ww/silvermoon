@@ -47,6 +47,14 @@ check、skill contract 和 installed-package E2E，覆盖文件缺省、三个�
 readiness ordering、内容边界、SHA-1/SHA-256、双语 framing 与全部 check
 targets，并运行 release-grade 检查。
 
+### I-S07: 消除 canonical skill 的跨平台换行误差
+
+部署验证发现，从 Git blob 打包的 LF canonical skill 在
+`core.autocrlf=true` 的 Windows consumer 中会被 snapshot checkout 转为
+CRLF，导致内容未变化却报告 `canonical-skill-mismatched`。canonical skill
+digest 必须把有效文本的 CRLF/LF 视为等价，同时继续逐字节拒绝其他文本变化和
+二进制变化；增加跨平台 unit 与 installed-package regression coverage。
+
 ## Acceptance criteria
 
 ### I-AC01: 缺省项目完全兼容
@@ -107,6 +115,15 @@ materialization 责任；canonical/generated skill 内容一致。`pnpm check`�
 `pnpm check:skills`、Markdown links、package/installed E2E、
 `git diff --check`、`silvermoon check --worktree` 与 staged check 全部通过。
 
+### I-AC09: 发布包 skill 校验不受 Git 换行转换影响
+
+从 registry-style tarball 安装 Silvermoon、用支持的 `skills add` 命令注册
+canonical skill，并在 `core.autocrlf=true` repository 中提交后，HEAD、
+worktree、staged、commit 与 remote check 均保持 `project-ready`。仅 CRLF/LF
+转换可等价；任一其他内容变化仍产生 `canonical-skill-mismatched`。通过反向
+换行 unit fixture、Windows installed-package E2E 和真实 registry consumer
+复验证明。
+
 ## Verification evidence
 
 - `src/guidance.js` 与 `src/git.js` 从选定 Git tree 读取固定 entry、验证 blob
@@ -121,3 +138,14 @@ materialization 责任；canonical/generated skill 内容一致。`pnpm check`�
 - 2026-09-29 的最终候选通过 `pnpm check`、`pnpm check:skills`、
   `git diff --check`、`silvermoon check --worktree` 与
   `silvermoon check --staged`。
+- 2026-09-29 部署 `silvermoon@0.1.3-rc.1` 后，真实 registry tarball 在
+  Windows `core.autocrlf=true` consumer 的 HEAD check 中把已注册且文件内容
+  相同的 skill 误报为 `canonical-skill-mismatched`；将 repository-local
+  `core.autocrlf` 改为 `false` 后同一 snapshot 通过，确认是 snapshot checkout
+  的换行转换而不是 skill 漂移。
+- `src/adoption.js` 只为不含 NUL 且可解码为 UTF-8 的 canonical skill 文本统一
+  CRLF/LF 后计算 digest；其他字节保持原样，因此真实文本或二进制漂移仍失败。
+- unit regression 使用与运行包相反的文本换行，integration regression 覆盖
+  HEAD、worktree、staged、commit 与 remote，installed-package E2E 强制
+  `core.autocrlf=true`。修复候选再次通过 `pnpm check`、`pnpm check:skills`、
+  `git diff --check` 与 `silvermoon check --worktree`。
