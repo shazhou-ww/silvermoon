@@ -1,0 +1,47 @@
+# Ledger
+
+## Implementation
+
+### Implementation steps
+
+- [ ] **I-S01:** 定义 domain message 与 projection contracts
+- [ ] **I-S02:** 实现 observation reducer 与 actions projector
+- [ ] **I-S03:** 建立 functional core 与 imperative effect driver
+- [ ] **I-S04:** 以纯函数生成并渲染 response
+- [ ] **I-S05:** 整合 domain messages 与 performance trace
+- [ ] **I-S06:** 迁移 feature integrations、文档与测试
+- [ ] **I-S07:** 准备 0.2.0 RC implementation candidate
+
+### Implementation acceptance criteria
+
+- [ ] **I-AC01:** 同一 domain stream 可确定性重建 report
+- [ ] **I-AC02:** Response 只依赖 intention 与 internal observation
+- [ ] **I-AC03:** Effect 执行与 action history 精确对应
+- [ ] **I-AC04:** 四字段 public report 覆盖全部命令
+- [ ] **I-AC05:** 默认输出 answer-first 且 stderr 保持纯净
+- [ ] **I-AC06:** Unified trace 保留性能并解释业务路径
+- [ ] **I-AC07:** Trace 不泄露完整 domain payload
+- [ ] **I-AC08:** 现有行为完成一致迁移
+- [ ] **I-AC09:** 0.2.0-rc.1 candidate 可供明确验收
+
+## Deployment
+
+### Deployment steps
+
+- [ ] **D-S01:** 确认 RC 发布前提与显式授权
+- [ ] **D-S02:** 发布不可变的 0.2.0 RC
+- [ ] **D-S03:** 在真实消费者中验证 RC
+- [ ] **D-S04:** 处理 RC 缺陷或确认稳定候选
+- [ ] **D-S05:** 重新验收 0.2.0 stable implementation
+- [ ] **D-S06:** 发布并验证稳定 0.2.0
+- [ ] **D-S07:** 请求最终 deployment acceptance
+
+### Deployment acceptance criteria
+
+- [ ] **D-AC01:** RC 在 stable 之前发布且不影响 latest
+- [ ] **D-AC02:** RC 真实验证新的 command runtime
+- [ ] **D-AC03:** Phase guidance 与既有安全边界不回归
+- [ ] **D-AC04:** RC 失败只产生新的不可变候选
+- [ ] **D-AC05:** Stable candidate 经第二次 implementation gate
+- [ ] **D-AC06:** Stable 0.2.0 独立发布并完整验证
+- [ ] **D-AC07:** 最终验收证据完整可追溯
