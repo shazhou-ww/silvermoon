@@ -27,17 +27,19 @@
 ### Deployment steps
 
 - [x] **D-S01:** 发布明确授权的 Silvermoon 版本
-  - Evidence: `npm/silvermoon/v0.2.1` points to the published primary release commit; GitHub Actions run `36537400522` succeeded and npm `latest` resolves to `0.2.1`.
-- [ ] **D-S02:** 在干净消费者仓库验证 npm 整备
-  - Evidence: npm and pnpm workspaces passed. Published `0.2.1` with Yarn 1.22.22 saved exact `0.2.1` instead of `^0.2.1`; the corrected local candidate passed a real Yarn workspace. Bun 1.3.10 passed a non-workspace install/CLI with a fresh cache; its default workspace linker still fails with `ENOENT` on a transitive package, while explicit `--linker=hoisted` passes. The published default workspace command remains unverified.
+  - Evidence: `npm/silvermoon/v0.2.2` points to primary release commit `ace5dfb36e775f8a2628ee81aa87a04ef1e154b5`. GitHub Actions run `36543345220` attempt 2 completed successfully with `VERIFY_NPM_RELEASE_OK`; npm `latest` resolves to `0.2.2`, and the registry integrity matches the verified tarball. Attempt 1's 404s were registry propagation delays; no version or tag was replaced.
+- [x] **D-S02:** 在干净消费者仓库验证 npm 整备
+  - Evidence: Published `0.2.2` workspace fixtures for npm, pnpm, Yarn 1.22.22, and Bun 1.3.10 all reported blocking `npm-dependency-missing` with their correct root-workspace remediation. Executing each remediation wrote `devDependencies.silvermoon: "^0.2.2"`, updated its lockfile, installed CLI version `0.2.2`, and made the local skill available. Registering from `./node_modules/silvermoon/skills` removed the dependency and canonical-skill blockers; each copied `SKILL.md` matched the package source SHA-256 `CA49A1227668E5B589A367AA0EE6BA4C19F0A3A742CA0C8E9E1535AB5B5A147A`.
 - [x] **D-S03:** 验证非 npm 与自举场景
-  - Evidence: Published `silvermoon@0.2.1` reached `project-ready` in a no-manifest/no-lockfile/no-node_modules Git fixture; a clean source clone at the release commit passed frozen install, `whats-next`, temporary `create-idea`, and `check --worktree`.
+  - Evidence: Published `silvermoon@0.2.2` reached `project-ready` in a Git fixture with no root `package.json`, lockfile, or `node_modules`; a clean source clone at the earlier release commit passed frozen install, `whats-next`, temporary `create-idea`, and `check --worktree`.
 
 ### Deployment acceptance criteria
 
-- [ ] **D-AC01:** 已发布 npm 项目获得阻塞且可执行的版本对齐指令
-- [ ] **D-AC02:** 安装来源、skill 与运行版本保持一致
+- [x] **D-AC01:** 已发布 npm 项目获得阻塞且可执行的版本对齐指令
+  - Evidence: Each manager's actual `0.2.2` CLI blocked a workspace with a missing root dependency and emitted the appropriate command sequence, including Yarn's explicit `npm pkg set` followed by `yarn install`. After applying remediation, no npm-dependency or canonical-skill problem remained.
+- [x] **D-AC02:** 安装来源、skill 与运行版本保持一致
+  - Evidence: All four workspace managers resolved CLI version `0.2.2`, registered the canonical skill from the installed package, and produced the same source/copy SHA-256. The release verifier also matched the published registry integrity, provenance, tag, and source commit to the verified `0.2.2` tarball.
 - [x] **D-AC03:** 非 npm 项目不承担 npm 整备成本
-  - Evidence: Published `silvermoon@0.2.1` returned `project-ready` for an isolated non-npm Git fixture with canonical config and skill, and no root `package.json`, `node_modules`, or lockfile.
+  - Evidence: Published `silvermoon@0.2.2` returned `project-ready` for an isolated non-npm Git fixture with canonical config and skill, and no root `package.json`, `node_modules`, or lockfile.
 - [x] **D-AC04:** Silvermoon source checkout 保持可开发
   - Evidence: Release source checkout has no `devDependencies.silvermoon`; from a clean clone, `pnpm install --frozen-lockfile`, `whats-next`, `create-idea`, and `check --worktree` succeeded.
