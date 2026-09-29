@@ -1,52 +1,46 @@
-# Implementation
+# 实施
 
 ## Steps
 
-### I-S01: Replace fixed setup instructions with Agent navigation
+### I-S01: 用 Agent 导航替代固定整备指令
 
-Rewrite both README Quick Start sections around one project-Agent entry point:
-`npx silvermoon whats-next`. Tell the Agent to follow the current report,
-preserve existing work, and repeat after observable changes until the default
-output reports `navigation-ready`. Remove fixed dependency, package-manager,
-skill-registration, and snapshot-check setup recipes from those sections.
+围绕单一项目 Agent 入口 `npx silvermoon whats-next` 重写两份 README 的 Quick
+Start。要求 Agent 遵循当前报告、保留已有工作，并在产生可观察变更后重复运行，
+直至默认输出报告 `navigation-ready`。从这些章节移除固定的 dependency、
+package manager、skill 注册与 snapshot 检查配方。
 
-### I-S02: Expose navigation readiness in default output
+### I-S02: 在默认输出中展示导航就绪状态
 
-Include the exact `navigation-ready` state in the localized response summary
-for successful bare `whats-next` navigation. Keep the four-projection JSON
-shape and the observation state unchanged; the human renderer continues to
-render only the self-contained response.
+在成功的裸 `whats-next` 导航本地化 response summary 中包含精确的
+`navigation-ready` 状态。保持四个 projection 的 JSON 形状与 observation state
+不变；人类可读 renderer 仍只渲染自足的 response。
 
-### I-S03: Protect the workflow with regression coverage and issue traceability
+### I-S03: 以回归覆盖和 issue 可追踪性保护工作流
 
-Add English and Chinese regression assertions for the visible readiness state
-and the Agent-guided Quick Start boundary. Keep the CLI-output problem linked
-to [GitHub issue #1](https://github.com/shazhou-ww/silvermoon/issues/1).
+为可见的就绪状态和 Agent 引导的 Quick Start 边界增加英文与中文回归断言。保持
+CLI 输出问题与 [GitHub issue #1](https://github.com/shazhou-ww/silvermoon/issues/1)
+关联。
 
 ## Acceptance criteria
 
-### I-AC01: Quick Starts delegate setup to the project Agent
+### I-AC01: Quick Start 将整备委托给项目 Agent
 
-`README.md` and `README.zh-CN.md` use `npx silvermoon whats-next`, require the
-exact visible `navigation-ready` state, and omit fixed install and registration
-recipes. The documentation contract test proves the required phrases and
-excluded details in both sections.
+`README.md` 与 `README.zh-CN.md` 使用 `npx silvermoon whats-next`，要求显示
+精确可见的 `navigation-ready` 状态，并省略固定安装和注册配方。documentation
+contract test 证明两个章节均包含必要措辞且排除了相关细节。
 
-### I-AC02: Human-readable readiness matches the observation
+### I-AC02: 人类可读就绪状态与 observation 一致
 
-For English and Chinese bare navigation, default output contains the exact
-`navigation-ready` value while `observation.state` remains
-`navigation-ready`. Unit and integration tests prove the localized rendered
-text and the unchanged structured observation.
+对于英文与中文裸导航，默认输出包含精确的 `navigation-ready` 值，同时
+`observation.state` 保持为 `navigation-ready`。unit 与 integration tests
+证明本地化渲染文本及未改变的结构化 observation。
 
-### I-AC03: The output gap remains jointly trackable
+### I-AC03: 输出缺口保持共同可追踪
 
-GitHub issue #1 remains linked from this implementation contract and describes
-the missing human-readable readiness state. Its URL and open state can be
-verified with the GitHub issue API or CLI.
+本实现契约继续关联 GitHub issue #1，且该 issue 描述人类可读就绪状态缺失问题。
+可通过 GitHub issue API 或 CLI 验证其 URL 与 open 状态。
 
-### I-AC04: Repository validation passes
+### I-AC04: 仓库验证通过
 
-The complete `pnpm check` suite succeeds for the implementation candidate,
-including unit, integration, contract, end-to-end, skill, Markdown, and package
-checks.
+实现候选通过完整的 `pnpm check` suite，包括 unit、integration、contract、
+end-to-end、skill、Markdown 与 package 检查。
