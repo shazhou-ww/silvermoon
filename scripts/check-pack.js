@@ -4,7 +4,7 @@ import { existsSync, readFileSync, statSync } from "node:fs";
 import { basename, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { inspectNpmTarball } from "./verify-npm-release.mjs";
+import { inspectNpmTarball } from "./npm-tarball.mjs";
 
 const packageRoot = fileURLToPath(new URL("..", import.meta.url));
 const configuredTarball = process.env.SILVERMOON_TARBALL?.trim();

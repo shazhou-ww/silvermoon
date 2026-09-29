@@ -14,7 +14,7 @@ import { join, resolve } from "node:path";
 import test, { afterEach } from "node:test";
 
 import { formatGitHubOutput } from "../../scripts/build-npm-tarball.mjs";
-import { inspectNpmTarball } from "../../scripts/verify-npm-release.mjs";
+import { inspectNpmTarball } from "../../scripts/npm-tarball.mjs";
 
 const temporaryDirectories = [];
 const builderPath = resolve("scripts/build-npm-tarball.mjs");
