@@ -2,24 +2,23 @@
 
 ## Steps
 
-<!--
-Give every step a stable D-Sxx identifier and a level-three heading.
-Describe deployment or external-world verification work.
-Do not use task-list checkboxes in this document.
--->
+### D-S01: Verify the published repository candidate
 
-### D-S01: Step title
+After this deployment contract is published, refresh `origin/main` and verify
+the accepted implementation from the primary branch. Run the complete
+repository check, validate the remote Silvermoon snapshot, and exercise the
+default human-readable `whats-next` output to confirm that Active ideas is
+rendered as an ID/Alias/State Markdown table.
 
-<!-- Describe this deployment or external-verification step. -->
+This deployment ends with repository verification. It must not publish an npm
+package, create a release tag, or invoke the npm publishing workflow.
 
 ## Acceptance criteria
 
-<!--
-Give every criterion a stable D-ACxx identifier and a level-three heading.
-Describe both the observable external outcome and the method that proves it.
-Do not create a separate validation section or use task-list checkboxes.
--->
+### D-AC01: Published primary passes repository verification
 
-### D-AC01: Criterion title
-
-<!-- Describe the required external outcome and how an Agent can prove it. -->
+The implementation and this deployment contract are reachable from refreshed
+`origin/main`; `pnpm check` exits successfully; `silvermoon check --remote
+--json` reports a valid remote snapshot; and the default human-readable
+`whats-next` output contains the Active ideas ID/Alias/State table. The recorded
+deployment evidence confirms that no npm publication was performed.

@@ -14,8 +14,8 @@
 
 ### Deployment steps
 
-- [ ] **D-S01:** Step title
+- [ ] **D-S01:** Verify the published repository candidate
 
 ### Deployment acceptance criteria
 
-- [ ] **D-AC01:** Criterion title
+- [ ] **D-AC01:** Published primary passes repository verification
