@@ -60,13 +60,44 @@
 
 ### Deployment steps
 
-- [ ] **D-S01:** 通过受保护标签发布明确授权的版本
-- [ ] **D-S02:** 核对注册表与发布产物身份
-- [ ] **D-S03:** 验证公开 README 与资产兼容性
+- [x] **D-S01:** 通过受保护标签发布明确授权的版本
+- [x] **D-S02:** 核对注册表与发布产物身份
+- [x] **D-S03:** 验证公开 README 与资产兼容性
 
 ### Deployment acceptance criteria
 
-- [ ] **D-AC01:** 发布来源可追溯到受保护主分支
-- [ ] **D-AC02:** 注册表提供经过验证的同一产物
-- [ ] **D-AC03:** 公开 README 使用不可变 CDN 资源
-- [ ] **D-AC04:** 历史资产 URL 保持可用
+- [x] **D-AC01:** 发布来源可追溯到受保护主分支
+- [x] **D-AC02:** 注册表提供经过验证的同一产物
+- [x] **D-AC03:** 公开 README 使用不可变 CDN 资源
+- [x] **D-AC04:** 历史资产 URL 保持可用
+
+### 部署证据
+
+- 2026-09-29：不可变 tag `npm/silvermoon/v0.1.3` 指向
+  `36f91ea380cfbe132eeda6431dfc81ed6b542557`，该提交可从刷新后的
+  `origin/main` 到达。GitHub tag ruleset `Protect npm release tags`
+  处于 active 状态，覆盖 `refs/tags/npm/*/*` 并限制创建、更新和删除。
+  `Publish npm package` workflow run
+  [`36521754553`](https://github.com/shazhou-ww/silvermoon/actions/runs/36521754553)
+  的 tag、head commit 和 provenance invocation 完全一致，全部步骤成功；
+  SLSA payload 同时绑定 repository、`.github/workflows/publish-npm.yml`、
+  tag ref、Git commit 和 GitHub-hosted builder。
+- 2026-09-29：canonical npm registry 将 `latest` 指向 `0.1.3`，版本元数据的
+  `gitHead` 为发布提交。下载 tarball 的 SHA-256 为
+  `8fad3cca22a5917a826df2a60b1754102f17eacf905bf955b8e89aa9cac57d95`，
+  shasum 为 `7cca9b8a4dd547ef644fd267ba85fde0a9c35dba`，integrity 为
+  `sha512-f8aHS4ob8yntOyZvtps/3g1pBT0L/Imlq9u2/d5IOCStQpm+zzWSWbuGyJD/0qzUGYr6iaIOsXd2xx6gq7l1fw==`；
+  三者与 workflow 唯一候选和 registry 元数据一致。39 个文件通过发布 tag
+  的 package allowlist 和安装后 E2E，独立 verifier 再次输出
+  `VERIFY_NPM_RELEASE_OK`。
+- 2026-09-29：registry package-level README 与 tarball `README.md`
+  字节一致；英文和中文 README 均包含发布提交固定的主视觉及头像 jsDelivr
+  URL，且不含 `@main`、`HEAD` 或 raw GitHub 可移动资源。npm `0.1.3`
+  页面实际显示并成功加载两张图片，同时公开显示同一 workflow、source commit
+  与 Sigstore transparency entry。
+- 2026-09-29：历史 raw GitHub 主视觉和 `docs/assets` 头像 URL 均返回
+  HTTP 200 与 `image/svg+xml`，其 SHA-256 分别为
+  `b60395a15bf57ed2f8e3ae41a7d29681d44b101626690962fa9bd7a802816796`
+  和 `116e6dd7e6a651648a776c660d420fc68f6534d2a4c7e3965c80e423ae18ed58`，
+  与 `0.1.3` tarball canonical 资产逐字节一致；npm `0.1.0` 历史页面的
+  主视觉和头像也仍可见并成功加载。
