@@ -129,9 +129,9 @@ The tag is the release instruction. Do not run a second publication command.
    immutable database ID.
 4. Require the `Verify published package` step to emit
    `VERIFY_NPM_RELEASE_OK`. This proves the exact version, dist-tag, registry
-   integrity, tarball bytes and file count, package-level README, both tarball
-   READMEs, npm publish and SLSA provenance, tagged commit, and commit-pinned
-   jsDelivr assets all match the single candidate tarball.
+   `gitHead`, integrity, tarball bytes and file count, package-level README,
+   both tarball READMEs, npm publish and SLSA provenance, tagged commit, and
+   commit-pinned jsDelivr assets all match the single candidate tarball.
 5. Report the package version, release commit, tag, workflow URL and database
    ID, registry integrity, provenance invocation URL, and jsDelivr asset URLs.
 

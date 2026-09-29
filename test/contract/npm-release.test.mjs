@@ -180,9 +180,11 @@ test("uses a protected, least-privilege trusted-publishing workflow", async () =
     build.env.ARTIFACT_DIRECTORY,
     "${{ steps.stage.outputs.artifact_directory }}",
   );
+  assert.equal(build.env.RELEASE_COMMIT, "${{ github.sha }}");
   assert.match(build.run, /build-npm-tarball\.mjs/);
   assert.match(build.run, /--package-directory "\$PACKAGE_DIRECTORY"/);
   assert.match(build.run, /--output-directory "\$ARTIFACT_DIRECTORY"/);
+  assert.match(build.run, /--git-head "\$RELEASE_COMMIT"/);
   for (const step of [generateReadme, tarball, e2e, publication]) {
     assert.equal(
       step["working-directory"],
@@ -203,6 +205,7 @@ test("uses a protected, least-privilege trusted-publishing workflow", async () =
     tarball.env.SILVERMOON_TARBALL_INTEGRITY,
     "${{ steps.package.outputs.tarball_integrity }}",
   );
+  assert.equal(tarball.env.SILVERMOON_RELEASE_COMMIT, "${{ github.sha }}");
   assert.equal(
     publication.env.SILVERMOON_TARBALL_SHA256,
     "${{ steps.package.outputs.tarball_sha256 }}",
@@ -227,6 +230,7 @@ test("uses a protected, least-privilege trusted-publishing workflow", async () =
     1,
   );
   assert.match(checkPack, /SILVERMOON_TARBALL/);
+  assert.match(checkPack, /SILVERMOON_RELEASE_COMMIT/);
   assert.match(checkPack, /--dry-run/);
   assert.match(installedPackage, /process\.env\.SILVERMOON_TARBALL/);
   assert.ok(
@@ -242,6 +246,7 @@ test("uses a protected, least-privilege trusted-publishing workflow", async () =
   assert.match(verification.run, /--tag "\$RELEASE_TAG"/);
   for (const required of [
     "dist-tags",
+    "Candidate tarball gitHead mismatch",
     "npm dist identity",
     "readmeFilename",
     "attestations",
@@ -266,7 +271,7 @@ test("documents trusted-publisher setup and the protected release procedure", as
     "Environment: `npm`",
     "Allowed action: direct `npm publish`",
     "tag ruleset targeting `npm/**`",
-    "git tag npm/silvermoon/v0.1.1 origin/main",
+    "git tag npm/silvermoon/v0.1.2 origin/main",
     "RELEASE_PACKAGES",
     "Do not move or recreate the tag",
     "pnpm test:unit",

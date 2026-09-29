@@ -108,6 +108,7 @@ test("verifies registry identity, READMEs, provenance, and jsDelivr assets", asy
   const candidate = await buildNpmTarball({
     packageDirectory,
     outputDirectory,
+    gitHead: commit,
   });
   const tarball = await readFile(candidate.tarballPath);
   const sha512 = createHash("sha512").update(tarball).digest("hex");

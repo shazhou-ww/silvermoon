@@ -4,10 +4,13 @@ import { existsSync, readFileSync, statSync } from "node:fs";
 import { basename, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { inspectNpmTarball } from "./verify-npm-release.mjs";
+
 const packageRoot = fileURLToPath(new URL("..", import.meta.url));
 const configuredTarball = process.env.SILVERMOON_TARBALL?.trim();
 const expectedSha256 = process.env.SILVERMOON_TARBALL_SHA256?.trim();
 const expectedIntegrity = process.env.SILVERMOON_TARBALL_INTEGRITY?.trim();
+const expectedGitHead = process.env.SILVERMOON_RELEASE_COMMIT?.trim();
 const tarball = configuredTarball
   ? resolve(packageRoot, configuredTarball)
   : null;
@@ -18,6 +21,18 @@ if (tarball && (!existsSync(tarball) || !statSync(tarball).isFile())) {
 if (!tarball && (expectedSha256 || expectedIntegrity)) {
   process.stderr.write(
     "Tarball identity was configured without SILVERMOON_TARBALL.\n",
+  );
+  process.exit(1);
+}
+if (expectedGitHead && !/^[0-9a-f]{40,64}$/i.test(expectedGitHead)) {
+  process.stderr.write(
+    "SILVERMOON_RELEASE_COMMIT must be a full hexadecimal Git object ID.\n",
+  );
+  process.exit(1);
+}
+if (expectedGitHead && !tarball) {
+  process.stderr.write(
+    "Release commit was configured without SILVERMOON_TARBALL.\n",
   );
   process.exit(1);
 }
@@ -110,8 +125,25 @@ if (packed.status !== 0) {
   );
   const integrityMismatch =
     expectedIntegrity && result.integrity !== expectedIntegrity;
+  let actualGitHead;
+  if (expectedGitHead) {
+    try {
+      actualGitHead = (await inspectNpmTarball(tarball)).manifest.gitHead;
+    } catch (error) {
+      process.stderr.write(`Could not inspect configured npm tarball: ${error.message}\n`);
+      process.exit(1);
+    }
+  }
+  const gitHeadMismatch =
+    expectedGitHead && actualGitHead !== expectedGitHead;
 
-  if (missing.length > 0 || unexpected.length > 0 || emptyReadme || integrityMismatch) {
+  if (
+    missing.length > 0 ||
+    unexpected.length > 0 ||
+    emptyReadme ||
+    integrityMismatch ||
+    gitHeadMismatch
+  ) {
     if (missing.length > 0) process.stderr.write(`Missing packed files: ${missing.join(", ")}\n`);
     if (unexpected.length > 0) {
       process.stderr.write(`Unexpected packed files: ${unexpected.join(", ")}\n`);
@@ -124,10 +156,15 @@ if (packed.status !== 0) {
         `Configured npm tarball integrity mismatch: expected ${expectedIntegrity}, found ${result.integrity}.\n`,
       );
     }
+    if (gitHeadMismatch) {
+      process.stderr.write(
+        `Configured npm tarball gitHead mismatch: expected ${expectedGitHead}, found ${actualGitHead ?? "missing"}.\n`,
+      );
+    }
     process.exitCode = 1;
   } else {
     process.stdout.write(
-      `PACK_OK name=${result.name} version=${result.version} files=${files.length} source=${tarball ?? "directory-dry-run"} integrity=${result.integrity}\n`,
+      `PACK_OK name=${result.name} version=${result.version} files=${files.length} source=${tarball ?? "directory-dry-run"} integrity=${result.integrity}${expectedGitHead ? ` gitHead=${actualGitHead}` : ""}\n`,
     );
   }
 }
