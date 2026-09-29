@@ -83,6 +83,7 @@ if (packed.status !== 0) {
     "README.md",
     "README.zh-CN.md",
     "assets/silvermoon-avatar.svg",
+    "assets/silvermoon-mascot.png",
     "assets/silvermoon.svg",
     "bin/silvermoon.js",
     "docs/assets/silvermoon-avatar.svg",

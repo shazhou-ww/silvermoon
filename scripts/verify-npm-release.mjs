@@ -17,6 +17,7 @@ const npmPublishType =
 const assetPaths = [
   "assets/silvermoon.svg",
   "assets/silvermoon-avatar.svg",
+  "assets/silvermoon-mascot.png",
 ];
 
 async function fetchResponse(url, description, fetchImpl, headers = {}) {

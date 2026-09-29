@@ -36,7 +36,7 @@ test("rewrites the real repository README onto an immutable commit without touch
   assert.match(
     output,
     new RegExp(
-      `cdn\\.jsdelivr\\.net/gh/shazhou-ww/silvermoon@${commit}/assets/silvermoon-avatar\\.svg`,
+      `cdn\\.jsdelivr\\.net/gh/shazhou-ww/silvermoon@${commit}/assets/silvermoon-mascot\\.png`,
     ),
   );
   assert.match(
@@ -109,7 +109,7 @@ test("--source generates an immutable alternate README without changing it", asy
     assert.match(
       generated,
       new RegExp(
-        `cdn\\.jsdelivr\\.net/gh/shazhou-ww/silvermoon@${commit}/assets/silvermoon-avatar\\.svg`,
+        `cdn\\.jsdelivr\\.net/gh/shazhou-ww/silvermoon@${commit}/assets/silvermoon-mascot\\.png`,
       ),
     );
     assert.equal(await readFile(sourcePath, "utf8"), before);

@@ -31,6 +31,7 @@ const attestationUrl =
 const assets = [
   "assets/silvermoon.svg",
   "assets/silvermoon-avatar.svg",
+  "assets/silvermoon-mascot.png",
 ];
 
 afterEach(async () => {
@@ -75,6 +76,7 @@ test("verifies registry identity, READMEs, provenance, and jsDelivr assets", asy
   const assetContents = new Map([
     ["assets/silvermoon.svg", Buffer.from("<svg>hero</svg>\n")],
     ["assets/silvermoon-avatar.svg", Buffer.from("<svg>avatar</svg>\n")],
+    ["assets/silvermoon-mascot.png", Buffer.from("mascot")],
   ]);
   const assetUrls = assets.map(
     (path) => `https://cdn.jsdelivr.net/gh/${repository}@${commit}/${path}`,

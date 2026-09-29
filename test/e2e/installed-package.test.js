@@ -233,6 +233,10 @@ try {
     ),
   ]);
   assert.deepEqual(compatibilityAvatar, canonicalAvatar);
+  const mascot = await readFile(
+    join(consumer, "node_modules", "silvermoon", "assets", "silvermoon-mascot.png"),
+  );
+  assert.ok(mascot.length > 0);
   for (const schema of [
     "config.schema.json",
     "definitions.schema.json",
