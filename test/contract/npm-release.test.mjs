@@ -7,9 +7,20 @@ import { parseDocument } from "yaml";
 const releaseGuideUrl = new URL("../../docs/npm-package-releases.md", import.meta.url);
 const workflowUrl = new URL("../../.github/workflows/publish-npm.yml", import.meta.url);
 const publishSkillUrl = new URL("../../.agents/skills/publish/SKILL.md", import.meta.url);
+const buildTarballUrl = new URL("../../scripts/build-npm-tarball.mjs", import.meta.url);
+const checkPackUrl = new URL("../../scripts/check-pack.js", import.meta.url);
+const installedPackageUrl = new URL(
+  "../../test/e2e/installed-package.test.js",
+  import.meta.url,
+);
 
 test("uses a protected, least-privilege trusted-publishing workflow", async () => {
-  const source = await readFile(workflowUrl, "utf8");
+  const [source, buildTarball, checkPack, installedPackage] = await Promise.all([
+    readFile(workflowUrl, "utf8"),
+    readFile(buildTarballUrl, "utf8"),
+    readFile(checkPackUrl, "utf8"),
+    readFile(installedPackageUrl, "utf8"),
+  ]);
   const document = parseDocument(source);
   assert.deepEqual(document.errors, []);
 
@@ -36,7 +47,9 @@ test("uses a protected, least-privilege trusted-publishing workflow", async () =
     "Run contract tests",
     "Run integration tests",
     "Discover agent skills",
+    "Stage selected package",
     "Generate immutable npm README",
+    "Build selected package tarball",
     "Verify selected package tarball",
     "Test installed package",
   ];
@@ -52,9 +65,19 @@ test("uses a protected, least-privilege trusted-publishing workflow", async () =
   }
 
   const generateReadmeIndex = stepNames.indexOf("Generate immutable npm README");
+  const stageIndex = stepNames.indexOf("Stage selected package");
+  const buildIndex = stepNames.indexOf("Build selected package tarball");
   assert.ok(
-    generateReadmeIndex > stepNames.indexOf("Discover agent skills"),
-    "README generation must run after release validation and layered tests",
+    stageIndex > stepNames.indexOf("Discover agent skills"),
+    "staging must run after release validation and layered tests",
+  );
+  assert.ok(
+    stageIndex < generateReadmeIndex,
+    "staging must run before README generation",
+  );
+  assert.ok(
+    generateReadmeIndex < buildIndex,
+    "README generation must run before the one tarball build",
   );
   for (const name of [
     "Verify selected package tarball",
@@ -62,8 +85,8 @@ test("uses a protected, least-privilege trusted-publishing workflow", async () =
     "Publish selected package",
   ]) {
     assert.ok(
-      generateReadmeIndex < stepNames.indexOf(name),
-      `README generation must run before ${name}`,
+      buildIndex < stepNames.indexOf(name),
+      `the tarball build must run before ${name}`,
     );
   }
 
@@ -81,8 +104,12 @@ test("uses a protected, least-privilege trusted-publishing workflow", async () =
   const contract = publish.steps.find(({ name }) => name === "Run contract tests");
   const integration = publish.steps.find(({ name }) => name === "Run integration tests");
   const skills = publish.steps.find(({ name }) => name === "Discover agent skills");
+  const stage = publish.steps.find(({ name }) => name === "Stage selected package");
   const generateReadme = publish.steps.find(
     ({ name }) => name === "Generate immutable npm README",
+  );
+  const build = publish.steps.find(
+    ({ name }) => name === "Build selected package tarball",
   );
   const tarball = publish.steps.find(({ name }) => name === "Verify selected package tarball");
   const e2e = publish.steps.find(({ name }) => name === "Test installed package");
@@ -104,9 +131,17 @@ test("uses a protected, least-privilege trusted-publishing workflow", async () =
   assert.equal(contract.run, "pnpm test:contract");
   assert.equal(integration.run, "pnpm test:integration");
   assert.equal(skills.run, "pnpm check:skills");
+  assert.equal(stage.id, "stage");
+  assert.equal(
+    stage.env.PACKAGE_DIRECTORY,
+    "${{ steps.release.outputs.package_directory }}",
+  );
+  assert.match(stage.run, /git archive "\$GITHUB_SHA" \| tar -x -C "\$STAGE_ROOT"/);
+  assert.match(stage.run, /package_directory=\$PACKAGE_ROOT/);
+  assert.match(stage.run, /artifact_directory=\$ARTIFACT_DIRECTORY/);
   assert.equal(
     generateReadme["working-directory"],
-    "${{ steps.release.outputs.package_directory }}",
+    "${{ steps.stage.outputs.package_directory }}",
   );
   assert.equal(generateReadme.env.RELEASE_COMMIT, "${{ github.sha }}");
   assert.match(
@@ -118,15 +153,60 @@ test("uses a protected, least-privilege trusted-publishing workflow", async () =
     />\s*README\.md/,
     "README generation must use --out, never a shell redirect that truncates the source",
   );
+  assert.equal(build.id, "package");
+  assert.equal(
+    build.env.PACKAGE_DIRECTORY,
+    "${{ steps.stage.outputs.package_directory }}",
+  );
+  assert.equal(
+    build.env.ARTIFACT_DIRECTORY,
+    "${{ steps.stage.outputs.artifact_directory }}",
+  );
+  assert.match(build.run, /build-npm-tarball\.mjs/);
+  assert.match(build.run, /--package-directory "\$PACKAGE_DIRECTORY"/);
+  assert.match(build.run, /--output-directory "\$ARTIFACT_DIRECTORY"/);
   for (const step of [generateReadme, tarball, e2e, publication]) {
     assert.equal(
       step["working-directory"],
-      "${{ steps.release.outputs.package_directory }}",
+      "${{ steps.stage.outputs.package_directory }}",
     );
   }
+  for (const step of [tarball, e2e, publication]) {
+    assert.equal(
+      step.env.SILVERMOON_TARBALL,
+      "${{ steps.package.outputs.tarball_path }}",
+    );
+  }
+  assert.equal(
+    tarball.env.SILVERMOON_TARBALL_SHA256,
+    "${{ steps.package.outputs.tarball_sha256 }}",
+  );
+  assert.equal(
+    tarball.env.SILVERMOON_TARBALL_INTEGRITY,
+    "${{ steps.package.outputs.tarball_integrity }}",
+  );
+  assert.equal(
+    publication.env.SILVERMOON_TARBALL_SHA256,
+    "${{ steps.package.outputs.tarball_sha256 }}",
+  );
   assert.equal(tarball.run, "npm run pack:check");
   assert.equal(e2e.run, "npm run test:e2e");
-  assert.match(publication.run, /npm publish --access public --provenance/);
+  assert.match(publication.run, /sha256sum --check --strict/);
+  assert.match(
+    publication.run,
+    /npm publish "\$SILVERMOON_TARBALL" \\\n\s+--access public --provenance/,
+  );
+  assert.equal(
+    publish.steps.filter(({ run = "" }) => run.includes("build-npm-tarball.mjs")).length,
+    1,
+  );
+  assert.equal(
+    (buildTarball.match(/spawnImpl\(/g) ?? []).length,
+    1,
+  );
+  assert.match(checkPack, /SILVERMOON_TARBALL/);
+  assert.match(checkPack, /--dry-run/);
+  assert.match(installedPackage, /process\.env\.SILVERMOON_TARBALL/);
   assert.equal(publish.steps.some(({ run }) => run === "pnpm check"), false);
   assert.doesNotMatch(source, /NODE_AUTH_TOKEN|NPM_TOKEN/);
 });

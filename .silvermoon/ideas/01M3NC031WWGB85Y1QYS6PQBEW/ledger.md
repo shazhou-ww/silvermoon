@@ -6,7 +6,7 @@
 
 - [x] **I-S01:** 建立根级公开资产契约
 - [x] **I-S02:** 生成 commit 固定的 jsDelivr README
-- [ ] **I-S03:** 构建并发布单一 tarball
+- [x] **I-S03:** 构建并发布单一 tarball
 - [ ] **I-S04:** 加强发布编排与外部核验
 - [ ] **I-S05:** 覆盖发布合同并完成仓库验证
 
@@ -14,7 +14,7 @@
 
 - [x] **I-AC01:** 公开资产路径一致且向后兼容
 - [x] **I-AC02:** 发布 README 只引用不可变资源
-- [ ] **I-AC03:** 验证与发布使用同一 tarball
+- [x] **I-AC03:** 验证与发布使用同一 tarball
 - [ ] **I-AC04:** 主分支发布信任边界保持不变
 - [ ] **I-AC05:** 完整候选通过 release-grade 验证
 
@@ -32,6 +32,14 @@
   分支或标签、错误提交、相对图片及可移动 GitHub 文件 URL。聚焦的 18 项单元、
   集成与契约测试通过，真实 README 的生成结果仅引用指定提交，且源文件在生成
   前后保持字节不变。
+- 2026-09-29：publish workflow 在 `git archive` staging 中生成 README，
+  `build-npm-tarball.mjs` 只调用一次实际 `npm pack`，校验并记录 tarball
+  绝对路径、SHA-256、npm shasum、SHA-512 integrity 与排序文件清单。内容检查
+  使用该 `.tgz` 的 `npm pack --dry-run --json` 结果，安装后 E2E 在收到
+  `SILVERMOON_TARBALL` 时不再自行打包，最终 publish 命令显式接收同一路径。
+  内容检查对照记录的 SHA-256 与 npm integrity，publish 紧邻执行前再次校验
+  SHA-256。本地端到端演练生成且保留一份实际 tarball，38 个文件通过
+  `PACK_OK` 与 `PACK_SMOKE_OK`。
 
 ## Deployment
 

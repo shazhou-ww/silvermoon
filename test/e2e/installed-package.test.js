@@ -6,6 +6,7 @@ import {
   readdir,
   readFile,
   rm,
+  stat,
   writeFile,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -67,15 +68,29 @@ function npmResult(args, cwd) {
 
 const temporaryRoot = await mkdtemp(join(tmpdir(), "silvermoon-pack-smoke-"));
 try {
-  const packed = JSON.parse(
-    npm(["pack", "--json", "--pack-destination", temporaryRoot], packageRoot),
-  )[0];
-  const tarball = join(temporaryRoot, packed.filename);
+  const configuredTarball = process.env.SILVERMOON_TARBALL?.trim();
+  let tarball;
+  if (configuredTarball) {
+    tarball = resolve(packageRoot, configuredTarball);
+    assert.equal((await stat(tarball)).isFile(), true, tarball);
+  } else {
+    const packed = JSON.parse(
+      npm(["pack", "--json", "--pack-destination", temporaryRoot], packageRoot),
+    )[0];
+    tarball = join(temporaryRoot, packed.filename);
+  }
   const bootstrap = join(temporaryRoot, "bootstrap");
   await mkdir(bootstrap);
   run("git", ["init", "--initial-branch=main"], bootstrap);
   npm(["init", "-y"], bootstrap);
   npm(["install", "--ignore-scripts", "--no-audit", "--no-fund", tarball], bootstrap);
+  const installedManifest = JSON.parse(
+    await readFile(
+      join(bootstrap, "node_modules", "silvermoon", "package.json"),
+      "utf8",
+    ),
+  );
+  assert.equal(installedManifest.name, "silvermoon");
   const bootstrapStatusBefore = run(
     "git",
     ["status", "--porcelain=v1", "--untracked-files=all"],
@@ -157,7 +172,7 @@ try {
   const consumerManifestPath = join(consumer, "package.json");
   const consumerManifest = JSON.parse(await readFile(consumerManifestPath, "utf8"));
   delete consumerManifest.dependencies;
-  consumerManifest.devDependencies = { silvermoon: packed.version };
+  consumerManifest.devDependencies = { silvermoon: installedManifest.version };
   await writeFile(consumerManifestPath, `${JSON.stringify(consumerManifest, null, 2)}\n`);
   npm([
     "exec",
@@ -244,7 +259,10 @@ try {
     help,
     /silvermoon whatsnext|silvermoon task|silvermoon status|silvermoon init|silvermoon skill/,
   );
-  assert.equal(npm(["exec", "--", "silvermoon", "--version"], consumer), packed.version);
+  assert.equal(
+    npm(["exec", "--", "silvermoon", "--version"], consumer),
+    installedManifest.version,
+  );
   const exported = run(
     process.execPath,
     [
@@ -371,7 +389,9 @@ try {
     ).type,
     "canonical-skill-mismatched",
   );
-  process.stdout.write(`PACK_SMOKE_OK name=${packed.name} version=${packed.version}\n`);
+  process.stdout.write(
+    `PACK_SMOKE_OK name=${installedManifest.name} version=${installedManifest.version} tarball=${tarball}\n`,
+  );
 } finally {
   await rm(temporaryRoot, { recursive: true, force: true });
 }
