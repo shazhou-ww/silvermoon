@@ -102,10 +102,12 @@ jobs:
         env:
           PACKAGE_DIRECTORY: ${{ steps.stage.outputs.package_directory }}
           ARTIFACT_DIRECTORY: ${{ steps.stage.outputs.artifact_directory }}
+          RELEASE_COMMIT: ${{ github.sha }}
         run: >-
           node scripts/build-npm-tarball.mjs
           --package-directory "$PACKAGE_DIRECTORY"
           --output-directory "$ARTIFACT_DIRECTORY"
+          --git-head "$RELEASE_COMMIT"
 
       - name: Verify selected package tarball
         working-directory: ${{ steps.stage.outputs.package_directory }}
@@ -113,6 +115,7 @@ jobs:
           SILVERMOON_TARBALL: ${{ steps.package.outputs.tarball_path }}
           SILVERMOON_TARBALL_SHA256: ${{ steps.package.outputs.tarball_sha256 }}
           SILVERMOON_TARBALL_INTEGRITY: ${{ steps.package.outputs.tarball_integrity }}
+          SILVERMOON_RELEASE_COMMIT: ${{ github.sha }}
         run: npm run pack:check
 
       - name: Test installed package

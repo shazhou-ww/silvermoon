@@ -330,6 +330,11 @@ export async function verifyNpmRelease(
       `Candidate tarball identity mismatch: expected ${packageName}@${version}, found ${candidate.manifest.name ?? "missing"}@${candidate.manifest.version ?? "missing"}.`,
     );
   }
+  if (candidate.manifest.gitHead !== commit) {
+    throw new Error(
+      `Candidate tarball gitHead mismatch: expected ${commit}, found ${candidate.manifest.gitHead ?? "missing"}.`,
+    );
+  }
   const readmes = new Map();
   for (const filename of ["README.md", "README.zh-CN.md"]) {
     const readme = requiredEntry(candidate.entries, filename).toString("utf8");

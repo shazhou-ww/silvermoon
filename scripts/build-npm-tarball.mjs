@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
-import { appendFile, mkdir, readFile, stat } from "node:fs/promises";
+import { appendFile, mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import { basename, dirname, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -50,17 +50,52 @@ function digest(algorithm, bytes, encoding) {
   return createHash(algorithm).update(bytes).digest(encoding);
 }
 
+function validateGitHead(gitHead) {
+  if (!/^[0-9a-f]{40,64}$/i.test(gitHead ?? "")) {
+    throw new Error("Git head must be a full hexadecimal Git object ID.");
+  }
+  return gitHead;
+}
+
+async function stampGitHead(packageRoot, gitHead) {
+  const manifestPath = resolve(packageRoot, "package.json");
+  let manifest;
+  try {
+    manifest = JSON.parse(await readFile(manifestPath, "utf8"));
+  } catch (error) {
+    throw new Error(`Could not read package manifest: ${error.message}`);
+  }
+  if (!manifest || typeof manifest !== "object" || Array.isArray(manifest)) {
+    throw new Error("Package manifest must be a JSON object.");
+  }
+  if (manifest.gitHead && manifest.gitHead !== gitHead) {
+    throw new Error(
+      `Package manifest gitHead mismatch: expected ${gitHead}, found ${manifest.gitHead}.`,
+    );
+  }
+  if (manifest.gitHead !== gitHead) {
+    await writeFile(
+      manifestPath,
+      `${JSON.stringify({ ...manifest, gitHead }, null, 2)}\n`,
+      "utf8",
+    );
+  }
+}
+
 export async function buildNpmTarball({
   packageDirectory,
   outputDirectory,
+  gitHead,
   spawnImpl = spawnSync,
 }) {
   const packageRoot = resolve(packageDirectory);
   const outputRoot = resolve(outputDirectory);
+  const releaseGitHead = validateGitHead(gitHead);
   const packageStatus = await stat(packageRoot);
   if (!packageStatus.isDirectory()) {
     throw new Error(`Package directory is not a directory: ${packageRoot}`);
   }
+  await stampGitHead(packageRoot, releaseGitHead);
   await mkdir(outputRoot, { recursive: true });
 
   const invocation = packCommand(outputRoot);
@@ -94,6 +129,7 @@ export async function buildNpmTarball({
   return {
     name: result.name,
     version: result.version,
+    gitHead: releaseGitHead,
     tarballPath,
     size: tarballBytes.length,
     sha256: digest("sha256", tarballBytes, "hex"),
@@ -112,6 +148,7 @@ export function formatGitHubOutput(metadata) {
     `tarball_shasum=${metadata.shasum}`,
     `tarball_integrity=${metadata.integrity}`,
     `tarball_file_count=${metadata.files.length}`,
+    `tarball_git_head=${metadata.gitHead}`,
   ].join("\n");
 }
 
@@ -120,18 +157,24 @@ function parseArguments(argv) {
   for (let index = 0; index < argv.length; index += 2) {
     const option = argv[index];
     const value = argv[index + 1];
-    if (!value || !["--package-directory", "--output-directory"].includes(option)) {
+    if (
+      !value ||
+      !["--package-directory", "--output-directory", "--git-head"].includes(option)
+    ) {
       throw new Error(
-        "Usage: node scripts/build-npm-tarball.mjs --package-directory <path> --output-directory <path>",
+        "Usage: node scripts/build-npm-tarball.mjs --package-directory <path> --output-directory <path> --git-head <commit>",
       );
     }
-    const key =
-      option === "--package-directory" ? "packageDirectory" : "outputDirectory";
+    const key = {
+      "--package-directory": "packageDirectory",
+      "--output-directory": "outputDirectory",
+      "--git-head": "gitHead",
+    }[option];
     values[key] = value;
   }
-  if (!values.packageDirectory || !values.outputDirectory) {
+  if (!values.packageDirectory || !values.outputDirectory || !values.gitHead) {
     throw new Error(
-      "Usage: node scripts/build-npm-tarball.mjs --package-directory <path> --output-directory <path>",
+      "Usage: node scripts/build-npm-tarball.mjs --package-directory <path> --output-directory <path> --git-head <commit>",
     );
   }
   return values;

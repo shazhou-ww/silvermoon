@@ -11,7 +11,7 @@ The current release mapping is:
 | --- | --- | --- |
 | `silvermoon` | `silvermoon` | `.` |
 
-A stable tag such as `npm/silvermoon/v0.1.1` publishes with the npm `latest`
+A stable tag such as `npm/silvermoon/v0.1.2` publishes with the npm `latest`
 dist-tag. A named prerelease such as `npm/silvermoon/v0.2.0-beta.1` publishes
 with the `beta` dist-tag. Numeric-only prerelease channels are intentionally
 rejected.
@@ -76,12 +76,12 @@ the release namespace.
 5. Fetch the current primary branch and tags.
 6. Create the package-specific tag at `origin/main` and push that exact tag.
 
-For `silvermoon@0.1.1`:
+For `silvermoon@0.1.2`:
 
 ```sh
 git fetch origin main --tags
-git tag npm/silvermoon/v0.1.1 origin/main
-git push origin refs/tags/npm/silvermoon/v0.1.1
+git tag npm/silvermoon/v0.1.2 origin/main
+git push origin refs/tags/npm/silvermoon/v0.1.2
 ```
 
 The tag version must exactly equal [`package.json`](../package.json). The
@@ -97,19 +97,22 @@ The [`publish-npm.yml`](../.github/workflows/publish-npm.yml) workflow then:
    `pnpm check:skills`;
 5. creates an isolated `git archive` staging tree and generates commit-pinned
    English and Chinese package READMEs without changing the tagged checkout;
-6. creates one tarball, records its path, SHA-256, npm shasum, registry
+6. records the tagged commit as `gitHead` in the isolated package manifest,
+   creates one tarball, records its path, SHA-256, npm shasum, registry
    integrity, and complete file list, then passes that same file to
-   `npm run pack:check` and `npm run test:e2e`;
+   `npm run pack:check` and `npm run test:e2e`; the pre-publication check
+   requires the tarball manifest to contain that exact commit;
 7. publishes that exact tarball with provenance and the derived npm dist-tag
    when the version was absent; and
 8. runs `verify-npm-release.mjs` until the registry is consistent or the
    bounded retry window expires.
 
-The post-publication verifier requires the exact version and dist-tag, registry
-integrity and tarball bytes, package-level README, both tarball READMEs, npm
-publish and SLSA provenance attestations, tagged Git commit, and commit-pinned
-jsDelivr SVG responses to match the candidate. A successful run prints
-`VERIFY_NPM_RELEASE_OK` with the verified identities.
+The post-publication verifier requires the exact version and dist-tag, matching
+tarball and registry `gitHead`, registry integrity and tarball bytes,
+package-level README, both tarball READMEs, npm publish and SLSA provenance
+attestations, tagged Git commit, and commit-pinned jsDelivr SVG responses to
+match the candidate. A successful run prints `VERIFY_NPM_RELEASE_OK` with the
+verified identities.
 
 Release runs are serialized within this repository. The registry preflight and
 `npm publish` cannot form one cross-system transaction, so an external
