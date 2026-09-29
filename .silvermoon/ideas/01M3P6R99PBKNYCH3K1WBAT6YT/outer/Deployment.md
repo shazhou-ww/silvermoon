@@ -1,49 +1,42 @@
-# Deployment
+# 部署
 
 ## Steps
 
-### D-S01: Publish the repository verification contract
+### D-S01: 发布仓库验证契约
 
-Publish this deployment contract to the configured primary branch through
-ordinary non-force Git. This deployment has no package-release action: do not
-publish npm, create an npm release tag, or invoke the npm publishing workflow.
+通过普通、非强制的 Git 操作将本部署契约发布到配置的 primary branch。本次部署
+不包含 package release 动作：不得发布 npm package、创建 npm release tag 或调用
+npm 发布 workflow。
 
-### D-S02: Validate the published primary snapshot
+### D-S02: 验证已发布的 primary snapshot
 
-Refresh the configured primary branch, prove that the published deployment
-candidate is reachable from it, and run Silvermoon validation against the
-remote snapshot. Run the repository's complete `pnpm check` suite against the
-same candidate.
+刷新配置的 primary branch，证明已发布的部署候选可从该分支到达，并对 remote
+snapshot 运行 Silvermoon 验证。针对同一候选运行仓库完整的 `pnpm check`。
 
-### D-S03: Verify the real default navigation output
+### D-S03: 验证真实的默认导航输出
 
-Run the repository CLI's default bare `whats-next` command from the clean,
-synchronized repository. Confirm that its human-readable output includes the
-exact `navigation-ready` state while the JSON form continues to report
-`observation.state` as `navigation-ready`.
+从干净且已同步的仓库运行 repository CLI 的默认裸 `whats-next` 命令。确认其
+人类可读输出包含精确的 `navigation-ready` 状态，同时 JSON 形式继续将
+`observation.state` 报告为 `navigation-ready`。
 
 ## Acceptance criteria
 
-### D-AC01: Primary contains the verified candidate
+### D-AC01: Primary 包含已验证的候选
 
-The deployment contract and accepted implementation are reachable from the
-refreshed `origin/main` tip. `silvermoon check --remote --json` reports a valid
-remote snapshot at that commit.
+部署契约与已验收的实现均可从刷新后的 `origin/main` tip 到达。
+`silvermoon check --remote --json` 在该 commit 上报告有效的 remote snapshot。
 
-### D-AC02: Repository release-grade checks pass
+### D-AC02: 仓库 release-grade 检查通过
 
-`pnpm check` exits successfully for the published candidate, proving its unit,
-integration, contract, end-to-end, skill, Markdown, and package checks without
-publishing a package.
+`pnpm check` 针对已发布候选成功退出，证明其 unit、integration、contract、
+end-to-end、skill、Markdown 与 package 检查均通过，且不发布任何 package。
 
-### D-AC03: Agent setup has an observable ready boundary
+### D-AC03: Agent 整备具备可观察的就绪边界
 
-Default bare `whats-next` output includes `navigation-ready`, and the matching
-JSON report has `observation.state: navigation-ready`. Captured command results
-in the ledger prove both views agree.
+默认裸 `whats-next` 输出包含 `navigation-ready`，对应 JSON 报告包含
+`observation.state: navigation-ready`。ledger 中记录的命令结果证明两种视图一致。
 
-### D-AC04: Deployment performs no npm release
+### D-AC04: 部署不执行 npm 发版
 
-The deployment evidence contains only repository publication and verification:
-no npm package publication, npm release tag, or npm publishing workflow is
-created or invoked.
+部署证据只包含仓库发布与验证：不得发布 npm package、创建 npm release tag，
+也不得创建或调用 npm 发布 workflow。
