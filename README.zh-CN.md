@@ -103,7 +103,7 @@ provenance。`create-idea` 可返回 preparing guidance。这些 guidance 只能
   <tr>
     <td width="160" align="center" valign="top">
       <!-- markdownlint-disable-next-line MD013 -->
-      <img src="https://cdn.jsdelivr.net/gh/shazhou-ww/silvermoon@main/assets/silvermoon-avatar.svg" width="128" alt="项目器灵银月的线稿头像">
+      <img src="https://cdn.jsdelivr.net/gh/shazhou-ww/silvermoon@main/assets/silvermoon-mascot.png" width="160" alt="项目器灵银月的全身立绘">
     </td>
     <td valign="top">
       Silvermoon 得名于《凡人修仙传》中的银月。她来自灵界的银月狼族，是玲珑公主分裂出的

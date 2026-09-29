@@ -53,10 +53,10 @@ test("keeps both READMEs reader-first and structurally aligned", async () => {
     );
     assert.match(
       source,
-      /cdn\.jsdelivr\.net\/gh\/shazhou-ww\/silvermoon@main\/assets\/silvermoon-avatar\.svg" width="128"/,
+      /cdn\.jsdelivr\.net\/gh\/shazhou-ww\/silvermoon@main\/assets\/silvermoon-mascot\.png" width="160"/,
     );
     assert.doesNotMatch(source, /raw\.githubusercontent\.com\/shazhou-ww\/silvermoon/);
-    assert.match(source, /<table>[\s\S]*silvermoon-avatar\.svg[\s\S]*<\/table>/);
+    assert.match(source, /<table>[\s\S]*silvermoon-mascot\.png[\s\S]*<\/table>/);
     assert.doesNotMatch(
       source.match(/<table>[\s\S]*?<\/table>/)?.[0] ?? "",
       /youtube\.com|bilibili\.com/,

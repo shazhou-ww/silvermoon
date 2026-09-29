@@ -65,6 +65,7 @@ test("ships safe canonical artwork with a byte-identical legacy avatar", async (
   assert.match(readme, /alt="Silvermoon, the artifact spirit of the project"/);
   assert.match(
     readme,
-    /src="https:\/\/cdn\.jsdelivr\.net\/gh\/shazhou-ww\/silvermoon@main\/assets\/silvermoon-avatar\.svg" width="128"/,
+    /src="https:\/\/cdn\.jsdelivr\.net\/gh\/shazhou-ww\/silvermoon@main\/assets\/silvermoon-mascot\.png" width="160"/,
   );
+  assert.match(avatar, /viewBox="0 0 1280 1280"/);
 });
