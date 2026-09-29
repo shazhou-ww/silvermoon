@@ -59,3 +59,13 @@
 - [ ] **D-AC05:** Stable candidate 经第二次 implementation gate
 - [ ] **D-AC06:** Stable 0.2.0 独立发布并完整验证
 - [ ] **D-AC07:** 最终验收证据完整可追溯
+
+### Deployment evidence
+
+- 2026-09-29: npm registry 未列出 `0.2.0-rc.1`；`latest` 仍为 `0.1.3`，
+  `rc` 仍为 `0.1.3-rc.4`。本地与远端均未发现
+  `npm/silvermoon/v0.2.0-rc.1` tag。当前 `origin/main` 为
+  `a28bc9d0bfbb75b3fc5ea6d142e77aa6e3ca3cf6`，其 package manifest 版本为
+  `0.2.0-rc.1`，idea 状态为 deploying 且已记录 implementation acceptance。
+  D-S01 仍待用户显式调用 `/publish silvermoon 0.2.0-rc.1`；本次未创建 tag、
+  未运行 publish workflow，也未发布 package。
