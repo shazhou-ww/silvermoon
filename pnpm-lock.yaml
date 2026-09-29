@@ -33,6 +33,9 @@ importers:
       semver:
         specifier: ^7.8.5
         version: 7.8.5
+      silvermoon:
+        specifier: ^0.2.2
+        version: 0.2.2
 
 packages:
 
@@ -367,6 +370,11 @@ packages:
   semver@7.8.5:
     resolution: {integrity: sha512-Y7/KDsb8LjooZpwaqGyulO6DQlksgCncchHGk+sZIY4SBvUocMBEFH5Ur1fI4dV+Jvl0w6cjvucaIi40puRioA==}
     engines: {node: '>=10'}
+    hasBin: true
+
+  silvermoon@0.2.2:
+    resolution: {integrity: sha512-81rAbKXKmNAGQEaCiUOjOz4YB+VO8SOiIRocl5vhq0raWjGQwDlgDcfpgn0Nf4NWWzhKyYlTIbbe14v+h7ji8A==}
+    engines: {node: '>=22'}
     hasBin: true
 
   slash@5.1.0:
@@ -866,6 +874,16 @@ snapshots:
       queue-microtask: 1.2.3
 
   semver@7.8.5: {}
+
+  silvermoon@0.2.2:
+    dependencies:
+      commander: 14.0.3
+      marked: 18.0.13
+      mdast-util-from-markdown: 2.0.3
+      mdast-util-to-markdown: 2.1.2
+      yaml: 2.9.1
+    transitivePeerDependencies:
+      - supports-color
 
   slash@5.1.0: {}
 
