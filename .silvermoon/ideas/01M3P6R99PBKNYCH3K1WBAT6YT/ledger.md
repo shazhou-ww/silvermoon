@@ -19,8 +19,13 @@
 
 ### Deployment steps
 
-- [ ] **D-S01:** Step title
+- [ ] **D-S01:** Publish the repository verification contract
+- [ ] **D-S02:** Validate the published primary snapshot
+- [ ] **D-S03:** Verify the real default navigation output
 
 ### Deployment acceptance criteria
 
-- [ ] **D-AC01:** Criterion title
+- [ ] **D-AC01:** Primary contains the verified candidate
+- [ ] **D-AC02:** Repository release-grade checks pass
+- [ ] **D-AC03:** Agent setup has an observable ready boundary
+- [ ] **D-AC04:** Deployment performs no npm release
