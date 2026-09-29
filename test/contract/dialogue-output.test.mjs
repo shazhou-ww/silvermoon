@@ -23,11 +23,16 @@ test("public commands share intention and observation but only dialogues add out
         "outcomes",
       ]);
       assert.equal(report.observation.version.type, "worktree");
+      assert.equal(typeof report.observation.outputLanguage, "string");
       assert.deepEqual(report.observation.problems, []);
       assert.equal(typeof report.instructions, "string");
       assert.ok(Array.isArray(report.outcomes));
     }
     assert.equal(navigation.observation.state, "navigation-ready");
+    assert.deepEqual(navigation.intention.args, {
+      idea: null,
+      language: null,
+    });
     assert.equal(Object.hasOwn(navigation.observation, "selectedIdea"), false);
     assert.equal(creation.observation.state, "idea-created");
     assert.equal(creation.observation.createdIdea.state, "preparing");
@@ -36,8 +41,9 @@ test("public commands share intention and observation but only dialogues add out
     assert.deepEqual(Object.keys(check).sort(), ["intention", "observation"]);
     assert.deepEqual(check.intention, {
       command: "check",
-      args: { target: { type: "head" } },
+      args: { target: { type: "head" }, language: null },
     });
+    assert.equal(typeof check.observation.outputLanguage, "string");
     assert.equal(check.observation.state, "project-ready");
     assert.deepEqual(check.observation.problems, []);
     assert.equal(check.observation.ideas.counts.preparing, 1);

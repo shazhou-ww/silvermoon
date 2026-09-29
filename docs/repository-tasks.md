@@ -11,8 +11,10 @@ optional transport and are not protocol state.
 
 ```sh
 silvermoon whats-next [idea]
+silvermoon whats-next [idea] --language zh-CN
 silvermoon create-idea
 silvermoon check
+silvermoon check --language en-US
 silvermoon check --worktree
 silvermoon check --staged
 silvermoon check --commit HEAD
@@ -32,6 +34,13 @@ primary branch and upstream plus a clean worktree, without fetching or requiring
 HEAD to match the remote tip. If hygiene blocks explicit creation, perform only
 that blocking action and then retry `create-idea` so active-idea selection
 cannot replace the pending create intent.
+
+Use `--language en-US|zh-CN` with `whats-next` or `check` only when the user
+explicitly requests a temporary output locale. Preserve the canonical option
+on every hygiene retry. It never changes the content language recorded in
+project, user, or idea configuration. `create-idea --language <tag>` remains a
+separate persistent content-language choice and accepts any canonical BCP 47
+tag.
 
 ## Decisions And Publication
 

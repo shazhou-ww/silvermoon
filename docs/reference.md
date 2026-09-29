@@ -67,13 +67,21 @@ world revision and does not change lifecycle decisions. Explicit
 `abandoned: false`, derived state, criteria mirrors, source locators, unknown
 keys, YAML aliases or anchors, comments, and noncanonical YAML are rejected.
 
-Effective language resolves as `idea language > project preferredLanguage >
-user preferredLanguage > en-US`. Every complete observation exposes the
-resolved non-empty tag as `configuration.preferredLanguage`. Missing idea
-language remains dynamically inherited and is never written back. Dialogue
-project status presents this effective value as `interaction language`
-(`交互语言`), meaning the language Silvermoon should use to interact with the
-user rather than a programming language used by the project.
+Effective content language resolves as `idea language > project
+preferredLanguage > user preferredLanguage > en-US`. Every complete
+observation exposes the resolved non-empty tag as
+`configuration.preferredLanguage`. Missing idea language remains dynamically
+inherited and is never written back. Dialogue project status presents this
+effective value as `content language` (`内容语言`).
+
+Every command observation also exposes an independent `outputLanguage`.
+Silvermoon's built-in output locales are exactly `en-US` and `zh-CN`.
+`whats-next --language <tag>` and `check --language <tag>` normalize casing
+before enforcing that allowlist, apply only to the current invocation, and
+take display precedence over content language. Without an explicit output
+override, content tags beginning with `zh` select `zh-CN`; every other content
+tag selects `en-US`. Output selection never writes configuration or idea
+status.
 
 State is derived in order:
 
@@ -88,9 +96,9 @@ State is derived in order:
 ## Public Commands
 
 ```sh
-silvermoon whats-next [idea] [--trace <file.trace.jsonl>]
+silvermoon whats-next [idea] [--language <en-US|zh-CN>] [--trace <file.trace.jsonl>]
 silvermoon create-idea [--language <tag>] [--trace <file.trace.jsonl>]
-silvermoon check [--remote | --commit <revision> | --staged | --worktree] [--trace <file.trace.jsonl>]
+silvermoon check [--remote | --commit <revision> | --staged | --worktree] [--language <en-US|zh-CN>] [--trace <file.trace.jsonl>]
 ```
 
 `whats-next` and `create-idea` build one dialogue envelope:
@@ -100,19 +108,24 @@ silvermoon check [--remote | --commit <revision> | --staged | --worktree] [--tra
   "intention": {
     "command": "whats-next",
     "args": {
-      "idea": null
+      "idea": null,
+      "language": null
     }
   },
-  "observation": {},
+  "observation": {
+    "outputLanguage": "en-US"
+  },
   "outcomes": [],
   "instructions": ""
 }
 ```
 
-- `intention` contains the command and normalized business arguments. Output
-  format is not part of the intention.
+- `intention` contains the command and normalized business arguments. For
+  `whats-next` and `check`, `args.language` is the canonical temporary output
+  override or `null`. Output format is not part of the intention.
 - `observation` describes the reliable facts for the requested command and
-  intent, not a mandatory global idea inventory.
+  intent, not a mandatory global idea inventory. `outputLanguage` is present
+  even when Git, configuration, or a requested snapshot is unavailable.
 - `outcomes` records only high-level repository side effects actually
   attempted by this invocation. Each item has `type`, `status` (`success` or
   `failure`), and `summary`. An empty array means no side effect was attempted.
@@ -150,7 +163,11 @@ stdout, or stderr. The path is relative to the caller's working directory when
 not absolute. Events are buffered so a trace inside the repository cannot
 affect that invocation's worktree observation. The file is written after the
 measured command work finishes and uses exclusive creation, so an existing
-normalized target is never overwritten.
+normalized target is never overwritten. The top command span records the
+canonical output-language override or `null` for `whats-next` and `check`.
+
+Unsupported output locales, empty values, and invalid BCP 47 tags are usage
+errors with exit status `2`, before repository inspection or fetch.
 
 Observations are discriminated by command intent and `state`:
 
@@ -198,9 +215,9 @@ to discuss and run `create-idea`.
 `create-idea` requires the configured primary branch and upstream plus a clean
 worktree, then creates one canonical scaffold. It does not fetch, compare
 remote ancestry, or require local HEAD to match the remote tip. Its optional
-language override is normalized before preflight and is the only command
-override; without it the status remains dynamically inherited. It does not
-stage, commit, push, or record approval.
+content-language choice accepts any canonical BCP 47 tag, is normalized before
+preflight, and is persisted to the new idea; without it the status remains
+dynamically inherited. It does not stage, commit, push, or record approval.
 
 ## Validation Targets
 
@@ -233,12 +250,16 @@ Unlike dialogue commands, `check --json` contains **only** `intention` and
 {
   "intention": {
     "command": "check",
-    "args": { "target": { "type": "staged" } }
+    "args": {
+      "target": { "type": "staged" },
+      "language": null
+    }
   },
   "observation": {
     "state": "project-ready",
     "root": "D:\\Code\\silvermoon",
     "version": { "type": "staged" },
+    "outputLanguage": "en-US",
     "configuration": {
       "primaryRepository": "https://example.com/owner/repository.git",
       "primaryBranch": "main",
@@ -266,6 +287,10 @@ Unlike dialogue commands, `check --json` contains **only** `intention` and
 `{ type: "remote", commit: "<oid>" }`. Failed commit resolution or fetch
 reports `commit: null` and a problem. Staged and worktree versions only
 contain `type`.
+
+`--language en-US|zh-CN` is orthogonal to every target. It changes only
+Silvermoon-owned natural-language framing and leaves the target, snapshot,
+validation state, problems, and exit status unchanged.
 
 The `check` observation has its own discriminated states:
 

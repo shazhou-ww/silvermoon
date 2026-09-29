@@ -39,12 +39,16 @@ preferredLanguage: zh-CN
 `preferredLanguage` 可省略。具体 idea 可以通过 `status.yaml` 的 `language`
 覆盖它，创建时也可以使用 `create-idea --language <tag>` 设置该值。否则 Silvermoon 会继续
 读取 `~/.config/silvermoon/config.yaml`，最后稳定回退到 `en-US`。
+这些持久化值决定项目内容所用语言。若只需改变单次命令的内置输出语言，可使用
+`whats-next --language en-US|zh-CN` 或 `check --language en-US|zh-CN`；该临时覆盖
+不会写入任何配置或 idea。
 
 然后创建一个 idea，让已注册的 Silvermoon skill 每次引导一个安全的下一步行动：
 
 ```sh
 silvermoon create-idea
 silvermoon whats-next <idea>
+silvermoon whats-next <idea> --language zh-CN
 ```
 
 在生成的 `Idea.md` 中描述想要抵达的世界，审阅并批准这个精确 revision。此后，

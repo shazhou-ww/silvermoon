@@ -6,7 +6,10 @@ import {
   Option,
 } from "commander";
 
-import { canonicalizeLanguageTag } from "./language.js";
+import {
+  canonicalizeLanguageTag,
+  canonicalizeOutputLanguage,
+} from "./language.js";
 import { renderCheck, renderDialogue } from "./dialogue.js";
 import { checkRepository } from "./index.js";
 import { createIdea } from "./create-idea.js";
@@ -51,9 +54,17 @@ export function render(report, json, io) {
   );
 }
 
-function languageArgument(value) {
+function contentLanguageArgument(value) {
   try {
     return canonicalizeLanguageTag(value);
+  } catch (caught) {
+    throw new InvalidArgumentError(caught.message);
+  }
+}
+
+function outputLanguageArgument(value) {
+  try {
+    return canonicalizeOutputLanguage(value);
   } catch (caught) {
     throw new InvalidArgumentError(caught.message);
   }
@@ -79,10 +90,12 @@ export function createProgram(io = console) {
 Examples:
   $ silvermoon whats-next
   $ silvermoon whats-next <idea>
+  $ silvermoon whats-next <idea> --language zh-CN
   $ silvermoon whats-next <idea> --json
   $ silvermoon whats-next <idea> --trace whats-next.trace.jsonl
   $ silvermoon create-idea
   $ silvermoon check
+  $ silvermoon check --language en-US
   $ silvermoon check --worktree
   $ silvermoon check --staged
   $ silvermoon check --commit HEAD
@@ -91,13 +104,26 @@ Examples:
   addCommonOptions(
     program
       .command("whats-next [idea]")
-      .description("observe project, repository, and idea readiness"),
+      .description("observe project, repository, and idea readiness")
+      .option(
+        "--language <tag>",
+        "use a built-in output language (en-US or zh-CN) for this invocation",
+        outputLanguageArgument,
+      ),
   ).action(async (idea, options) => {
     const report = await withTraceFile(
       options.trace,
       "command.whats-next",
-      { command: "whats-next", processId: process.pid },
-      () => whatsNext({ idea, root: options.root }),
+      {
+        command: "whats-next",
+        outputLanguage: options.language ?? null,
+        processId: process.pid,
+      },
+      () => whatsNext({
+        idea,
+        language: options.language,
+        root: options.root,
+      }),
     );
     render(report, options.json, io);
     program.setOptionValue("resultCode", 0);
@@ -109,14 +135,18 @@ Examples:
       .description("create one structured idea scaffold after readiness checks")
       .option(
         "--language <tag>",
-        "persist a canonical language override on the new idea",
-        languageArgument,
+        "persist a canonical content language override on the new idea",
+        contentLanguageArgument,
       ),
   ).action(async (options) => {
     const report = await withTraceFile(
       options.trace,
       "command.create-idea",
-      { command: "create-idea", processId: process.pid },
+      {
+        command: "create-idea",
+        contentLanguage: options.language ?? null,
+        processId: process.pid,
+      },
       () => createIdea({
         language: options.language,
         root: options.root,
@@ -130,6 +160,11 @@ Examples:
     program
       .command("check")
       .description("validate Silvermoon configuration and idea state")
+      .option(
+        "--language <tag>",
+        "use a built-in output language (en-US or zh-CN) for this invocation",
+        outputLanguageArgument,
+      )
       .addOption(new Option("--remote", "fetch and validate the configured primary tip").conflicts(["commit", "staged", "worktree"]))
       .addOption(new Option("--commit <revision>", "validate one local commit snapshot").conflicts(["remote", "staged", "worktree"]))
       .addOption(new Option("--staged", "validate the index snapshot").conflicts(["remote", "commit", "worktree"]))
@@ -138,9 +173,14 @@ Examples:
     const report = await withTraceFile(
       options.trace,
       "command.check",
-      { command: "check", processId: process.pid },
+      {
+        command: "check",
+        outputLanguage: options.language ?? null,
+        processId: process.pid,
+      },
       () => checkRepository({
         commit: options.commit,
+        language: options.language,
         remote: options.remote,
         root: options.root,
         staged: options.staged,

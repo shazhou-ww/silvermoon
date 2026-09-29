@@ -53,6 +53,9 @@ preferredLanguage: en
 `language` in `status.yaml`, and `create-idea --language <tag>` can set that
 override when the idea is created. Otherwise Silvermoon checks
 `~/.config/silvermoon/config.yaml` and finally defaults to `en-US`.
+These stored values choose the language for project-owned content. To change
+only one command's built-in output, use `whats-next --language en-US|zh-CN` or
+`check --language en-US|zh-CN`; the temporary override is never persisted.
 
 Then create an idea and let the registered Silvermoon skill guide one safe
 next action at a time:
@@ -60,6 +63,7 @@ next action at a time:
 ```sh
 silvermoon create-idea
 silvermoon whats-next <idea>
+silvermoon whats-next <idea> --language zh-CN
 ```
 
 Describe the desired world in the generated `Idea.md`, review it, and approve

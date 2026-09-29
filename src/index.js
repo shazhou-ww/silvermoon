@@ -15,6 +15,10 @@ import {
   withTemporaryWorktree,
 } from "./git.js";
 import {
+  canonicalizeOutputLanguage,
+  DEFAULT_LANGUAGE,
+} from "./language.js";
+import {
   observeSnapshot,
   unavailableObservation,
 } from "./observation.js";
@@ -29,18 +33,25 @@ function targetArgument({ commit, remote, staged, worktree }) {
 
 function failureReport({
   intention,
+  outputLanguage,
   problem,
   root,
   version,
 }) {
   return {
     intention,
-    observation: unavailableObservation({ problem, root, version }),
+    observation: unavailableObservation({
+      outputLanguage,
+      problem,
+      root,
+      version,
+    }),
   };
 }
 
 async function inspectTree({
   gitRoot,
+  outputLanguage,
   root,
   tree,
   userHome,
@@ -50,6 +61,7 @@ async function inspectTree({
     observeSnapshot({
       contentRoot,
       gitRoot,
+      outputLanguage,
       root,
       projectOnly: true,
       snapshotTree: tree,
@@ -65,12 +77,17 @@ function finishCheck(intention, observed) {
 
 export async function checkRepository({
   commit,
+  language,
   remote = false,
   root = process.cwd(),
   staged = false,
   userHome,
   worktree = false,
 } = {}) {
+  const canonicalLanguage = language === undefined
+    ? undefined
+    : canonicalizeOutputLanguage(language);
+  const fallbackOutputLanguage = canonicalLanguage ?? DEFAULT_LANGUAGE;
   const requestedRoot = resolve(root);
   const targetCount = [remote, commit !== undefined, staged, worktree]
     .filter(Boolean).length;
@@ -82,10 +99,17 @@ export async function checkRepository({
     throw error;
   }
   const target = targetArgument({ commit, remote, staged, worktree });
-  const intention = { command: "check", args: { target } };
+  const intention = {
+    command: "check",
+    args: {
+      target,
+      language: canonicalLanguage ?? null,
+    },
+  };
   const repository = runGit(requestedRoot, ["rev-parse", "--show-toplevel"]);
   if (!repository.ok) {
     const observed = await observeSnapshot({
+      outputLanguage: canonicalLanguage,
       projectOnly: true,
       root: requestedRoot,
       userHome,
@@ -106,6 +130,7 @@ export async function checkRepository({
     } catch (caught) {
       return failureReport({
         intention,
+        outputLanguage: fallbackOutputLanguage,
         problem: {
           type: "head-unavailable",
           summary: sanitizeGitMessage(caught.message),
@@ -124,6 +149,7 @@ export async function checkRepository({
     } catch (caught) {
       return failureReport({
         intention,
+        outputLanguage: fallbackOutputLanguage,
         problem: {
           type: "snapshot-inspection-failed",
           summary: sanitizeGitMessage(caught.message),
@@ -140,8 +166,9 @@ export async function checkRepository({
           observedThrough: "version",
           root: repositoryRoot,
           version: { type: "remote", commit: null },
+          outputLanguage: fallbackOutputLanguage,
           problems: bootstrap.diagnostics.map((diagnostic) =>
-            diagnosticProblem(diagnostic)
+            diagnosticProblem(diagnostic, fallbackOutputLanguage)
           ),
         },
       };
@@ -154,6 +181,7 @@ export async function checkRepository({
       const summary = sanitizeGitMessage(caught.message);
       return failureReport({
         intention,
+        outputLanguage: fallbackOutputLanguage,
         root: repositoryRoot,
         version: { type: "remote", commit: null },
         problem: { type: "primary-fetch-failed", summary },
@@ -166,6 +194,7 @@ export async function checkRepository({
         (contentRoot, tree) => observeSnapshot({
           contentRoot,
           gitRoot: repositoryRoot,
+          outputLanguage: canonicalLanguage,
           root: repositoryRoot,
           projectOnly: true,
           snapshotTree: tree,
@@ -177,6 +206,7 @@ export async function checkRepository({
     } catch (caught) {
       return failureReport({
         intention,
+        outputLanguage: fallbackOutputLanguage,
         problem: {
           type: "snapshot-inspection-failed",
           summary: sanitizeGitMessage(caught.message),
@@ -195,6 +225,7 @@ export async function checkRepository({
     } catch (caught) {
       return failureReport({
         intention,
+        outputLanguage: fallbackOutputLanguage,
         problem: {
           type: "commit-unavailable",
           summary: sanitizeGitMessage(caught.message),
@@ -210,6 +241,7 @@ export async function checkRepository({
         (contentRoot, tree) => observeSnapshot({
           contentRoot,
           gitRoot: repositoryRoot,
+          outputLanguage: canonicalLanguage,
           root: repositoryRoot,
           projectOnly: true,
           snapshotTree: tree,
@@ -221,6 +253,7 @@ export async function checkRepository({
     } catch (caught) {
       return failureReport({
         intention,
+        outputLanguage: fallbackOutputLanguage,
         problem: {
           type: "snapshot-inspection-failed",
           summary: sanitizeGitMessage(caught.message),
@@ -236,6 +269,7 @@ export async function checkRepository({
       const snapshot = indexSnapshot(repositoryRoot);
       const observed = await inspectTree({
         gitRoot: repositoryRoot,
+        outputLanguage: canonicalLanguage,
         root: repositoryRoot,
         tree: snapshot.tree,
         userHome,
@@ -245,6 +279,7 @@ export async function checkRepository({
     } catch (caught) {
       return failureReport({
         intention,
+        outputLanguage: fallbackOutputLanguage,
         problem: {
           type: "snapshot-inspection-failed",
           summary: sanitizeGitMessage(caught.message),
@@ -259,6 +294,7 @@ export async function checkRepository({
     const snapshot = worktreeSnapshot(repositoryRoot);
     const observed = await inspectTree({
       gitRoot: repositoryRoot,
+      outputLanguage: canonicalLanguage,
       root: repositoryRoot,
       tree: snapshot.tree,
       userHome,
@@ -268,6 +304,7 @@ export async function checkRepository({
   } catch (caught) {
     return failureReport({
       intention,
+      outputLanguage: fallbackOutputLanguage,
       problem: {
         type: "snapshot-inspection-failed",
         summary: sanitizeGitMessage(caught.message),

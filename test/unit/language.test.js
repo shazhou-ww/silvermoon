@@ -3,9 +3,12 @@ import { test } from "node:test";
 
 import {
   canonicalizeLanguageTag,
+  canonicalizeOutputLanguage,
   DEFAULT_LANGUAGE,
   isCanonicalLanguageTag,
+  OUTPUT_LANGUAGES,
   resolveLanguage,
+  resolveOutputLanguage,
 } from "../../src/language.js";
 
 test("canonicalizes valid BCP 47 language tags", () => {
@@ -19,6 +22,20 @@ test("rejects invalid or non-string language tags", () => {
   for (const value of ["", " zh-CN", "en_US", 42, null]) {
     assert.throws(() => canonicalizeLanguageTag(value), /language tag|BCP 47/);
     assert.equal(isCanonicalLanguageTag(value), false);
+  }
+});
+
+test("normalizes only the built-in output languages", () => {
+  assert.deepEqual(OUTPUT_LANGUAGES, ["en-US", "zh-CN"]);
+  assert.equal(Object.isFrozen(OUTPUT_LANGUAGES), true);
+  assert.equal(canonicalizeOutputLanguage("EN-us"), "en-US");
+  assert.equal(canonicalizeOutputLanguage("zh-cn"), "zh-CN");
+
+  for (const value of ["", "en_US", "en", "zh", "fr-FR"]) {
+    assert.throws(
+      () => canonicalizeOutputLanguage(value),
+      (error) => error.exitCode === 2,
+    );
   }
 });
 
@@ -37,6 +54,25 @@ test("resolves language from the most specific configured layer", () => {
   );
   assert.deepEqual(
     resolveLanguage(),
+    { tag: DEFAULT_LANGUAGE, source: "default" },
+  );
+});
+
+test("resolves output independently from arbitrary content languages", () => {
+  assert.deepEqual(
+    resolveOutputLanguage({ content: "fr-FR" }),
+    { tag: "en-US", source: "content" },
+  );
+  assert.deepEqual(
+    resolveOutputLanguage({ content: "zh-Hant" }),
+    { tag: "zh-CN", source: "content" },
+  );
+  assert.deepEqual(
+    resolveOutputLanguage({ content: "fr-FR", override: "zh-cn" }),
+    { tag: "zh-CN", source: "override" },
+  );
+  assert.deepEqual(
+    resolveOutputLanguage(),
     { tag: DEFAULT_LANGUAGE, source: "default" },
   );
 });

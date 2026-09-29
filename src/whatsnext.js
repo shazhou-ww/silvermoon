@@ -14,6 +14,7 @@ import {
   resolveHead,
   sanitizeGitMessage,
 } from "./git.js";
+import { canonicalizeOutputLanguage } from "./language.js";
 import {
   observeSnapshot,
   repositoryProblemObservation,
@@ -217,7 +218,7 @@ async function assessRepositoryReadinessInternal({
   root,
   synchronizePrimary = true,
 }) {
-  const language = observed.language;
+  const language = observed.outputLanguage;
   let changes;
   try {
     changes = inspectWorktreeChanges(root);
@@ -515,19 +516,30 @@ export async function assessIdeaCreationReadiness(options) {
 
 export async function whatsNext({
   idea: selector,
+  language,
   root = process.cwd(),
   userHome,
 } = {}) {
+  const canonicalLanguage = language === undefined
+    ? undefined
+    : canonicalizeOutputLanguage(language);
   const requestedRoot = resolve(root);
   const intention = {
     command: "whats-next",
-    args: { idea: selector ?? null },
+    args: {
+      idea: selector ?? null,
+      language: canonicalLanguage ?? null,
+    },
   };
-  const recheckCommand = selector === undefined
+  const baseRecheckCommand = selector === undefined
     ? "silvermoon whats-next"
     : `silvermoon whats-next ${JSON.stringify(selector)}`;
+  const recheckCommand = canonicalLanguage === undefined
+    ? baseRecheckCommand
+    : `${baseRecheckCommand} --language ${canonicalLanguage}`;
   const outcomes = [];
   let observed = await observeSnapshot({
+    outputLanguage: canonicalLanguage,
     root: requestedRoot,
     userHome,
     version: { type: "worktree" },
@@ -540,7 +552,7 @@ export async function whatsNext({
       projectInstructions(
         observed,
         observed.observation.root,
-        observed.language,
+        observed.outputLanguage,
         recheckCommand,
       ),
     );
@@ -570,7 +582,7 @@ export async function whatsNext({
       intention,
       { ...readiness.observation, state: "navigation-ready" },
       outcomes,
-      navigationInstruction(observed.layout.ideas, observed.language),
+      navigationInstruction(observed.layout.ideas, observed.outputLanguage),
     );
   }
   if (!selected) {
@@ -582,11 +594,11 @@ export async function whatsNext({
       outcomes,
       joinInstructions([
         localize(
-          observed.language,
+          observed.outputLanguage,
           `Idea ${selector} does not match an observed ULID or unique alias.`,
           `Idea ${selector} 未匹配任何已观察到的 ULID 或唯一 alias。`,
         ),
-        navigationInstruction(observed.layout.ideas, observed.language),
+        navigationInstruction(observed.layout.ideas, observed.outputLanguage),
       ]),
     );
   }
@@ -600,6 +612,6 @@ export async function whatsNext({
       },
     }),
     outcomes,
-    lifecycleInstruction(selected, observed.language),
+    lifecycleInstruction(selected, observed.outputLanguage),
   );
 }
