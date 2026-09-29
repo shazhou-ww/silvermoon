@@ -1,14 +1,14 @@
 # 账本
 
-## 实现
+## 实施
 
-### Implementation steps
+### 实施步骤
 
 - [x] **I-S01:** 用 Agent 导航替代固定整备指令
 - [x] **I-S02:** 在默认输出中展示导航就绪状态
 - [x] **I-S03:** 以回归覆盖和 issue 可追踪性保护工作流
 
-### Implementation acceptance criteria
+### 实施验收标准
 
 - [x] **I-AC01:** Quick Start 将整备委托给项目 Agent
 - [x] **I-AC02:** 人类可读就绪状态与 observation 一致
@@ -17,13 +17,13 @@
 
 ## 部署
 
-### Deployment steps
+### 部署步骤
 
 - [ ] **D-S01:** 发布仓库验证契约
 - [ ] **D-S02:** 验证已发布的 primary snapshot
 - [ ] **D-S03:** 验证真实的默认导航输出
 
-### Deployment acceptance criteria
+### 部署验收标准
 
 - [ ] **D-AC01:** Primary 包含已验证的候选
 - [ ] **D-AC02:** 仓库 release-grade 检查通过
