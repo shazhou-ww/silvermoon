@@ -36,11 +36,15 @@ silvermoon whats-next
 silvermoon list-ideas
 ```
 
-Silvermoon is ecosystem-neutral: the target repository does not need
-`package.json`, a package manager, a Silvermoon dependency, or `node_modules`.
-The first report lists every applicable setup step in order, including the
-exact `npx skills add ... --agent universal` command that registers the
-canonical skill at `.agents/skills/silvermoon`.
+Silvermoon remains ecosystem-neutral when the repository root has no
+`package.json`: non-npm projects do not need a package manager, a Silvermoon
+dependency, or `node_modules`. If a root `package.json` exists, it must be valid
+JSON and declare `devDependencies.silvermoon` as exactly `^<running-version>`.
+The report supplies a package-manager-aware repair command. After installing
+that root dependency, register its canonical skill from
+`./node_modules/silvermoon/skills`; non-npm projects use the skill bundled with
+the running installation. Readiness checks inspect the selected repository
+snapshot and do not install dependencies or require `node_modules`.
 
 Create `.silvermoon/config.yaml`:
 

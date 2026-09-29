@@ -140,6 +140,30 @@ primaryBranch: main
   assert.doesNotMatch(responseText(observedIdeas), /^\d+\. /m);
 });
 
+test("npm dependency setup blocks lifecycle navigation before fetching primary", async () => {
+  const repository = await fixture();
+  await writeFile(
+    join(repository.root, "package.json"),
+    JSON.stringify({ name: "consumer" }, null, 2) + "\n",
+  );
+  const commands = [];
+
+  const report = await observeGitCommands(
+    (args) => commands.push(args),
+    () => whatsNext({
+      idea: FIRST_ID,
+      root: repository.root,
+      userHome: repository.base,
+    }),
+  );
+
+  assert.equal(report.observation.state, "project-setup-required");
+  assert.equal(report.observation.problems[0].type, "npm-dependency-missing");
+  assert.equal(report.actions.length, 0);
+  assert.match(responseText(report), /silvermoon@\^[0-9]+\.[0-9]+\.[0-9]+/);
+  assert.equal(commands.some(([name]) => name === "fetch"), false);
+});
+
 test("[selector-none] naked navigation lists one active idea without selecting it", async () => {
   const repository = await fixture();
 

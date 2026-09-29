@@ -45,11 +45,17 @@ override.
 
 `whats-next` may fetch and inspect but never changes files, branches, index, or
 refs. `create-idea` requires the configured primary branch and upstream plus a
-clean worktree; it does not fetch or compare ancestry. The target does not need
-a package manifest, package manager, Silvermoon dependency, or `node_modules`.
-The packaged skill is canonical; register it at `.agents/skills/silvermoon`
-with the supported `npx skills add` universal target. Silvermoon reports setup
-problems but does not repair them.
+clean worktree; it does not fetch or compare ancestry. A repository without a
+root `package.json` needs no package manager, Silvermoon dependency, or
+`node_modules`. When the root manifest exists, it must be valid JSON and declare
+`devDependencies.silvermoon` as exactly `^<running-version>`; follow the
+reported package-manager-specific remediation. Register npm projects' skill
+from `./node_modules/silvermoon/skills` after installing root dependencies.
+Other repositories use the skill bundled with the running installation.
+Snapshot checks do not require installed dependencies, and Silvermoon reports
+setup problems without modifying project files or registering skills. Register
+the canonical skill at `.agents/skills/silvermoon` with the supported
+`npx skills add` universal target.
 
 `check` validates only a project snapshot; it does not navigate ideas or check
 repository synchronization. Default `check` validates committed `HEAD`;

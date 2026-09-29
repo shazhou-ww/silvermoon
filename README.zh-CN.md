@@ -23,10 +23,13 @@ silvermoon whats-next
 silvermoon list-ideas
 ```
 
-Silvermoon 不依赖目标仓库的技术栈：目标项目无需 `package.json`、package manager、
-Silvermoon dependency 或 `node_modules`。首次报告会按顺序列出所有适用的整备步骤，
-其中包括把 canonical skill 注册到 `.agents/skills/silvermoon` 的精确
-`npx skills add ... --agent universal` 命令。
+Silvermoon 对非 npm 仓库保持生态中立：当仓库根目录没有 `package.json` 时，无需
+package manager、Silvermoon dependency 或 `node_modules`。如果根目录存在
+`package.json`，它必须是有效 JSON，并在 `devDependencies.silvermoon` 中逐字声明
+`^<当前运行版本>`。首次报告会按项目 package manager 提供修复命令。安装根依赖后，
+从 `./node_modules/silvermoon/skills` 注册 canonical skill；非 npm 项目继续使用当前
+运行实例随附的 skill。整备检查只读取所选 repository snapshot，不会安装依赖，也不要求
+存在 `node_modules`。
 
 创建 `.silvermoon/config.yaml`：
 

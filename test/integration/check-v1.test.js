@@ -6,7 +6,10 @@ import { afterEach, test } from "node:test";
 
 import { observeGitCommands } from "../../src/git.js";
 import { checkRepository } from "../../src/index.js";
-import { REPOSITORY_SKILL_PATH } from "../../src/adoption.js";
+import {
+  REPOSITORY_SKILL_PATH,
+  SILVERMOON_VERSION,
+} from "../../src/adoption.js";
 import { serializeIdeaStatus } from "../../src/ideas.js";
 import {
   GUIDANCE_ROOT,
@@ -64,6 +67,64 @@ test("checks HEAD with a project-only observation and resolved commit version", 
   assert.equal(report.observation.state, "project-ready");
   assert.equal(report.observation.ideas.counts.preparing, 1);
   assert.deepEqual(report.observation.problems, []);
+});
+
+test("checks root npm dependency from each selected snapshot without node_modules", async () => {
+  const repository = await fixture();
+  const manifestPath = join(repository.root, "package.json");
+  const expectedRange = `^${SILVERMOON_VERSION}`;
+  const invalidRange = expectedRange === "^0.0.0" ? "^0.0.1" : "^0.0.0";
+  const validManifest = {
+    name: "consumer",
+    devDependencies: { silvermoon: expectedRange },
+  };
+  const invalidManifest = {
+    ...validManifest,
+    devDependencies: { silvermoon: invalidRange },
+  };
+  await writeFile(manifestPath, `${JSON.stringify(validManifest, null, 2)}\n`);
+  git(repository.root, "add", "package.json");
+  git(repository.root, "commit", "-m", "Add the root Silvermoon devDependency");
+  git(repository.root, "push", "origin", "main");
+  const validCommit = git(repository.root, "rev-parse", "HEAD");
+  await writeFile(manifestPath, `${JSON.stringify(invalidManifest, null, 2)}\n`);
+  git(repository.root, "add", "package.json");
+  await writeFile(manifestPath, `${JSON.stringify(validManifest, null, 2)}\n`);
+
+  const head = await checkRepository({
+    root: repository.root,
+    userHome: repository.base,
+  });
+  const commit = await checkRepository({
+    commit: validCommit,
+    root: repository.root,
+    userHome: repository.base,
+  });
+  const staged = await checkRepository({
+    staged: true,
+    root: repository.root,
+    userHome: repository.base,
+  });
+  const worktree = await checkRepository({
+    worktree: true,
+    root: repository.root,
+    userHome: repository.base,
+  });
+  const remote = await checkRepository({
+    remote: true,
+    root: repository.root,
+    userHome: repository.base,
+  });
+
+  assert.equal(head.observation.state, "project-ready");
+  assert.equal(commit.observation.state, "project-ready");
+  assert.equal(staged.observation.state, "project-setup-required");
+  assert.equal(staged.observation.problems[0].type, "npm-dependency-version-mismatch");
+  assert.equal(worktree.observation.state, "project-ready");
+  assert.equal(remote.observation.state, "project-ready");
+  await assert.rejects(readFile(join(repository.root, "node_modules")), {
+    code: "ENOENT",
+  });
 });
 
 test("accepts canonical skill line endings across every snapshot target", async () => {
