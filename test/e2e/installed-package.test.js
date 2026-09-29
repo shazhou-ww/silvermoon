@@ -255,6 +255,39 @@ try {
     consumer,
   );
   assert.equal(exported, "function,function,function,function,function,function|false,false");
+  const localizedCheck = JSON.parse(
+    npm(
+      ["exec", "--", "silvermoon", "check", "--language", "ZH-cn", "--json"],
+      consumer,
+    ),
+  );
+  assert.equal(localizedCheck.intention.args.language, "zh-CN");
+  assert.equal(localizedCheck.observation.outputLanguage, "zh-CN");
+  assert.equal(
+    localizedCheck.observation.configuration.preferredLanguage,
+    "en-US",
+  );
+  const localizedCheckText = npm(
+    ["exec", "--", "silvermoon", "check", "--language", "zh-CN"],
+    consumer,
+  );
+  assert.match(localizedCheckText, /^## 检查\n\n- 目标: `head`/);
+  assert.match(localizedCheckText, /- 结果: 通过/);
+  const statusBeforeInvalidLanguage = run(
+    "git",
+    ["status", "--porcelain=v1", "--untracked-files=all"],
+    consumer,
+  );
+  const invalidLanguage = npmResult(
+    ["exec", "--", "silvermoon", "check", "--language", "fr-FR"],
+    consumer,
+  );
+  assert.equal(invalidLanguage.status, 2, invalidLanguage.stderr);
+  assert.match(invalidLanguage.stderr, /unsupported output language/);
+  assert.equal(
+    run("git", ["status", "--porcelain=v1", "--untracked-files=all"], consumer),
+    statusBeforeInvalidLanguage,
+  );
   const ideasBefore = await readdir(join(consumer, ".silvermoon", "ideas"));
   const created = JSON.parse(npm(["exec", "--", "silvermoon", "create-idea", "--json"], consumer));
   assert.deepEqual(Object.keys(created).sort(), [
@@ -341,10 +374,29 @@ try {
   assert.equal(worktree.observation.state, "project-ready");
   assert.equal(Object.hasOwn(createdSummary, "alias"), false);
   const lifecycle = JSON.parse(
-    npm(["exec", "--", "silvermoon", "whats-next", "installed-smoke", "--json"], consumer),
+    npm(
+      [
+        "exec",
+        "--",
+        "silvermoon",
+        "whats-next",
+        "installed-smoke",
+        "--language",
+        "zh-cn",
+        "--json",
+      ],
+      consumer,
+    ),
+  );
+  assert.equal(lifecycle.intention.args.language, "zh-CN");
+  assert.equal(lifecycle.observation.outputLanguage, "zh-CN");
+  assert.equal(
+    lifecycle.observation.configuration.preferredLanguage,
+    "en-US",
   );
   assert.equal(lifecycle.observation.state, "repository-sync-required");
   assert.equal(lifecycle.observation.problems[0].type, "worktree-changes");
+  assert.match(lifecycle.observation.problems[0].summary, /未跟踪=5/);
   assert.deepEqual(lifecycle.outcomes, []);
   const lifecycleText = npm(
     ["exec", "--", "silvermoon", "whats-next", "installed-smoke"],

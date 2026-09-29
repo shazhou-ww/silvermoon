@@ -48,10 +48,10 @@ The repository URL is credential-free, canonical shared state. Credentials,
 named remotes, and URL rewrites remain local Git concerns. Silvermoon metadata
 paths are fixed and cannot be overridden by configuration.
 
-## Configure Preferred Language
+## Configure Content And Output Language
 
 All language values are canonical BCP 47 tags such as `en` or `zh-CN`.
-Silvermoon resolves natural-language output in this order:
+Silvermoon resolves the language for project-owned content in this order:
 
 1. optional idea `status.yaml` `language`;
 2. optional project `.silvermoon/config.yaml` `preferredLanguage`;
@@ -67,7 +67,23 @@ preferredLanguage: zh-CN
 
 Inherited values remain dynamic and are not copied into an idea. Use
 `create-idea --language <tag>` only when the new idea needs a stable override.
-The shared observation reports the resolved non-empty language tag.
+That command continues to accept any canonical BCP 47 tag.
+
+For one invocation's Silvermoon-owned output, `whats-next` and `check` accept
+only the built-in `en-US` and `zh-CN` locales. Input casing is normalized, so
+`EN-us` and `zh-cn` are accepted. This override has higher display precedence
+than idea, project, or user content language and is never persisted:
+
+```sh
+silvermoon whats-next <idea> --language zh-CN
+silvermoon check --worktree --language en-US
+```
+
+Every observation reports the actual built-in locale as `outputLanguage`.
+When configuration is available, `configuration.preferredLanguage` remains
+the resolved content language and can therefore differ from `outputLanguage`.
+Without a temporary override, Chinese content tags use `zh-CN` output and all
+other content tags use the built-in `en-US` output.
 
 ## Create The First Idea
 

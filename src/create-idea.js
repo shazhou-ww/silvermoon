@@ -194,7 +194,7 @@ export async function createIdea({
       projectInstructions(
         observed,
         observed.observation.root,
-        observed.language,
+        observed.outputLanguage,
         recheckCommand,
       ),
     );
@@ -243,7 +243,7 @@ export async function createIdea({
       observation: readiness.observation,
       outcomes,
       cleanup: caught.cleanup,
-      language: observed.language,
+      language: observed.outputLanguage,
     });
   }
 
@@ -270,7 +270,7 @@ export async function createIdea({
         observation: readiness.observation,
         outcomes,
         cleanup,
-        language: observed.language,
+        language: observed.outputLanguage,
       });
     }
 
@@ -318,7 +318,7 @@ export async function createIdea({
         "create-idea-scaffold",
         "success",
         localize(
-          observed.language,
+          observed.outputLanguage,
           `Created idea ${id} at ${paths.ideaPath}.`,
           `已在 ${paths.ideaPath} 创建 idea ${id}。`,
         ),
@@ -330,9 +330,9 @@ export async function createIdea({
         }),
         outcomes,
         localize(
-          observed.language,
-          `Use ${observed.language} for natural-language content while describing the requested Ideal World in ${paths.ideaDocumentPath}; keep the stable IDs and placeholders in ${paths.implementationDocumentPath}, ${paths.deploymentDocumentPath}, and ${paths.ledgerPath} synchronized.`,
-          `使用 ${observed.language} 在 ${paths.ideaDocumentPath} 中描述请求的理想契约，并保持 ${paths.implementationDocumentPath}、${paths.deploymentDocumentPath} 与 ${paths.ledgerPath} 中的稳定 ID 和占位同步。`,
+          observed.outputLanguage,
+          `Use ${observed.contentLanguage} for natural-language content while describing the requested Ideal World in ${paths.ideaDocumentPath}; keep the stable IDs and placeholders in ${paths.implementationDocumentPath}, ${paths.deploymentDocumentPath}, and ${paths.ledgerPath} synchronized.`,
+          `使用 ${observed.contentLanguage} 在 ${paths.ideaDocumentPath} 中描述请求的理想契约，并保持 ${paths.implementationDocumentPath}、${paths.deploymentDocumentPath} 与 ${paths.ledgerPath} 中的稳定 ID 和占位同步。`,
         ),
       );
     } catch (caught) {
@@ -365,7 +365,7 @@ export async function createIdea({
         observation: readiness.observation,
         outcomes,
         cleanup,
-        language: observed.language,
+        language: observed.outputLanguage,
       });
     }
   }
@@ -379,6 +379,6 @@ export async function createIdea({
     observation: readiness.observation,
     outcomes,
     cleanup,
-    language: observed.language,
+    language: observed.outputLanguage,
   });
 }

@@ -230,6 +230,32 @@ test("normalizes and persists an explicit idea language", async () => {
   );
 });
 
+test("keeps arbitrary canonical content languages outside the output allowlist", async () => {
+  const repository = await fixture();
+
+  const report = await createIdea({
+    generateId: () => createdId,
+    language: "fr-fr",
+    root: repository.root,
+    userHome: repository.base,
+  });
+
+  assert.equal(report.intention.args.language, "fr-FR");
+  assert.equal(
+    report.observation.configuration.preferredLanguage,
+    "fr-FR",
+  );
+  assert.equal(report.observation.outputLanguage, "en-US");
+  assert.match(report.instructions, /^Use fr-FR /);
+  assert.equal(
+    await readFile(
+      join(repository.root, ...ideaPaths(createdId).statusPath.split("/")),
+      "utf8",
+    ),
+    `version: 1\nid: ${createdId}\nlanguage: fr-FR\n`,
+  );
+});
+
 test("preserves create intent and does not mutate a dirty repository", async () => {
   const repository = await fixture();
   await writeFile(join(repository.root, "dirty.txt"), "preserve\n");

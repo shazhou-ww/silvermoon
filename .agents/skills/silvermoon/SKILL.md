@@ -19,6 +19,10 @@ repository or external actions with ordinary tools and Git.
 - Bare `whats-next` lists active ideas and offers creation, even when exactly one idea is active.
   Never infer selection; require an explicit ULID or alias.
 - Use `--json` only when a programmatic consumer needs the envelope.
+- Use `--language en-US|zh-CN` with `whats-next` or `check` only when the user
+  explicitly requests a temporary output locale. Preserve the same canonical
+  option in every hygiene retry. It changes Silvermoon-owned rendering for
+  that invocation only, never project or idea content language.
 - Treat each command's `intention`, `observation`, `outcomes`, and `instructions`
   as one report. Read every problem and all ordered instructions; never combine
   reports.
@@ -73,8 +77,9 @@ review; never ask for approval of unpublished content. Publication is not
 approval and must not change `status.yaml`.
 
 An Agent may derive a concise, unique alias; do not ask for a name solely for
-the alias. Pass `--language <tag>` only when the user explicitly requests a
-stable language override. Do not use that option with `whats-next` or `check`.
+the alias. Pass `create-idea --language <tag>` only when the user explicitly
+requests a stable content-language override. Unlike the temporary output
+override, creation accepts any canonical BCP 47 tag and persists it.
 
 ## Continue The Selected Idea
 

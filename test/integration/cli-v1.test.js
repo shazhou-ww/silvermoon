@@ -82,6 +82,8 @@ test("writes task and Git spans without changing the observed worktree", async (
       [
         "whats-next",
         "fixture",
+        "--language",
+        "ZH-cn",
         "--root",
         repository.root,
         "--trace",
@@ -98,6 +100,8 @@ test("writes task and Git spans without changing the observed worktree", async (
     assert.deepEqual(errors, []);
     const report = JSON.parse(logs[0]);
     assert.deepEqual(report.observation.problems, []);
+    assert.equal(report.intention.args.language, "zh-CN");
+    assert.equal(report.observation.outputLanguage, "zh-CN");
 
     const events = (await readFile(tracePath, "utf8"))
       .trim()
@@ -105,6 +109,7 @@ test("writes task and Git spans without changing the observed worktree", async (
       .map((line) => JSON.parse(line));
     assert.equal(events[0].event, "span-start");
     assert.equal(events[0].name, "command.whats-next");
+    assert.equal(events[0].attributes.outputLanguage, "zh-CN");
     assert.equal(events.at(-1).event, "span-end");
     assert.equal(events.at(-1).name, "command.whats-next");
     assert.ok(events.some(({ name }) => name === "snapshot.observe"));

@@ -3,6 +3,7 @@ import { spawnSync } from "node:child_process";
 import {
   mkdir,
   mkdtemp,
+  readFile,
   rm,
   writeFile,
 } from "node:fs/promises";
@@ -67,9 +68,15 @@ test("project setup uses cumulative observation variants and reports all setup f
   const root = await mkdtemp(join(tmpdir(), "silvermoon-unconfigured-"));
   temporaryDirectories.push(root);
 
-  const missingGit = await whatsNext({ root, userHome: root });
+  const missingGit = await whatsNext({
+    language: "zh-cn",
+    root,
+    userHome: root,
+  });
   assert.equal(missingGit.observation.state, "project-setup-required");
   assert.equal(missingGit.observation.observedThrough, "root");
+  assert.equal(missingGit.intention.args.language, "zh-CN");
+  assert.equal(missingGit.observation.outputLanguage, "zh-CN");
   assert.equal(Object.hasOwn(missingGit.observation, "version"), false);
   assert.deepEqual(
     missingGit.observation.problems.map(({ type }) => type),
@@ -77,6 +84,7 @@ test("project setup uses cumulative observation variants and reports all setup f
   );
   assert.equal(missingGit.outcomes.length, 0);
   assert.match(missingGit.instructions, /^1\. .*\n2\. .*\n3\. /);
+  assert.match(missingGit.instructions, /处理/);
 
   const configured = await fixture();
   await writeFile(
@@ -139,8 +147,9 @@ test("[selector-none] naked navigation lists one active idea without selecting i
   ]);
   assert.deepEqual(report.intention, {
     command: "whats-next",
-    args: { idea: null },
+    args: { idea: null, language: null },
   });
+  assert.equal(report.observation.outputLanguage, "en-US");
   assert.equal(report.observation.state, "navigation-ready");
   assert.deepEqual(report.observation.ideas.activeIdeas, [{
     id: FIRST_ID,
@@ -152,6 +161,20 @@ test("[selector-none] naked navigation lists one active idea without selecting i
   assert.match(report.instructions, /silvermoon create-idea/);
   assert.equal(report.outcomes[0].type, "fetch-primary");
   assert.equal(report.outcomes[0].status, "success");
+
+  const localized = await whatsNext({
+    language: "zh-cn",
+    root: repository.root,
+    userHome: repository.base,
+  });
+  assert.equal(localized.observation.state, "navigation-ready");
+  assert.equal(localized.observation.outputLanguage, "zh-CN");
+  assert.equal(
+    localized.observation.configuration.preferredLanguage,
+    "en-US",
+  );
+  assert.match(localized.instructions, /^请明确选择/);
+  assert.match(localized.outcomes[0].summary, /^已 fetch /);
 });
 
 test("empty navigation stays ready without selecting an idea", async () => {
@@ -257,11 +280,13 @@ test("default navigation excludes completed and abandoned ideas while counting t
 
 test("uses formal world and contract names in localized lifecycle instructions", async () => {
   const repository = await fixture({
-    preferredLanguage: "zh-CN",
+    preferredLanguage: "fr-FR",
     ideas: [
       { id: FIRST_ID, status: { alias: "preparing" } },
       { id: SECOND_ID, status: { alias: "implementing" } },
       { id: DEPLOYING_ID, status: { alias: "deploying" } },
+      { id: COMPLETED_ID, status: { alias: "completed" } },
+      { id: ABANDONED_ID, status: { alias: "abandoned" } },
     ],
   });
   await setIdeaState(repository.root, SECOND_ID, "implementing", {
@@ -269,6 +294,12 @@ test("uses formal world and contract names in localized lifecycle instructions",
   });
   await setIdeaState(repository.root, DEPLOYING_ID, "deploying", {
     alias: "deploying",
+  });
+  await setIdeaState(repository.root, COMPLETED_ID, "completed", {
+    alias: "completed",
+  });
+  await setIdeaState(repository.root, ABANDONED_ID, "abandoned", {
+    alias: "abandoned",
   });
   git(repository.root, "add", ".");
   git(repository.root, "commit", "-m", "Set localized lifecycle states");
@@ -278,12 +309,21 @@ test("uses formal world and contract names in localized lifecycle instructions",
     [FIRST_ID, "理想契约就绪"],
     [SECOND_ID, "除非理想契约确实需要变化"],
     [DEPLOYING_ID, "保留内层世界"],
+    [COMPLETED_ID, "已完成 idea"],
+    [ABANDONED_ID, "已放弃 idea"],
   ]) {
     const selected = await whatsNext({
       idea: id,
+      language: "zh-cn",
       root: repository.root,
       userHome: repository.base,
     });
+    assert.equal(selected.intention.args.language, "zh-CN");
+    assert.equal(selected.observation.outputLanguage, "zh-CN");
+    assert.equal(
+      selected.observation.configuration.preferredLanguage,
+      "fr-FR",
+    );
     assert.match(selected.instructions, new RegExp(phrase));
     assert.doesNotMatch(selected.instructions, /道心|内景|现世/);
   }
@@ -294,6 +334,7 @@ test("[selector-unknown] reports an unknown selector without guessing", async ()
 
   const report = await whatsNext({
     idea: "unknown",
+    language: "zh-CN",
     root: repository.root,
     userHome: repository.base,
   });
@@ -303,8 +344,9 @@ test("[selector-unknown] reports an unknown selector without guessing", async ()
   assert.deepEqual(report.observation.candidates, [{
     id: FIRST_ID, alias: "fixture", state: "preparing",
   }]);
+  assert.equal(report.observation.outputLanguage, "zh-CN");
   assert.equal(Object.hasOwn(report.observation, "selectedIdea"), false);
-  assert.match(report.instructions, /does not match/);
+  assert.match(report.instructions, /未匹配/);
   assert.doesNotMatch(report.instructions, new RegExp(FIRST_ID));
   assert.match(report.instructions, /create-idea/);
 });
@@ -351,9 +393,66 @@ test("resolves preferred language for the selected idea without changing bare na
     selected.observation.configuration.preferredLanguage,
     "fr",
   );
+  assert.equal(selected.observation.outputLanguage, "en-US");
   assert.equal(
     bare.observation.configuration.preferredLanguage,
     "en-US",
+  );
+  assert.equal(bare.observation.outputLanguage, "en-US");
+});
+
+test("uses a canonical output override without changing content language or persisted status", async () => {
+  const repository = await fixture({
+    ideas: [{
+      id: FIRST_ID,
+      status: { alias: "localized", language: "fr-FR" },
+    }],
+  });
+  const statusPath = join(
+    repository.root,
+    ".silvermoon",
+    "ideas",
+    FIRST_ID,
+    "status.yaml",
+  );
+  const configPath = join(repository.root, ".silvermoon", "config.yaml");
+  const before = await readFile(statusPath, "utf8");
+  const configBefore = await readFile(configPath, "utf8");
+
+  const selected = await whatsNext({
+    idea: "localized",
+    language: "ZH-cn",
+    root: repository.root,
+    userHome: repository.base,
+  });
+
+  assert.deepEqual(selected.intention.args, {
+    idea: "localized",
+    language: "zh-CN",
+  });
+  assert.equal(selected.observation.outputLanguage, "zh-CN");
+  assert.equal(
+    selected.observation.configuration.preferredLanguage,
+    "fr-FR",
+  );
+  assert.match(selected.instructions, /^继续在 /);
+  assert.match(selected.outcomes[0].summary, /^已 fetch /);
+  assert.equal(await readFile(statusPath, "utf8"), before);
+  assert.equal(await readFile(configPath, "utf8"), configBefore);
+
+  await writeFile(join(repository.root, "local.txt"), "preserve me\n");
+  const blocked = await whatsNext({
+    idea: "localized",
+    language: "zh-CN",
+    root: repository.root,
+    userHome: repository.base,
+  });
+
+  assert.equal(blocked.observation.outputLanguage, "zh-CN");
+  assert.match(blocked.instructions, /^检查全部 staged、unstaged 和 untracked 路径/);
+  assert.match(
+    blocked.instructions,
+    /silvermoon whats-next "localized" --language zh-CN/,
   );
 });
 
@@ -624,4 +723,21 @@ test("records fetch failure as a failure outcome with a trustworthy envelope", a
   assert.equal(report.outcomes.at(-1).type, "fetch-primary");
   assert.equal(report.outcomes.at(-1).status, "failure");
   assert.match(report.instructions, /network|网络/);
+});
+
+test("rejects an unsupported programmatic output language before repository inspection", async () => {
+  const repository = await fixture();
+  const commands = [];
+
+  await assert.rejects(
+    observeGitCommands(
+      (args) => commands.push(args),
+      () => whatsNext({
+        language: "fr-FR",
+        root: repository.root,
+      }),
+    ),
+    (error) => error.exitCode === 2,
+  );
+  assert.deepEqual(commands, []);
 });

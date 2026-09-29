@@ -47,8 +47,9 @@ test("checks HEAD with a project-only observation and resolved commit version", 
   ]);
   assert.deepEqual(report.intention, {
     command: "check",
-    args: { target: { type: "head" } },
+    args: { target: { type: "head" }, language: null },
   });
+  assert.equal(report.observation.outputLanguage, "en-US");
   assert.deepEqual(report.observation.version, {
     type: "commit",
     commit,
@@ -76,6 +77,40 @@ test("keeps the requested revision in intention and only the resolved commit in 
     type: "commit",
     commit: expected,
   });
+});
+
+test("applies a canonical output override independently across every check target", async () => {
+  const repository = await fixture();
+  const targets = [
+    {},
+    { commit: "HEAD" },
+    { staged: true },
+    { worktree: true },
+    { remote: true },
+  ];
+
+  for (const target of targets) {
+    const baseline = await checkRepository({
+      ...target,
+      root: repository.root,
+      userHome: repository.base,
+    });
+    const localized = await checkRepository({
+      ...target,
+      language: "ZH-cn",
+      root: repository.root,
+      userHome: repository.base,
+    });
+    const { outputLanguage: _baselineLanguage, ...baselineObservation } =
+      baseline.observation;
+    const { outputLanguage: _localizedLanguage, ...localizedObservation } =
+      localized.observation;
+
+    assert.equal(localized.intention.args.language, "zh-CN");
+    assert.equal(localized.observation.outputLanguage, "zh-CN");
+    assert.deepEqual(localized.intention.args.target, baseline.intention.args.target);
+    assert.deepEqual(localizedObservation, baselineObservation);
+  }
 });
 
 test("validates identical trees independently of target and parent topology", async () => {
@@ -286,6 +321,7 @@ test("remote check reports invalid HEAD primary coordinates before fetching", as
   const report = await observeGitCommands(
     (args) => commands.push(args),
     () => checkRepository({
+      language: "zh-CN",
       remote: true,
       root: repository.root,
       userHome: repository.base,
@@ -295,7 +331,9 @@ test("remote check reports invalid HEAD primary coordinates before fetching", as
   assert.equal(report.observation.state, "project-setup-required");
   assert.equal(report.observation.observedThrough, "version");
   assert.deepEqual(report.observation.version, { type: "remote", commit: null });
+  assert.equal(report.observation.outputLanguage, "zh-CN");
   assert.equal(report.observation.problems[0].type, "config-invalid-primary-repository");
+  assert.match(report.observation.problems[0].summary, /^在 /);
   assert.equal(
     commands.some(([name]) => name === "fetch" || name === "ls-remote"),
     false,
@@ -320,6 +358,22 @@ test("returns a check-unavailable observation for an unavailable commit", async 
   assert.deepEqual(Object.keys(report).sort(), ["intention", "observation"]);
 });
 
+test("keeps an output override when the requested check snapshot is unavailable", async () => {
+  const repository = await fixture();
+
+  const report = await checkRepository({
+    commit: "missing-revision",
+    language: "zh-cn",
+    root: repository.root,
+    userHome: repository.base,
+  });
+
+  assert.equal(report.intention.args.language, "zh-CN");
+  assert.equal(report.observation.outputLanguage, "zh-CN");
+  assert.equal(report.observation.state, "check-unavailable");
+  assert.equal(report.observation.problems[0].type, "commit-unavailable");
+});
+
 test("uses the shared root-stage setup observation for every target outside Git", async () => {
   const root = await mkdtemp(join(tmpdir(), "silvermoon-check-no-git-"));
   temporaryDirectories.push(root);
@@ -333,12 +387,15 @@ test("uses the shared root-stage setup observation for every target outside Git"
   ]) {
     const report = await checkRepository({
       ...options,
+      language: "zh-CN",
       root,
       userHome: root,
     });
     assert.equal(report.observation.state, "project-setup-required");
     assert.equal(report.observation.observedThrough, "root");
+    assert.equal(report.observation.outputLanguage, "zh-CN");
     assert.equal(Object.hasOwn(report.observation, "version"), false);
+    assert.match(report.observation.problems[0].summary, /^Silvermoon 发现/);
     assert.deepEqual(
       report.observation.problems.map(({ type }) => type),
       ["git-repository-missing", "config-missing", "canonical-skill-missing"],
@@ -375,4 +432,21 @@ test("rejects conflicting programmatic check targets as usage errors", async () 
     }),
     (error) => error.exitCode === 2,
   );
+});
+
+test("rejects an unsupported programmatic output language before Git inspection", async () => {
+  const repository = await fixture();
+  const commands = [];
+
+  await assert.rejects(
+    observeGitCommands(
+      (args) => commands.push(args),
+      () => checkRepository({
+        language: "fr-FR",
+        root: repository.root,
+      }),
+    ),
+    (error) => error.exitCode === 2,
+  );
+  assert.deepEqual(commands, []);
 });

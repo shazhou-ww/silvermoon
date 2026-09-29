@@ -1,3 +1,8 @@
+import {
+  DEFAULT_LANGUAGE,
+  resolveOutputLanguage,
+} from "./language.js";
+
 const ACTIVE_STATES = new Set(["preparing", "implementing", "deploying"]);
 const IDEA_STATES = [
   "preparing",
@@ -71,11 +76,19 @@ export function createEnvelope(intention, observation, outcomes, instructions) {
 }
 
 export function dialogueReadyObservation(observation, state, details = {}) {
-  const { root, version, configuration, problems } = observation;
-  return { state, root, version, configuration, problems, ...details };
+  const { root, version, configuration, outputLanguage, problems } = observation;
+  return {
+    state,
+    root,
+    version,
+    configuration,
+    outputLanguage,
+    problems,
+    ...details,
+  };
 }
 
-function renderIntention(intention, language) {
+function renderIntention(intention, language, contentLanguage) {
   if (intention.command === "whats-next") {
     return intention.args.idea === null
       ? localize(
@@ -93,8 +106,8 @@ function renderIntention(intention, language) {
     return intention.args.language === null
       ? localize(
         language,
-        `Create one new idea and use ${language} for natural-language content.`,
-        `创建一个新 idea，并使用 ${language} 撰写自然语言内容。`,
+        `Create one new idea and use ${contentLanguage} for natural-language content.`,
+        `创建一个新 idea，并使用 ${contentLanguage} 撰写自然语言内容。`,
       )
       : localize(
         language,
@@ -198,7 +211,7 @@ function renderObservation(observation, language) {
       `- ${localize(language, "primary", "主仓库")}: ${codeSpan(`${observation.configuration.primaryRepository}#${observation.configuration.primaryBranch}`)}`,
     );
     lines.push(
-      `- ${localize(language, "interaction language", "交互语言")}: ${observation.configuration.preferredLanguage}`,
+      `- ${localize(language, "content language", "内容语言")}: ${observation.configuration.preferredLanguage}`,
     );
   }
   if (observation.ideas) {
@@ -240,9 +253,16 @@ function renderOutcomes(outcomes, language) {
 }
 
 export function renderDialogue(report) {
-  const language =
+  const contentLanguage =
     report.observation.configuration?.preferredLanguage
-    ?? "en-US";
+    ?? DEFAULT_LANGUAGE;
+  const language = report.observation.outputLanguage
+    ?? resolveOutputLanguage({
+      content: contentLanguage,
+      override: report.intention.command === "whats-next"
+        ? report.intention.args.language ?? undefined
+        : undefined,
+    }).tag;
   const visibleOutcomes = report.outcomes.filter((item) =>
     !(item.type === "fetch-primary"
       && item.status === "success"
@@ -252,7 +272,7 @@ export function renderDialogue(report) {
   const sections = [
     [
       localize(language, "Current instruction", "本次指示"),
-      renderIntention(report.intention, language),
+      renderIntention(report.intention, language, contentLanguage),
     ],
     [
       localize(language, "Project status", "项目现状"),
@@ -273,7 +293,11 @@ export function renderDialogue(report) {
 }
 
 export function renderCheck(report) {
-  const language = report.observation.configuration?.preferredLanguage ?? "en-US";
+  const language = report.observation.outputLanguage
+    ?? resolveOutputLanguage({
+      content: report.observation.configuration?.preferredLanguage,
+      override: report.intention.args.language ?? undefined,
+    }).tag;
   const { target } = report.intention.args;
   const version = renderVersion(report.observation.version);
   const label = target.type === "commit"

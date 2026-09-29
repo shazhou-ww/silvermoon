@@ -25,12 +25,13 @@ function envelope() {
   return {
     intention: {
       command: "whats-next",
-      args: { idea: null },
+      args: { idea: null, language: null },
     },
     observation: {
       state: "navigation-ready",
       root: "C:\\repository",
       version: { type: "worktree" },
+      outputLanguage: "en-US",
       configuration: {
         primaryRepository: "https://example.test/owner/repository.git",
         primaryBranch: "main",
@@ -68,10 +69,7 @@ test("registers only the approved command surface", () => {
   assert.ok(create.options.some(({ long }) => long === "--language"));
   for (const command of program.commands) {
     assert.ok(command.options.some(({ long }) => long === "--trace"));
-  }
-  for (const name of ["check", "whats-next"]) {
-    const command = program.commands.find((candidate) => candidate.name() === name);
-    assert.ok(!command.options.some(({ long }) => long === "--language"));
+    assert.ok(command.options.some(({ long }) => long === "--language"));
   }
 });
 
@@ -122,7 +120,7 @@ test("renders JSON verbatim and omits the empty outcomes section in Markdown", (
   const text = human.logs[0];
   assert.match(text, /^## Current instruction\n\nDetermine the available next work\.\n\n/);
   assert.match(text, /\n\n## Project status\n\n/);
-  assert.match(text, /- interaction language: en-US/);
+  assert.match(text, /- content language: en-US/);
   assert.doesNotMatch(text, /- language: en-US/);
   assert.match(text, /\n\n### Ideas you can continue\n\n- `01M36QGPNTXEPP61DA4KP4AVZF` preparing/);
   assert.doesNotMatch(text, /### Issues to address/);
@@ -136,9 +134,10 @@ test("renders JSON verbatim and omits the empty outcomes section in Markdown", (
   assert.match(text, /Choose an idea or run/);
 });
 
-test("uses localized section headings from resolved configuration", () => {
+test("uses the observation output language independently of content language", () => {
   const report = envelope();
-  report.observation.configuration.preferredLanguage = "zh-CN";
+  report.observation.configuration.preferredLanguage = "fr-FR";
+  report.observation.outputLanguage = "zh-CN";
   report.outcomes.push({
     type: "fetch-primary",
     status: "success",
@@ -150,8 +149,7 @@ test("uses localized section headings from resolved configuration", () => {
 
   assert.match(output.logs[0], /^## 本次指示\n\n查看当前可推进的工作。\n\n/);
   assert.match(output.logs[0], /\n\n## 项目现状\n\n/);
-  assert.match(output.logs[0], /- 交互语言: zh-CN/);
-  assert.doesNotMatch(output.logs[0], /- 语言: zh-CN/);
+  assert.match(output.logs[0], /- 内容语言: fr-FR/);
   assert.match(output.logs[0], /\n\n### 可继续推进的想法\n\n/);
   assert.doesNotMatch(output.logs[0], /## 本次操作及结果/);
   assert.match(output.logs[0], /\n\n## 下一步建议\n\n/);
@@ -266,12 +264,16 @@ test("renders observed problems under their own level-three heading", () => {
 
 test("renders check as a verdict without dialogue actions or instructions", () => {
   const report = {
-    intention: { command: "check", args: { target: { type: "staged" } } },
+    intention: {
+      command: "check",
+      args: { target: { type: "staged" }, language: null },
+    },
     observation: {
       state: "project-setup-required",
       observedThrough: "version",
       root: "C:\\repository",
       version: { type: "staged" },
+      outputLanguage: "en-US",
       problems: [{ type: "config-missing", summary: "Missing configuration." }],
     },
   };
@@ -281,11 +283,20 @@ test("renders check as a verdict without dialogue actions or instructions", () =
   assert.match(output.logs[0], /- Result: invalid or unavailable/);
   assert.match(output.logs[0], /\n\n### Issues to address\n\n- \[config-missing\] Missing configuration/);
   assert.doesNotMatch(output.logs[0], /## Suggested next steps|## Actions and results/);
+
+  report.intention.args.language = "zh-CN";
+  report.observation.outputLanguage = "zh-CN";
+  const localized = capture();
+  render(report, false, localized.io);
+  assert.match(localized.logs[0], /^## 检查\n\n- 目标: `staged`/);
+  assert.match(localized.logs[0], /- 结果: 未通过或无法验证/);
 });
 
 test("rejects conflicting targets and invalid language as CLI usage errors", async () => {
   const first = capture();
   const second = capture();
+  const third = capture();
+  const fourth = capture();
 
   assert.equal(
     await runCli(["check", "--remote", "--worktree"], first.io),
@@ -295,6 +306,16 @@ test("rejects conflicting targets and invalid language as CLI usage errors", asy
     await runCli(["create-idea", "--language", "en_US"], second.io),
     2,
   );
+  assert.equal(
+    await runCli(["whats-next", "--language", "fr-FR"], third.io),
+    2,
+  );
+  assert.equal(
+    await runCli(["check", "--language", "en"], fourth.io),
+    2,
+  );
   assert.ok(first.errors.length > 0);
   assert.ok(second.errors.length > 0);
+  assert.ok(third.errors.length > 0);
+  assert.ok(fourth.errors.length > 0);
 });

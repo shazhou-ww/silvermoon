@@ -9,6 +9,7 @@ publishing Silvermoon ideas.
 npx silvermoon whats-next
 npx silvermoon whats-next 01M36QGPNTXEPP61DA4KP4AVZF
 npx silvermoon whats-next publish-documentation --json
+npx silvermoon whats-next publish-documentation --language zh-CN
 ```
 
 Without a selector, Silvermoon asks for a choice among multiple active ideas,
@@ -17,10 +18,13 @@ one, or many active ideas: only a selector chooses work. Completed and abandoned
 ideas are excluded from default candidates. A selector is either a canonical
 uppercase ULID or an exact, unique, case-sensitive alias.
 
-The shared observation includes a resolved non-empty `preferredLanguage`.
-Instructions use it for world entries, same-world supporting artifacts, the
-ledger, and user-facing explanations. Commands, identifiers, schema fields,
-protocol markers, and verbatim tool output retain their original form.
+The shared observation exposes the resolved content preference as
+`configuration.preferredLanguage` and the built-in rendering locale as
+`outputLanguage`. Instructions use the content preference for world entries,
+same-world supporting artifacts, and the ledger. A caller may use
+`--language en-US|zh-CN` to override only Silvermoon-owned output for one
+`whats-next` invocation. Commands, identifiers, schema fields, protocol
+markers, and verbatim tool output retain their original form.
 
 Every invocation follows three strict layers. It first checks Git,
 configuration compatibility, and `.agents/skills/silvermoon`. It then checks
@@ -48,10 +52,12 @@ require local HEAD to be aligned with the remote tip. Its preparation reports
 omit the active-idea inventory because existing work does not replace explicit
 creation intent.
 
-`--language` is the only command-level language override. It normalizes a valid
-BCP 47 tag and writes it to the new idea's `status.yaml`. Without the option,
-creation writes no language field and the idea dynamically inherits project,
-user, or `en-US` defaults. `whats-next` and `check` do not accept the option.
+For `create-idea`, `--language` normalizes any valid BCP 47 tag and writes it
+to the new idea's `status.yaml` as a persistent content-language preference.
+Without the option, creation writes no language field and the idea dynamically
+inherits project, user, or `en-US` defaults. This is distinct from the
+non-persistent `en-US|zh-CN` output override accepted by `whats-next` and
+`check`.
 
 The generated files remain untracked for review. Complete `Idea.md`, optionally
 add a concise unique alias, inspect every path, and publish the initial idea
@@ -79,7 +85,8 @@ diff. Preserve unknown and concurrent work. Never force-push, use
 `reset --hard`, broadly clean the worktree, or silently rewrite history.
 
 After an observable change, run `whats-next` again. Do not poll an unchanged
-observation.
+observation. When the invocation used `--language`, every generated retry
+command preserves the same canonical output-language option.
 
 ## Author World Contracts
 
@@ -115,6 +122,7 @@ Validate the complete candidate:
 
 ```sh
 silvermoon check --worktree
+silvermoon check --worktree --language zh-CN
 git add .silvermoon/ideas/<ULID>/status.yaml
 silvermoon check --staged
 ```
@@ -128,6 +136,10 @@ the index and is the pre-commit hook target. Its JSON has `intention` and
 means the chosen project snapshot is valid; `1` means invalid or unavailable
 and must block the commit; `2` means invalid CLI usage. Do not treat the
 existence of a report as permission to commit.
+
+`check --language en-US|zh-CN` changes only Silvermoon-owned report framing.
+It is orthogonal to every check target and never changes the selected snapshot,
+validation conclusion, problems, or exit status.
 
 `check` does not infer that a status field was newly written, prove who
 authorized it, compare it with a commit parent, or search history for its
