@@ -1,25 +1,21 @@
-# Deployment
+# 部署方案
 
-## Steps
+## 部署步骤
 
-<!--
-Give every step a stable D-Sxx identifier and a level-three heading.
-Describe deployment or external-world verification work.
-Do not use task-list checkboxes in this document.
--->
+### D-S01: 验证已发布的仓库候选
 
-### D-S01: Step title
+发布本部署合同后，刷新 `origin/main`，并从 primary 分支验证已验收的实现。
+运行完整仓库检查，验证远端 Silvermoon snapshot，并实际运行默认的人类可读
+`whats-next` 输出，确认 Active ideas 以 ID/Alias/State Markdown 表格呈现。
 
-<!-- Describe this deployment or external-verification step. -->
+本次部署止于仓库验证，不得发布 npm package、创建 release tag 或调用 npm
+发布工作流。
 
-## Acceptance criteria
+## 部署验收标准
 
-<!--
-Give every criterion a stable D-ACxx identifier and a level-three heading.
-Describe both the observable external outcome and the method that proves it.
-Do not create a separate validation section or use task-list checkboxes.
--->
+### D-AC01: 已发布的 primary 通过仓库验证
 
-### D-AC01: Criterion title
-
-<!-- Describe the required external outcome and how an Agent can prove it. -->
+实现与本部署合同均可从刷新后的 `origin/main` 到达；`pnpm check` 成功退出；
+`silvermoon check --remote --json` 报告远端 snapshot 有效；默认的人类可读
+`whats-next` 输出包含 Active ideas 的 ID/Alias/State 表格。记录的部署证据需
+确认未执行任何 npm 发布。

@@ -163,13 +163,13 @@ function dialogueResponse(intention, internalObservation, language) {
         summary: choices.length === 0
           ? localize(
             language,
-            "No active ideas are available.",
-            "当前没有 active idea。",
+            "Current state: navigation-ready. No active ideas are available.",
+            "当前状态：navigation-ready。当前没有 active idea。",
           )
           : localize(
             language,
-            `${choices.length} active idea(s) are available.`,
-            `当前有 ${choices.length} 个 active idea。`,
+            `Current state: navigation-ready. ${choices.length} active idea(s) are available.`,
+            `当前状态：navigation-ready。当前有 ${choices.length} 个 active idea。`,
           ),
         choices,
         nextSteps,
@@ -304,6 +304,16 @@ function markdownTableCell(value) {
     .replaceAll(/\r?\n/g, " ");
 }
 
+function renderMarkdownTable(headers, rows) {
+  return [
+    `| ${headers.join(" | ")} |`,
+    `| ${headers.map(() => "---").join(" | ")} |`,
+    ...rows.map((row) =>
+      `| ${row.map(markdownTableCell).join(" | ")} |`
+    ),
+  ];
+}
+
 function renderIdeaList(response, language) {
   const headers = [
     localize(language, "ID", "ID"),
@@ -318,20 +328,17 @@ function renderIdeaList(response, language) {
   const lines = [
     `${response.summary} ${localize(language, "Counts", "计数")}: ${counts}.`,
     "",
-    `| ${headers.join(" | ")} |`,
-    `| ${headers.map(() => "---").join(" | ")} |`,
-  ];
-  for (const idea of response.items) {
-    lines.push(
-      `| ${[
+    ...renderMarkdownTable(
+      headers,
+      response.items.map((idea) => [
         idea.id,
         idea.alias,
         idea.state,
         idea.createdAt,
         idea.title,
-      ].map(markdownTableCell).join(" | ")} |`,
-    );
-  }
+      ]),
+    ),
+  ];
   if (response.items.length === 0) {
     lines.push(
       "",
@@ -432,15 +439,35 @@ export function renderResponse(response) {
     );
   }
 
-  if (response.choices?.length > 0) {
+  if (response.choices) {
     lines.push(
       "",
-      `### ${localize(language, "Available ideas", "可用 ideas")}`,
+      `### ${localize(language, "Active ideas", "Active ideas")}`,
       "",
     );
-    for (const idea of response.choices) {
-      const alias = idea.alias === undefined ? "" : ` (${idea.alias})`;
-      lines.push(`- ${codeSpan(idea.id)}${alias} ${idea.state}`);
+    if (response.choices.length === 0) {
+      lines.push(
+        localize(
+          language,
+          "No active ideas are available.",
+          "当前没有 active idea。",
+        ),
+      );
+    } else {
+      lines.push(
+        ...renderMarkdownTable(
+          [
+            localize(language, "ID", "ID"),
+            localize(language, "Alias", "Alias"),
+            localize(language, "State", "状态"),
+          ],
+          response.choices.map((idea) => [
+            idea.id,
+            idea.alias,
+            idea.state,
+          ]),
+        ),
+      );
     }
   }
 

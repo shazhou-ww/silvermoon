@@ -329,4 +329,37 @@ test("verifies registry identity, READMEs, provenance, and jsDelivr assets", asy
     /failed after 2 attempts.*server returned 503/,
   );
   assert.deepEqual(retries, [1]);
+
+  const relativeOutputDirectory = join(root, "relative-output");
+  const relativeReadme = [
+    "# Unstaged fixture",
+    '<img src="./assets/silvermoon.svg">',
+    "",
+  ].join("\n");
+  const manifestPath = join(packageDirectory, "package.json");
+  const relativeManifest = JSON.parse(await readFile(manifestPath, "utf8"));
+  relativeManifest.readme = relativeReadme;
+  relativeManifest.readmeFilename = "README.md";
+  await Promise.all([
+    writeFile(manifestPath, `${JSON.stringify(relativeManifest, null, 2)}\n`),
+    writeFile(join(packageDirectory, "README.md"), relativeReadme),
+    writeFile(join(packageDirectory, "README.zh-CN.md"), relativeReadme),
+  ]);
+  const relativeCandidate = await buildNpmTarball({
+    packageDirectory,
+    outputDirectory: relativeOutputDirectory,
+    gitHead: commit,
+  });
+  await assert.rejects(
+    () =>
+      verifyNpmRelease(
+        { ...release, tarballPath: relativeCandidate.tarballPath },
+        {
+          fetchImpl: async () => {
+            throw new Error("release verification fetched before README validation");
+          },
+        },
+      ),
+    /README\.md still contains references that require release rewriting/,
+  );
 });

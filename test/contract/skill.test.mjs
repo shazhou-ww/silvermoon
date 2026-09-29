@@ -76,6 +76,10 @@ test("exposes one consolidated silvermoon skill", async () => {
     "--language en-US|zh-CN",
     "temporary output locale",
     "create-idea --language <tag>",
+    "effective content language",
+    "natural-language content in all",
+    "temporary output language",
+    "canonical headings",
     "`intention`, `observation`, `actions`, and `response`",
     "project-setup-required",
     "repository-sync-required",
@@ -193,13 +197,17 @@ test("keeps repository idea titles specific and ledger headings unique", async (
     const headings = [...ledger.matchAll(/^#{1,6} (.+)$/gm)]
       .map(([, heading]) => heading);
     assert.equal(new Set(headings).size, headings.length, idea.name);
-    for (const heading of [
-      "Implementation steps",
-      "Implementation acceptance criteria",
-      "Deployment steps",
-      "Deployment acceptance criteria",
+    for (const alternatives of [
+      ["Implementation steps", "实施步骤"],
+      ["Implementation acceptance criteria", "实施验收标准"],
+      ["Deployment steps", "部署步骤"],
+      ["Deployment acceptance criteria", "部署验收标准"],
     ]) {
-      assert.ok(headings.includes(heading), `${idea.name} is missing: ${heading}`);
+      assert.equal(
+        alternatives.filter((heading) => headings.includes(heading)).length,
+        1,
+        `${idea.name} must contain exactly one of: ${alternatives.join(", ")}`,
+      );
     }
   }
 });
@@ -208,6 +216,10 @@ test("documents explicit Silvermoon adoption and conversion", async () => {
   const readme = await readFile(resolve(repositoryRoot, "README.md"), "utf8");
   const operations = await readFile(
     resolve(repositoryRoot, "docs", "operations.md"),
+    "utf8",
+  );
+  const gettingStarted = await readFile(
+    resolve(repositoryRoot, "docs", "getting-started.md"),
     "utf8",
   );
   const coreConcepts = await readFile(
@@ -226,7 +238,7 @@ test("documents explicit Silvermoon adoption and conversion", async () => {
   assert.match(adoption, /version: 1/);
   for (
     const source of [
-      `${readme}\n${coreConcepts}\n${operations}\n${reference}`,
+      `${readme}\n${gettingStarted}\n${coreConcepts}\n${operations}\n${reference}`,
       adoption,
     ]
   ) {

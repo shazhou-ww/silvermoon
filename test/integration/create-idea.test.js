@@ -18,6 +18,7 @@ import {
   IDEA_TEMPLATE,
   IMPLEMENTATION_TEMPLATE,
   LEDGER_TEMPLATE,
+  ideaTemplates,
 } from "../../src/idea-templates.js";
 import {
   GUIDANCE_ROOT,
@@ -258,9 +259,23 @@ test("normalizes and persists an explicit idea language", async () => {
   );
   assert.match(responseText(report), /理想契约/);
   assert.doesNotMatch(responseText(report), /道心|内景|现世/);
+  const paths = ideaPaths(createdId);
+  const templates = ideaTemplates("zh-CN");
+  for (const [path, source] of [
+    [paths.ideaDocumentPath, templates.idea],
+    [paths.implementationDocumentPath, templates.implementation],
+    [paths.deploymentDocumentPath, templates.deployment],
+    [paths.ledgerPath, templates.ledger],
+  ]) {
+    assert.equal(
+      await readFile(join(repository.root, ...path.split("/")), "utf8"),
+      source,
+    );
+    assert.doesNotMatch(source, /Step title|Criterion title/);
+  }
   assert.equal(
     await readFile(
-      join(repository.root, ...ideaPaths(createdId).statusPath.split("/")),
+      join(repository.root, ...paths.statusPath.split("/")),
       "utf8",
     ),
     `version: 1\nid: ${createdId}\nlanguage: zh-CN\n`,
@@ -283,7 +298,14 @@ test("keeps arbitrary canonical content languages outside the output allowlist",
     "fr-FR",
   );
   assert.equal(report.observation.outputLanguage, "en-US");
-  assert.match(responseText(report), /^Use fr-FR /);
+  assert.match(
+    responseText(report),
+    /no built-in fr-FR scaffold.*en-US fallback placeholders/,
+  );
+  assert.match(
+    responseText(report),
+    /Replace all natural-language placeholders with fr-FR/,
+  );
   assert.equal(
     await readFile(
       join(repository.root, ...ideaPaths(createdId).statusPath.split("/")),

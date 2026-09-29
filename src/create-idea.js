@@ -10,10 +10,7 @@ import {
 import { createCommandRun } from "./domain.js";
 import { inspectPhaseGuidance } from "./guidance.js";
 import {
-  DEPLOYMENT_TEMPLATE,
-  IDEA_TEMPLATE,
-  IMPLEMENTATION_TEMPLATE,
-  LEDGER_TEMPLATE,
+  ideaTemplates,
 } from "./idea-templates.js";
 import { isValidUlid, serializeIdeaStatus } from "./ideas.js";
 import { canonicalizeLanguageTag } from "./language.js";
@@ -209,6 +206,7 @@ async function cleanupScaffold(cleanupPlan, operations) {
 
 async function createScaffold({
   canonicalLanguage,
+  contentLanguage,
   generateId,
   operations,
   repositoryRoot,
@@ -263,11 +261,12 @@ async function createScaffold({
       paths.innerPath,
       paths.idealPath,
     ];
+    const templates = ideaTemplates(contentLanguage);
     const files = [
-      [paths.ideaDocumentPath, IDEA_TEMPLATE],
-      [paths.implementationDocumentPath, IMPLEMENTATION_TEMPLATE],
-      [paths.deploymentDocumentPath, DEPLOYMENT_TEMPLATE],
-      [paths.ledgerPath, LEDGER_TEMPLATE],
+      [paths.ideaDocumentPath, templates.idea],
+      [paths.implementationDocumentPath, templates.implementation],
+      [paths.deploymentDocumentPath, templates.deployment],
+      [paths.ledgerPath, templates.ledger],
       [paths.statusPath, serializeIdeaStatus({
         version: 1,
         id,
@@ -420,6 +419,7 @@ export async function createIdea({
     },
     () => createScaffold({
       canonicalLanguage,
+      contentLanguage: observed.contentLanguage,
       generateId,
       operations,
       repositoryRoot,
@@ -467,6 +467,18 @@ export async function createIdea({
   }
 
   const { createdIdea, paths } = completion.result;
+  const templates = ideaTemplates(observed.contentLanguage);
+  const languageInstruction = templates.localized
+    ? localize(
+      observed.outputLanguage,
+      `Use ${observed.contentLanguage} for all natural-language content in the canonical idea documents and ledger.`,
+      `在 canonical idea 文档和 ledger 的所有自然语言内容中使用 ${observed.contentLanguage}。`,
+    )
+    : localize(
+      observed.outputLanguage,
+      `Silvermoon has no built-in ${observed.contentLanguage} scaffold, so the new files contain explicit ${templates.templateLanguage} fallback placeholders. Replace all natural-language placeholders with ${observed.contentLanguage} before continuing.`,
+      `Silvermoon 没有内置的 ${observed.contentLanguage} 脚手架，因此新文件包含明确的 ${templates.templateLanguage} fallback 占位。继续前，将所有自然语言占位替换为 ${observed.contentLanguage}。`,
+    );
   return runtime.complete(
     dialogueReadyObservation(readiness.observation, "idea-created", {
       createdIdea,
@@ -477,8 +489,8 @@ export async function createIdea({
     {
       nextSteps: localize(
         observed.outputLanguage,
-        `Use ${observed.contentLanguage} for natural-language content while describing the requested Ideal World in ${paths.ideaDocumentPath}; keep the stable IDs and placeholders in ${paths.implementationDocumentPath}, ${paths.deploymentDocumentPath}, and ${paths.ledgerPath} synchronized.`,
-        `使用 ${observed.contentLanguage} 在 ${paths.ideaDocumentPath} 中描述请求的理想契约，并保持 ${paths.implementationDocumentPath}、${paths.deploymentDocumentPath} 与 ${paths.ledgerPath} 中的稳定 ID 和占位同步。`,
+        `${languageInstruction} Describe the requested Ideal World in ${paths.ideaDocumentPath}; keep canonical headings, stable IDs, and placeholders in ${paths.implementationDocumentPath}, ${paths.deploymentDocumentPath}, and ${paths.ledgerPath} synchronized.`,
+        `${languageInstruction} 在 ${paths.ideaDocumentPath} 中描述请求的理想契约；保持 ${paths.implementationDocumentPath}、${paths.deploymentDocumentPath} 与 ${paths.ledgerPath} 中的 canonical 标题、稳定 ID 和占位同步。`,
       ),
     },
   );

@@ -37,6 +37,31 @@ test("keeps both READMEs reader-first and structurally aligned", async () => {
 
   assert.ok(english.indexOf("## Quick Start") < english.indexOf("## Why Silvermoon"));
   assert.ok(chinese.indexOf("## 快速开始") < chinese.indexOf("## 为什么需要 Silvermoon"));
+  const englishQuickStart = english.match(
+    /## Quick Start\r?\n([\s\S]*?)\r?\n## Why Silvermoon/,
+  )?.[1] ?? "";
+  const chineseQuickStart = chinese.match(
+    /## 快速开始\r?\n([\s\S]*?)\r?\n## 为什么需要 Silvermoon/,
+  )?.[1] ?? "";
+  assert.match(englishQuickStart, /coding agent/);
+  assert.match(chineseQuickStart, /coding agent/);
+  assert.match(
+    englishQuickStart,
+    /Copy the prompt below and send it to your coding agent from the project:/,
+  );
+  assert.match(
+    chineseQuickStart,
+    /复制下面的提示词，并在项目中发送给 coding agent：/,
+  );
+  for (const quickStart of [englishQuickStart, chineseQuickStart]) {
+    assert.match(quickStart, /```text[\s\S]*?```/);
+    assert.match(quickStart, /npx silvermoon whats-next/);
+    assert.match(quickStart, /navigation-ready/);
+    assert.doesNotMatch(
+      quickStart,
+      /npm install --global|devDependencies\.silvermoon|node_modules|pnpm|yarn/,
+    );
+  }
   assert.match(
     english,
     /> Fellow cultivator, you wouldn't want your lifebound project to be without an\s+>\s*artifact spirit, would you\?/,
@@ -49,11 +74,15 @@ test("keeps both READMEs reader-first and structurally aligned", async () => {
   for (const source of [english, chinese]) {
     assert.match(
       source,
-      /cdn\.jsdelivr\.net\/gh\/shazhou-ww\/silvermoon@main\/assets\/silvermoon\.svg/,
+      /src="\.\/assets\/silvermoon\.svg"/,
     );
     assert.match(
       source,
-      /cdn\.jsdelivr\.net\/gh\/shazhou-ww\/silvermoon@main\/assets\/silvermoon-mascot\.png" width="160"/,
+      /src="\.\/assets\/silvermoon-mascot\.png" width="160"/,
+    );
+    assert.doesNotMatch(
+      source,
+      /cdn\.jsdelivr\.net\/gh\/shazhou-ww\/silvermoon@main\/assets\//,
     );
     assert.doesNotMatch(source, /raw\.githubusercontent\.com\/shazhou-ww\/silvermoon/);
     assert.match(source, /<table>[\s\S]*silvermoon-mascot\.png[\s\S]*<\/table>/);
@@ -148,23 +177,15 @@ test("resolves repository-local links in reader documentation", async () => {
 });
 
 test("documents fixed additive phase guidance and snapshot validation", async () => {
-  const [readme, chineseReadme, core, gettingStarted, operations, reference] =
+  const [core, gettingStarted, operations, reference] =
     await Promise.all([
-      readFile(resolve(repositoryRoot, "README.md"), "utf8"),
-      readFile(resolve(repositoryRoot, "README.zh-CN.md"), "utf8"),
       readFile(resolve(repositoryRoot, "docs", "core-concepts.md"), "utf8"),
       readFile(resolve(repositoryRoot, "docs", "getting-started.md"), "utf8"),
       readFile(resolve(repositoryRoot, "docs", "operations.md"), "utf8"),
       readFile(resolve(repositoryRoot, "docs", "reference.md"), "utf8"),
     ]);
 
-  for (const source of [
-    readme,
-    chineseReadme,
-    core,
-    gettingStarted,
-    reference,
-  ]) {
+  for (const source of [core, gettingStarted, reference]) {
     assert.match(source, /\.silvermoon\/guidance\//);
     assert.match(source, /preparing\.md/);
     assert.match(source, /additive|追加/);
@@ -218,8 +239,6 @@ test("documents the four projections and unified event trace", async () => {
 
 test("documents the dedicated local idea inventory query", async () => {
   const paths = [
-    "README.md",
-    "README.zh-CN.md",
     "docs/getting-started.md",
     "docs/operations.md",
     "docs/reference.md",
@@ -230,7 +249,7 @@ test("documents the dedicated local idea inventory query", async () => {
     paths.map((path) => readFile(resolve(repositoryRoot, path), "utf8")),
   );
   for (const source of sources) assert.match(source, /list-ideas/);
-  const detailed = sources.slice(2, 5).join("\n");
+  const detailed = sources.slice(0, 3).join("\n");
   for (const option of [
     "--state",
     "--all",

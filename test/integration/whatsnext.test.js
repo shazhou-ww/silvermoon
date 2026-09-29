@@ -22,6 +22,7 @@ import {
   CHANGE_SAMPLE_ITEM_LIMIT,
   whatsNext,
 } from "../../src/whatsnext.js";
+import { renderResponse } from "../../src/response.js";
 import {
   createRepository,
   FIRST_ID,
@@ -189,6 +190,18 @@ test("[selector-none] naked navigation lists one active idea without selecting i
     alias: "fixture",
     state: "preparing",
   }]);
+  assert.equal(
+    report.response.summary,
+    "Current state: navigation-ready. 1 active idea(s) are available.",
+  );
+  assert.deepEqual(report.response.choices, report.observation.ideas.activeIdeas);
+  const rendered = renderResponse(report.response);
+  assert.match(rendered, /### Active ideas/);
+  assert.match(rendered, /\| ID \| Alias \| State \|/);
+  assert.match(
+    rendered,
+    new RegExp(`\\| ${FIRST_ID} \\| fixture \\| preparing \\|`),
+  );
   assert.doesNotMatch(responseText(report), new RegExp(FIRST_ID));
   assert.match(responseText(report), /silvermoon whats-next <ULID-or-alias>/);
   assert.match(responseText(report), /silvermoon create-idea/);
@@ -202,6 +215,10 @@ test("[selector-none] naked navigation lists one active idea without selecting i
   });
   assert.equal(localized.observation.state, "navigation-ready");
   assert.equal(localized.observation.outputLanguage, "zh-CN");
+  assert.equal(
+    localized.response.summary,
+    "当前状态：navigation-ready。当前有 1 个 active idea。",
+  );
   assert.equal(
     localized.observation.configuration.preferredLanguage,
     "en-US",
@@ -222,6 +239,7 @@ test("empty navigation stays ready without selecting an idea", async () => {
   assert.deepEqual(report.observation.ideas.activeIdeas, []);
   assert.equal(report.observation.ideas.counts.completed, 0);
   assert.equal(Object.hasOwn(report.observation, "selectedIdea"), false);
+  assert.match(renderResponse(report.response), /当前没有 active idea|No active ideas/);
   assert.match(responseText(report), /create-idea/);
 });
 
@@ -361,6 +379,12 @@ test("uses formal world and contract names in localized lifecycle instructions",
     );
     assert.match(responseText(selected), new RegExp(phrase));
     assert.doesNotMatch(responseText(selected), /道心|内景|现世/);
+    if ([FIRST_ID, SECOND_ID, DEPLOYING_ID].includes(id)) {
+      assert.match(
+        responseText(selected),
+        /自然语言内容中使用 fr-FR/,
+      );
+    }
   }
 });
 
@@ -471,6 +495,7 @@ test("uses a canonical output override without changing content language or pers
     "fr-FR",
   );
   assert.match(responseText(selected), /^继续在 /);
+  assert.match(responseText(selected), /自然语言内容中使用 fr-FR/);
   assert.match(selected.actions[0].result.commit, /^[0-9a-f]{40}$/);
   assert.equal(await readFile(statusPath, "utf8"), before);
   assert.equal(await readFile(configPath, "utf8"), configBefore);

@@ -125,6 +125,14 @@ the resolved content language and can therefore differ from `outputLanguage`.
 Without a temporary override, Chinese content tags use `zh-CN` output and all
 other content tags use the built-in `en-US` output.
 
+The resolved content language applies to natural-language content throughout
+`Idea.md`, `Implementation.md`, `Deployment.md`, same-world supporting files,
+and `ledger.md`. Canonical headings, stable IDs, paths, CLI options, and schema
+fields are machine contracts and remain unchanged. `create-idea` localizes
+built-in English and Chinese scaffolds; for another canonical language tag its
+next step names the fallback template language and requires the Agent to
+replace every natural-language placeholder before continuing.
+
 ## Inspect The Local Idea Inventory
 
 Use the dedicated read-only query when the question is which ideas exist,

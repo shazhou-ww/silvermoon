@@ -2,7 +2,7 @@
 
 <p align="center">
   <!-- markdownlint-disable-next-line MD013 -->
-  <img src="https://cdn.jsdelivr.net/gh/shazhou-ww/silvermoon@main/assets/silvermoon.svg" width="960" alt="Silvermoon，项目的器灵">
+  <img src="./assets/silvermoon.svg" width="960" alt="Silvermoon，项目的器灵">
 </p>
 
 <p align="center">
@@ -17,53 +17,27 @@
 
 Silvermoon 需要 Node.js 22 或更高版本，并且能够通过 Git 访问仓库的 primary branch。
 
-```sh
-npm install --global silvermoon
-silvermoon whats-next
-silvermoon list-ideas
+复制下面的提示词，并在项目中发送给 coding agent：
+
+```text
+请运行 `npx silvermoon whats-next`，遵循报告的最高优先级指示，保留已有工作，并在每次产生可观察变更后重新运行，直到默认输出明确显示 `navigation-ready`。
 ```
 
-Silvermoon 对非 npm 仓库保持生态中立：当仓库根目录没有 `package.json` 时，无需
-package manager、Silvermoon dependency 或 `node_modules`。如果根目录存在
-`package.json`，它必须是有效 JSON，并在 `devDependencies.silvermoon` 中逐字声明
-`^<当前运行版本>`。首次报告会按项目 package manager 提供修复命令。安装根依赖后，
-从 `./node_modules/silvermoon/skills` 注册 canonical skill；非 npm 项目继续使用当前
-运行实例随附的 skill。整备检查只读取所选 repository snapshot，不会安装依赖，也不要求
-存在 `node_modules`。
+只有默认输出明确显示 `当前状态：navigation-ready` 时才算整备完成；受阻报告或
+任何其他状态都不表示已就绪。项目特定的整备方式应以当前报告为准，而不是依赖
+README 中固定的命令清单。
 
-创建 `.silvermoon/config.yaml`：
-
-```yaml
-version: 1
-primaryRepository: https://github.com/example/repository.git
-primaryBranch: main
-preferredLanguage: zh-CN
-```
-
-`preferredLanguage` 可省略。具体 idea 可以通过 `status.yaml` 的 `language`
-覆盖它，创建时也可以使用 `create-idea --language <tag>` 设置该值。否则 Silvermoon 会继续
-读取 `~/.config/silvermoon/config.yaml`，最后稳定回退到 `en-US`。
-这些持久化值决定项目内容所用语言。若只需改变单次命令的内置输出语言，可使用
-`whats-next --language en-US|zh-CN` 或 `check --language en-US|zh-CN`；该临时覆盖
-不会写入任何配置或 idea。
-
-只想查看当前本地 inventory 时使用 `list-ideas`。它默认返回 active ideas，并支持
-可重复的 `--state`、`--all`、literal `--query`、RFC 3339
-`--created-since` / `--created-before`、`--sort` 和 `--limit`。与 lifecycle
-导航不同，这个只读查询使用有效的 worktree snapshot，不检查 branch、upstream、
-cleanliness、网络或 primary 同步。
-
-然后创建一个 idea，让已注册的 Silvermoon skill 每次引导一个安全的下一步行动：
+navigation 就绪后，继续让 Agent 推进：
 
 ```sh
-silvermoon create-idea
-silvermoon whats-next <idea>
-silvermoon whats-next <idea> --language zh-CN
+npx silvermoon create-idea
+npx silvermoon whats-next <idea>
 ```
 
 在生成的 `Idea.md` 中描述想要抵达的世界，审阅并批准这个精确 revision。此后，
-Silvermoon 会让目标、实现、仓库状态与现实结果始终相连。完整的首次工作流见英文
-[Getting Started](./docs/getting-started.md)。
+Silvermoon 会让目标、实现、仓库状态与现实结果始终相连。完整工作流见英文
+[Getting Started](./docs/getting-started.md)；命令、验证、JSON、语言、guidance、
+audience 与 trace 细节见 [Technical Reference](./docs/reference.md)。
 每个命令都处理一条有序且带版本的 domain-message stream。默认 `human` audience
 会在 stdin 与 stdout 都连接 TTY 时使用 Silvermoon 内置的 `tui-md` 视图渲染
 response；使用 `q`、`Esc` 或 `Ctrl+C` 退出。human 输出被重定向或进入管道时仍是
@@ -109,7 +83,7 @@ provenance。`create-idea` 可返回 preparing guidance。这些 guidance 只能
   <tr>
     <td width="160" align="center" valign="top">
       <!-- markdownlint-disable-next-line MD013 -->
-      <img src="https://cdn.jsdelivr.net/gh/shazhou-ww/silvermoon@main/assets/silvermoon-mascot.png" width="160" alt="项目器灵银月的全身立绘">
+      <img src="./assets/silvermoon-mascot.png" width="160" alt="项目器灵银月的全身立绘">
     </td>
     <td valign="top">
       Silvermoon 得名于《凡人修仙传》中的银月。她来自灵界的银月狼族，是玲珑公主分裂出的

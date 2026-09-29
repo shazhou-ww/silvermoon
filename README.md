@@ -2,7 +2,7 @@
 
 <p align="center">
   <!-- markdownlint-disable-next-line MD013 -->
-  <img src="https://cdn.jsdelivr.net/gh/shazhou-ww/silvermoon@main/assets/silvermoon.svg" width="960" alt="Silvermoon, the artifact spirit of the project">
+  <img src="./assets/silvermoon.svg" width="960" alt="Silvermoon, the artifact spirit of the project">
 </p>
 
 <p align="center">
@@ -30,59 +30,30 @@
 Silvermoon needs Node.js 22 or newer and Git access to the repository's primary
 branch.
 
-```sh
-npm install --global silvermoon
-silvermoon whats-next
-silvermoon list-ideas
+Copy the prompt below and send it to your coding agent from the project:
+
+```text
+Run `npx silvermoon whats-next`, follow the report's highest-priority instruction, preserve existing work, and rerun it after each observable change until the default output reports `navigation-ready`.
 ```
 
-Silvermoon remains ecosystem-neutral when the repository root has no
-`package.json`: non-npm projects do not need a package manager, a Silvermoon
-dependency, or `node_modules`. If a root `package.json` exists, it must be valid
-JSON and declare `devDependencies.silvermoon` as exactly `^<running-version>`.
-The report supplies a package-manager-aware repair command. After installing
-that root dependency, register its canonical skill from
-`./node_modules/silvermoon/skills`; non-npm projects use the skill bundled with
-the running installation. Readiness checks inspect the selected repository
-snapshot and do not install dependencies or require `node_modules`.
+Setup is complete only when the default output explicitly reports
+`Current state: navigation-ready`; a blocked report or any other state is not
+ready. The report, rather than a fixed command list in this README, is the
+authority for repository-specific setup.
 
-Create `.silvermoon/config.yaml`:
-
-```yaml
-version: 1
-primaryRepository: https://github.com/example/repository.git
-primaryBranch: main
-preferredLanguage: en
-```
-
-`preferredLanguage` is optional. A specific idea can override it with
-`language` in `status.yaml`, and `create-idea --language <tag>` can set that
-override when the idea is created. Otherwise Silvermoon checks
-`~/.config/silvermoon/config.yaml` and finally defaults to `en-US`.
-These stored values choose the language for project-owned content. To change
-only one command's built-in output, use `whats-next --language en-US|zh-CN` or
-`check --language en-US|zh-CN`; the temporary override is never persisted.
-
-Use `list-ideas` when you only need the current local inventory. It defaults to
-active ideas and supports repeatable `--state`, `--all`, literal `--query`,
-RFC 3339 `--created-since` / `--created-before`, `--sort`, and `--limit`.
-Unlike lifecycle navigation, this read-only query uses the valid worktree
-snapshot without checking branch, upstream, cleanliness, network, or primary
-synchronization.
-
-Then create an idea and let the registered Silvermoon skill guide one safe
-next action at a time:
+Once navigation is ready, continue through the Agent:
 
 ```sh
-silvermoon create-idea
-silvermoon whats-next <idea>
-silvermoon whats-next <idea> --language zh-CN
+npx silvermoon create-idea
+npx silvermoon whats-next <idea>
 ```
 
 Describe the desired world in the generated `Idea.md`, review it, and approve
 that exact revision. From then on, Silvermoon keeps the goal, implementation,
 repository state, and real-world result connected. See
-[Getting Started](./docs/getting-started.md) for the complete first workflow.
+[Getting Started](./docs/getting-started.md) for the complete workflow and
+[Technical Reference](./docs/reference.md) for command, validation, JSON,
+language, guidance, audience, and trace details.
 Every command processes one ordered, versioned domain-message stream. The
 default `human` audience renders the response with Silvermoon's bundled
 `tui-md` view when stdin and stdout are both TTYs; use `q`, `Esc`, or `Ctrl+C`
@@ -140,7 +111,7 @@ sessions, Agents, and hosting platforms.
   <tr>
     <td width="160" align="center" valign="top">
       <!-- markdownlint-disable-next-line MD013 -->
-      <img src="https://cdn.jsdelivr.net/gh/shazhou-ww/silvermoon@main/assets/silvermoon-mascot.png" width="160" alt="Full-body portrait of Silvermoon, the project's artifact spirit">
+      <img src="./assets/silvermoon-mascot.png" width="160" alt="Full-body portrait of Silvermoon, the project's artifact spirit">
     </td>
     <td valign="top">
       Silvermoon is named after a character in <em>A Record of a Mortal's
