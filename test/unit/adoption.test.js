@@ -269,9 +269,10 @@ test("prefers packageManager, infers a unique root lockfile, and avoids ambiguou
     const root = await npmRepository({ name: "consumer" }, { lockfiles: [lockfile] });
     const report = await inspectAdoption({ root });
     if (manager === "yarn") {
-      assert.match(
-        report.instructions[0],
-        /npm pkg set "devDependencies\.silvermoon=\^0\.2\.1"/,
+      assert.ok(
+        report.instructions[0].includes(
+          `npm pkg set "devDependencies.silvermoon=^${SILVERMOON_VERSION}"`,
+        ),
       );
       assert.match(report.instructions[0], /then `yarn install`/);
     } else {
