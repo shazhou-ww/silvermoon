@@ -8,9 +8,9 @@ import { traceAsync, traceSync } from "./trace.js";
 
 let commandObserver = null;
 
-export function runGit(root, args, { env, input } = {}) {
+function executeGit(root, args, { encoding, env, input } = {}) {
   if (commandObserver) commandObserver([...args]);
-  const result = traceSync(
+  return traceSync(
     "git.command",
     {
       argumentCount: args.length - 1,
@@ -18,7 +18,7 @@ export function runGit(root, args, { env, input } = {}) {
       subcommand: args[0] ?? null,
     },
     () => spawnSync("git", ["-C", root, ...args], {
-      encoding: "utf8",
+      encoding,
       env: { ...process.env, GIT_TERMINAL_PROMPT: "0", ...env },
       input,
       windowsHide: true,
@@ -31,6 +31,10 @@ export function runGit(root, args, { env, input } = {}) {
       status: completed.status === 0 ? "ok" : "error",
     }),
   );
+}
+
+export function runGit(root, args, { env, input } = {}) {
+  const result = executeGit(root, args, { encoding: "utf8", env, input });
   return {
     error: result.error ?? null,
     ok: result.status === 0,
@@ -75,6 +79,76 @@ function requireGit(root, args, label, options) {
     throw error;
   }
   return result.stdout;
+}
+
+function parseTreeEntries(source, label) {
+  const entries = [];
+  for (const record of source.split("\0")) {
+    if (!record) continue;
+    const match = /^([0-7]{6}) (blob|tree|commit) ([0-9a-f]{40}|[0-9a-f]{64})\t([\s\S]+)$/
+      .exec(record);
+    if (!match) throw new Error(`Cannot parse ${label} entry`);
+    entries.push({
+      mode: match[1],
+      type: match[2],
+      object: match[3],
+      name: match[4],
+    });
+  }
+  return entries;
+}
+
+export function inspectTreeEntry(root, tree, path) {
+  const output = requireGit(
+    root,
+    ["ls-tree", "-z", tree, "--", path],
+    `Cannot inspect snapshot path ${path}`,
+  );
+  const entries = parseTreeEntries(output, `snapshot path ${path}`);
+  if (entries.length === 0) return null;
+  if (entries.length !== 1 || entries[0].name !== path) {
+    throw new Error(`Snapshot path ${path} did not resolve exactly once`);
+  }
+  return entries[0];
+}
+
+export function listTreeEntries(root, tree, path) {
+  const output = requireGit(
+    root,
+    ["ls-tree", "-z", tree],
+    `Cannot inspect snapshot directory ${path}`,
+  );
+  return parseTreeEntries(output, `snapshot directory ${path}`);
+}
+
+export function gitObjectSize(root, object) {
+  const output = requireGit(
+    root,
+    ["cat-file", "-s", object],
+    `Cannot inspect Git object ${object}`,
+  );
+  if (!/^(?:0|[1-9]\d*)$/.test(output)) {
+    throw new Error(`Cannot parse size for Git object ${object}`);
+  }
+  return Number(output);
+}
+
+export function readGitBlob(root, object) {
+  const result = executeGit(
+    root,
+    ["cat-file", "blob", object],
+    { encoding: null },
+  );
+  if (result.status !== 0) {
+    const stderr = Buffer.isBuffer(result.stderr)
+      ? result.stderr.toString("utf8")
+      : result.stderr;
+    throw new Error(
+      `Cannot read Git blob ${object}: `
+      + `${sanitizeGitMessage(stderr?.trim() || result.error?.message || "Git failed")}`,
+    );
+  }
+  return Buffer.from(result.stdout);
 }
 
 export function inspectTreePaths(root, tree, paths) {

@@ -3,6 +3,7 @@ import { spawnSync } from "node:child_process";
 import {
   lstat,
   mkdir,
+  readdir,
   readFile,
   rm,
   writeFile,
@@ -18,7 +19,11 @@ import {
   IMPLEMENTATION_TEMPLATE,
   LEDGER_TEMPLATE,
 } from "../../src/idea-templates.js";
-import { ideaPaths } from "../../src/layout.js";
+import {
+  GUIDANCE_ROOT,
+  ideaPaths,
+  phaseGuidancePath,
+} from "../../src/layout.js";
 import {
   createRepository,
   FIRST_ID,
@@ -126,6 +131,7 @@ test("[unrelated-active-create] [create-no-remote] creates an exact scaffold wit
     state: "preparing",
   });
   assert.equal(Object.hasOwn(report.observation, "ideas"), false);
+  assert.equal(Object.hasOwn(report.observation, "guidance"), false);
   assert.deepEqual(
     report.outcomes.map(({ type, status }) => [type, status]),
     [["create-idea-scaffold", "success"]],
@@ -528,4 +534,105 @@ test("returns a failure outcome for an invalid generated identity", async () => 
     ).stdout,
     before,
   );
+});
+
+test("attaches preparing guidance before creating a scaffold", async () => {
+  const repository = await fixture();
+  const preparingPath = phaseGuidancePath("preparing");
+  await mkdir(join(repository.root, ...GUIDANCE_ROOT.split("/")), {
+    recursive: true,
+  });
+  await writeFile(
+    join(repository.root, ...preparingPath.split("/")),
+    "Prepare this project-specific contract.\n",
+  );
+  await mkdir(
+    join(repository.root, ...phaseGuidancePath("implementing").split("/")),
+  );
+  await writeFile(
+    join(
+      repository.root,
+      ...phaseGuidancePath("implementing").split("/"),
+      "invalid.md",
+    ),
+    "ignored\n",
+  );
+  git(repository.root, "add", ".");
+  git(repository.root, "commit", "-m", "Add preparing guidance");
+
+  const report = await createIdea({
+    generateId: () => createdId,
+    root: repository.root,
+    userHome: repository.base,
+  });
+
+  assert.equal(report.observation.state, "idea-created");
+  assert.deepEqual(report.observation.guidance, {
+    phase: "preparing",
+    path: preparingPath,
+    contentRevision: git(repository.root, "rev-parse", `HEAD:${preparingPath}`),
+    content: "Prepare this project-specific contract.\n",
+  });
+  assert.match(report.instructions, /Ideal World/);
+  assert.doesNotMatch(report.instructions, /project-specific contract/);
+});
+
+test("invalid preparing guidance stops before any scaffold write", async () => {
+  const repository = await fixture();
+  await mkdir(join(repository.root, ...GUIDANCE_ROOT.split("/")), {
+    recursive: true,
+  });
+  await writeFile(
+    join(repository.root, ...phaseGuidancePath("preparing").split("/")),
+    " \n\t\n",
+  );
+  git(repository.root, "add", ".");
+  git(repository.root, "commit", "-m", "Add invalid preparing guidance");
+  const ideasBefore = await readdir(join(repository.root, ".silvermoon", "ideas"));
+  let directoryWrites = 0;
+
+  const report = await createIdea({
+    generateId: () => createdId,
+    operations: {
+      mkdir: async (...args) => {
+        directoryWrites += 1;
+        return mkdir(...args);
+      },
+    },
+    root: repository.root,
+    userHome: repository.base,
+  });
+
+  assert.equal(report.observation.state, "phase-guidance-invalid");
+  assert.deepEqual(
+    report.observation.problems.map(({ type }) => type),
+    ["guidance-file-empty"],
+  );
+  assert.equal(report.outcomes.length, 0);
+  assert.equal(directoryWrites, 0);
+  assert.deepEqual(
+    await readdir(join(repository.root, ".silvermoon", "ideas")),
+    ideasBefore,
+  );
+  assert.doesNotMatch(report.instructions, /Ideal World/);
+  assert.match(report.instructions, /preparing\.md/);
+});
+
+test("does not inspect preparing guidance before creation preflight succeeds", async () => {
+  const repository = await fixture();
+  await writeFile(join(repository.root, "dirty.txt"), "preserve\n");
+  let reads = 0;
+
+  const report = await createIdea({
+    generateId: () => createdId,
+    guidanceReader: async () => {
+      reads += 1;
+      throw new Error("guidance must not be read");
+    },
+    root: repository.root,
+    userHome: repository.base,
+  });
+
+  assert.equal(report.observation.state, "repository-preparation-required");
+  assert.equal(reads, 0);
 });

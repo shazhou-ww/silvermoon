@@ -4,10 +4,12 @@ import { resolve } from "node:path";
 
 import {
   createEnvelope,
+  diagnosticProblem,
   dialogueReadyObservation,
   localize,
   outcome,
 } from "./dialogue.js";
+import { inspectPhaseGuidance } from "./guidance.js";
 import {
   DEPLOYMENT_TEMPLATE,
   IDEA_TEMPLATE,
@@ -20,6 +22,7 @@ import { IDEAS_ROOT, ideaPaths } from "./layout.js";
 import { observeSnapshot } from "./observation.js";
 import {
   assessIdeaCreationReadiness,
+  phaseGuidanceInstructions,
   projectInstructions,
 } from "./whatsnext.js";
 
@@ -162,6 +165,7 @@ function projectCreationObservation(observation) {
 
 export async function createIdea({
   generateId = generateUlid,
+  guidanceReader = inspectPhaseGuidance,
   language,
   operations = {},
   root = process.cwd(),
@@ -215,6 +219,33 @@ export async function createIdea({
       ),
       outcomes,
       readiness.instructions,
+    );
+  }
+
+  const inspectedGuidance = await guidanceReader({
+    gitRoot: repositoryRoot,
+    phase: "preparing",
+    snapshotTree: readiness.head,
+  });
+  if (inspectedGuidance.state === "invalid") {
+    return createEnvelope(
+      intention,
+      dialogueReadyObservation(
+        readiness.observation,
+        "phase-guidance-invalid",
+        {
+          problems: inspectedGuidance.diagnostics.map((diagnostic) =>
+            diagnosticProblem(diagnostic, observed.outputLanguage)
+          ),
+        },
+      ),
+      outcomes,
+      phaseGuidanceInstructions(
+        inspectedGuidance.diagnostics,
+        repositoryRoot,
+        observed.outputLanguage,
+        recheckCommand,
+      ),
     );
   }
 
@@ -327,6 +358,9 @@ export async function createIdea({
         intention,
         dialogueReadyObservation(readiness.observation, "idea-created", {
           createdIdea: { id, path: paths.ideaPath, state: "preparing" },
+          ...(inspectedGuidance.guidance === undefined
+            ? {}
+            : { guidance: inspectedGuidance.guidance }),
         }),
         outcomes,
         localize(

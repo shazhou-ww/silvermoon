@@ -145,3 +145,39 @@ test("resolves repository-local links in reader documentation", async () => {
     }
   }
 });
+
+test("documents fixed additive phase guidance and snapshot validation", async () => {
+  const [readme, chineseReadme, core, gettingStarted, operations, reference] =
+    await Promise.all([
+      readFile(resolve(repositoryRoot, "README.md"), "utf8"),
+      readFile(resolve(repositoryRoot, "README.zh-CN.md"), "utf8"),
+      readFile(resolve(repositoryRoot, "docs", "core-concepts.md"), "utf8"),
+      readFile(resolve(repositoryRoot, "docs", "getting-started.md"), "utf8"),
+      readFile(resolve(repositoryRoot, "docs", "operations.md"), "utf8"),
+      readFile(resolve(repositoryRoot, "docs", "reference.md"), "utf8"),
+    ]);
+
+  for (const source of [
+    readme,
+    chineseReadme,
+    core,
+    gettingStarted,
+    reference,
+  ]) {
+    assert.match(source, /\.silvermoon\/guidance\//);
+    assert.match(source, /preparing\.md/);
+    assert.match(source, /additive|追加/);
+    assert.match(source, /fourth\s+contract|第四份\s*contract/);
+  }
+  assert.match(operations, /\.silvermoon\/guidance\/<phase>\.md/);
+  assert.match(operations, /additive/);
+  assert.match(operations, /fourth contract/);
+  assert.match(operations, /observation\.guidance/);
+  assert.match(operations, /Materialize\s+applicable requirements/);
+  assert.match(reference, /contentRevision/);
+  assert.match(reference, /32 KiB/);
+  assert.match(reference, /SHA-1 or SHA-256/);
+  assert.match(reference, /HEAD, worktree, index, commit, or remote/);
+  assert.match(reference, /no schema or configuration key/);
+  assert.match(gettingStarted, /before any\s+scaffold path is written/);
+});

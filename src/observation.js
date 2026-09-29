@@ -6,6 +6,7 @@ import {
   resolvedConfiguration,
   summarizeIdeas,
 } from "./dialogue.js";
+import { inspectAllGuidance } from "./guidance.js";
 import { inspectIdeaLayout } from "./idea-layout.js";
 import { resolveLanguage, resolveOutputLanguage } from "./language.js";
 import { traceAsync } from "./trace.js";
@@ -254,12 +255,23 @@ async function observeSnapshotInternal({
     );
   }
 
+  const guidanceDiagnostics = projectOnly
+    ? (await inspectAllGuidance({
+      gitRoot: gitRoot ?? adoption.root,
+      snapshotTree,
+    })).diagnostics
+    : [];
   const layoutFindings = layout.diagnostics.map((diagnostic) => ({
     priority: 50,
     problem: diagnosticProblem(diagnostic, outputLanguage),
     instruction: diagnosticInstruction(diagnostic, outputLanguage),
   }));
-  findings.push(...layoutFindings);
+  const guidanceFindings = guidanceDiagnostics.map((diagnostic) => ({
+    priority: 60,
+    problem: diagnosticProblem(diagnostic, outputLanguage),
+    instruction: diagnosticInstruction(diagnostic, outputLanguage),
+  }));
+  findings.push(...layoutFindings, ...guidanceFindings);
   findings.sort((left, right) => left.priority - right.priority);
 
   if (layout.diagnostics.length > 0) {

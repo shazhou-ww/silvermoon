@@ -153,6 +153,11 @@ try {
     join(consumer, ".silvermoon", "config.yaml"),
     "version: 1\nprimaryRepository: https://example.com/owner/repository.git\nprimaryBranch: main\n",
   );
+  await mkdir(join(consumer, ".silvermoon", "guidance"));
+  await writeFile(
+    join(consumer, ".silvermoon", "guidance", "preparing.md"),
+    "Installed preparing guidance.\n",
+  );
   await writeFile(join(consumer, ".gitignore"), "node_modules/\n");
   await writeFile(join(consumer, paths.idea), "# Installed package smoke\n");
   await writeFile(join(consumer, paths.implementation), "");
@@ -285,6 +290,32 @@ try {
     localizedCheck.observation.configuration.preferredLanguage,
     "en-US",
   );
+  const guidedLifecycle = JSON.parse(
+    npm(
+      ["exec", "--", "silvermoon", "whats-next", "installed-smoke", "--json"],
+      consumer,
+    ),
+  );
+  assert.deepEqual(guidedLifecycle.observation.guidance, {
+    phase: "preparing",
+    path: ".silvermoon/guidance/preparing.md",
+    contentRevision: run(
+      "git",
+      ["rev-parse", "HEAD:.silvermoon/guidance/preparing.md"],
+      consumer,
+    ),
+    content: "Installed preparing guidance.\n",
+  });
+  assert.doesNotMatch(
+    guidedLifecycle.instructions,
+    /Installed preparing guidance/,
+  );
+  const guidedLifecycleText = npm(
+    ["exec", "--", "silvermoon", "whats-next", "installed-smoke"],
+    consumer,
+  );
+  assert.match(guidedLifecycleText, /## Project phase guidance/);
+  assert.match(guidedLifecycleText, /> Installed preparing guidance\./);
   const localizedCheckText = npm(
     ["exec", "--", "silvermoon", "check", "--language", "zh-CN"],
     consumer,
@@ -316,6 +347,10 @@ try {
   ]);
   assert.equal(created.intention.command, "create-idea");
   assert.equal(created.observation.state, "idea-created");
+  assert.deepEqual(
+    created.observation.guidance,
+    guidedLifecycle.observation.guidance,
+  );
   assert.deepEqual(
     created.outcomes.map(({ type, status }) => [type, status]),
     [["create-idea-scaffold", "success"]],

@@ -65,6 +65,13 @@ Silvermoon 会让目标、实现、仓库状态与现实结果始终相连。完
 `*.trace.jsonl` 会被忽略。trace 文件只在待测命令工作完成后创建，并且绝不覆盖
 已有文件。
 
+项目可按需添加 `.silvermoon/guidance/preparing.md`、`implementing.md` 与
+`deploying.md`。Silvermoon 只会在 canonical instructions 之后返回当前可行动
+阶段中与 snapshot 绑定的 repository-owned Markdown；`create-idea` 可返回
+preparing guidance。这些 guidance 只能追加约束，不是第四份 contract 或 decision
+fact；`check` 会验证完整的固定目录。详见英文
+[Core Concepts](./docs/core-concepts.md)。
+
 ## 为什么需要 Silvermoon
 
 长期运行的 Agent 工作往往让人背负太多不可见状态：有人必须记住原本想做什么、代码是否

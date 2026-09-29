@@ -84,6 +84,13 @@ Silvermoon appends it. Repository-local `*.trace.jsonl` files are ignored.
 Trace files are created only after the measured command work completes and
 never overwrite an existing file.
 
+Projects may optionally add `.silvermoon/guidance/preparing.md`,
+`implementing.md`, and `deploying.md`. Silvermoon returns only the current
+actionable phase's snapshot-bound, repository-owned Markdown after canonical
+instructions; `create-idea` can return preparing guidance. This guidance is
+additive, never a fourth contract or decision fact, and `check` validates the
+complete fixed directory. See [Core Concepts](./docs/core-concepts.md).
+
 ## Why Silvermoon
 
 Long-running Agent work usually asks people to carry too much invisible state.

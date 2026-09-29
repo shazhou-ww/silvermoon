@@ -7,7 +7,11 @@ import { afterEach, test } from "node:test";
 import { observeGitCommands } from "../../src/git.js";
 import { checkRepository } from "../../src/index.js";
 import { serializeIdeaStatus } from "../../src/ideas.js";
-import { ideaPaths } from "../../src/layout.js";
+import {
+  GUIDANCE_ROOT,
+  ideaPaths,
+  phaseGuidancePath,
+} from "../../src/layout.js";
 import {
   createRepository,
   FIRST_ID,
@@ -449,4 +453,75 @@ test("rejects an unsupported programmatic output language before Git inspection"
     (error) => error.exitCode === 2,
   );
   assert.deepEqual(commands, []);
+});
+
+test("validates complete guidance independently for every snapshot target", async () => {
+  const repository = await fixture();
+  await mkdir(join(repository.root, ...GUIDANCE_ROOT.split("/")), {
+    recursive: true,
+  });
+  for (const phase of ["preparing", "implementing", "deploying"]) {
+    await writeFile(
+      join(repository.root, ...phaseGuidancePath(phase).split("/")),
+      `${phase}\n`,
+    );
+  }
+  git(repository.root, "add", ".");
+  git(repository.root, "commit", "-m", "Add valid guidance");
+  git(repository.root, "push", "origin", "main");
+
+  await writeFile(
+    join(repository.root, ...phaseGuidancePath("deploying").split("/")),
+    Buffer.from("invalid\0guidance\n"),
+  );
+  const head = await checkRepository({
+    root: repository.root,
+    userHome: repository.base,
+  });
+  const worktree = await checkRepository({
+    root: repository.root,
+    userHome: repository.base,
+    worktree: true,
+  });
+  git(repository.root, "add", ".");
+  const staged = await checkRepository({
+    root: repository.root,
+    staged: true,
+    userHome: repository.base,
+  });
+  git(repository.root, "commit", "-m", "Add invalid guidance");
+  const invalidCommit = git(repository.root, "rev-parse", "HEAD");
+  const committed = await checkRepository({
+    commit: invalidCommit,
+    root: repository.root,
+    userHome: repository.base,
+  });
+  const current = await checkRepository({
+    root: repository.root,
+    userHome: repository.base,
+  });
+  const remote = await checkRepository({
+    remote: true,
+    root: repository.root,
+    userHome: repository.base,
+  });
+
+  for (const report of [head, remote]) {
+    assert.equal(report.observation.state, "project-ready");
+    assert.deepEqual(report.observation.problems, []);
+    assert.equal(Object.hasOwn(report.observation, "guidance"), false);
+  }
+  for (const report of [worktree, staged, committed, current]) {
+    assert.equal(report.observation.state, "project-setup-required");
+    assert.ok(
+      report.observation.problems.some(
+        ({ type }) => type === "guidance-file-nul",
+      ),
+    );
+    assert.equal(Object.hasOwn(report.observation, "guidance"), false);
+  }
+  assert.notEqual(
+    current.observation.version.commit,
+    remote.observation.version.commit,
+  );
 });
