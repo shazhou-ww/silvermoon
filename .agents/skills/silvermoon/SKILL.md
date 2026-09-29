@@ -100,19 +100,24 @@ files in its selected snapshot but never returns their content.
 
 `create-idea` creates only the scaffold: `Idea.md`, `Implementation.md`,
 `Deployment.md`, `ledger.md`, and `status.yaml`. It never stages, commits,
-pushes, or records a decision. Preserve explicit creation intent through
-hygiene retries: retry `create-idea`, not bare `whats-next`.
+pushes, or records a decision. Preserve explicit creation intent through hygiene
+retries: retry `create-idea`, not bare `whats-next`.
 
-During preparation, complete the `Idea.md` ideal contract. Keep the
-Implementation, Deployment, and matching ledger placeholders synchronized
-until their lifecycle actions. Review every generated path and validate the
-candidate, then commit and publish it to configured primary through the normal
-non-force path before asking the user to review or approve it. Verify the commit
-is reachable from refreshed primary and reobserve the exact `idealRevision`.
-If publication requires a pull request, wait until it reaches primary. If
-publication is blocked, say the candidate is not yet available for cross-device
-review; never ask for approval of unpublished content. Publication is not
-approval and must not change `status.yaml`.
+Every successfully created idea must be completed, validated, committed, and
+synchronized to the configured primary branch before requesting review or
+approval, or moving on to unrelated work. During preparation, complete the
+`Idea.md` ideal contract. Keep the Implementation, Deployment, and matching
+ledger placeholders synchronized until their lifecycle actions. Review every
+generated path, validate the candidate, commit it, and synchronize it through
+the normal non-force Git path. Verify the commit is reachable from refreshed
+primary and reobserve the exact `idealRevision`. If synchronization requires a
+pull request, wait until it reaches primary. If synchronization is blocked,
+preserve the candidate and report that it is not yet available for cross-device
+review; never ask for approval of unpublished content.
+
+This required Git synchronization is part of the idea workflow, not an npm
+package release. It does not require `/publish` authorization, does not publish
+to npm, and does not record approval or change `status.yaml`.
 
 An Agent may derive a concise, unique alias; do not ask for a name solely for
 the alias. Pass `create-idea --language <tag>` only when the user explicitly
