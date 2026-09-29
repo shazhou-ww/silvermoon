@@ -241,6 +241,7 @@ test("uses a protected, least-privilege trusted-publishing workflow", async () =
   assert.match(checkPack, /package README metadata does not match README\.md/);
   assert.match(checkPack, /does not match a deterministic directory pack/);
   assert.match(checkPack, /--dry-run/);
+  assert.match(verifyRelease, /distTag === "latest"/);
   assert.match(installedPackage, /process\.env\.SILVERMOON_TARBALL/);
   assert.ok(
     stepNames.indexOf("Verify published package") >
