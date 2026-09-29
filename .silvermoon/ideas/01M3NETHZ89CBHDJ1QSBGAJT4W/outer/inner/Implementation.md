@@ -106,3 +106,18 @@ network/process spies、双语输出和 trace inspection 证明。
 materialization 责任；canonical/generated skill 内容一致。`pnpm check`、
 `pnpm check:skills`、Markdown links、package/installed E2E、
 `git diff --check`、`silvermoon check --worktree` 与 staged check 全部通过。
+
+## Verification evidence
+
+- `src/guidance.js` 与 `src/git.js` 从选定 Git tree 读取固定 entry、验证 blob
+  原始字节并返回同一 blob 的 object ID；`src/observation.js` 对全部 check
+  snapshot 执行完整目录验证。
+- `src/whatsnext.js` 与 `src/create-idea.js` 只在当前 actionable phase 成为最终
+  动作后附带 guidance；`src/dialogue.js` 将 canonical instructions 与
+  repository-owned Markdown 分段呈现。
+- `test/integration/guidance.test.js`、command integration、dialogue contract 与
+  installed-package E2E 覆盖缺省兼容、三阶段、失败边界、SHA-1/SHA-256、竞态、
+  双语 framing、trace 隔离及全部 check targets。
+- 2026-09-29 的最终候选通过 `pnpm check`、`pnpm check:skills`、
+  `git diff --check`、`silvermoon check --worktree` 与
+  `silvermoon check --staged`。

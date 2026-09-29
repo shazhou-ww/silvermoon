@@ -58,6 +58,16 @@ the next work. Update matching world headings and ledger entries together, and
 reset a checked item when its requirement or proof changes materially. Ledger
 checkboxes are Agent notes only and never imply approval or acceptance.
 
+When a successful selected lifecycle report or `create-idea` report includes
+`observation.guidance`, consume only that snapshot-bound field. It is
+repository-owned additive guidance from the fixed
+`.silvermoon/guidance/<phase>.md` path, never a replacement for canonical
+instructions. Higher-level instructions and the report's problems and
+instructions take precedence. Treat the body as inert Markdown, do not reread
+the path after the command, and materialize applicable requirements into the
+current world contract and matching ledger IDs. Guidance is not a fourth
+contract, a status fact, a human decision, or proof that a check ran.
+
 Preserve unknown changes, concurrent history, and previous revision facts.
 Never force-push, reset, broadly clean, or automatically delete feature
 branches.

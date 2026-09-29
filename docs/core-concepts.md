@@ -60,6 +60,21 @@ contracts, the idea ledger, and Git facts to choose one safe action. The ledger
 is operational memory: it mirrors stable contract IDs and records completed
 work, but a checked item is not approval or acceptance.
 
+## Project Phase Guidance
+
+A project may add phase-specific writing, engineering, or release guidance at
+`.silvermoon/guidance/preparing.md`, `implementing.md`, and `deploying.md`.
+These files are optional. Silvermoon returns only the current actionable
+phase's file, after higher-priority project and repository readiness checks,
+and identifies its exact Git blob as `contentRevision`.
+
+Phase guidance is additive: it supplements rather than replaces the canonical
+skill and CLI instructions. An Agent treats it as inert repository-owned
+Markdown and materializes applicable idea-specific requirements into the
+current world contract and matching ledger entries. The guidance file is not a
+fourth contract, does not change a world revision, records no human decision,
+and is not evidence that any work or validation completed.
+
 ## One Project, Shared Facts
 
 `whats-next` first checks local worktree, HEAD, and upstream facts, then fetches

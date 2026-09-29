@@ -48,6 +48,35 @@ The repository URL is credential-free, canonical shared state. Credentials,
 named remotes, and URL rewrites remain local Git concerns. Silvermoon metadata
 paths are fixed and cannot be overridden by configuration.
 
+## Add Optional Project Phase Guidance
+
+Projects with additional lifecycle requirements may add any of these fixed
+files:
+
+```text
+.silvermoon/guidance/
+|-- preparing.md
+|-- implementing.md
+`-- deploying.md
+```
+
+Each file is optional, repository-owned Markdown for only its named phase.
+`whats-next <idea>` returns the applicable file only after that actionable
+phase becomes the highest-priority next action. A successful `create-idea`
+returns only preparing guidance after local preflight and before relying on
+the new scaffold. The report includes the fixed path, exact Git blob
+`contentRevision`, and captured content, so consumers must not reread the file.
+
+Keep each file at most 32 KiB of valid UTF-8 without a BOM or NUL byte, with at
+least one non-whitespace character. Use regular files and no extra entries in
+the directory. Lifecycle commands validate only the phase they are about to
+return; every `check` target validates the complete directory.
+
+Guidance is additive and lower priority than Silvermoon's canonical workflow.
+Put every applicable idea-specific requirement into the current world contract
+and matching ledger entries. The guidance itself is not a fourth contract,
+approval, acceptance, status fact, or completion evidence.
+
 ## Configure Content And Output Language
 
 All language values are canonical BCP 47 tags such as `en` or `zh-CN`.
@@ -98,7 +127,10 @@ The command requires the configured primary branch and upstream plus a clean
 local worktree. It does not fetch or require local HEAD to match the remote
 tip. When those checks pass, it creates one untracked idea scaffold with
 `Idea.md`, `Implementation.md`, `Deployment.md`, `ledger.md`, and
-`status.yaml`. It never stages, commits, pushes, or records a human decision.
+`status.yaml`. If valid preparing guidance exists, the success report includes
+its snapshot-bound content. Invalid preparing guidance stops before any
+scaffold path is written. The command never stages, commits, pushes, or records
+a human decision.
 
 Replace the guidance in the `Idea.md` ideal contract with the desired outcome,
 scope, and constraints. Keep the `Implementation.md` inner implementation

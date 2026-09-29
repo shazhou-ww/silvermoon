@@ -1,11 +1,15 @@
 import { resolve } from "node:path";
 
 import {
+  ACTIVE_STATES,
   createEnvelope,
+  diagnosticInstruction,
+  diagnosticProblem,
   dialogueReadyObservation,
   localize,
   outcome,
 } from "./dialogue.js";
+import { inspectPhaseGuidance } from "./guidance.js";
 import {
   compareCommits,
   fetchPrimary,
@@ -55,6 +59,26 @@ export function projectInstructions(
       language,
       `After completing the applicable steps, run ${command(root, recheckCommand)} again.`,
       `完成适用步骤后，再运行 ${command(root, recheckCommand)}。`,
+    ),
+  ]);
+}
+
+export function phaseGuidanceInstructions(
+  diagnostics,
+  root,
+  language,
+  recheckCommand,
+) {
+  return joinInstructions([
+    ...formatInstructionSteps(
+      diagnostics.map((diagnostic) =>
+        diagnosticInstruction(diagnostic, language)
+      ),
+    ),
+    localize(
+      language,
+      `After repairing the current phase guidance, run ${command(root, recheckCommand)} again.`,
+      `修复当前阶段 guidance 后，再运行 ${command(root, recheckCommand)}。`,
     ),
   ]);
 }
@@ -515,6 +539,7 @@ export async function assessIdeaCreationReadiness(options) {
 }
 
 export async function whatsNext({
+  guidanceReader = inspectPhaseGuidance,
   idea: selector,
   language,
   root = process.cwd(),
@@ -602,14 +627,48 @@ export async function whatsNext({
       ]),
     );
   }
+
+  const selectedIdea = {
+    id: selected.id,
+    ...(selected.alias === undefined ? {} : { alias: selected.alias }),
+    state: selected.state,
+  };
+  let guidance;
+  if (ACTIVE_STATES.has(selected.state)) {
+    const inspected = await guidanceReader({
+      gitRoot: readiness.observation.root,
+      phase: selected.state,
+      snapshotTree: readiness.primary,
+    });
+    if (inspected.state === "invalid") {
+      return createEnvelope(
+        intention,
+        dialogueReadyObservation(
+          readiness.observation,
+          "phase-guidance-invalid",
+          {
+            selectedIdea,
+            problems: inspected.diagnostics.map((diagnostic) =>
+              diagnosticProblem(diagnostic, observed.outputLanguage)
+            ),
+          },
+        ),
+        outcomes,
+        phaseGuidanceInstructions(
+          inspected.diagnostics,
+          readiness.observation.root,
+          observed.outputLanguage,
+          recheckCommand,
+        ),
+      );
+    }
+    guidance = inspected.guidance;
+  }
   return createEnvelope(
     intention,
     dialogueReadyObservation(readiness.observation, "idea-selected", {
-      selectedIdea: {
-        id: selected.id,
-        ...(selected.alias === undefined ? {} : { alias: selected.alias }),
-        state: selected.state,
-      },
+      selectedIdea,
+      ...(guidance === undefined ? {} : { guidance }),
     }),
     outcomes,
     lifecycleInstruction(selected, observed.outputLanguage),

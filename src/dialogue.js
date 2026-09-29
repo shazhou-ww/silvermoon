@@ -178,6 +178,11 @@ function renderObservation(observation, language) {
       "The project is ready, but the local repository must be prepared before creating an idea.",
       "项目已就绪，但创建 idea 前仍需整备本地 repository。",
     ),
+    "phase-guidance-invalid": localize(
+      language,
+      "The project and repository are ready, but the current phase guidance is invalid.",
+      "项目与 repository 已就绪，但当前阶段 guidance 无效。",
+    ),
     "navigation-ready": localize(
       language,
       observation.ideas?.activeIdeas.length > 0
@@ -221,6 +226,17 @@ function renderObservation(observation, language) {
       + `deploying=${counts.deploying}, completed=${counts.completed}, abandoned=${counts.abandoned}`,
     );
   }
+  if (
+    observation.state === "phase-guidance-invalid"
+    && observation.selectedIdea
+  ) {
+    const idea = observation.selectedIdea;
+    const alias = idea.alias === undefined ? "" : ` (${idea.alias})`;
+    lines.push(
+      `- ${localize(language, "selected idea", "当前 idea")}: `
+      + `${codeSpan(idea.id)}${alias}; ${localize(language, "state", "状态")}: ${idea.state}`,
+    );
+  }
   const sections = [`${lines[0]}\n\n${lines.slice(1).join("\n")}`];
   const candidates = observation.state === "idea-not-found"
     ? observation.candidates
@@ -250,6 +266,25 @@ function renderOutcomes(outcomes, language) {
       return `- ${status} [${item.type}]: ${item.summary}`;
     })
     .join("\n");
+}
+
+function renderGuidance(guidance, language) {
+  const content = guidance.content
+    .split("\n")
+    .map((line) => line.length === 0 ? ">" : `> ${line}`)
+    .join("\n");
+  return [
+    `- ${localize(language, "source", "来源")}: ${localize(
+      language,
+      "repository-owned additive guidance",
+      "repository-owned 追加 guidance",
+    )}`,
+    `- ${localize(language, "phase", "阶段")}: ${codeSpan(guidance.phase)}`,
+    `- ${localize(language, "path", "路径")}: ${codeSpan(guidance.path)}`,
+    `- ${localize(language, "content revision", "内容 revision")}: ${codeSpan(guidance.contentRevision)}`,
+    "",
+    content,
+  ].join("\n");
 }
 
 export function renderDialogue(report) {
@@ -288,6 +323,12 @@ export function renderDialogue(report) {
       localize(language, "Suggested next steps", "下一步建议"),
       report.instructions,
     ],
+    ...(report.observation.guidance === undefined
+      ? []
+      : [[
+        localize(language, "Project phase guidance", "项目阶段 guidance"),
+        renderGuidance(report.observation.guidance, language),
+      ]]),
   ];
   return sections.map(([heading, body]) => `## ${heading}\n\n${body}`).join("\n\n");
 }

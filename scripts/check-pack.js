@@ -104,6 +104,7 @@ if (packed.status !== 0) {
     "src/create-idea.js",
     "src/dialogue.js",
     "src/git.js",
+    "src/guidance.js",
     "src/idea-layout.js",
     "src/idea-templates.js",
     "src/ideas.js",

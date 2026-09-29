@@ -10,6 +10,10 @@ Each idea is self-contained under one canonical uppercase ULID:
 ```text
 .silvermoon/
 |-- config.yaml
+|-- guidance/
+|   |-- preparing.md
+|   |-- implementing.md
+|   `-- deploying.md
 `-- ideas/
     `-- 01M36QGPNTXEPP61DA4KP4AVZF/
         |-- status.yaml
@@ -34,6 +38,39 @@ explicit file is an error rather than a silent fallback.
 
 The repository configuration accepts optional `preferredLanguage` after
 `primaryBranch`. Stored language values are canonical BCP 47 tags.
+
+## Phase Guidance
+
+The three files under `.silvermoon/guidance/` are optional fixed conventions,
+not configuration fields. They are additive project input, not a fourth
+contract, status fact, decision, or proof of completion:
+
+| Phase | Repository-relative path |
+| --- | --- |
+| `preparing` | `.silvermoon/guidance/preparing.md` |
+| `implementing` | `.silvermoon/guidance/implementing.md` |
+| `deploying` | `.silvermoon/guidance/deploying.md` |
+
+The directory must be a regular repository-owned directory and may contain
+only those entries. Each present entry must be a regular file, not a symlink,
+with at most 32 KiB of raw blob bytes. Content must be valid UTF-8 without a
+BOM or NUL byte and must contain a non-whitespace character. CRLF is accepted
+and report content is normalized to LF. Silvermoon treats the body as inert
+Markdown: it does not parse frontmatter, interpolate values, resolve includes,
+fetch URLs, execute snippets, translate content, or write it to traces.
+
+Lifecycle commands use on-demand validation. Selected `whats-next` reads only
+the selected actionable phase after project, local repository, fetch, and
+ancestry readiness. `create-idea` reads only preparing guidance after local
+preflight and before writing any scaffold path. Errors in another phase and
+extra directory entries do not preempt those commands. Bare navigation,
+selector misses, completed or abandoned ideas, and readiness blocks do not
+read or return guidance.
+
+All `check` targets use complete validation: they reject any invalid phase file
+or extra entry in their selected HEAD, worktree, index, commit, or remote
+snapshot. A missing directory or missing phase file is valid. Checks never
+return guidance content.
 
 ## World Revisions
 
@@ -133,6 +170,25 @@ silvermoon check [--remote | --commit <revision> | --staged | --worktree] [--lan
   readiness layer. A single remediation is plain text; multiple remediations
   are numbered in priority order.
 
+After readiness, an actionable selected idea or successful creation may add
+`guidance` to the command-specific observation:
+
+```json
+{
+  "guidance": {
+    "phase": "implementing",
+    "path": ".silvermoon/guidance/implementing.md",
+    "contentRevision": "<git-blob-object-id>",
+    "content": "Repository-owned Markdown captured from the snapshot.\n"
+  }
+}
+```
+
+`path`, `contentRevision`, and `content` come from one Git snapshot. The object
+ID follows the repository's SHA-1 or SHA-256 object format. Guidance never
+appears at the top level or inside canonical `instructions`, and an absent file
+does not produce an empty field.
+
 Default dialogue output renders the same report with concise lists under
 `## Current instruction`, `## Project status`, and `## Suggested next steps`
 (in Chinese: `## 本次指示`, `## 项目现状`, `## 下一步建议`). The optional
@@ -145,10 +201,13 @@ second reasoning path. Within the project-status section, nonempty navigation
 candidates and observed problems appear under `### Ideas you can continue` and
 `### Issues to address` (in Chinese: `### 可继续推进的想法` and
 `### 需要处理的问题`). Suggested next steps refer to these candidates without
-repeating their inventory. Empty sections are omitted. Dialogue exit status
-`0` means a trustworthy report was formed, even when it reports readiness
-blocks or a failed operation; `1` means an internal failure prevented a
-trustworthy report; `2` means invalid CLI usage.
+repeating their inventory. When guidance is present, a separate
+`## Project phase guidance` section follows suggested next steps, identifies
+its project provenance and metadata, and blockquotes every content line.
+Empty sections are omitted. Dialogue exit status `0` means a trustworthy
+report was formed, even when it reports readiness blocks or a failed
+operation; `1` means an internal failure prevented a trustworthy report; `2`
+means invalid CLI usage.
 
 All commands accept `--trace <file.trace.jsonl>`. If the supplied path does not
 end with the exact lowercase `.trace.jsonl` suffix, Silvermoon appends it while
@@ -184,12 +243,18 @@ Observations are discriminated by command intent and `state`:
 - Selected `whats-next` returns `idea-selected` with only `selectedIdea`
   (`id`, optional `alias`, lifecycle `state`), including terminal ideas.
   Unknown selectors return `idea-not-found` with `candidates`, not a
-  fabricated selected idea.
+  fabricated selected idea. An actionable selection may also contain
+  snapshot-bound `guidance`.
+- `phase-guidance-invalid` means command readiness reached the current
+  actionable phase, but that phase's optional file exists and is invalid. It
+  contains problems and repair instructions, not lifecycle instructions or
+  guidance content.
 - After a successful `create-idea` preflight, `idea-created` carries
   `createdIdea` (`id`, `path`, `state: "preparing"`). This confirms
-  pre-creation readiness, not a clean post-creation worktree. An attempted but
-  failed scaffold returns `idea-create-failed` without `createdIdea`; preflight
-  failures retain their setup or local preparation state.
+  pre-creation readiness, not a clean post-creation worktree, and may also
+  contain captured preparing `guidance`. An attempted but failed scaffold
+  returns `idea-create-failed` without `createdIdea`; preflight failures retain
+  their setup or local preparation state.
 
 Dialogue versions have `version.type: "worktree"`. When present, `ideas.counts` has
 `preparing`, `implementing`, `deploying`, `completed`, and `abandoned`;
@@ -213,8 +278,9 @@ never selects an idea: it always lists every active idea alongside the option
 to discuss and run `create-idea`.
 
 `create-idea` requires the configured primary branch and upstream plus a clean
-worktree, then creates one canonical scaffold. It does not fetch, compare
-remote ancestry, or require local HEAD to match the remote tip. Its optional
+worktree, validates optional preparing guidance from the same local `HEAD`,
+then creates one canonical scaffold. It does not fetch, compare remote
+ancestry, or require local HEAD to match the remote tip. Its optional
 content-language choice accepts any canonical BCP 47 tag, is normalized before
 preflight, and is persisted to the new idea; without it the status remains
 dynamically inherited. It does not stage, commit, push, or record approval.
@@ -235,7 +301,8 @@ dynamically inherited. It does not stage, commit, push, or record approval.
 Targets are mutually exclusive and never change the caller's branch, index, or
 worktree. `--remote` may fetch Git objects, but it does not produce dialogue
 outcomes. `check` validates the selected snapshot's project contract only:
-Git, configuration, canonical skill, idea layout, world revisions, and status.
+Git, configuration, canonical skill, idea layout, world revisions, status, and
+the complete optional phase guidance directory.
 Its result depends on the materialized tree, not commit parents, parent order,
 branch, merge/cherry-pick path, or retained decision reachability. A canonical
 decision revision that differs from the current world is a valid historical
@@ -311,9 +378,10 @@ internal failure and must fail closed; `2` means invalid CLI usage. Do not
 infer success merely from a rendered report or empty-looking output.
 
 Runtime checks verify canonical YAML, fixed paths, the three world entries,
-unique aliases, Git object format, current world tree resolution, and lifecycle
-derivation from the selected snapshot. They do not infer newly made decisions
-from a parent diff or audit decision provenance through history.
+unique aliases, Git object format, current world tree resolution, phase
+guidance structure and content, and lifecycle derivation from the selected
+snapshot. They do not infer newly made decisions from a parent diff or audit
+decision provenance through history.
 
 ## Schemas
 
@@ -321,3 +389,6 @@ from a parent diff or audit decision provenance through history.
 - [User configuration](../schema/v1/user-config.schema.json)
 - [Idea status](../schema/v1/idea-status.schema.json)
 - [Shared definitions](../schema/v1/definitions.schema.json)
+
+Phase guidance has no schema or configuration key. Its fixed filenames,
+Git-entry constraints, and Markdown byte rules are the complete contract.
