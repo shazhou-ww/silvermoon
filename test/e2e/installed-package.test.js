@@ -120,10 +120,16 @@ try {
   );
   assert.deepEqual(
     bootstrapReport.observation.problems.map(({ type }) => type),
-    ["config-missing", "canonical-skill-missing"],
+    [
+      "config-missing",
+      "npm-dependency-wrong-section",
+      "canonical-skill-missing",
+    ],
   );
   assert.equal(bootstrapReport.observation.observedThrough, "version");
   assert.match(responseText(bootstrapReport), /--agent universal/);
+  assert.match(responseText(bootstrapReport), /npm install --save-dev/);
+  assert.match(responseText(bootstrapReport), /\.\/node_modules\/silvermoon\/skills/);
   assert.doesNotMatch(
     JSON.stringify(bootstrapReport),
     /package\.manifest|execution-source|project-local/,
@@ -182,7 +188,7 @@ try {
   const consumerManifestPath = join(consumer, "package.json");
   const consumerManifest = JSON.parse(await readFile(consumerManifestPath, "utf8"));
   delete consumerManifest.dependencies;
-  consumerManifest.devDependencies = { silvermoon: installedManifest.version };
+  consumerManifest.devDependencies = { silvermoon: `^${installedManifest.version}` };
   await writeFile(consumerManifestPath, `${JSON.stringify(consumerManifest, null, 2)}\n`);
   npm([
     "exec",

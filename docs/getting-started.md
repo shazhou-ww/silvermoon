@@ -20,18 +20,28 @@ silvermoon whats-next
 # or: npx silvermoon@<version> whats-next
 ```
 
-The setup report gives the exact path for the running installation. Use it to
-register the bundled canonical skill through the universal `skills` target:
+For repositories without a root `package.json`, the setup report gives the
+exact path for the running installation. Use it to register the bundled
+canonical skill through the universal `skills` target:
 
 ```sh
 npx skills add <path-to-running-silvermoon>/skills --skill silvermoon --agent universal --yes --copy
 ```
 
-The registration lives only at `.agents/skills/silvermoon`. Silvermoon checks
-that its content exactly matches the running installation. It does not require
-the target repository to use Node, contain `package.json`, declare a
-Silvermoon dependency, or have `node_modules`, and it never mutates skill
-registration itself.
+If the repository root contains `package.json`, Silvermoon requires valid JSON
+and an exact `devDependencies.silvermoon` value of `^<running-version>`.
+Follow the setup report's package-manager-specific command, then install the
+root dependencies and register the project-local canonical skill:
+
+```sh
+npx skills add ./node_modules/silvermoon/skills --skill silvermoon --agent universal --yes --copy
+```
+
+Only the tracked root manifest is part of readiness; installed dependencies
+and `node_modules` are not required for snapshot checks. Silvermoon checks the
+registration at `.agents/skills/silvermoon` against its running canonical
+skill, and never mutates the manifest, package-manager files, dependencies, or
+skill registration itself. Non-npm repositories remain free of npm setup.
 
 ## Configure The Shared Primary
 

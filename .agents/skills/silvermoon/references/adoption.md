@@ -15,10 +15,20 @@ when a programmatic consumer needs the complete
 The command may fetch after local readiness passes, but it does not move the
 worktree, index, branches, or named refs.
 
-The target repository may use any language or build ecosystem. It does not
-need `package.json`, a package manager, a Silvermoon dependency, or
-`node_modules`. Use any compatible Silvermoon installation, and register the
-canonical skill bundled with that running installation:
+The target repository may use any language or build ecosystem. If it has no
+root `package.json`, it does not need a package manager, a Silvermoon
+dependency, or `node_modules`. If a root manifest exists, Silvermoon requires
+valid JSON and `devDependencies.silvermoon` exactly equal to
+`^<running-version>`. Follow the reported package-manager-specific command.
+After installing root dependencies, register the canonical skill from the
+project-local package:
+
+```sh
+npx skills add ./node_modules/silvermoon/skills --skill silvermoon --agent universal --yes --copy
+```
+
+Non-npm repositories register the skill bundled with their running Silvermoon
+installation:
 
 ```sh
 npx skills add <path-to-running-silvermoon>/skills --skill silvermoon --agent universal --yes --copy

@@ -104,6 +104,33 @@ test("project setup reports no idea inventory and performs no repository access"
   );
 });
 
+test("npm dependency setup blocks idea creation before repository synchronization", async () => {
+  const repository = await fixture();
+  await writeFile(
+    join(repository.root, "package.json"),
+    JSON.stringify({ name: "consumer" }, null, 2) + "\n",
+  );
+  const commands = [];
+
+  const report = await observeGitCommands(
+    (args) => commands.push(args),
+    () => createIdea({
+      generateId: () => createdId,
+      root: repository.root,
+      userHome: repository.base,
+    }),
+  );
+
+  assert.equal(report.observation.state, "project-setup-required");
+  assert.equal(report.observation.problems[0].type, "npm-dependency-missing");
+  assert.equal(report.actions.length, 0);
+  assert.equal(commands.some(([name]) => name === "fetch"), false);
+  assert.deepEqual(
+    await readdir(join(repository.root, ".silvermoon", "ideas")),
+    [FIRST_ID],
+  );
+});
+
 test("[unrelated-active-create] [create-no-remote] creates an exact scaffold without remote access", async () => {
   const repository = await fixture();
   const before = repositoryState(repository.root, repository.repository);

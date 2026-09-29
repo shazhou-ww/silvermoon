@@ -17,6 +17,22 @@ const packageRoot = fileURLToPath(new URL("..", import.meta.url));
 const packageJson = JSON.parse(await readFile(resolve(packageRoot, "package.json"), "utf8"));
 const packagedSkillsRoot = resolve(packageRoot, "skills");
 const packagedSkill = resolve(packagedSkillsRoot, "silvermoon");
+const localSkillsRoot = "./node_modules/silvermoon/skills";
+const dependencySections = [
+  "dependencies",
+  "devDependencies",
+  "peerDependencies",
+  "optionalDependencies",
+];
+const lockfileManagers = new Map([
+  ["package-lock.json", "npm"],
+  ["npm-shrinkwrap.json", "npm"],
+  ["pnpm-lock.yaml", "pnpm"],
+  ["yarn.lock", "yarn"],
+  ["bun.lock", "bun"],
+  ["bun.lockb", "bun"],
+]);
+const semverPattern = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*)(?:\.(?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*))*))?(?:\+([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?$/;
 const utf8Decoder = new TextDecoder("utf-8", {
   fatal: true,
   ignoreBOM: true,
@@ -24,6 +40,320 @@ const utf8Decoder = new TextDecoder("utf-8", {
 
 export const SILVERMOON_VERSION = packageJson.version;
 export const REPOSITORY_SKILL_PATH = ".agents/skills/silvermoon";
+const expectedDependency = typeof SILVERMOON_VERSION === "string"
+  && semverPattern.test(SILVERMOON_VERSION)
+  ? `^${SILVERMOON_VERSION}`
+  : null;
+
+function isRecord(value) {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function isSilvermoonSourceCheckout(root, manifest) {
+  const repositoryUrl = manifest.repository?.url;
+  if (
+    resolve(root) !== resolve(packageRoot)
+    || manifest.name !== "silvermoon"
+    || typeof repositoryUrl !== "string"
+  ) {
+    return false;
+  }
+  const normalizedUrl = repositoryUrl
+    .replace(/^git\+/, "")
+    .replace(/\.git$/, "");
+  return normalizedUrl === "https://github.com/shazhou-ww/silvermoon";
+}
+
+function workspaceRoot(manifest) {
+  if (!Object.hasOwn(manifest, "workspaces")) return false;
+  const workspaces = manifest.workspaces;
+  const packages = Array.isArray(workspaces)
+    ? workspaces
+    : isRecord(workspaces)
+      ? workspaces.packages
+      : null;
+  if (!Array.isArray(packages) || !packages.every((item) => typeof item === "string")) {
+    return null;
+  }
+  return packages.length > 0;
+}
+
+function packageManagerDescriptor(manager, workspace, reason = null) {
+  if (reason || !manager || workspace === null) {
+    return {
+      manager: null,
+      reason: reason ?? (workspace === null
+        ? "The root workspaces field is not in a recognized form."
+        : "The package manager could not be determined safely."),
+      workspace,
+    };
+  }
+  return {
+    manager,
+    reason: null,
+    workspace,
+  };
+}
+
+async function detectPackageManager(root, manifest) {
+  const workspace = workspaceRoot(manifest);
+  if (Object.hasOwn(manifest, "packageManager")) {
+    const declaration = manifest.packageManager;
+    const match = typeof declaration === "string"
+      ? /^(npm|pnpm|yarn|bun)@(.+)$/.exec(declaration)
+      : null;
+    if (!match || !semverPattern.test(match[2])) {
+      return packageManagerDescriptor(
+        null,
+        workspace,
+        `The root packageManager value ${JSON.stringify(declaration)} is unknown or invalid.`,
+      );
+    }
+    return packageManagerDescriptor(match[1], workspace);
+  }
+
+  const detected = [];
+  const uncertain = [];
+  for (const [filename, manager] of lockfileManagers) {
+    try {
+      const metadata = await lstat(resolve(root, filename));
+      if (metadata.isFile()) detected.push({ filename, manager });
+      else uncertain.push(filename);
+    } catch (caught) {
+      if (caught.code !== "ENOENT") uncertain.push(filename);
+    }
+  }
+  if (uncertain.length > 0) {
+    return packageManagerDescriptor(
+      null,
+      workspace,
+      `Cannot safely inspect root lockfile path(s): ${uncertain.join(", ")}.`,
+    );
+  }
+  const managers = [...new Set(detected.map(({ manager }) => manager))];
+  if (managers.length > 1) {
+    return packageManagerDescriptor(
+      null,
+      workspace,
+      `Conflicting root lockfiles identify ${managers.join(", ")}.`,
+    );
+  }
+  return packageManagerDescriptor(managers[0] ?? "npm", workspace);
+}
+
+export function dependencyInstallCommand(manager, workspace, version = SILVERMOON_VERSION) {
+  const packageSpecifier = `silvermoon@^${version}`;
+  if (manager === "npm") {
+    return { executable: "npm", args: ["install", "--save-dev", packageSpecifier] };
+  }
+  if (manager === "pnpm") {
+    return {
+      executable: "pnpm",
+      args: [
+        "add",
+        "--save-dev",
+        packageSpecifier,
+        ...(workspace ? ["--workspace-root"] : []),
+      ],
+    };
+  }
+  if (manager === "yarn") {
+    return {
+      executable: "yarn",
+      args: [
+        "add",
+        packageSpecifier,
+        "--dev",
+        ...(workspace ? ["--ignore-workspace-root-check"] : []),
+      ],
+    };
+  }
+  if (manager === "bun") {
+    return { executable: "bun", args: ["add", packageSpecifier, "--dev"] };
+  }
+  return null;
+}
+
+function renderCommand({ executable, args }) {
+  return [executable, ...args]
+    .map((argument) => argument.includes("^") || argument.includes(" ")
+      ? `"${argument.replaceAll('"', '\\"')}"`
+      : argument)
+    .join(" ");
+}
+
+export function renderDependencyCommand(manager, workspace, version = SILVERMOON_VERSION) {
+  const command = dependencyInstallCommand(manager, workspace, version);
+  return command ? renderCommand(command) : null;
+}
+
+function dependencyInstruction(packageManager) {
+  const command = packageManager.manager
+    ? renderDependencyCommand(
+      packageManager.manager,
+      packageManager.workspace,
+      SILVERMOON_VERSION,
+    )
+    : null;
+  if (!expectedDependency) {
+    return `The running Silvermoon version ${JSON.stringify(SILVERMOON_VERSION)} is not a supported SemVer version; repair the package before declaring its dependency.`;
+  }
+  if (!command) {
+    return `Do not guess a package-manager command. ${packageManager.reason} Resolve the root package-manager/workspace configuration, then add silvermoon@${expectedDependency} to the root devDependencies.`;
+  }
+  return `From the repository root, run \`${command}\` to set root devDependencies.silvermoon to ${expectedDependency}.`;
+}
+
+function skillInstruction(skill, packageManager) {
+  const registration = `npx skills add "${skill}" --skill silvermoon --agent universal --yes --copy`;
+  if (skill === packagedSkillsRoot) {
+    return `Run \`${registration}\`.`;
+  }
+  const install = packageManager.manager
+    ? `run \`${packageManager.manager} install\``
+    : "install dependencies with the resolved project package manager";
+  return `After you add the required Silvermoon devDependency and ${install} at the repository root, run \`${registration}\`.`;
+}
+
+export async function inspectNpmProject(
+  snapshotRoot,
+  repositoryRoot,
+  { readManifest = readFile } = {},
+) {
+  const manifestPath = resolve(snapshotRoot, "package.json");
+  let metadata;
+  try {
+    metadata = await lstat(manifestPath);
+  } catch (caught) {
+    if (caught.code === "ENOENT") return { npmProject: false, findings: [] };
+    return {
+      npmProject: true,
+      findings: [{
+        priority: 35,
+        problem: {
+          type: "npm-manifest-unreadable",
+          summary: `Cannot inspect the root package.json: ${caught.message}`,
+        },
+        instruction: "Repair access to the root package.json, then rerun Silvermoon.",
+      }],
+      manifest: null,
+      packageManager: { manager: null, reason: "The root manifest could not be read.", workspace: null },
+    };
+  }
+  if (!metadata.isFile()) {
+    return {
+      npmProject: true,
+      findings: [{
+        priority: 35,
+        problem: {
+          type: "npm-manifest-invalid",
+          summary: "The root package.json must be a regular file.",
+        },
+        instruction: "Replace the root package.json path with a readable regular JSON manifest.",
+      }],
+      manifest: null,
+      packageManager: { manager: null, reason: "The root manifest is not a regular file.", workspace: null },
+    };
+  }
+
+  let manifest;
+  try {
+    manifest = JSON.parse(await readManifest(manifestPath, "utf8"));
+  } catch (caught) {
+    const invalidJson = caught instanceof SyntaxError;
+    return {
+      npmProject: true,
+      findings: [{
+        priority: 35,
+        problem: {
+          type: invalidJson ? "npm-manifest-invalid" : "npm-manifest-unreadable",
+          summary: invalidJson
+            ? `The root package.json is not valid JSON: ${caught.message}`
+            : `Cannot read the root package.json: ${caught.message}`,
+        },
+        instruction: "Repair the root package.json as a readable JSON object, then rerun Silvermoon.",
+      }],
+      manifest: null,
+      packageManager: { manager: null, reason: "The root manifest could not be parsed.", workspace: null },
+    };
+  }
+  if (!isRecord(manifest)) {
+    return {
+      npmProject: true,
+      findings: [{
+        priority: 35,
+        problem: {
+          type: "npm-manifest-invalid",
+          summary: "The root package.json must contain a JSON object.",
+        },
+        instruction: "Replace the root package.json contents with a valid JSON object.",
+      }],
+      manifest: null,
+      packageManager: { manager: null, reason: "The root manifest is not a JSON object.", workspace: null },
+    };
+  }
+
+  const packageManager = await detectPackageManager(snapshotRoot, manifest);
+  const findings = [];
+  const sourceCheckout = isSilvermoonSourceCheckout(repositoryRoot, manifest);
+  if (!expectedDependency) {
+    findings.push({
+      priority: 35,
+      problem: {
+        type: "npm-runtime-version-invalid",
+        summary: `The running Silvermoon version ${JSON.stringify(SILVERMOON_VERSION)} is not a supported SemVer version.`,
+      },
+      instruction: "Use a Silvermoon package with a valid SemVer version before adopting this npm project.",
+    });
+  } else if (!sourceCheckout) {
+    const declarations = dependencySections
+      .filter((section) => isRecord(manifest[section]) && Object.hasOwn(manifest[section], "silvermoon"));
+    const hasDevDependency = declarations.includes("devDependencies");
+    const actual = isRecord(manifest.devDependencies)
+      ? manifest.devDependencies.silvermoon
+      : undefined;
+    if (!hasDevDependency) {
+      findings.push({
+        priority: 35,
+        problem: {
+          type: declarations.length > 0
+            ? "npm-dependency-wrong-section"
+            : "npm-dependency-missing",
+          summary: declarations.length > 0
+            ? "The root Silvermoon dependency must be declared in devDependencies."
+            : `The root devDependencies.silvermoon must be ${expectedDependency}.`,
+        },
+        instruction: dependencyInstruction(packageManager),
+      });
+    } else if (actual !== expectedDependency) {
+      findings.push({
+        priority: 35,
+        problem: {
+          type: "npm-dependency-version-mismatch",
+          summary: `The root devDependencies.silvermoon must be exactly ${expectedDependency}; found ${JSON.stringify(actual)}.`,
+        },
+        instruction: dependencyInstruction(packageManager),
+      });
+    }
+    if (declarations.length > 1) {
+      findings.push({
+        priority: 36,
+        problem: {
+          type: "npm-dependency-duplicate",
+          summary: `Silvermoon is declared in multiple root dependency sections: ${declarations.join(", ")}.`,
+        },
+        instruction: `Remove duplicate Silvermoon declarations and keep only devDependencies.silvermoon at ${expectedDependency}.`,
+      });
+    }
+  }
+  return {
+    npmProject: true,
+    findings,
+    manifest,
+    packageManager,
+    sourceCheckout,
+  };
+}
 
 function canonicalSkillBytes(content) {
   if (content.includes(0)) return content;
@@ -93,9 +423,6 @@ async function inspectSkill(contentRoot) {
         type: "canonical-skill-missing",
         summary: `Missing canonical Silvermoon skill at ${REPOSITORY_SKILL_PATH}.`,
       },
-      instruction:
-        `Run \`npx skills add "${packagedSkillsRoot}" --skill silvermoon `
-        + "--agent universal --yes --copy`.",
     };
   }
   if (!metadata.isDirectory() && !metadata.isSymbolicLink()) {
@@ -137,9 +464,6 @@ async function inspectSkill(contentRoot) {
           `${REPOSITORY_SKILL_PATH} does not match the canonical skill bundled `
           + `with Silvermoon ${SILVERMOON_VERSION}.`,
       },
-      instruction:
-        `Review local skill changes, then run \`npx skills add "${packagedSkillsRoot}" `
-        + "--skill silvermoon --agent universal --yes --copy`.",
     };
   }
   return { ok: true, digest: actualDigest };
@@ -180,16 +504,29 @@ export async function inspectAdoption({
     });
   }
 
+  const npm = await traceAsync(
+    "npm-project.inspect",
+    {},
+    () => inspectNpmProject(snapshotRoot, repositoryRoot),
+  );
+  findings.push(...npm.findings);
+  const skillSource = npm.npmProject && !npm.sourceCheckout
+    ? localSkillsRoot
+    : packagedSkillsRoot;
   const skill = await traceAsync(
     "skill.inspect",
     {},
-    () => inspectSkill(snapshotRoot),
+    () => inspectSkill(snapshotRoot, skillSource),
   );
   if (!skill.ok) {
     findings.push({
       priority: 40,
       problem: skill.problem,
-      instruction: skill.instruction,
+      instruction: skillInstruction(skillSource, npm.packageManager ?? {
+        manager: null,
+        reason: "The root package manager is unknown.",
+        workspace: null,
+      }),
     });
   }
   findings.sort((left, right) => left.priority - right.priority);
