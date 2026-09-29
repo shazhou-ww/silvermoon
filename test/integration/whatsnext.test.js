@@ -190,7 +190,10 @@ test("[selector-none] naked navigation lists one active idea without selecting i
     alias: "fixture",
     state: "preparing",
   }]);
-  assert.equal(report.response.summary, "1 active idea(s) are available.");
+  assert.equal(
+    report.response.summary,
+    "Current state: navigation-ready. 1 active idea(s) are available.",
+  );
   assert.deepEqual(report.response.choices, report.observation.ideas.activeIdeas);
   const rendered = renderResponse(report.response);
   assert.match(rendered, /### Active ideas/);
@@ -212,6 +215,10 @@ test("[selector-none] naked navigation lists one active idea without selecting i
   });
   assert.equal(localized.observation.state, "navigation-ready");
   assert.equal(localized.observation.outputLanguage, "zh-CN");
+  assert.equal(
+    localized.response.summary,
+    "当前状态：navigation-ready。当前有 1 个 active idea。",
+  );
   assert.equal(
     localized.observation.configuration.preferredLanguage,
     "en-US",
