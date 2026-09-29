@@ -215,6 +215,19 @@ export async function verifyNpmRelease(
     assertImmutableReadme(readme, filename, commit);
     readmes.set(filename.toLowerCase(), readme);
   }
+  const candidateReadmeFilename = candidate.manifest.readmeFilename;
+  const candidatePackageReadme =
+    typeof candidateReadmeFilename === "string"
+      ? readmes.get(candidateReadmeFilename.toLowerCase())
+      : undefined;
+  if (
+    !candidatePackageReadme ||
+    candidate.manifest.readme !== candidatePackageReadme
+  ) {
+    throw new Error(
+      `Candidate tarball package README metadata does not match ${candidateReadmeFilename ?? "(missing filename)"}.`,
+    );
+  }
 
   const encodedPackage = encodeURIComponent(packageName);
   const packageUrl = `${npmRegistry}/${encodedPackage}`;
@@ -239,6 +252,12 @@ export async function verifyNpmRelease(
       `npm gitHead mismatch: expected ${commit}, found ${versionMetadata.gitHead ?? "missing"}.`,
     );
   }
+  if (
+    versionMetadata.readmeFilename !== candidateReadmeFilename ||
+    versionMetadata.readme !== candidatePackageReadme
+  ) {
+    throw new Error("npm version README metadata does not match the candidate tarball.");
+  }
 
   const dist = versionMetadata.dist;
   if (
@@ -256,17 +275,12 @@ export async function verifyNpmRelease(
     throw new Error("npm package metadata disagrees with exact version metadata.");
   }
 
-  const readmeFilename = packageMetadata.readmeFilename;
-  const expectedPackageReadme =
-    typeof readmeFilename === "string"
-      ? readmes.get(readmeFilename.toLowerCase())
-      : undefined;
   if (
-    !expectedPackageReadme ||
-    packageMetadata.readme !== expectedPackageReadme
+    packageMetadata.readmeFilename !== candidateReadmeFilename ||
+    packageMetadata.readme !== candidatePackageReadme
   ) {
     throw new Error(
-      `npm package README does not match candidate ${readmeFilename ?? "(missing filename)"}.`,
+      `npm package README does not match candidate ${candidateReadmeFilename}.`,
     );
   }
 
@@ -329,7 +343,7 @@ export async function verifyNpmRelease(
     sha256: candidate.sha256,
     integrity: candidate.integrity,
     fileCount: candidate.fileCount,
-    readmeFilename,
+    readmeFilename: candidateReadmeFilename,
     provenanceInvocation: invocationId,
     assets: assetPaths.map(
       (path) => `https://cdn.jsdelivr.net/gh/${repository}@${commit}/${path}`,

@@ -97,11 +97,12 @@ The [`publish-npm.yml`](../.github/workflows/publish-npm.yml) workflow then:
    `pnpm check:skills`;
 5. creates an isolated `git archive` staging tree and generates commit-pinned
    English and Chinese package READMEs without changing the tagged checkout;
-6. records the tagged commit as `gitHead` in the isolated package manifest,
-   creates one tarball, records its path, SHA-256, npm shasum, registry
-   integrity, and complete file list, then passes that same file to
-   `npm run pack:check` and `npm run test:e2e`; the pre-publication check
-   requires the tarball manifest to contain that exact commit;
+6. records the tagged commit as `gitHead` and the canonical `README.md` content
+   in the isolated package manifest, creates one tarball, records its path,
+   SHA-256, npm shasum, registry integrity, and complete file list, then passes
+   that same file to `npm run pack:check` and `npm run test:e2e`; the
+   pre-publication check requires the tarball manifest to contain that exact
+   commit and README metadata;
 7. publishes that exact tarball with provenance and the derived npm dist-tag
    when the version was absent; and
 8. runs `verify-npm-release.mjs` until the registry is consistent or the

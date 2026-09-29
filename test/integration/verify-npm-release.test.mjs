@@ -124,14 +124,16 @@ test("verifies registry identity, READMEs, provenance, and jsDelivr assets", asy
   };
   const packageMetadata = {
     "dist-tags": { [distTag]: version },
-    readme: chineseReadme,
-    readmeFilename: "README.zh-CN.md",
+    readme: englishReadme,
+    readmeFilename: "README.md",
     versions: { [version]: { dist } },
   };
   const versionMetadata = {
     name: packageName,
     version,
     gitHead: commit,
+    readme: englishReadme,
+    readmeFilename: "README.md",
     dist,
   };
   const attestations = {
@@ -245,6 +247,15 @@ test("verifies registry identity, READMEs, provenance, and jsDelivr assets", asy
         }),
       }),
     /package README does not match/,
+  );
+  await assert.rejects(
+    () =>
+      verifyNpmRelease(release, {
+        fetchImpl: fetchFor({
+          versionMetadata: { readme: "# different\n" },
+        }),
+      }),
+    /version README metadata does not match/,
   );
   await assert.rejects(
     () =>

@@ -127,9 +127,15 @@ if (packed.status !== 0) {
   const integrityMismatch =
     expectedIntegrity && result.integrity !== expectedIntegrity;
   let actualGitHead;
+  let readmeMetadataMismatch = false;
   if (expectedGitHead) {
     try {
-      actualGitHead = (await inspectNpmTarball(tarball)).manifest.gitHead;
+      const inspected = await inspectNpmTarball(tarball);
+      actualGitHead = inspected.manifest.gitHead;
+      readmeMetadataMismatch =
+        inspected.manifest.readmeFilename !== "README.md" ||
+        inspected.manifest.readme !==
+          inspected.entries.get("README.md")?.toString("utf8");
     } catch (error) {
       process.stderr.write(`Could not inspect configured npm tarball: ${error.message}\n`);
       process.exit(1);
@@ -143,7 +149,8 @@ if (packed.status !== 0) {
     unexpected.length > 0 ||
     emptyReadme ||
     integrityMismatch ||
-    gitHeadMismatch
+    gitHeadMismatch ||
+    readmeMetadataMismatch
   ) {
     if (missing.length > 0) process.stderr.write(`Missing packed files: ${missing.join(", ")}\n`);
     if (unexpected.length > 0) {
@@ -160,6 +167,11 @@ if (packed.status !== 0) {
     if (gitHeadMismatch) {
       process.stderr.write(
         `Configured npm tarball gitHead mismatch: expected ${expectedGitHead}, found ${actualGitHead ?? "missing"}.\n`,
+      );
+    }
+    if (readmeMetadataMismatch) {
+      process.stderr.write(
+        "Configured npm tarball package README metadata does not match README.md.\n",
       );
     }
     process.exitCode = 1;

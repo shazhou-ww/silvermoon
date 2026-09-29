@@ -237,6 +237,8 @@ test("uses a protected, least-privilege trusted-publishing workflow", async () =
   assert.match(checkPack, /from "\.\/npm-tarball\.mjs"/);
   assert.doesNotMatch(checkPack, /verify-npm-release\.mjs/);
   assert.doesNotMatch(npmTarball, /from "(?!node:)/);
+  assert.match(buildTarball, /readmeFilename/);
+  assert.match(checkPack, /package README metadata does not match README\.md/);
   assert.match(checkPack, /--dry-run/);
   assert.match(installedPackage, /process\.env\.SILVERMOON_TARBALL/);
   assert.ok(
@@ -253,6 +255,7 @@ test("uses a protected, least-privilege trusted-publishing workflow", async () =
   for (const required of [
     "dist-tags",
     "Candidate tarball gitHead mismatch",
+    "Candidate tarball package README metadata",
     "npm dist identity",
     "readmeFilename",
     "attestations",

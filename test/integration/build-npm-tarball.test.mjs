@@ -19,6 +19,7 @@ import { inspectNpmTarball } from "../../scripts/npm-tarball.mjs";
 const temporaryDirectories = [];
 const builderPath = resolve("scripts/build-npm-tarball.mjs");
 const gitHead = "a".repeat(40);
+const readme = "# Tarball fixture\n";
 
 afterEach(async () => {
   await Promise.all(
@@ -44,6 +45,7 @@ test("builds one tarball and records its verified identity and files", async () 
     }, null, 2)}\n`,
   );
   await writeFile(join(packageDirectory, "index.js"), "export const value = 1;\n");
+  await writeFile(join(packageDirectory, "README.md"), readme);
 
   const built = spawnSync(process.execPath, [
     builderPath,
@@ -69,6 +71,7 @@ test("builds one tarball and records its verified identity and files", async () 
   assert.equal(metadata.name, "tarball-build-fixture");
   assert.equal(metadata.version, "1.2.3");
   assert.equal(metadata.gitHead, gitHead);
+  assert.equal(metadata.readmeFilename, "README.md");
   assert.equal(
     metadata.sha256,
     createHash("sha256").update(bytes).digest("hex"),
@@ -79,16 +82,19 @@ test("builds one tarball and records its verified identity and files", async () 
   );
   assert.deepEqual(
     metadata.files.map(({ path }) => path),
-    ["index.js", "package.json"],
+    ["README.md", "index.js", "package.json"].sort((left, right) =>
+      left.localeCompare(right)
+    ),
   );
-  assert.equal(
-    (await inspectNpmTarball(metadata.tarballPath)).manifest.gitHead,
-    gitHead,
-  );
+  const inspected = await inspectNpmTarball(metadata.tarballPath);
+  assert.equal(inspected.manifest.gitHead, gitHead);
+  assert.equal(inspected.manifest.readmeFilename, "README.md");
+  assert.equal(inspected.manifest.readme, readme);
   assert.equal(
     await readFile(githubOutput, "utf8"),
     `${formatGitHubOutput(metadata)}\n`,
   );
+  await writeFile(join(packageDirectory, "README.md"), readme);
 });
 
 test("rejects a missing or conflicting release git head", async () => {

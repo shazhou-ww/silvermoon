@@ -57,29 +57,58 @@ function validateGitHead(gitHead) {
   return gitHead;
 }
 
-async function stampGitHead(packageRoot, gitHead) {
+async function stampReleaseMetadata(packageRoot, gitHead) {
   const manifestPath = resolve(packageRoot, "package.json");
+  const readmeFilename = "README.md";
   let manifest;
+  let readme;
   try {
-    manifest = JSON.parse(await readFile(manifestPath, "utf8"));
+    [manifest, readme] = await Promise.all([
+      readFile(manifestPath, "utf8").then((source) => JSON.parse(source)),
+      readFile(resolve(packageRoot, readmeFilename), "utf8"),
+    ]);
   } catch (error) {
-    throw new Error(`Could not read package manifest: ${error.message}`);
+    throw new Error(`Could not read package release metadata: ${error.message}`);
   }
   if (!manifest || typeof manifest !== "object" || Array.isArray(manifest)) {
     throw new Error("Package manifest must be a JSON object.");
+  }
+  if (!readme) {
+    throw new Error(`${readmeFilename} must not be empty.`);
   }
   if (manifest.gitHead && manifest.gitHead !== gitHead) {
     throw new Error(
       `Package manifest gitHead mismatch: expected ${gitHead}, found ${manifest.gitHead}.`,
     );
   }
-  if (manifest.gitHead !== gitHead) {
+  if (manifest.readme !== undefined && manifest.readme !== readme) {
+    throw new Error("Package manifest readme does not match README.md.");
+  }
+  if (
+    manifest.readmeFilename !== undefined &&
+    manifest.readmeFilename !== readmeFilename
+  ) {
+    throw new Error(
+      `Package manifest readmeFilename must be ${readmeFilename}.`,
+    );
+  }
+  if (
+    manifest.gitHead !== gitHead ||
+    manifest.readme !== readme ||
+    manifest.readmeFilename !== readmeFilename
+  ) {
     await writeFile(
       manifestPath,
-      `${JSON.stringify({ ...manifest, gitHead }, null, 2)}\n`,
+      `${JSON.stringify({
+        ...manifest,
+        gitHead,
+        readme,
+        readmeFilename,
+      }, null, 2)}\n`,
       "utf8",
     );
   }
+  return readmeFilename;
 }
 
 export async function buildNpmTarball({
@@ -95,7 +124,7 @@ export async function buildNpmTarball({
   if (!packageStatus.isDirectory()) {
     throw new Error(`Package directory is not a directory: ${packageRoot}`);
   }
-  await stampGitHead(packageRoot, releaseGitHead);
+  const readmeFilename = await stampReleaseMetadata(packageRoot, releaseGitHead);
   await mkdir(outputRoot, { recursive: true });
 
   const invocation = packCommand(outputRoot);
@@ -130,6 +159,7 @@ export async function buildNpmTarball({
     name: result.name,
     version: result.version,
     gitHead: releaseGitHead,
+    readmeFilename,
     tarballPath,
     size: tarballBytes.length,
     sha256: digest("sha256", tarballBytes, "hex"),
@@ -149,6 +179,7 @@ export function formatGitHubOutput(metadata) {
     `tarball_integrity=${metadata.integrity}`,
     `tarball_file_count=${metadata.files.length}`,
     `tarball_git_head=${metadata.gitHead}`,
+    `tarball_readme_filename=${metadata.readmeFilename}`,
   ].join("\n");
 }
 
