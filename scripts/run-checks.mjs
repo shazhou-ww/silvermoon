@@ -22,6 +22,12 @@ export function packageManagerCommand(
   } = {},
 ) {
   if (env.npm_execpath) {
+    if (platform === "win32" && /\.exe$/i.test(env.npm_execpath)) {
+      return {
+        command: env.npm_execpath,
+        args: ["run", script],
+      };
+    }
     return {
       command: execPath,
       args: [env.npm_execpath, "run", script],

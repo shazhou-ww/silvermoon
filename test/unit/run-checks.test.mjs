@@ -22,6 +22,17 @@ test("uses the invoking package manager when available", () => {
       args: ["/tools/pnpm.cjs", "run", "test"],
     },
   );
+  assert.deepEqual(
+    packageManagerCommand("test", {
+      env: { npm_execpath: "C:\\tools\\pnpm.exe" },
+      execPath: "C:\\tools\\node.exe",
+      platform: "win32",
+    }),
+    {
+      command: "C:\\tools\\pnpm.exe",
+      args: ["run", "test"],
+    },
+  );
 });
 
 test("falls back to a platform-safe npm command", () => {
