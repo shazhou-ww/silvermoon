@@ -297,8 +297,59 @@ function responseTitle(response) {
   return localize(response.language, english, chinese);
 }
 
+function markdownTableCell(value) {
+  return String(value ?? "-")
+    .replaceAll("\\", "\\\\")
+    .replaceAll("|", "\\|")
+    .replaceAll(/\r?\n/g, " ");
+}
+
+function renderIdeaList(response, language) {
+  const headers = [
+    localize(language, "ID", "ID"),
+    localize(language, "Alias", "Alias"),
+    localize(language, "State", "状态"),
+    localize(language, "Created", "创建时间"),
+    localize(language, "Title", "标题"),
+  ];
+  const counts = Object.entries(response.inventory.counts)
+    .map(([state, count]) => `${state}=${count}`)
+    .join(", ");
+  const lines = [
+    `${response.summary} ${localize(language, "Counts", "计数")}: ${counts}.`,
+    "",
+    `| ${headers.join(" | ")} |`,
+    `| ${headers.map(() => "---").join(" | ")} |`,
+  ];
+  for (const idea of response.items) {
+    lines.push(
+      `| ${[
+        idea.id,
+        idea.alias,
+        idea.state,
+        idea.createdAt,
+        idea.title,
+      ].map(markdownTableCell).join(" | ")} |`,
+    );
+  }
+  if (response.items.length === 0) {
+    lines.push(
+      "",
+      localize(language, "No ideas matched.", "没有匹配的 idea。"),
+    );
+  }
+  return lines.join("\n");
+}
+
 export function renderResponse(response) {
   const language = response.language ?? DEFAULT_LANGUAGE;
+  if (response.kind === "idea-list") {
+    return [
+      `## ${responseTitle(response)}`,
+      "",
+      renderIdeaList(response, language),
+    ].join("\n");
+  }
   const lines = [`## ${responseTitle(response)}`, "", response.summary];
 
   if (response.inventory) {

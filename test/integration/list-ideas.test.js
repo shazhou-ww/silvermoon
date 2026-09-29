@@ -445,8 +445,13 @@ test("[inventory-cli] CLI renders complete local inventory without lifecycle ins
     0,
   );
   assert.match(text.logs[0], /^## Ideas/);
-  assert.match(text.logs[0], /States: `preparing`, `implementing`, `deploying`/);
-  assert.match(text.logs[0], /Created=`2026-/);
+  assert.match(text.logs[0], /Matched 3 idea\(s\) and returned 3\./);
+  assert.match(
+    text.logs[0],
+    /Counts: preparing=1, implementing=1, deploying=1, completed=0, abandoned=0\./,
+  );
+  assert.match(text.logs[0], /\| ID \| Alias \| State \| Created \| Title \|/);
+  assert.match(text.logs[0], /\| .* \| .* \| preparing \| 2026-/);
   assert.doesNotMatch(text.logs[0], /Next steps|create-idea|whats-next/);
   assert.deepEqual(text.errors, []);
 });
