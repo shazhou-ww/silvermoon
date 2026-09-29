@@ -47,14 +47,13 @@
 
 ### Deployment steps
 
-- [ ] **D-S01:** 发布明确授权的 Silvermoon 版本
-- [ ] **D-S02:** 在真实消费者仓库验证 inventory 查询
-- [ ] **D-S03:** 验证离线与非整备 repository 边界
+- [ ] **D-S01:** 发布无发版部署契约
+- [ ] **D-S02:** 验证精确 primary commit 的托管 CI
+- [ ] **D-S03:** 复核无发版交付边界与 Silvermoon 导航
 
 ### Deployment acceptance criteria
 
-- [ ] **D-AC01:** npm 安装包公开可用 list-ideas
-- [ ] **D-AC02:** 已发布查询符合默认与组合语义
-- [ ] **D-AC03:** repository 未整备不阻止本地 inventory
-- [ ] **D-AC04:** 无效输入与不可信数据不会伪装成功
-- [ ] **D-AC05:** 既有工作流在已发布版本中不回归
+- [ ] **D-AC01:** 已验收实现与部署契约存在于 configured primary
+- [ ] **D-AC02:** 精确部署候选的 GitHub Actions CI 成功
+- [ ] **D-AC03:** deployment 不产生 release artifact 或发布动作
+- [ ] **D-AC04:** 发布后导航与 deployment revision 一致
