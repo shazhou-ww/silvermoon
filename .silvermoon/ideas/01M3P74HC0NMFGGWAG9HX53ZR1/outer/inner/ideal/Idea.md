@@ -32,6 +32,7 @@ idea 列表时格式不一致，也不便快速比较候选项。
 - 改变 active idea 的筛选、排序、计数或选择逻辑。
 - 为 `whats-next` 增加当前 observation 未提供的 idea 元数据。
 - 改变 JSON 输出结构或 `list-ideas` 的渲染行为。
+- 发布新的 npm package 版本；本 idea 的 deployment 仅验证仓库修改，不执行 npm 发版。
 
 ## Constraints
 
