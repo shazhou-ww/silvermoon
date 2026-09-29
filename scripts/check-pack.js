@@ -124,6 +124,7 @@ if (packed.status !== 0) {
     "src/repository.js",
     "src/response.js",
     "src/trace.js",
+    "src/tui.js",
     "src/user-config.js",
     "src/whatsnext.js",
     "src/yaml.js",

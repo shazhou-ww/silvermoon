@@ -23,6 +23,7 @@ const { version: VERSION } = JSON.parse(
 );
 
 const TRACE_FILE_SUFFIX = ".trace.jsonl";
+const AUDIENCES = ["human", "agent"];
 
 function write(method, value) {
   const text = value.replace(/\n$/, "");
@@ -38,6 +39,14 @@ export function normalizeTraceFileName(value) {
 function addCommonOptions(command) {
   return command
     .option("--json", "serialize all four command projections as JSON")
+    .addOption(
+      new Option(
+        "--audience <audience>",
+        "select human TUI or agent Markdown output (default: human)",
+      )
+        .choices(AUDIENCES)
+        .conflicts("json"),
+    )
     .option(
       "--trace <file.trace.jsonl>",
       "write domain and timing events as JSONL (suffix is appended when omitted)",
@@ -46,12 +55,48 @@ function addCommonOptions(command) {
     .option("-r, --root <path>", "repository root", process.cwd());
 }
 
-export function render(report, json, io) {
-  io.log(
-    json
-      ? JSON.stringify(report, null, 2)
-      : renderResponse(report.response),
-  );
+export function selectOutputRenderer({
+  audience = "human",
+  json = false,
+  stdinIsTTY = false,
+  stdoutIsTTY = false,
+}) {
+  if (json) return "json";
+  if (audience === "human" && stdinIsTTY && stdoutIsTTY) return "tui";
+  return "markdown";
+}
+
+async function defaultTuiRenderer(content, terminal) {
+  const { renderTuiMarkdown } = await import("./tui.js");
+  await renderTuiMarkdown(content, terminal);
+}
+
+export async function render(
+  report,
+  { audience = "human", json = false } = {},
+  io = console,
+  {
+    renderTui = defaultTuiRenderer,
+    terminal = { stdin: process.stdin, stdout: process.stdout },
+  } = {},
+) {
+  const renderer = selectOutputRenderer({
+    audience,
+    json,
+    stdinIsTTY: terminal.stdin.isTTY === true,
+    stdoutIsTTY: terminal.stdout.isTTY === true,
+  });
+  if (renderer === "json") {
+    io.log(JSON.stringify(report, null, 2));
+    return;
+  }
+
+  const markdown = renderResponse(report.response);
+  if (renderer === "tui") {
+    await renderTui(markdown, terminal);
+    return;
+  }
+  io.log(markdown);
 }
 
 function contentLanguageArgument(value) {
@@ -74,7 +119,7 @@ function collectOption(value, previous = []) {
   return [...previous, value];
 }
 
-export function createProgram(io = console) {
+export function createProgram(io = console, runtime = {}) {
   const program = new Command();
   program
     .name("silvermoon")
@@ -97,6 +142,7 @@ Examples:
   $ silvermoon whats-next
   $ silvermoon whats-next <idea>
   $ silvermoon whats-next <idea> --language zh-CN
+  $ silvermoon whats-next <idea> --audience agent
   $ silvermoon whats-next <idea> --json
   $ silvermoon whats-next <idea> --trace whats-next.trace.jsonl
   $ silvermoon create-idea
@@ -151,7 +197,7 @@ Examples:
         root: options.root,
       }),
     );
-    render(report, options.json, io);
+    await render(report, options, io, runtime);
     program.setOptionValue(
       "resultCode",
       report.observation.state === "ideas-listed" ? 0 : 1,
@@ -181,7 +227,7 @@ Examples:
         root: options.root,
       }),
     );
-    render(report, options.json, io);
+    await render(report, options, io, runtime);
     program.setOptionValue("resultCode", 0);
   });
 
@@ -207,7 +253,7 @@ Examples:
         root: options.root,
       }),
     );
-    render(report, options.json, io);
+    await render(report, options, io, runtime);
     program.setOptionValue("resultCode", 0);
   });
 
@@ -241,7 +287,7 @@ Examples:
         worktree: options.worktree,
       }),
     );
-    render(report, options.json, io);
+    await render(report, options, io, runtime);
     program.setOptionValue(
       "resultCode",
       report.observation.state === "project-ready" ? 0 : 1,
@@ -251,8 +297,8 @@ Examples:
   return program;
 }
 
-export async function runCli(args, io = console) {
-  const program = createProgram(io);
+export async function runCli(args, io = console, runtime = {}) {
+  const program = createProgram(io, runtime);
   try {
     await program.parseAsync(args.length === 0 ? ["--help"] : args, { from: "user" });
   } catch (caught) {

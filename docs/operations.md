@@ -118,9 +118,13 @@ unpublished local candidate, and never treat publication as approval.
 ## Follow One Report
 
 Treat `intention`, `observation`, `actions`, and `response` as one immutable
-report for every command. Default output renders only `response`; `--json`
-serializes all four projections and retains `actions: []` when no side effect
-was attempted. Actions are historical facts. Future work appears only in
+report for every command. The implicit `human` audience uses the bundled
+`tui-md` view only when both stdin and stdout are TTYs; `q`, `Esc`, and
+`Ctrl+C` exit the view. Human pipelines and redirections receive raw response
+Markdown. `--audience agent` always emits that raw Markdown without TUI control
+sequences. `--json` serializes all four projections and retains `actions: []`
+when no side effect was attempted; an explicit `--audience` conflicts with
+`--json`. Actions are historical facts. Future work appears only in
 `response.nextSteps`.
 
 Project setup takes precedence over repository synchronization, which takes

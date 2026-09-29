@@ -65,7 +65,7 @@ function npmResult(args, cwd) {
   return spawnSync(process.execPath, [npmCli, ...args], {
     cwd,
     encoding: "utf8",
-    timeout: 120_000,
+    timeout: 600_000,
     windowsHide: true,
   });
 }
@@ -95,6 +95,14 @@ try {
     ),
   );
   assert.equal(installedManifest.name, "silvermoon");
+  for (const dependency of [
+    "@opentui/core",
+    "@opentui/react",
+    "react",
+    "tui-md",
+  ]) {
+    assert.equal(typeof installedManifest.dependencies[dependency], "string");
+  }
   const bootstrapStatusBefore = run(
     "git",
     ["status", "--porcelain=v1", "--untracked-files=all"],
@@ -276,6 +284,7 @@ try {
   assert.match(help, /silvermoon whats-next/);
   assert.match(help, /silvermoon create-idea/);
   assert.match(help, /silvermoon check/);
+  assert.match(help, /--audience agent/);
   assert.doesNotMatch(
     help,
     /silvermoon whatsnext|silvermoon task|silvermoon status|silvermoon init|silvermoon skill/,
@@ -297,6 +306,18 @@ try {
     exported,
     "function,function,function,function,function,function,function,function,function,function,function,function,function|1,2|false,false",
   );
+  assert.equal(
+    run(
+      process.execPath,
+      [
+        "--input-type=module",
+        "-e",
+        "import { renderTuiMarkdown } from './node_modules/silvermoon/src/tui.js'; console.log(typeof renderTuiMarkdown);",
+      ],
+      consumer,
+    ),
+    "function",
+  );
   const inventory = JSON.parse(
     npm(
       ["exec", "--", "silvermoon", "list-ideas", "--all", "--json"],
@@ -316,7 +337,16 @@ try {
   assert.equal(inventory.observation.ideas[0].alias, "installed-smoke");
   assert.equal(inventory.observation.ideas[0].title, "Installed package smoke");
   const inventoryText = npm(
-    ["exec", "--", "silvermoon", "list-ideas", "--state", "active"],
+    [
+      "exec",
+      "--",
+      "silvermoon",
+      "list-ideas",
+      "--state",
+      "active",
+      "--audience",
+      "agent",
+    ],
     consumer,
   );
   assert.match(inventoryText, /^## Ideas/);
@@ -380,6 +410,12 @@ try {
   );
   assert.equal(invalidLanguage.status, 2, invalidLanguage.stderr);
   assert.match(invalidLanguage.stderr, /unsupported output language/);
+  const conflictingOutput = npmResult(
+    ["exec", "--", "silvermoon", "check", "--json", "--audience", "agent"],
+    consumer,
+  );
+  assert.equal(conflictingOutput.status, 2, conflictingOutput.stderr);
+  assert.match(conflictingOutput.stderr, /cannot be used with option '--json'/);
   assert.equal(
     run("git", ["status", "--porcelain=v1", "--untracked-files=all"], consumer),
     statusBeforeInvalidLanguage,

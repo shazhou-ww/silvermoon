@@ -83,12 +83,15 @@ Describe the desired world in the generated `Idea.md`, review it, and approve
 that exact revision. From then on, Silvermoon keeps the goal, implementation,
 repository state, and real-world result connected. See
 [Getting Started](./docs/getting-started.md) for the complete first workflow.
-Every command processes one ordered, versioned domain-message stream. Add
-`--json` when a programmatic consumer needs its four deterministic projections:
-`intention`, `observation`, `actions`, and `response`. Actions are side effects
-already attempted; future work belongs only to `response.nextSteps`. Default
-Markdown renders only the self-contained response instead of exposing the
-internal projections. For pre-commit validation, run
+Every command processes one ordered, versioned domain-message stream. The
+default `human` audience renders the response with Silvermoon's bundled
+`tui-md` view when stdin and stdout are both TTYs; use `q`, `Esc`, or `Ctrl+C`
+to exit. Redirected or piped human output remains raw Markdown. Use
+`--audience agent` for stable raw response Markdown regardless of TTY state, or
+`--json` for the four deterministic projections: `intention`, `observation`,
+`actions`, and `response`. An explicitly supplied `--audience` conflicts with
+`--json`. Actions are side effects already attempted; future work belongs only
+to `response.nextSteps`. For pre-commit validation, run
 `silvermoon check --staged`: unlike the default `check` (committed `HEAD`), it
 checks the index and exits `0` only when the project snapshot is valid. See the
 [Technical Reference](./docs/reference.md) for validation targets and exit

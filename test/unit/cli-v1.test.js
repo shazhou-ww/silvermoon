@@ -6,6 +6,7 @@ import {
   normalizeTraceFileName,
   render,
   runCli,
+  selectOutputRenderer,
 } from "../../src/cli.js";
 import { CommandRun } from "../../src/domain.js";
 
@@ -19,6 +20,13 @@ function capture() {
       log: (value) => logs.push(value),
     },
     logs,
+  };
+}
+
+function terminal(stdinIsTTY = false, stdoutIsTTY = false) {
+  return {
+    stdin: { isTTY: stdinIsTTY },
+    stdout: { isTTY: stdoutIsTTY },
   };
 }
 
@@ -75,6 +83,7 @@ test("registers only the approved command surface", () => {
   for (const command of program.commands.filter((candidate) =>
     candidate.name() !== "list-ideas"
   )) {
+    assert.ok(command.options.some(({ long }) => long === "--audience"));
     assert.ok(command.options.some(({ long }) => long === "--trace"));
     assert.ok(command.options.some(({ long }) => long === "--language"));
   }
@@ -87,6 +96,7 @@ test("registers only the approved command surface", () => {
     "--query",
     "--sort",
     "--state",
+    "--audience",
     "--trace",
   ]) {
     assert.ok(list.options.some(({ long }) => long === option), option);
@@ -128,16 +138,17 @@ test("help describes the four projections and unified trace", async () => {
   assert.equal(await runCli(["whats-next", "--help"], command.io), 0);
   const commandHelp = command.logs.join("\n");
   assert.match(commandHelp, /four command projections/);
+  assert.match(commandHelp, /human TUI or agent Markdown/);
   assert.match(commandHelp, /domain and timing events/);
 });
 
-test("renders JSON verbatim and default output from response only", () => {
+test("renders JSON verbatim and default non-TTY output from response only", async () => {
   const report = reportFor();
   const json = capture();
   const human = capture();
 
-  render(report, true, json.io);
-  render(report, false, human.io);
+  await render(report, { json: true }, json.io);
+  await render(report, {}, human.io, { terminal: terminal() });
 
   assert.deepEqual(JSON.parse(json.logs[0]), report);
   assert.deepEqual(Object.keys(report), [
@@ -158,14 +169,14 @@ test("renders JSON verbatim and default output from response only", () => {
   );
 });
 
-test("response rendering uses the observation output language", () => {
+test("response rendering uses the observation output language", async () => {
   const report = reportFor({
     observation: navigationObservation("zh-CN"),
     nextSteps: "请选择一个 idea。",
   });
   const output = capture();
 
-  render(report, false, output.io);
+  await render(report, {}, output.io, { terminal: terminal() });
 
   assert.match(output.logs[0], /^## 选择要继续的工作\n\n/);
   assert.match(output.logs[0], /当前有 1 个 active idea/);
@@ -174,7 +185,7 @@ test("response rendering uses the observation output language", () => {
   assert.doesNotMatch(output.logs[0], /本次指示|项目现状|本次操作及结果/);
 });
 
-test("renders selected ideas and validation without internal projections", () => {
+test("renders selected ideas and validation without internal projections", async () => {
   const selected = reportFor({
     intention: {
       command: "whats-next",
@@ -193,7 +204,7 @@ test("renders selected ideas and validation without internal projections", () =>
     nextSteps: "Continue the implementation.",
   });
   const selectedOutput = capture();
-  render(selected, false, selectedOutput.io);
+  await render(selected, {}, selectedOutput.io, { terminal: terminal() });
   assert.match(selectedOutput.logs[0], /^## Next steps/);
   assert.match(selectedOutput.logs[0], /fixture/);
   assert.match(selectedOutput.logs[0], /implementing/);
@@ -210,17 +221,83 @@ test("renders selected ideas and validation without internal projections", () =>
     nextSteps: undefined,
   });
   const checkOutput = capture();
-  render(check, false, checkOutput.io);
+  await render(check, {}, checkOutput.io, { terminal: terminal() });
   assert.match(checkOutput.logs[0], /^## Check/);
   assert.match(checkOutput.logs[0], /Result: valid/);
   assert.doesNotMatch(checkOutput.logs[0], /Next steps/);
 });
 
-test("rejects conflicting targets and invalid language as CLI usage errors", async () => {
+test("selects output rendering from audience and both TTY states", async () => {
+  assert.equal(selectOutputRenderer({}), "markdown");
+  assert.equal(
+    selectOutputRenderer({ stdinIsTTY: true, stdoutIsTTY: true }),
+    "tui",
+  );
+  assert.equal(
+    selectOutputRenderer({
+      audience: "agent",
+      stdinIsTTY: true,
+      stdoutIsTTY: true,
+    }),
+    "markdown",
+  );
+  assert.equal(
+    selectOutputRenderer({ stdinIsTTY: false, stdoutIsTTY: true }),
+    "markdown",
+  );
+  assert.equal(
+    selectOutputRenderer({ stdinIsTTY: true, stdoutIsTTY: false }),
+    "markdown",
+  );
+  assert.equal(selectOutputRenderer({ json: true }), "json");
+
+  const report = reportFor();
+  const tui = capture();
+  const rendered = [];
+  await render(report, {}, tui.io, {
+    renderTui: async (content, streams) => rendered.push({ content, streams }),
+    terminal: terminal(true, true),
+  });
+  assert.deepEqual(tui.logs, []);
+  assert.equal(rendered.length, 1);
+  assert.match(rendered[0].content, /^## Choose what to continue/);
+
+  const agent = capture();
+  await render(report, { audience: "agent" }, agent.io, {
+    renderTui: async () => assert.fail("agent output must not start the TUI"),
+    terminal: terminal(true, true),
+  });
+  assert.equal(agent.logs[0], rendered[0].content);
+  assert.doesNotMatch(agent.logs[0], /\x1B\[/);
+});
+
+test("surfaces TUI initialization failures as command failures", async () => {
+  const output = capture();
+  const exitCode = await runCli(
+    ["list-ideas", "--root", process.cwd()],
+    output.io,
+    {
+      renderTui: async () => {
+        throw new Error("fixture TUI failure");
+      },
+      terminal: terminal(true, true),
+    },
+  );
+
+  assert.equal(exitCode, 1);
+  assert.deepEqual(output.logs, []);
+  assert.deepEqual(output.errors, [
+    "ERROR command.failed: fixture TUI failure",
+  ]);
+});
+
+test("rejects conflicting targets, output modes, and invalid values as usage errors", async () => {
   for (const args of [
     ["check", "--remote", "--staged"],
     ["check", "--language", "fr-FR"],
     ["whats-next", "--language", "fr-FR"],
+    ["whats-next", "--audience", "reader"],
+    ["whats-next", "--json", "--audience", "agent"],
   ]) {
     const result = capture();
     assert.equal(await runCli(args, result.io), 2);

@@ -191,13 +191,17 @@ Then ask what comes next with the generated ULID or an exact unique alias:
 silvermoon whats-next <idea>
 ```
 
-Default Markdown renders only the self-contained response. Add `--json` when a
-programmatic consumer needs the complete
-`intention / observation / actions / response` report. Read every problem and
-execute applicable `response.nextSteps` in order; `actions` contains only
-side effects Silvermoon already attempted. Run the same command again only
-after an expected repository change, an unexpected input change, or a newly
-arrived external result.
+The default human audience opens the bundled `tui-md` view only when stdin and
+stdout are both TTYs; press `q`, `Esc`, or `Ctrl+C` to exit. Pipes,
+redirections, and other non-TTY uses receive raw Markdown. Agents should add
+`--audience agent` to receive the same raw response Markdown even when attached
+to a TTY. Add `--json` when a programmatic consumer needs the complete
+`intention / observation / actions / response` report; an explicitly supplied
+`--audience` cannot be combined with `--json`. Read every problem and execute
+applicable `response.nextSteps` in order; `actions` contains only side effects
+Silvermoon already attempted. Run the same command again only after an expected
+repository change, an unexpected input change, or a newly arrived external
+result.
 
 ## Make Decisions Explicit
 

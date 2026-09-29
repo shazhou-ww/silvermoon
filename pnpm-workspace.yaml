@@ -1,2 +1,5 @@
+allowBuilds:
+  koffi: true
+  unsafe-pointer: true
 minimumReleaseAgeExclude:
   - silvermoon@0.2.2

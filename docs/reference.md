@@ -133,10 +133,10 @@ State is derived in order:
 ## Public Commands
 
 ```sh
-silvermoon list-ideas [--state <state>] [--all] [--query <text>] [--created-since <RFC3339>] [--created-before <RFC3339>] [--sort <newest|oldest>] [--limit <positive-integer>] [--trace <file.trace.jsonl>]
-silvermoon whats-next [idea] [--language <en-US|zh-CN>] [--trace <file.trace.jsonl>]
-silvermoon create-idea [--language <tag>] [--trace <file.trace.jsonl>]
-silvermoon check [--remote | --commit <revision> | --staged | --worktree] [--language <en-US|zh-CN>] [--trace <file.trace.jsonl>]
+silvermoon list-ideas [--state <state>] [--all] [--query <text>] [--created-since <RFC3339>] [--created-before <RFC3339>] [--sort <newest|oldest>] [--limit <positive-integer>] [--audience <human|agent>] [--trace <file.trace.jsonl>]
+silvermoon whats-next [idea] [--language <en-US|zh-CN>] [--audience <human|agent>] [--trace <file.trace.jsonl>]
+silvermoon create-idea [--language <tag>] [--audience <human|agent>] [--trace <file.trace.jsonl>]
+silvermoon check [--remote | --commit <revision> | --staged | --worktree] [--language <en-US|zh-CN>] [--audience <human|agent>] [--trace <file.trace.jsonl>]
 ```
 
 Every valid invocation starts one ordered domain-message stream with
@@ -211,11 +211,20 @@ neither field. The public observation intentionally omits content so the
 response is the only rendered payload while still remaining a deterministic
 projection.
 
-Default Markdown renders only `response`, never the intention, observation, or
-action history. It begins with the answer, then includes only relevant idea
-references, inventory details, validation details, problems, next steps, and
-blockquoted guidance. `--json` serializes the four projections from the same
-domain stream; there is no YAML output or second reasoning path. A trustworthy
+Audience selection is independent of report construction. When `--audience` is
+omitted, the audience is `human`: stdin and stdout must both be TTYs for the
+bundled `tui-md` view to start. That view supports scrolling and exits with
+`q`, `Esc`, or `Ctrl+C`. If either stream is not a TTY, human output is raw
+Markdown. `--audience agent` always emits raw Markdown without TUI control
+sequences. Both Markdown paths render only `response`, never the intention,
+observation, or action history, and derive their content from the same command
+report. They begin with the answer, then include only relevant idea references,
+inventory details, validation details, problems, next steps, and blockquoted
+guidance.
+
+`--json` without an explicitly selected audience serializes the four
+projections from the same domain stream; explicit `--json --audience ...` is a
+usage error. There is no YAML output or second reasoning path. A trustworthy
 blocked report still exits `0` for `whats-next` and `create-idea`.
 `list-ideas` exits `0` only for a trustworthy inventory (including an empty
 result) and exits `1` for setup or layout unavailability. `check` exits `0`

@@ -64,13 +64,16 @@ silvermoon whats-next <idea> --language zh-CN
 在生成的 `Idea.md` 中描述想要抵达的世界，审阅并批准这个精确 revision。此后，
 Silvermoon 会让目标、实现、仓库状态与现实结果始终相连。完整的首次工作流见英文
 [Getting Started](./docs/getting-started.md)。
-每个命令都处理一条有序且带版本的 domain-message stream。程序消费者可使用
-`--json` 获取四个确定性 projection：`intention`、`observation`、`actions` 与
-`response`。`actions` 只记录已经尝试的副作用，未来工作只位于
-`response.nextSteps`。默认 Markdown 只渲染自足的 response，不暴露内部
-projection。提交前使用 `silvermoon check --staged` 验证 index；无参数 `check`
-只验证已提交的 `HEAD`，不能替代提交前检查。只有项目快照有效时检查才以退出码
-`0` 放行，详见英文 [Technical Reference](./docs/reference.md)。
+每个命令都处理一条有序且带版本的 domain-message stream。默认 `human` audience
+会在 stdin 与 stdout 都连接 TTY 时使用 Silvermoon 内置的 `tui-md` 视图渲染
+response；使用 `q`、`Esc` 或 `Ctrl+C` 退出。human 输出被重定向或进入管道时仍是
+原始 Markdown。Agent 与自动化调用方可用 `--audience agent` 在任何终端状态下
+获取稳定的原始 response Markdown，或使用 `--json` 获取四个确定性 projection：
+`intention`、`observation`、`actions` 与 `response`。显式 `--audience` 与
+`--json` 互斥。`actions` 只记录已经尝试的副作用，未来工作只位于
+`response.nextSteps`。提交前使用 `silvermoon check --staged` 验证 index；无参数
+`check` 只验证已提交的 `HEAD`，不能替代提交前检查。只有项目快照有效时检查才以
+退出码 `0` 放行，详见英文 [Technical Reference](./docs/reference.md)。
 
 任何命令都可以添加 `--trace <file.trace.jsonl>`，写出一条 schema-versioned
 JSONL timeline。`domain` channel 保存经过 allowlist 的 message 摘要，
