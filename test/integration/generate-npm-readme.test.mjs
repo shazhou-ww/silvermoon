@@ -19,14 +19,24 @@ test("rewrites the real repository README onto an immutable commit without touch
 
   assert.doesNotMatch(
     output,
-    /raw\.githubusercontent\.com\/shazhou-ww\/silvermoon\/main/,
+    /cdn\.jsdelivr\.net\/gh\/shazhou-ww\/silvermoon@(?:main|HEAD)\//,
+  );
+  assert.doesNotMatch(
+    output,
+    /raw\.githubusercontent\.com\/shazhou-ww\/silvermoon\//,
   );
   assert.doesNotMatch(output, /\]\(\.\.?\/[^)]+\)/);
   assert.doesNotMatch(output, /\b(?:href|src)="\.\.?\/[^"]+"/i);
   assert.match(
     output,
     new RegExp(
-      `raw\\.githubusercontent\\.com/shazhou-ww/silvermoon/${commit}/assets/silvermoon\\.svg`,
+      `cdn\\.jsdelivr\\.net/gh/shazhou-ww/silvermoon@${commit}/assets/silvermoon\\.svg`,
+    ),
+  );
+  assert.match(
+    output,
+    new RegExp(
+      `cdn\\.jsdelivr\\.net/gh/shazhou-ww/silvermoon@${commit}/assets/silvermoon-avatar\\.svg`,
     ),
   );
   assert.match(

@@ -5,7 +5,7 @@
 ### Implementation steps
 
 - [x] **I-S01:** 建立根级公开资产契约
-- [ ] **I-S02:** 生成 commit 固定的 jsDelivr README
+- [x] **I-S02:** 生成 commit 固定的 jsDelivr README
 - [ ] **I-S03:** 构建并发布单一 tarball
 - [ ] **I-S04:** 加强发布编排与外部核验
 - [ ] **I-S05:** 覆盖发布合同并完成仓库验证
@@ -13,7 +13,7 @@
 ### Implementation acceptance criteria
 
 - [x] **I-AC01:** 公开资产路径一致且向后兼容
-- [ ] **I-AC02:** 发布 README 只引用不可变资源
+- [x] **I-AC02:** 发布 README 只引用不可变资源
 - [ ] **I-AC03:** 验证与发布使用同一 tarball
 - [ ] **I-AC04:** 主分支发布信任边界保持不变
 - [ ] **I-AC05:** 完整候选通过 release-grade 验证
@@ -26,6 +26,12 @@
   `node --test "test/contract/assets.test.js"`、`pnpm pack:check` 与
   `pnpm test:e2e` 通过，证明 SVG 安全性与明暗主题对比度、双路径字节一致性、
   package allowlist 和安装后内容一致性。
+- 2026-09-29：两份仓库 README 的主视觉与头像均改用根级资产的 GitHub-backed
+  jsDelivr `@main` URL；npm README generator 将本仓库 jsDelivr 与旧
+  raw GitHub `main` 引用固定到指定完整提交，并拒绝缺失 ref、`HEAD`、其他
+  分支或标签、错误提交、相对图片及可移动 GitHub 文件 URL。聚焦的 18 项单元、
+  集成与契约测试通过，真实 README 的生成结果仅引用指定提交，且源文件在生成
+  前后保持字节不变。
 
 ## Deployment
 

@@ -5,13 +5,22 @@ import { generateNpmReadme } from "../../scripts/generate-npm-readme.mjs";
 
 const commit = "a".repeat(40);
 
-test("rewrites raw.githubusercontent.com main refs to the release commit", () => {
+test("pins Silvermoon jsDelivr main refs to the release commit", () => {
   const source =
-    '![logo](https://raw.githubusercontent.com/shazhou-ww/silvermoon/main/assets/silvermoon.svg)';
+    '![logo](https://cdn.jsdelivr.net/gh/shazhou-ww/silvermoon@main/assets/silvermoon.svg)';
   const output = generateNpmReadme({ source, commit });
   assert.equal(
     output,
-    `![logo](https://raw.githubusercontent.com/shazhou-ww/silvermoon/${commit}/assets/silvermoon.svg)`,
+    `![logo](https://cdn.jsdelivr.net/gh/shazhou-ww/silvermoon@${commit}/assets/silvermoon.svg)`,
+  );
+});
+
+test("migrates the legacy raw main endpoint to commit-pinned jsDelivr", () => {
+  const source =
+    '![logo](https://raw.githubusercontent.com/shazhou-ww/silvermoon/main/assets/silvermoon.svg)';
+  assert.equal(
+    generateNpmReadme({ source, commit }),
+    `![logo](https://cdn.jsdelivr.net/gh/shazhou-ww/silvermoon@${commit}/assets/silvermoon.svg)`,
   );
 });
 
@@ -48,7 +57,7 @@ test("preserves fragment identifiers on rewritten relative links", () => {
 
 test("is deterministic for the same source and commit", () => {
   const source = [
-    "https://raw.githubusercontent.com/shazhou-ww/silvermoon/main/assets/silvermoon.svg",
+    "https://cdn.jsdelivr.net/gh/shazhou-ww/silvermoon@main/assets/silvermoon.svg",
     "[Docs](./docs/getting-started.md)",
     '<a href="./README.zh-CN.md">zh</a>',
   ].join("\n");
@@ -73,14 +82,41 @@ test("rejects malformed release commits", () => {
   );
 });
 
-test("fails closed on unrecognized relative repository links", () => {
+test("fails closed on movable hosted repository references", () => {
+  for (const source of [
+    "https://cdn.jsdelivr.net/gh/shazhou-ww/silvermoon/assets/silvermoon.svg",
+    "https://cdn.jsdelivr.net/gh/shazhou-ww/silvermoon@HEAD/assets/silvermoon.svg",
+    "https://cdn.jsdelivr.net/gh/shazhou-ww/silvermoon@feature/assets/silvermoon.svg",
+    "https://raw.githubusercontent.com/shazhou-ww/silvermoon/HEAD/assets/silvermoon.svg",
+    "https://github.com/shazhou-ww/silvermoon/blob/main/assets/silvermoon.svg",
+  ]) {
+    assert.throws(
+      () => generateNpmReadme({ source, commit }),
+      /full Git object ID/,
+    );
+  }
+  assert.throws(
+    () =>
+      generateNpmReadme({
+        source: `https://cdn.jsdelivr.net/gh/shazhou-ww/silvermoon@${"b".repeat(40)}/assets/silvermoon.svg`,
+        commit,
+      }),
+    /must use release commit/,
+  );
+});
+
+test("fails closed on relative repository links and resources", () => {
   assert.throws(
     () => generateNpmReadme({ source: "[Docs](docs/getting-started.md)", commit }),
     /Unrecognized relative repository Markdown link/,
   );
   assert.throws(
     () => generateNpmReadme({ source: '<img src="./assets/silvermoon.svg">', commit }),
-    /Unrecognized relative repository HTML reference/,
+    /Relative repository HTML resource/,
+  );
+  assert.throws(
+    () => generateNpmReadme({ source: "![Logo](./assets/silvermoon.svg)", commit }),
+    /Relative repository Markdown image/,
   );
   assert.throws(
     () => generateNpmReadme({ source: "[Up](../package.json)", commit }),
@@ -90,7 +126,7 @@ test("fails closed on unrecognized relative repository links", () => {
 
 test("does not mutate the provided source string", () => {
   const source =
-    "See [Getting Started](./docs/getting-started.md) and https://raw.githubusercontent.com/shazhou-ww/silvermoon/main/assets/silvermoon.svg";
+    "See [Getting Started](./docs/getting-started.md) and https://cdn.jsdelivr.net/gh/shazhou-ww/silvermoon@main/assets/silvermoon.svg";
   const snapshot = source.slice();
   generateNpmReadme({ source, commit });
   assert.equal(source, snapshot);

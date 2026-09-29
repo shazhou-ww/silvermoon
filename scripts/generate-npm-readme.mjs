@@ -4,12 +4,13 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 const repositoryRoot = fileURLToPath(new URL("..", import.meta.url));
 const repository = "shazhou-ww/silvermoon";
+const jsDelivrRepository = `https://cdn.jsdelivr.net/gh/${repository}`;
+const jsDelivrMainPrefix = `${jsDelivrRepository}@main/`;
 const rawMainPrefix = `https://raw.githubusercontent.com/${repository}/main/`;
-const relativeFilePattern =
-  /^(?:\.\.?(?:\/|$)|(?![a-z][a-z0-9+.-]*:|#)[^/\s]+\/|[A-Za-z0-9_.-]+\.(?:md|svg|png|jpe?g|gif|webp|html?|json|ya?ml|js|mjs|cjs|ts|txt|sh)(?:#|$))/i;
+const fullObjectIdPattern = /^[0-9a-f]{40,64}$/i;
 
 function validateCommit(commit) {
-  if (!/^[0-9a-f]{40,64}$/i.test(commit ?? "")) {
+  if (!fullObjectIdPattern.test(commit ?? "")) {
     throw new Error("Release commit must be a full hexadecimal Git object ID.");
   }
   return commit;
@@ -21,15 +22,16 @@ function blobUrl(commit, path, anchor = "") {
 
 function rewriteMarkdownRelativeLinks(source, commit) {
   return source.replace(
-    /\]\(\.\/([^)\s#]+)(#[^)\s]*)?(?:\s+(?:"[^"]*"|'[^']*'))?\)/g,
+    /(?<!!)\]\(\.\/([^)\s#]+)(#[^)\s]*)?(?:\s+(?:"[^"]*"|'[^']*'))?\)/g,
     (_match, path, anchor = "") => `](${blobUrl(commit, path, anchor)})`,
   );
 }
 
 function rewriteHtmlRelativeHrefs(source, commit) {
   return source.replace(
-    /href="\.\/([^"#\s]+)(#[^"]*)?"/g,
-    (_match, path, anchor = "") => `href="${blobUrl(commit, path, anchor)}"`,
+    /href=(["'])\.\/([^"'#\s]+)(#[^"']*)?\1/g,
+    (_match, quote, path, anchor = "") =>
+      `href=${quote}${blobUrl(commit, path, anchor)}${quote}`,
   );
 }
 
@@ -38,25 +40,100 @@ function stripMarkdownLinkTitle(destination) {
   return titled ? titled[1] : destination;
 }
 
-function assertNoMovableOrRelativeRefs(source) {
-  if (source.includes(`https://raw.githubusercontent.com/${repository}/main`)) {
-    throw new Error(
-      "Generated README still references raw.githubusercontent.com/.../main; refusing movable refs.",
-    );
+function normalizeDestination(destination) {
+  const normalized = stripMarkdownLinkTitle(destination.trim());
+  if (normalized.startsWith("<") && normalized.endsWith(">")) {
+    return normalized.slice(1, -1);
+  }
+  return normalized;
+}
+
+function isRelativeRepositoryReference(destination) {
+  return (
+    !/^[a-z][a-z0-9+.-]*:/i.test(destination) &&
+    !destination.startsWith("#") &&
+    !destination.startsWith("//")
+  );
+}
+
+function assertNoRelativeResourceRefs(source) {
+  for (const match of source.matchAll(/!\[[^\]]*\]\(([^)]+)\)/g)) {
+    const destination = normalizeDestination(match[1]);
+    if (isRelativeRepositoryReference(destination)) {
+      throw new Error(
+        `Relative repository Markdown image is not allowed: ${destination}`,
+      );
+    }
   }
 
+  for (const match of source.matchAll(/\bsrc=(["'])(.*?)\1/gi)) {
+    const destination = match[2].trim();
+    if (isRelativeRepositoryReference(destination)) {
+      throw new Error(
+        `Relative repository HTML resource is not allowed: ${destination}`,
+      );
+    }
+  }
+}
+
+function assertFullObjectId(reference, kind) {
+  if (!fullObjectIdPattern.test(reference ?? "")) {
+    throw new Error(
+      `${kind} must use a full Git object ID; refusing movable reference ${reference ?? "(missing)"}.`,
+    );
+  }
+}
+
+function assertImmutableHostedRefs(source, releaseCommit) {
+  const jsDelivrPattern =
+    /https:\/\/cdn\.jsdelivr\.net\/gh\/([^/\s@"'<>]+)\/([^/@\s)"'<>]+)(?:@([^/\s)"'<>]+))?(?=\/|[\s)"'<>]|$)/gi;
+  for (const match of source.matchAll(jsDelivrPattern)) {
+    const referencedRepository = `${match[1]}/${match[2]}`;
+    const reference = match[3];
+    assertFullObjectId(reference, "jsDelivr GitHub reference");
+    if (
+      referencedRepository.toLowerCase() === repository.toLowerCase() &&
+      reference.toLowerCase() !== releaseCommit.toLowerCase()
+    ) {
+      throw new Error(
+        `Silvermoon jsDelivr reference must use release commit ${releaseCommit}.`,
+      );
+    }
+  }
+
+  const rawGitHubPattern =
+    /https:\/\/raw\.githubusercontent\.com\/([^/\s"'<>]+)\/([^/\s"'<>]+)\/([^/\s)"'<>]+)(?=\/)/gi;
+  for (const match of source.matchAll(rawGitHubPattern)) {
+    assertFullObjectId(match[3], "raw.githubusercontent.com reference");
+    if (`${match[1]}/${match[2]}`.toLowerCase() === repository.toLowerCase()) {
+      throw new Error(
+        "Silvermoon raw.githubusercontent.com references must use the jsDelivr GitHub endpoint.",
+      );
+    }
+  }
+
+  const githubFilePattern =
+    /https:\/\/github\.com\/[^/\s"'<>]+\/[^/\s"'<>]+\/(?:blob|raw|tree)\/([^/\s)"'<>]+)(?=\/)/gi;
+  for (const match of source.matchAll(githubFilePattern)) {
+    assertFullObjectId(match[1], "GitHub file reference");
+  }
+}
+
+function assertNoMovableOrRelativeRefs(source, releaseCommit) {
+  assertImmutableHostedRefs(source, releaseCommit);
+
   for (const match of source.matchAll(/\]\(([^)]+)\)/g)) {
-    const destination = stripMarkdownLinkTitle(match[1].trim());
-    if (relativeFilePattern.test(destination)) {
+    const destination = normalizeDestination(match[1]);
+    if (isRelativeRepositoryReference(destination)) {
       throw new Error(
         `Unrecognized relative repository Markdown link: ${destination}`,
       );
     }
   }
 
-  for (const match of source.matchAll(/\b(?:href|src)="([^"]+)"/gi)) {
-    const destination = match[1].trim();
-    if (relativeFilePattern.test(destination)) {
+  for (const match of source.matchAll(/\b(?:href|src)=(["'])(.*?)\1/gi)) {
+    const destination = match[2].trim();
+    if (isRelativeRepositoryReference(destination)) {
       throw new Error(
         `Unrecognized relative repository HTML reference: ${destination}`,
       );
@@ -72,14 +149,19 @@ export function generateNpmReadme({ source, commit }) {
   if (source.trim().length === 0) {
     throw new Error("README source is empty; refusing to generate an empty npm README.");
   }
+  assertNoRelativeResourceRefs(source);
 
   let result = source.replaceAll(
+    jsDelivrMainPrefix,
+    `${jsDelivrRepository}@${releaseCommit}/`,
+  );
+  result = result.replaceAll(
     rawMainPrefix,
-    `https://raw.githubusercontent.com/${repository}/${releaseCommit}/`,
+    `${jsDelivrRepository}@${releaseCommit}/`,
   );
   result = rewriteMarkdownRelativeLinks(result, releaseCommit);
   result = rewriteHtmlRelativeHrefs(result, releaseCommit);
-  assertNoMovableOrRelativeRefs(result);
+  assertNoMovableOrRelativeRefs(result, releaseCommit);
   if (result.trim().length === 0) {
     throw new Error("Generated npm README is empty; refusing to publish it.");
   }

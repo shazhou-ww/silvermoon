@@ -46,8 +46,15 @@ test("keeps both READMEs reader-first and structurally aligned", async () => {
   assert.match(chinese, /> 道友也不想自己的本命项目没有器灵吧？/);
 
   for (const source of [english, chinese]) {
-    assert.match(source, /silvermoon\/main\/assets\/silvermoon\.svg/);
-    assert.match(source, /docs\/assets\/silvermoon-avatar\.svg" width="128"/);
+    assert.match(
+      source,
+      /cdn\.jsdelivr\.net\/gh\/shazhou-ww\/silvermoon@main\/assets\/silvermoon\.svg/,
+    );
+    assert.match(
+      source,
+      /cdn\.jsdelivr\.net\/gh\/shazhou-ww\/silvermoon@main\/assets\/silvermoon-avatar\.svg" width="128"/,
+    );
+    assert.doesNotMatch(source, /raw\.githubusercontent\.com\/shazhou-ww\/silvermoon/);
     assert.match(source, /<table>[\s\S]*silvermoon-avatar\.svg[\s\S]*<\/table>/);
     assert.doesNotMatch(
       source.match(/<table>[\s\S]*?<\/table>/)?.[0] ?? "",
