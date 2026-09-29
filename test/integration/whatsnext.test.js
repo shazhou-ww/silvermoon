@@ -379,6 +379,12 @@ test("uses formal world and contract names in localized lifecycle instructions",
     );
     assert.match(responseText(selected), new RegExp(phrase));
     assert.doesNotMatch(responseText(selected), /道心|内景|现世/);
+    if ([FIRST_ID, SECOND_ID, DEPLOYING_ID].includes(id)) {
+      assert.match(
+        responseText(selected),
+        /自然语言内容中使用 fr-FR/,
+      );
+    }
   }
 });
 
@@ -489,6 +495,7 @@ test("uses a canonical output override without changing content language or pers
     "fr-FR",
   );
   assert.match(responseText(selected), /^继续在 /);
+  assert.match(responseText(selected), /自然语言内容中使用 fr-FR/);
   assert.match(selected.actions[0].result.commit, /^[0-9a-f]{40}$/);
   assert.equal(await readFile(statusPath, "utf8"), before);
   assert.equal(await readFile(configPath, "utf8"), configBefore);
