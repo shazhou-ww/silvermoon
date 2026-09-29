@@ -30,8 +30,8 @@ npx skills add <path-to-running-silvermoon>/skills --skill silvermoon --agent un
 
 If the repository root contains `package.json`, Silvermoon requires valid JSON
 and an exact `devDependencies.silvermoon` value of `^<running-version>`.
-Follow the setup report's package-manager-specific command, then install the
-root dependencies and register the project-local canonical skill:
+Follow all commands in the setup report in order; then register the
+project-local canonical skill:
 
 ```sh
 npx skills add ./node_modules/silvermoon/skills --skill silvermoon --agent universal --yes --copy

@@ -141,13 +141,13 @@ async function detectPackageManager(root, manifest) {
   return packageManagerDescriptor(managers[0] ?? "npm", workspace);
 }
 
-export function dependencyInstallCommand(manager, workspace, version = SILVERMOON_VERSION) {
+export function dependencyInstallCommands(manager, workspace, version = SILVERMOON_VERSION) {
   const packageSpecifier = `silvermoon@^${version}`;
   if (manager === "npm") {
-    return { executable: "npm", args: ["install", "--save-dev", packageSpecifier] };
+    return [{ executable: "npm", args: ["install", "--save-dev", packageSpecifier] }];
   }
   if (manager === "pnpm") {
-    return {
+    return [{
       executable: "pnpm",
       args: [
         "add",
@@ -155,21 +155,19 @@ export function dependencyInstallCommand(manager, workspace, version = SILVERMOO
         packageSpecifier,
         ...(workspace ? ["--workspace-root"] : []),
       ],
-    };
+    }];
   }
   if (manager === "yarn") {
-    return {
-      executable: "yarn",
-      args: [
-        "add",
-        packageSpecifier,
-        "--dev",
-        ...(workspace ? ["--ignore-workspace-root-check"] : []),
-      ],
-    };
+    return [
+      {
+        executable: "npm",
+        args: ["pkg", "set", `devDependencies.silvermoon=^${version}`],
+      },
+      { executable: "yarn", args: ["install"] },
+    ];
   }
   if (manager === "bun") {
-    return { executable: "bun", args: ["add", packageSpecifier, "--dev"] };
+    return [{ executable: "bun", args: ["add", packageSpecifier, "--dev"] }];
   }
   return null;
 }
@@ -183,12 +181,12 @@ function renderCommand({ executable, args }) {
 }
 
 export function renderDependencyCommand(manager, workspace, version = SILVERMOON_VERSION) {
-  const command = dependencyInstallCommand(manager, workspace, version);
-  return command ? renderCommand(command) : null;
+  const commands = dependencyInstallCommands(manager, workspace, version);
+  return commands ? commands.map(renderCommand).join("\n") : null;
 }
 
 function dependencyInstruction(packageManager) {
-  const command = packageManager.manager
+  const renderedCommands = packageManager.manager
     ? renderDependencyCommand(
       packageManager.manager,
       packageManager.workspace,
@@ -198,10 +196,14 @@ function dependencyInstruction(packageManager) {
   if (!expectedDependency) {
     return `The running Silvermoon version ${JSON.stringify(SILVERMOON_VERSION)} is not a supported SemVer version; repair the package before declaring its dependency.`;
   }
-  if (!command) {
+  if (!renderedCommands) {
     return `Do not guess a package-manager command. ${packageManager.reason} Resolve the root package-manager/workspace configuration, then add silvermoon@${expectedDependency} to the root devDependencies.`;
   }
-  return `From the repository root, run \`${command}\` to set root devDependencies.silvermoon to ${expectedDependency}.`;
+  const commands = renderedCommands.split("\n");
+  if (commands.length === 1) {
+    return `From the repository root, run \`${commands[0]}\` to set root devDependencies.silvermoon to ${expectedDependency}.`;
+  }
+  return `From the repository root, run these commands in order: ${commands.map((command) => `\`${command}\``).join(", then ")} to set root devDependencies.silvermoon to ${expectedDependency}.`;
 }
 
 function skillInstruction(skill, packageManager) {

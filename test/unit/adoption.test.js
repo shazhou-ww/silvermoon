@@ -14,7 +14,7 @@ import { afterEach, test } from "node:test";
 import { fileURLToPath } from "node:url";
 
 import {
-  dependencyInstallCommand,
+  dependencyInstallCommands,
   inspectAdoption,
   inspectNpmProject,
   REPOSITORY_SKILL_PATH,
@@ -200,44 +200,46 @@ test("requires the exact root devDependency and registers npm skills from the in
 
 test("generates structured manager-specific root dependency commands", () => {
   assert.deepEqual(
-    dependencyInstallCommand("npm", false),
-    {
+    dependencyInstallCommands("npm", false),
+    [{
       executable: "npm",
       args: ["install", "--save-dev", `silvermoon@^${SILVERMOON_VERSION}`],
-    },
+    }],
   );
   assert.deepEqual(
-    dependencyInstallCommand("pnpm", true),
-    {
+    dependencyInstallCommands("pnpm", true),
+    [{
       executable: "pnpm",
       args: ["add", "--save-dev", `silvermoon@^${SILVERMOON_VERSION}`, "--workspace-root"],
-    },
+    }],
   );
   assert.deepEqual(
-    dependencyInstallCommand("yarn", true),
-    {
-      executable: "yarn",
-      args: [
-        "add",
-        `silvermoon@^${SILVERMOON_VERSION}`,
-        "--dev",
-        "--ignore-workspace-root-check",
-      ],
-    },
+    dependencyInstallCommands("yarn", true),
+    [
+      {
+        executable: "npm",
+        args: ["pkg", "set", `devDependencies.silvermoon=^${SILVERMOON_VERSION}`],
+      },
+      { executable: "yarn", args: ["install"] },
+    ],
   );
   assert.deepEqual(
-    dependencyInstallCommand("bun", true),
-    {
+    dependencyInstallCommands("bun", true),
+    [{
       executable: "bun",
       args: ["add", `silvermoon@^${SILVERMOON_VERSION}`, "--dev"],
-    },
+    }],
   );
-  assert.equal(dependencyInstallCommand("unknown", false), null);
+  assert.equal(dependencyInstallCommands("unknown", false), null);
 });
 
-test("renders caret ranges with portable quoting for Windows and Unix shells", () => {
+test("renders dependency commands with portable quoting for Windows and Unix shells", () => {
   const rendered = `npm install --save-dev "silvermoon@^${SILVERMOON_VERSION}"`;
   assert.equal(renderDependencyCommand("npm", false), rendered);
+  assert.equal(
+    renderDependencyCommand("yarn", true),
+    `npm pkg set "devDependencies.silvermoon=^${SILVERMOON_VERSION}"\nyarn install`,
+  );
   assert.equal(renderDependencyCommand("unknown", false), null);
 });
 
@@ -266,7 +268,15 @@ test("prefers packageManager, infers a unique root lockfile, and avoids ambiguou
   ]) {
     const root = await npmRepository({ name: "consumer" }, { lockfiles: [lockfile] });
     const report = await inspectAdoption({ root });
-    assert.match(report.instructions[0], new RegExp("run `" + manager + " "));
+    if (manager === "yarn") {
+      assert.match(
+        report.instructions[0],
+        /npm pkg set "devDependencies\.silvermoon=\^0\.2\.1"/,
+      );
+      assert.match(report.instructions[0], /then `yarn install`/);
+    } else {
+      assert.match(report.instructions[0], new RegExp("run `" + manager + " "));
+    }
   }
 
   const unknown = await npmRepository({

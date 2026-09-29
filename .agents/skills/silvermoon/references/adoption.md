@@ -19,8 +19,9 @@ The target repository may use any language or build ecosystem. If it has no
 root `package.json`, it does not need a package manager, a Silvermoon
 dependency, or `node_modules`. If a root manifest exists, Silvermoon requires
 valid JSON and `devDependencies.silvermoon` exactly equal to
-`^<running-version>`. Follow the reported package-manager-specific command.
-After installing root dependencies, register the canonical skill from the
+`^<running-version>`. Follow every command in the setup report, in order; a
+manager-specific remediation may have separate manifest and install steps.
+After the dependencies are installed, register the canonical skill from the
 project-local package:
 
 ```sh

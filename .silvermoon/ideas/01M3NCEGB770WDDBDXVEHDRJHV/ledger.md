@@ -7,6 +7,7 @@
 - [x] **I-S01:** 识别根级 npm 项目
 - [x] **I-S02:** 强制运行时对齐的 devDependency
 - [x] **I-S03:** 生成包管理器感知的修复指令
+  - Evidence: The revised Yarn workspace remediation writes `^0.2.1` with `npm pkg set`, then updates the lockfile and installs with `yarn install`.
 - [x] **I-S04:** 对齐 skill 注册与 snapshot 行为
 - [x] **I-S05:** 更新公共契约与回归覆盖
 
@@ -15,9 +16,11 @@
 - [x] **I-AC01:** npm 项目分类只取决于根 manifest
 - [x] **I-AC02:** devDependency 契约阻止未整备 npm 项目
 - [x] **I-AC03:** remediation 与项目包管理器和 workspace 一致
+  - Evidence: Unit coverage checks all manager command sequences; a real Yarn 1.22.22 workspace produced `devDependencies.silvermoon: "^0.2.1"`, a caret-keyed `yarn.lock`, registered the local skill, and passed installed CLI readiness.
 - [x] **I-AC04:** npm skill 来源可复现且诊断保持只读
 - [x] **I-AC05:** snapshot 与跨生态行为不回归
 - [x] **I-AC06:** 完整候选通过发布级验证
+  - Evidence: `pnpm check`, packaged-skill synchronization, package contents, installed-package E2E, Markdown lint, `check --worktree`, `check --staged`, and `git diff --check` passed; two Windows symlink tests were skipped because the environment lacks symlink privileges.
 
 ## Deployment
 
