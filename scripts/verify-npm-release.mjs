@@ -269,8 +269,11 @@ export async function verifyNpmRelease(
   }
 
   if (
-    packageMetadata.readmeFilename !== candidateReadmeFilename ||
-    packageMetadata.readme !== candidatePackageReadme
+    distTag === "latest" &&
+    (
+      packageMetadata.readmeFilename !== candidateReadmeFilename ||
+      packageMetadata.readme !== candidatePackageReadme
+    )
   ) {
     throw new Error(
       `npm package README does not match candidate ${candidateReadmeFilename}.`,

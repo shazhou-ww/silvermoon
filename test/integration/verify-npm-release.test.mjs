@@ -228,6 +228,20 @@ test("verifies registry identity, READMEs, provenance, and jsDelivr assets", asy
   );
   assert.deepEqual(verified.assets, assetUrls);
 
+  const prereleaseVerified = await verifyNpmRelease(
+    { ...release, distTag: "rc" },
+    {
+      fetchImpl: fetchFor({
+        packageMetadata: {
+          "dist-tags": { latest: "1.2.2", rc: version },
+          readme: "",
+          readmeFilename: "",
+        },
+      }),
+    },
+  );
+  assert.equal(prereleaseVerified.distTag, "rc");
+
   await assert.rejects(
     () =>
       verifyNpmRelease(release, {

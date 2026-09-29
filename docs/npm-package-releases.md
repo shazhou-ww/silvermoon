@@ -105,17 +105,19 @@ The [`publish-npm.yml`](../.github/workflows/publish-npm.yml) workflow then:
    commit and README metadata and requires a fresh directory pack to be
    byte-identical;
 7. publishes the unchanged staged directory with provenance and the derived npm
-   dist-tag when the version was absent, allowing npm to include package-level
-   README metadata while the deterministic pack check and post-publication
+   dist-tag when the version was absent, allowing npm to include the
+   package-level README metadata while the deterministic pack check and post-publication
    verifier guarantee the registry tarball matches the candidate bytes; and
 8. runs `verify-npm-release.mjs` until the registry is consistent or the
    bounded retry window expires.
 
 The post-publication verifier requires the exact version and dist-tag, matching
-tarball and registry `gitHead`, registry integrity and tarball bytes,
-package-level README, both tarball READMEs, npm publish and SLSA provenance
-attestations, tagged Git commit, and commit-pinned jsDelivr SVG responses to
-match the candidate. A successful run prints `VERIFY_NPM_RELEASE_OK` with the
+tarball and registry `gitHead`, registry integrity and tarball bytes, both
+tarball READMEs, npm publish and SLSA provenance attestations, tagged Git
+commit, and commit-pinned jsDelivr SVG responses to match the candidate.
+Releases on the `latest` dist-tag additionally require npm's package-level
+README to match the candidate; prerelease channels leave that `latest` package
+page state unchanged. A successful run prints `VERIFY_NPM_RELEASE_OK` with the
 verified identities.
 
 Release runs are serialized within this repository. The registry preflight and
