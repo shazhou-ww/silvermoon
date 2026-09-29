@@ -66,6 +66,27 @@
   `deploymentRevision` 为 `4d51144828fbc0bbe5ce666a748322627376cecc`；
   deployment acceptance 尚未记录。Stable `0.2.0` 仍未发布，仍需单独的显式
   `/publish silvermoon 0.2.0` 授权。
+- 2026-09-29: Stable immutable tag `npm/silvermoon/v0.2.0` 指向
+  `27700c428509c3152d5eb96e90a8e1a4a150c6cb`。首次 workflow run
+  [36532815199](https://github.com/shazhou-ww/silvermoon/actions/runs/36532815199)
+  的 trusted publish 成功；npm 提示 package 正在处理，短暂 registry 404 使首轮
+  verification 达到重试上限。版本出现在 official registry 后，只重跑失败的
+  verifier job；重跑时 publish step skipped，最终 workflow success，
+  `VERIFY_NPM_RELEASE_OK` 确认唯一候选：SHA-256
+  `d1876697ce5b7d3536086dce89b40314cf90724a594821ddbd1c3ed1b1e2502c`、
+  integrity
+  `sha512-G+SG5VlrLUHKc0MJwOx0dSZOwnr19zF1QtvdG8t2fuAyPs0rxL0K1E8JTDRzXWKhmuCQ360taOs0flTakQDjlw==`、
+  46 个文件、`gitHead` 与 tag commit 相同、package README 与双语 tarball README
+  一致。官方 npm `latest` 为 `0.2.0`，`rc` 仍为 `0.2.0-rc.1`；publish 与 SLSA
+  provenance 均验证，provenance invocation 为
+  https://github.com/shazhou-ww/silvermoon/actions/runs/36532815199/attempts/1。
+  Commit-pinned jsDelivr assets：
+  [silvermoon.svg](https://cdn.jsdelivr.net/gh/shazhou-ww/silvermoon@27700c428509c3152d5eb96e90a8e1a4a150c6cb/assets/silvermoon.svg)、
+  [silvermoon-avatar.svg](https://cdn.jsdelivr.net/gh/shazhou-ww/silvermoon@27700c428509c3152d5eb96e90a8e1a4a150c6cb/assets/silvermoon-avatar.svg)。
+- 2026-09-29: 全新 registry consumer 分别执行 `npm install silvermoon@0.2.0`
+  与默认 `npm install silvermoon`，两者均安装 `0.2.0`；对 exact-version 与
+  default-version 下载的 registry tarball 分别运行完整 installed-package E2E，
+  两轮均通过，覆盖四个 public commands、输出合同、guidance 与预期失败。
 
 ## Deployment
 
@@ -76,7 +97,7 @@
 - [x] **D-S03:** 在真实消费者中验证 RC
 - [x] **D-S04:** 处理 RC 缺陷或确认稳定候选
 - [x] **D-S05:** 重新验收 0.2.0 stable implementation
-- [ ] **D-S06:** 发布并验证稳定 0.2.0
+- [x] **D-S06:** 发布并验证稳定 0.2.0
 - [ ] **D-S07:** 请求最终 deployment acceptance
 
 ### Deployment acceptance criteria
@@ -86,8 +107,8 @@
 - [x] **D-AC03:** Phase guidance 与既有安全边界不回归
 - [ ] **D-AC04:** RC 失败只产生新的不可变候选
 - [x] **D-AC05:** Stable candidate 经第二次 implementation gate
-- [ ] **D-AC06:** Stable 0.2.0 独立发布并完整验证
-- [ ] **D-AC07:** 最终验收证据完整可追溯
+- [x] **D-AC06:** Stable 0.2.0 独立发布并完整验证
+- [x] **D-AC07:** 最终验收证据完整可追溯
 
 ### Deployment evidence
 
