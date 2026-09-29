@@ -186,10 +186,22 @@ try {
     ),
     /# Getting Started/,
   );
-  await readFile(
-    join(consumer, "node_modules", "silvermoon", "docs", "assets", "silvermoon-avatar.svg"),
-    "utf8",
-  );
+  const [canonicalAvatar, compatibilityAvatar] = await Promise.all([
+    readFile(
+      join(consumer, "node_modules", "silvermoon", "assets", "silvermoon-avatar.svg"),
+    ),
+    readFile(
+      join(
+        consumer,
+        "node_modules",
+        "silvermoon",
+        "docs",
+        "assets",
+        "silvermoon-avatar.svg",
+      ),
+    ),
+  ]);
+  assert.deepEqual(compatibilityAvatar, canonicalAvatar);
   for (const schema of [
     "config.schema.json",
     "definitions.schema.json",

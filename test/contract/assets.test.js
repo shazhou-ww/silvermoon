@@ -1,9 +1,13 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { lstat, readFile } from "node:fs/promises";
 import { test } from "node:test";
 
 const artworkUrl = new URL("../../assets/silvermoon.svg", import.meta.url);
-const avatarUrl = new URL("../../docs/assets/silvermoon-avatar.svg", import.meta.url);
+const avatarUrl = new URL("../../assets/silvermoon-avatar.svg", import.meta.url);
+const compatibilityAvatarUrl = new URL(
+  "../../docs/assets/silvermoon-avatar.svg",
+  import.meta.url,
+);
 const readmeUrl = new URL("../../README.md", import.meta.url);
 
 function luminance(hex) {
@@ -22,26 +26,36 @@ function contrast(first, second) {
   return (bright + 0.05) / (dark + 0.05);
 }
 
-test("ships safe Silvermoon artwork with contrast in light and dark themes", async () => {
-  const [artwork, avatar, readme] = await Promise.all([
+test("ships safe canonical artwork with a byte-identical legacy avatar", async () => {
+  const [artwork, avatarBytes, compatibilityAvatarBytes, readme] = await Promise.all([
     readFile(artworkUrl, "utf8"),
-    readFile(avatarUrl, "utf8"),
+    readFile(avatarUrl),
+    readFile(compatibilityAvatarUrl),
     readFile(readmeUrl, "utf8"),
   ]);
+  const avatar = avatarBytes.toString("utf8");
+  const [avatarStatus, compatibilityAvatarStatus] = await Promise.all([
+    lstat(avatarUrl),
+    lstat(compatibilityAvatarUrl),
+  ]);
 
+  assert.equal(avatarStatus.isFile(), true);
+  assert.equal(avatarStatus.isSymbolicLink(), false);
+  assert.equal(compatibilityAvatarStatus.isFile(), true);
+  assert.equal(compatibilityAvatarStatus.isSymbolicLink(), false);
+  assert.deepEqual(compatibilityAvatarBytes, avatarBytes);
   assert.match(artwork, /viewBox="0 400 1280 880"/);
+  assert.match(avatar, /viewBox="0 0 1280 1280"/);
   assert.equal([...artwork.matchAll(/<path\b/g)].length, 23);
-  assert.doesNotMatch(
-    artwork,
-    /<script\b|on[a-z]+\s*=|<image\b|<foreignObject\b|(?:href|src)\s*=/i,
-  );
-  assert.match(artwork, /fill="#7d8590"/);
-  assert.ok(contrast("7d8590", "ffffff") >= 3);
-  assert.ok(contrast("7d8590", "0d1117") >= 3);
-  assert.doesNotMatch(
-    avatar,
-    /<script\b|on[a-z]+\s*=|<image\b|<foreignObject\b|(?:href|src)\s*=/i,
-  );
+  for (const source of [artwork, avatar]) {
+    assert.doesNotMatch(
+      source,
+      /<script\b|on[a-z]+\s*=|<image\b|<foreignObject\b|(?:href|src)\s*=/i,
+    );
+    assert.match(source, /fill="#7d8590"/);
+    assert.ok(contrast("7d8590", "ffffff") >= 3);
+    assert.ok(contrast("7d8590", "0d1117") >= 3);
+  }
 
   assert.doesNotMatch(readme, /<picture>|prefers-color-scheme/);
   assert.match(

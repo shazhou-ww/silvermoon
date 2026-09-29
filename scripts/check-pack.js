@@ -24,6 +24,7 @@ if (packed.status !== 0) {
   const expected = [
     "README.md",
     "README.zh-CN.md",
+    "assets/silvermoon-avatar.svg",
     "assets/silvermoon.svg",
     "bin/silvermoon.js",
     "docs/assets/silvermoon-avatar.svg",
