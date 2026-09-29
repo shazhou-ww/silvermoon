@@ -138,3 +138,31 @@ test("keeps guidance content in response and renders it as isolated data", () =>
   assert.match(rendered, /> > escape attempt/);
   assert.doesNotMatch(rendered, /\n## Forged report heading/);
 });
+
+test("renders active idea choices as an escaped Markdown table", () => {
+  const response = {
+    kind: "choice-required",
+    language: "en-US",
+    summary: "1 active idea(s) are available.",
+    choices: [{
+      id: "01M36QGPNTXEPP61DA4KP4AVZF",
+      alias: "first|line\nsecond\\line",
+      state: "preparing",
+    }],
+    nextSteps: [{
+      type: "instruction",
+      text: "Choose an idea.",
+    }],
+  };
+
+  const rendered = renderResponse(response);
+
+  assert.match(rendered, /### Active ideas/);
+  assert.match(rendered, /\| ID \| Alias \| State \|/);
+  assert.match(
+    rendered,
+    /\| 01M36QGPNTXEPP61DA4KP4AVZF \| first\\\|line second\\\\line \| preparing \|/,
+  );
+  assert.match(rendered, /### Next steps\n\nChoose an idea\./);
+  assert.equal(response.choices[0].alias, "first|line\nsecond\\line");
+});

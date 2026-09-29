@@ -30,87 +30,30 @@
 Silvermoon needs Node.js 22 or newer and Git access to the repository's primary
 branch.
 
-```sh
-npm install --global silvermoon
-silvermoon whats-next
-silvermoon list-ideas
-```
-
-Silvermoon remains ecosystem-neutral when the repository root has no
-`package.json`: non-npm projects do not need a package manager, a Silvermoon
-dependency, or `node_modules`. If a root `package.json` exists, it must be valid
-JSON and declare `devDependencies.silvermoon` as exactly `^<running-version>`.
-The report supplies a package-manager-aware repair command. After installing
-that root dependency, register its canonical skill from
-`./node_modules/silvermoon/skills`; non-npm projects use the skill bundled with
-the running installation. Readiness checks inspect the selected repository
-snapshot and do not install dependencies or require `node_modules`.
-
-Create `.silvermoon/config.yaml`:
-
-```yaml
-version: 1
-primaryRepository: https://github.com/example/repository.git
-primaryBranch: main
-preferredLanguage: en
-```
-
-`preferredLanguage` is optional. A specific idea can override it with
-`language` in `status.yaml`, and `create-idea --language <tag>` can set that
-override when the idea is created. Otherwise Silvermoon checks
-`~/.config/silvermoon/config.yaml` and finally defaults to `en-US`.
-These stored values choose the language for project-owned content. To change
-only one command's built-in output, use `whats-next --language en-US|zh-CN` or
-`check --language en-US|zh-CN`; the temporary override is never persisted.
-
-Use `list-ideas` when you only need the current local inventory. It defaults to
-active ideas and supports repeatable `--state`, `--all`, literal `--query`,
-RFC 3339 `--created-since` / `--created-before`, `--sort`, and `--limit`.
-Unlike lifecycle navigation, this read-only query uses the valid worktree
-snapshot without checking branch, upstream, cleanliness, network, or primary
-synchronization.
-
-Then create an idea and let the registered Silvermoon skill guide one safe
-next action at a time:
+Ask your project Agent to prepare the repository by running:
 
 ```sh
-silvermoon create-idea
-silvermoon whats-next <idea>
-silvermoon whats-next <idea> --language zh-CN
+npx silvermoon whats-next
+```
+
+Have the Agent follow the current report's highest-priority instruction,
+preserve existing work, and rerun the command after each observable change.
+Setup is complete only when the default output explicitly reports
+`Current state: navigation-ready`; a blocked report or any other state is not
+ready. The report, rather than a fixed command list in this README, is the
+authority for repository-specific setup.
+
+Once navigation is ready, continue through the Agent:
+
+```sh
+npx silvermoon create-idea
+npx silvermoon whats-next <idea>
 ```
 
 Describe the desired world in the generated `Idea.md`, review it, and approve
-that exact revision. From then on, Silvermoon keeps the goal, implementation,
-repository state, and real-world result connected. See
-[Getting Started](./docs/getting-started.md) for the complete first workflow.
-Every command processes one ordered, versioned domain-message stream. Add
-`--json` when a programmatic consumer needs its four deterministic projections:
-`intention`, `observation`, `actions`, and `response`. Actions are side effects
-already attempted; future work belongs only to `response.nextSteps`. Default
-Markdown renders only the self-contained response instead of exposing the
-internal projections. For pre-commit validation, run
-`silvermoon check --staged`: unlike the default `check` (committed `HEAD`), it
-checks the index and exits `0` only when the project snapshot is valid. See the
-[Technical Reference](./docs/reference.md) for validation targets and exit
-codes.
-
-Add `--trace <file.trace.jsonl>` to any command to write one schema-versioned
-JSONL timeline. Its `domain` channel contains allowlisted message summaries,
-and its `telemetry` channel contains paired performance spans; both share one
-trace ID and global sequence. Trace output never includes guidance or file
-content, Git arguments/output, environment data, or credentials. If the
-argument does not end with the exact lowercase `.trace.jsonl` suffix,
-Silvermoon appends it. Repository-local `*.trace.jsonl` files are ignored.
-Trace files are buffered, created only after command work completes, and never
-overwrite an existing file.
-
-Projects may optionally add `.silvermoon/guidance/preparing.md`,
-`implementing.md`, and `deploying.md`. Silvermoon returns only the current
-actionable phase's snapshot-bound, repository-owned Markdown in
-`response.guidance`; `observation.guidance` carries its provenance without
-content. `create-idea` can return preparing guidance. This guidance is
-additive, never a fourth contract or decision fact, and `check` validates the
-complete fixed directory. See [Core Concepts](./docs/core-concepts.md).
+that exact revision. See [Getting Started](./docs/getting-started.md) for the
+complete workflow and [Technical Reference](./docs/reference.md) for command,
+validation, JSON, language, guidance, and trace details.
 
 ## Why Silvermoon
 

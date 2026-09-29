@@ -210,6 +210,10 @@ test("documents explicit Silvermoon adoption and conversion", async () => {
     resolve(repositoryRoot, "docs", "operations.md"),
     "utf8",
   );
+  const gettingStarted = await readFile(
+    resolve(repositoryRoot, "docs", "getting-started.md"),
+    "utf8",
+  );
   const coreConcepts = await readFile(
     resolve(repositoryRoot, "docs", "core-concepts.md"),
     "utf8",
@@ -226,7 +230,7 @@ test("documents explicit Silvermoon adoption and conversion", async () => {
   assert.match(adoption, /version: 1/);
   for (
     const source of [
-      `${readme}\n${coreConcepts}\n${operations}\n${reference}`,
+      `${readme}\n${gettingStarted}\n${coreConcepts}\n${operations}\n${reference}`,
       adoption,
     ]
   ) {
