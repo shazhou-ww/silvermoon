@@ -2,4 +2,5 @@ version: 1
 id: 01M3NM5KSVV303Z8T9P63Q2JZ8
 alias: command-event-model
 approvedRevision: 01c17f9b3170b3685ef8c3c8d011bb977cab3587
-implementationAcceptedRevision: 3e64934f1c46f5b9b4f40486a4d61fe5dc54f120
+implementationAcceptedRevision: 4d8bd5c4bf990096602f9b6e60a34bbac61fb7cf
+deploymentAcceptedRevision: 4d51144828fbc0bbe5ce666a748322627376cecc
