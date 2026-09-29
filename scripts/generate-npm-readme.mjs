@@ -8,6 +8,7 @@ const jsDelivrRepository = `https://cdn.jsdelivr.net/gh/${repository}`;
 const jsDelivrMainPrefix = `${jsDelivrRepository}@main/`;
 const rawMainPrefix = `https://raw.githubusercontent.com/${repository}/main/`;
 const fullObjectIdPattern = /^[0-9a-f]{40,64}$/i;
+const readmeSources = new Set(["README.md", "README.zh-CN.md"]);
 
 function validateCommit(commit) {
   if (!fullObjectIdPattern.test(commit ?? "")) {
@@ -173,25 +174,31 @@ function parseArguments(argv) {
   for (let index = 0; index < argv.length; index += 2) {
     const option = argv[index];
     const value = argv[index + 1];
-    if (!value || !["--commit", "--out"].includes(option)) {
+    if (!value || !["--commit", "--out", "--source"].includes(option)) {
       throw new Error(
-        "Usage: node scripts/generate-npm-readme.mjs --commit <sha> [--out <path>]",
+        "Usage: node scripts/generate-npm-readme.mjs --commit <sha> [--source <path>] [--out <path>]",
       );
     }
     values[option.slice(2)] = value;
   }
   if (!values.commit) {
     throw new Error(
-      "Usage: node scripts/generate-npm-readme.mjs --commit <sha> [--out <path>]",
+      "Usage: node scripts/generate-npm-readme.mjs --commit <sha> [--source <path>] [--out <path>]",
     );
   }
   return values;
 }
 
 async function main() {
-  const { commit, out } = parseArguments(process.argv.slice(2));
-  const source = await readFile(resolve(repositoryRoot, "README.md"), "utf8");
-  const generated = generateNpmReadme({ source, commit });
+  const { commit, out, source = "README.md" } = parseArguments(
+    process.argv.slice(2),
+  );
+  if (!readmeSources.has(source)) {
+    throw new Error(`Unsupported README source: ${source}`);
+  }
+  const sourcePath = resolve(repositoryRoot, source);
+  const sourceText = await readFile(sourcePath, "utf8");
+  const generated = generateNpmReadme({ source: sourceText, commit });
   if (out) {
     // Atomic write: never truncate the destination before the content exists.
     // A shell redirect (`> README.md`) would empty the source file before this

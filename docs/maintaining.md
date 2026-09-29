@@ -62,4 +62,7 @@ Use [npm package releases](./npm-package-releases.md) for trusted publishing,
 tag rules, release validation, and failure recovery. Publishing occurs only
 through `.github/workflows/publish-npm.yml` from an immutable
 `npm/silvermoon/v<version>` tag whose commit is reachable from `origin/main`.
-Never publish locally or add an npm token.
+The workflow generates both package READMEs in an isolated staging tree,
+validates and publishes one tarball, then checks its registry integrity,
+package-level README, provenance, and commit-pinned jsDelivr assets. Never
+publish locally or add an npm token.

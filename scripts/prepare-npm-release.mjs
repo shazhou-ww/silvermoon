@@ -102,7 +102,7 @@ export function createReleasePlan({
   };
 }
 
-export async function assertVersionUnpublished(
+export async function observeVersionPublication(
   { packageName, version },
   { fetchImpl = globalThis.fetch } = {},
 ) {
@@ -116,7 +116,7 @@ export async function assertVersionUnpublished(
     throw new Error(`Could not verify ${packageName}@${version} on npm: ${error.message}`);
   }
 
-  if (response.status === 404) return;
+  if (response.status === 404) return "absent";
   if (!response.ok) {
     throw new Error(
       `Could not verify ${packageName}@${version} on npm: registry returned ${response.status}.`,
@@ -132,9 +132,7 @@ export async function assertVersionUnpublished(
   if (!metadata?.versions || typeof metadata.versions !== "object") {
     throw new Error(`npm metadata for ${packageName} does not contain a versions object.`);
   }
-  if (Object.hasOwn(metadata.versions, version)) {
-    throw new Error(`Package version is already published: ${packageName}@${version}`);
-  }
+  return Object.hasOwn(metadata.versions, version) ? "published" : "absent";
 }
 
 export function isReachableFromPrimary(commit, { root = repositoryRoot } = {}) {
@@ -158,6 +156,7 @@ export function formatGitHubOutput(plan) {
     `package_directory=${plan.packageDirectory}`,
     `version=${plan.version}`,
     `dist_tag=${plan.distTag}`,
+    `publication_state=${plan.publicationState}`,
   ].join("\n");
 }
 
@@ -187,8 +186,8 @@ export async function prepareNpmRelease({ commit, fetchImpl, root = repositoryRo
     reachableFromPrimary: isReachableFromPrimary(commit, { root }),
     tag,
   });
-  await assertVersionUnpublished(plan, { fetchImpl });
-  return plan;
+  const publicationState = await observeVersionPublication(plan, { fetchImpl });
+  return { ...plan, publicationState };
 }
 
 async function main() {

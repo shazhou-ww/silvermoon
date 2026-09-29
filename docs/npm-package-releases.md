@@ -92,13 +92,24 @@ The [`publish-npm.yml`](../.github/workflows/publish-npm.yml) workflow then:
 1. verifies the tagged commit is reachable from refreshed `origin/main`;
 2. installs the frozen pnpm dependencies;
 3. runs the allowlisted release planner and confirms the version is absent
-   from npm;
+   from npm, or records that an exact-version rerun must skip publication;
 4. runs `pnpm test:unit`, `pnpm test:contract`, `pnpm test:integration`, and
    `pnpm check:skills`;
-5. runs the selected package's `npm run pack:check` and
-   `npm run test:e2e`; and
-6. publishes only the selected directory with provenance and the derived npm
-   dist-tag.
+5. creates an isolated `git archive` staging tree and generates commit-pinned
+   English and Chinese package READMEs without changing the tagged checkout;
+6. creates one tarball, records its path, SHA-256, npm shasum, registry
+   integrity, and complete file list, then passes that same file to
+   `npm run pack:check` and `npm run test:e2e`;
+7. publishes that exact tarball with provenance and the derived npm dist-tag
+   when the version was absent; and
+8. runs `verify-npm-release.mjs` until the registry is consistent or the
+   bounded retry window expires.
+
+The post-publication verifier requires the exact version and dist-tag, registry
+integrity and tarball bytes, package-level README, both tarball READMEs, npm
+publish and SLSA provenance attestations, tagged Git commit, and commit-pinned
+jsDelivr SVG responses to match the candidate. A successful run prints
+`VERIFY_NPM_RELEASE_OK` with the verified identities.
 
 Release runs are serialized within this repository. The registry preflight and
 `npm publish` cannot form one cross-system transaction, so an external
@@ -110,13 +121,20 @@ duplicate publication without replacing the existing version.
 Publication stops before `npm publish` when the tag is malformed, the release
 key is unknown, the package is private, the package name or version differs
 from the mapping and tag, the npm publish configuration is not public npmjs,
-the commit is outside `origin/main`, the version already exists, registry state
-cannot be verified, or validation fails.
+the commit is outside `origin/main`, registry state cannot be observed, or
+validation fails. If the exact version already exists during a workflow rerun,
+the publish step is skipped and the verifier must prove that registry content
+is byte-identical to the rebuilt candidate and carries the expected provenance.
+Any mismatch is a hard failure.
 
 For a transient GitHub or registry failure before publication, rerun the same
 workflow run. Do not move or recreate the tag. For a source, manifest, or
 validation failure, make a new commit on `main`, choose a new version, and push
 a new tag after the fix is merged. npm versions and release tags are immutable.
+For a transient verification failure after publication, rerun only the failed
+workflow job when GitHub offers that option; the planner recognizes the
+existing version, skips `npm publish`, and performs the same complete
+verification again.
 
 ## Add another package
 

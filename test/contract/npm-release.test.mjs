@@ -9,16 +9,27 @@ const workflowUrl = new URL("../../.github/workflows/publish-npm.yml", import.me
 const publishSkillUrl = new URL("../../.agents/skills/publish/SKILL.md", import.meta.url);
 const buildTarballUrl = new URL("../../scripts/build-npm-tarball.mjs", import.meta.url);
 const checkPackUrl = new URL("../../scripts/check-pack.js", import.meta.url);
+const verifyReleaseUrl = new URL(
+  "../../scripts/verify-npm-release.mjs",
+  import.meta.url,
+);
 const installedPackageUrl = new URL(
   "../../test/e2e/installed-package.test.js",
   import.meta.url,
 );
 
 test("uses a protected, least-privilege trusted-publishing workflow", async () => {
-  const [source, buildTarball, checkPack, installedPackage] = await Promise.all([
+  const [
+    source,
+    buildTarball,
+    checkPack,
+    verifyRelease,
+    installedPackage,
+  ] = await Promise.all([
     readFile(workflowUrl, "utf8"),
     readFile(buildTarballUrl, "utf8"),
     readFile(checkPackUrl, "utf8"),
+    readFile(verifyReleaseUrl, "utf8"),
     readFile(installedPackageUrl, "utf8"),
   ]);
   const document = parseDocument(source);
@@ -114,6 +125,9 @@ test("uses a protected, least-privilege trusted-publishing workflow", async () =
   const tarball = publish.steps.find(({ name }) => name === "Verify selected package tarball");
   const e2e = publish.steps.find(({ name }) => name === "Test installed package");
   const publication = publish.steps.find(({ name }) => name === "Publish selected package");
+  const verification = publish.steps.find(
+    ({ name }) => name === "Verify published package",
+  );
 
   assert.equal(checkout.with["fetch-depth"], 0);
   assert.equal(checkout.uses, "actions/checkout@v6");
@@ -146,7 +160,11 @@ test("uses a protected, least-privilege trusted-publishing workflow", async () =
   assert.equal(generateReadme.env.RELEASE_COMMIT, "${{ github.sha }}");
   assert.match(
     generateReadme.run,
-    /generate-npm-readme\.mjs[\s\S]*--commit "\$RELEASE_COMMIT" --out README\.md/,
+    /--commit "\$RELEASE_COMMIT" --source README\.md --out README\.md/,
+  );
+  assert.match(
+    generateReadme.run,
+    /--commit "\$RELEASE_COMMIT" --source README\.zh-CN\.md --out README\.zh-CN\.md/,
   );
   assert.doesNotMatch(
     generateReadme.run,
@@ -191,6 +209,10 @@ test("uses a protected, least-privilege trusted-publishing workflow", async () =
   );
   assert.equal(tarball.run, "npm run pack:check");
   assert.equal(e2e.run, "npm run test:e2e");
+  assert.equal(
+    publication.if,
+    "steps.release.outputs.publication_state == 'absent'",
+  );
   assert.match(publication.run, /sha256sum --check --strict/);
   assert.match(
     publication.run,
@@ -207,6 +229,30 @@ test("uses a protected, least-privilege trusted-publishing workflow", async () =
   assert.match(checkPack, /SILVERMOON_TARBALL/);
   assert.match(checkPack, /--dry-run/);
   assert.match(installedPackage, /process\.env\.SILVERMOON_TARBALL/);
+  assert.ok(
+    stepNames.indexOf("Verify published package") >
+      stepNames.indexOf("Publish selected package"),
+  );
+  assert.equal(
+    verification.env.SILVERMOON_TARBALL,
+    "${{ steps.package.outputs.tarball_path }}",
+  );
+  assert.match(verification.run, /verify-npm-release\.mjs/);
+  assert.match(verification.run, /--commit "\$RELEASE_COMMIT"/);
+  assert.match(verification.run, /--tag "\$RELEASE_TAG"/);
+  for (const required of [
+    "dist-tags",
+    "npm dist identity",
+    "readmeFilename",
+    "attestations",
+    "jsDelivr asset",
+    "Published npm tarball bytes do not match",
+  ]) {
+    assert.ok(
+      verifyRelease.includes(required),
+      `release verifier is missing: ${required}`,
+    );
+  }
   assert.equal(publish.steps.some(({ run }) => run === "pnpm check"), false);
   assert.doesNotMatch(source, /NODE_AUTH_TOKEN|NPM_TOKEN/);
 });
@@ -227,10 +273,14 @@ test("documents trusted-publisher setup and the protected release procedure", as
     "pnpm test:contract",
     "pnpm test:integration",
     "npm run test:e2e",
+    "verify-npm-release.mjs",
+    "package-level README",
+    "jsDelivr",
   ]) {
     assert.ok(guide.includes(required), `Release guide is missing: ${required}`);
   }
   assert.match(guide, /Do not\s+create an npm automation token/);
+  assert.match(guide, /registry\s+integrity/);
   assert.match(guide, /new commit on `main`, choose a new version/);
 });
 
@@ -261,6 +311,10 @@ test("provides an explicit project publish skill with immutable release safeguar
     "implementationAcceptedRevision",
     "require `deploy-idea` before creating the release",
     "Require the workflow conclusion to be `success`",
+    "VERIFY_NPM_RELEASE_OK",
+    "package-level README",
+    "registry integrity",
+    "jsDelivr",
   ]) {
     assert.ok(source.includes(required), `publish skill is missing: ${required}`);
   }

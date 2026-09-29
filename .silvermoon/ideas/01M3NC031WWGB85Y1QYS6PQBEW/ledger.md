@@ -7,7 +7,7 @@
 - [x] **I-S01:** 建立根级公开资产契约
 - [x] **I-S02:** 生成 commit 固定的 jsDelivr README
 - [x] **I-S03:** 构建并发布单一 tarball
-- [ ] **I-S04:** 加强发布编排与外部核验
+- [x] **I-S04:** 加强发布编排与外部核验
 - [ ] **I-S05:** 覆盖发布合同并完成仓库验证
 
 ### Implementation acceptance criteria
@@ -15,7 +15,7 @@
 - [x] **I-AC01:** 公开资产路径一致且向后兼容
 - [x] **I-AC02:** 发布 README 只引用不可变资源
 - [x] **I-AC03:** 验证与发布使用同一 tarball
-- [ ] **I-AC04:** 主分支发布信任边界保持不变
+- [x] **I-AC04:** 主分支发布信任边界保持不变
 - [ ] **I-AC05:** 完整候选通过 release-grade 验证
 
 ### 实现证据
@@ -40,6 +40,13 @@
   内容检查对照记录的 SHA-256 与 npm integrity，publish 紧邻执行前再次校验
   SHA-256。本地端到端演练生成且保留一份实际 tarball，38 个文件通过
   `PACK_OK` 与 `PACK_SMOKE_OK`。
+- 2026-09-29：release planner 保留刷新后 `origin/main` ancestry 与
+  `npm/<release-key>/v<version>` allowlist，并将 registry 状态显式输出为
+  `absent` 或 `published`；精确版本重跑会跳过 publish，但仍必须通过完整候选
+  比对。新增发布后 verifier，逐项核对 version、dist-tag、tarball 字节与
+  integrity、文件数、npm package-level README、两份 tarball README、npm
+  publish/SLSA attestations、tag commit 及两个 jsDelivr SVG。发布 workflow、
+  维护文档和 publish skill 已同步，15 项聚焦 release 测试通过。
 
 ## Deployment
 
