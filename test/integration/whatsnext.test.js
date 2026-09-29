@@ -22,6 +22,7 @@ import {
   CHANGE_SAMPLE_ITEM_LIMIT,
   whatsNext,
 } from "../../src/whatsnext.js";
+import { renderResponse } from "../../src/response.js";
 import {
   createRepository,
   FIRST_ID,
@@ -189,6 +190,15 @@ test("[selector-none] naked navigation lists one active idea without selecting i
     alias: "fixture",
     state: "preparing",
   }]);
+  assert.equal(report.response.summary, "1 active idea(s) are available.");
+  assert.deepEqual(report.response.choices, report.observation.ideas.activeIdeas);
+  const rendered = renderResponse(report.response);
+  assert.match(rendered, /### Active ideas/);
+  assert.match(rendered, /\| ID \| Alias \| State \|/);
+  assert.match(
+    rendered,
+    new RegExp(`\\| ${FIRST_ID} \\| fixture \\| preparing \\|`),
+  );
   assert.doesNotMatch(responseText(report), new RegExp(FIRST_ID));
   assert.match(responseText(report), /silvermoon whats-next <ULID-or-alias>/);
   assert.match(responseText(report), /silvermoon create-idea/);
@@ -222,6 +232,7 @@ test("empty navigation stays ready without selecting an idea", async () => {
   assert.deepEqual(report.observation.ideas.activeIdeas, []);
   assert.equal(report.observation.ideas.counts.completed, 0);
   assert.equal(Object.hasOwn(report.observation, "selectedIdea"), false);
+  assert.match(renderResponse(report.response), /当前没有 active idea|No active ideas/);
   assert.match(responseText(report), /create-idea/);
 });
 
