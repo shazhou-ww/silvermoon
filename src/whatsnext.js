@@ -175,28 +175,36 @@ function selectIdea(ideas, selector) {
     ?? null;
 }
 
-function lifecycleInstruction(idea, language) {
+function lifecycleContentLanguageInstruction(contentLanguage, language) {
+  return localize(
+    language,
+    `Use ${contentLanguage} for natural-language content in the current world, its supporting files, and the ledger. Preserve canonical headings, stable IDs, paths, and machine fields.`,
+    `在当前世界、同世界辅助文件和 ledger 的自然语言内容中使用 ${contentLanguage}。保留 canonical 标题、稳定 ID、路径和机器字段。`,
+  );
+}
+
+function lifecycleInstruction(idea, language, contentLanguage) {
   const name = ideaName(idea);
   if (idea.state === "preparing") {
-    return localize(
+    return joinInstructions([localize(
       language,
       `Continue idea ${name} in ${idea.worlds.idealRevision.documentPath} and ${idea.ledgerPath}. Preserve the other worlds. When the Ideal World is ready, ask the user to approve exact revision ${idea.idealRevision}; only after explicit approval write it to approvedRevision in ${idea.statusPath}.`,
       `继续在 ${idea.worlds.idealRevision.documentPath} 和 ${idea.ledgerPath} 推进 idea ${name}，并保留其他世界。理想契约就绪后，请用户明确批准精确 revision ${idea.idealRevision}；只有获得明确批准后，才将其写入 ${idea.statusPath} 的 approvedRevision。`,
-    );
+    ), lifecycleContentLanguageInstruction(contentLanguage, language)]);
   }
   if (idea.state === "implementing") {
-    return localize(
+    return joinInstructions([localize(
       language,
       `Continue idea ${name} in ${idea.worlds.implementationRevision.documentPath}, its supporting files under ${idea.worlds.implementationRevision.path}, and ${idea.ledgerPath}. Do not change ${idea.worlds.idealRevision.path} unless the Ideal World must change. After all implementation evidence is published, ask the user to accept exact revision ${idea.implementationRevision}; only then write it to implementationAcceptedRevision in ${idea.statusPath}.`,
       `继续在 ${idea.worlds.implementationRevision.documentPath}、${idea.worlds.implementationRevision.path} 下的辅助文件和 ${idea.ledgerPath} 推进 idea ${name}。除非理想契约确实需要变化，否则不要修改 ${idea.worlds.idealRevision.path}。全部实现证据发布后，请用户明确验收精确 revision ${idea.implementationRevision}；只有获得明确验收后，才将其写入 ${idea.statusPath} 的 implementationAcceptedRevision。`,
-    );
+    ), lifecycleContentLanguageInstruction(contentLanguage, language)]);
   }
   if (idea.state === "deploying") {
-    return localize(
+    return joinInstructions([localize(
       language,
       `Continue idea ${name} from ${idea.worlds.deploymentRevision.documentPath}, its supporting files under ${idea.worlds.deploymentRevision.path}, and ${idea.ledgerPath}. Preserve nested worlds. After external evidence is complete and published, ask the user to accept exact revision ${idea.deploymentRevision}; only then write it to deploymentAcceptedRevision in ${idea.statusPath}.`,
       `从 ${idea.worlds.deploymentRevision.documentPath}、${idea.worlds.deploymentRevision.path} 下的辅助文件和 ${idea.ledgerPath} 继续推进 idea ${name}，并保留内层世界。外部证据完成且发布后，请用户明确验收精确 revision ${idea.deploymentRevision}；只有获得明确验收后，才将其写入 ${idea.statusPath} 的 deploymentAcceptedRevision。`,
-    );
+    ), lifecycleContentLanguageInstruction(contentLanguage, language)]);
   }
   if (idea.state === "abandoned") {
     return localize(
@@ -667,7 +675,11 @@ export async function whatsNext({
       ...(guidance === undefined ? {} : { guidance }),
     }),
     {
-      nextSteps: lifecycleInstruction(selected, observed.outputLanguage),
+      nextSteps: lifecycleInstruction(
+        selected,
+        observed.outputLanguage,
+        observed.contentLanguage,
+      ),
     },
   );
 }

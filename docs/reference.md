@@ -120,6 +120,16 @@ override, content tags beginning with `zh` select `zh-CN`; every other content
 tag selects `en-US`. Output selection never writes configuration or idea
 status.
 
+The effective content language governs natural-language prose, comments,
+short titles, and placeholders in all three world contracts, their same-world
+supporting files, and `ledger.md`. Canonical headings, stable IDs, paths, CLI
+options, and schema fields remain unchanged. `create-idea` provides localized
+scaffolds for built-in English and Chinese templates; for another canonical
+BCP 47 tag it reports the explicit fallback template language and requires the
+Agent to replace natural-language placeholders with the effective content
+language. Selected-idea `whats-next` instructions repeat the effective content
+language even when a temporary output-language override is active.
+
 State is derived in order:
 
 1. `abandoned` when `abandoned: true`.

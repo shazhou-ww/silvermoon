@@ -132,6 +132,17 @@ Pass `create-idea --language <tag>` only when the user explicitly requests a
 stable content-language override. Unlike the temporary output override,
 creation accepts any canonical BCP 47 tag and persists it.
 
+The effective content language reported as
+`response.details.contentLanguage` governs natural-language content in all
+three world contracts, same-world supporting files, and `ledger.md`. Preserve
+canonical headings, stable IDs, paths, CLI options, schema fields, and other
+machine contracts instead of translating them. An invocation's temporary
+output language changes only Silvermoon-owned report framing; it never changes
+the content language named by the lifecycle instruction. When `create-idea`
+reports a scaffold fallback for a content language without a built-in
+template, replace every natural-language placeholder with the exact reported
+content language before treating the contract as ready.
+
 ## Continue The Selected Idea
 
 Use the reported `ledgerPath` after lifecycle hygiene and continue only the
@@ -179,9 +190,11 @@ never define a second contract.
 In `Implementation.md` and `Deployment.md`, put plans under `## Steps` and
 outcomes under `## Acceptance criteria`. Use stable level-three IDs: `I-Sxx`,
 `I-ACxx`, `D-Sxx`, and `D-ACxx`. Each criterion states an observable outcome
-and how to prove it. Do not put checkboxes in world contracts. World content
-changes its world revision and containing revisions; `status.yaml` and
-`ledger.md` are outside those trees.
+and how to prove it. These headings and IDs are canonical machine contracts;
+write the surrounding prose and short titles in the effective content
+language. Do not put checkboxes in world contracts. World content changes its
+world revision and containing revisions; `status.yaml` and `ledger.md` are
+outside those trees.
 
 The required idea-root `ledger.md` is operational memory, not a fourth world,
 contract, or human decision. Mirror the stable IDs and short titles for
