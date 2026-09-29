@@ -9,6 +9,7 @@ const workflowUrl = new URL("../../.github/workflows/publish-npm.yml", import.me
 const publishSkillUrl = new URL("../../.agents/skills/publish/SKILL.md", import.meta.url);
 const buildTarballUrl = new URL("../../scripts/build-npm-tarball.mjs", import.meta.url);
 const checkPackUrl = new URL("../../scripts/check-pack.js", import.meta.url);
+const npmTarballUrl = new URL("../../scripts/npm-tarball.mjs", import.meta.url);
 const verifyReleaseUrl = new URL(
   "../../scripts/verify-npm-release.mjs",
   import.meta.url,
@@ -23,12 +24,14 @@ test("uses a protected, least-privilege trusted-publishing workflow", async () =
     source,
     buildTarball,
     checkPack,
+    npmTarball,
     verifyRelease,
     installedPackage,
   ] = await Promise.all([
     readFile(workflowUrl, "utf8"),
     readFile(buildTarballUrl, "utf8"),
     readFile(checkPackUrl, "utf8"),
+    readFile(npmTarballUrl, "utf8"),
     readFile(verifyReleaseUrl, "utf8"),
     readFile(installedPackageUrl, "utf8"),
   ]);
@@ -231,6 +234,9 @@ test("uses a protected, least-privilege trusted-publishing workflow", async () =
   );
   assert.match(checkPack, /SILVERMOON_TARBALL/);
   assert.match(checkPack, /SILVERMOON_RELEASE_COMMIT/);
+  assert.match(checkPack, /from "\.\/npm-tarball\.mjs"/);
+  assert.doesNotMatch(checkPack, /verify-npm-release\.mjs/);
+  assert.doesNotMatch(npmTarball, /from "(?!node:)/);
   assert.match(checkPack, /--dry-run/);
   assert.match(installedPackage, /process\.env\.SILVERMOON_TARBALL/);
   assert.ok(
