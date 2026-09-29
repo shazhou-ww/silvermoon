@@ -43,8 +43,8 @@
 ### Deployment steps
 
 - [x] **D-S01:** 确认 RC 发布前提与显式授权
-- [ ] **D-S02:** 发布不可变的 0.2.0 RC
-- [ ] **D-S03:** 在真实消费者中验证 RC
+- [x] **D-S02:** 发布不可变的 0.2.0 RC
+- [x] **D-S03:** 在真实消费者中验证 RC
 - [ ] **D-S04:** 处理 RC 缺陷或确认稳定候选
 - [ ] **D-S05:** 重新验收 0.2.0 stable implementation
 - [ ] **D-S06:** 发布并验证稳定 0.2.0
@@ -52,9 +52,9 @@
 
 ### Deployment acceptance criteria
 
-- [ ] **D-AC01:** RC 在 stable 之前发布且不影响 latest
-- [ ] **D-AC02:** RC 真实验证新的 command runtime
-- [ ] **D-AC03:** Phase guidance 与既有安全边界不回归
+- [x] **D-AC01:** RC 在 stable 之前发布且不影响 latest
+- [x] **D-AC02:** RC 真实验证新的 command runtime
+- [x] **D-AC03:** Phase guidance 与既有安全边界不回归
 - [ ] **D-AC04:** RC 失败只产生新的不可变候选
 - [ ] **D-AC05:** Stable candidate 经第二次 implementation gate
 - [ ] **D-AC06:** Stable 0.2.0 独立发布并完整验证
@@ -74,3 +74,30 @@
   2 Windows 权限限制 skip）及 installed-package E2E 通过；pack candidate 为
   `silvermoon@0.2.0-rc.1`。发布授权已满足，但仍须在刷新 `main`/tags 后再次
   验证 commit 可达性、目标版本/tag 缺失并运行 release planner，才可创建 tag。
+- 2026-09-29: 不可变 tag `npm/silvermoon/v0.2.0-rc.1` 指向
+  `fcc881a6a5e7b7f2aad283f3b151a4c15fd6f400`，GitHub Actions run
+  [36530022721](https://github.com/shazhou-ww/silvermoon/actions/runs/36530022721)
+  成功。`VERIFY_NPM_RELEASE_OK` 确认 registry tarball 与唯一候选一致：
+  SHA-256 `b920eb38d403ed939ac9d3d457a9d1fa7cc07d5f6edd2a72972a5756c29ecc89`、
+  integrity `sha512-7ZTG0pDu/kswHsXWuCx/ohOFqxBmjpNKhvpQ6bHPASWFw85qL9G24bSolqj9wmkDeYROjTnpxdr9tWX6oi+Sbg==`、
+  46 个文件、`gitHead` 与 tag commit 相同。npm `rc` 指向 `0.2.0-rc.1`，
+  `latest` 保持 `0.1.3`；npm publish 与 SLSA provenance 均已验证，
+  provenance invocation 为
+  https://github.com/shazhou-ww/silvermoon/actions/runs/36530022721/attempts/1。
+  Commit-pinned jsDelivr assets：
+  [silvermoon.svg](https://cdn.jsdelivr.net/gh/shazhou-ww/silvermoon@fcc881a6a5e7b7f2aad283f3b151a4c15fd6f400/assets/silvermoon.svg)、
+  [silvermoon-avatar.svg](https://cdn.jsdelivr.net/gh/shazhou-ww/silvermoon@fcc881a6a5e7b7f2aad283f3b151a4c15fd6f400/assets/silvermoon-avatar.svg)。
+  活跃 tag ruleset `Protect npm release tags` 覆盖 `npm/**` 并禁止创建、更新及删除；
+  GitHub push 确认本次创建使用当前身份在该规则中的显式 bypass 权限。
+- 2026-09-29: 在干净临时消费者分别执行 `npm install silvermoon@0.2.0-rc.1`
+  与 `npm install silvermoon@rc`，两者均解析到 `0.2.0-rc.1`。再分别从 npm
+  下载的精确版本 tarball 和 `@rc` tarball 运行完整 installed-package E2E，
+  两轮均通过，覆盖 `whats-next`、`create-idea`、`check`、`list-ideas`、
+  四 projection JSON、response-only Markdown、phase guidance 与预期失败。
+  直接从已安装 `@rc` CLI 对 `list-ideas` 执行 trace on/off differential：
+  public report 相同、stderr 为空；33 条统一 JSONL 含 3 条 domain events 和
+  15 对 telemetry spans，序号连续且 durations 有效，敏感 query
+  canary 未进入 trace。3 次测量中位数为 trace off 1314.12 ms、trace on
+  1245.55 ms。完整 `pnpm check` 的 trace schema、event correlation、
+  redaction、hostile guidance、repository readiness、SHA-1/SHA-256 与包装测试
+  亦全部通过（仅 2 项 Windows symlink 权限用例按预期跳过）。
