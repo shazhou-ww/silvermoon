@@ -1,6 +1,6 @@
 {
   "name": "silvermoon",
-  "version": "0.2.0-rc.1",
+  "version": "0.2.0",
   "description": "The project spirit that checks repository state and answers what's next.",
   "packageManager": "pnpm@11.22.0",
   "type": "module",
