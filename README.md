@@ -22,7 +22,8 @@
 
 # Silvermoon
 
-**The artifact spirit of the project.**
+> Fellow cultivator, you wouldn't want your lifebound project to be without an
+> artifact spirit, would you?
 
 ## Quick Start
 
@@ -127,9 +128,6 @@ revision. Because those facts live in Git, work can continue across devices,
 sessions, Agents, and hosting platforms.
 
 ## The Project's Artifact Spirit
-
-> Fellow Daoist, you wouldn't want your lifebound project to be without an
-> artifact spirit, would you?
 
 <table>
   <tr>

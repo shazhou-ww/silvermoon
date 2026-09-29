@@ -11,7 +11,7 @@
 
 # Silvermoon（银月）
 
-**项目的器灵。**
+> 道友也不想自己的本命项目没有器灵吧？
 
 ## 快速开始
 
@@ -98,8 +98,6 @@ provenance。`create-idea` 可返回 preparing guidance。这些 guidance 只能
 跨 session、跨 Agent、跨托管平台延续。
 
 ## 项目的器灵
-
-> 道友也不想自己的本命项目没有器灵吧？
 
 <table>
   <tr>
