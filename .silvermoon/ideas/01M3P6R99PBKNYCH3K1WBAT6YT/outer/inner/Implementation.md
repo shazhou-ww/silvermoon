@@ -5,9 +5,10 @@
 ### I-S01: 用 Agent 导航替代固定整备指令
 
 围绕单一项目 Agent 入口 `npx silvermoon whats-next` 重写两份 README 的 Quick
-Start。要求 Agent 遵循当前报告、保留已有工作，并在产生可观察变更后重复运行，
-直至默认输出报告 `navigation-ready`。从这些章节移除固定的 dependency、
-package manager、skill 注册与 snapshot 检查配方。
+Start。提供一句可直接复制并从项目中发送给 coding agent 的提示词，要求 Agent
+遵循当前报告、保留已有工作，并在产生可观察变更后重复运行，直至默认输出报告
+`navigation-ready`。从这些章节移除固定的 dependency、package manager、skill
+注册与 snapshot 检查配方。
 
 ### I-S02: 在默认输出中展示导航就绪状态
 
@@ -25,9 +26,10 @@ CLI 输出问题与 [GitHub issue #1](https://github.com/shazhou-ww/silvermoon/i
 
 ### I-AC01: Quick Start 将整备委托给项目 Agent
 
-`README.md` 与 `README.zh-CN.md` 使用 `npx silvermoon whats-next`，要求显示
-精确可见的 `navigation-ready` 状态，并省略固定安装和注册配方。documentation
-contract test 证明两个章节均包含必要措辞且排除了相关细节。
+`README.md` 与 `README.zh-CN.md` 使用 `text` 代码块提供可直接复制给 coding
+agent 的单句提示词，其中包含 `npx silvermoon whats-next`，并要求显示精确可见的
+`navigation-ready` 状态，同时省略固定安装和注册配方。documentation contract
+test 证明两个章节均包含复制指引、提示词和必要边界，且排除了相关细节。
 
 ### I-AC02: 人类可读就绪状态与 observation 一致
 

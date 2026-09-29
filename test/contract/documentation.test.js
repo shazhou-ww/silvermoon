@@ -43,9 +43,18 @@ test("keeps both READMEs reader-first and structurally aligned", async () => {
   const chineseQuickStart = chinese.match(
     /## 快速开始\r?\n([\s\S]*?)\r?\n## 为什么需要 Silvermoon/,
   )?.[1] ?? "";
-  assert.match(englishQuickStart, /project Agent/);
-  assert.match(chineseQuickStart, /项目 Agent/);
+  assert.match(englishQuickStart, /coding agent/);
+  assert.match(chineseQuickStart, /coding agent/);
+  assert.match(
+    englishQuickStart,
+    /Copy the prompt below and send it to your coding agent from the project:/,
+  );
+  assert.match(
+    chineseQuickStart,
+    /复制下面的提示词，并在项目中发送给 coding agent：/,
+  );
   for (const quickStart of [englishQuickStart, chineseQuickStart]) {
+    assert.match(quickStart, /```text[\s\S]*?```/);
     assert.match(quickStart, /npx silvermoon whats-next/);
     assert.match(quickStart, /navigation-ready/);
     assert.doesNotMatch(

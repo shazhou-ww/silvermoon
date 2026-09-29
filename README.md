@@ -30,14 +30,12 @@
 Silvermoon needs Node.js 22 or newer and Git access to the repository's primary
 branch.
 
-Ask your project Agent to prepare the repository by running:
+Copy the prompt below and send it to your coding agent from the project:
 
-```sh
-npx silvermoon whats-next
+```text
+Run `npx silvermoon whats-next`, follow the report's highest-priority instruction, preserve existing work, and rerun it after each observable change until the default output reports `navigation-ready`.
 ```
 
-Have the Agent follow the current report's highest-priority instruction,
-preserve existing work, and rerun the command after each observable change.
 Setup is complete only when the default output explicitly reports
 `Current state: navigation-ready`; a blocked report or any other state is not
 ready. The report, rather than a fixed command list in this README, is the

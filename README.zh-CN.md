@@ -17,16 +17,15 @@
 
 Silvermoon 需要 Node.js 22 或更高版本，并且能够通过 Git 访问仓库的 primary branch。
 
-请项目 Agent 运行以下命令来整备仓库：
+复制下面的提示词，并在项目中发送给 coding agent：
 
-```sh
-npx silvermoon whats-next
+```text
+请运行 `npx silvermoon whats-next`，遵循报告的最高优先级指示，保留已有工作，并在每次产生可观察变更后重新运行，直到默认输出明确显示 `navigation-ready`。
 ```
 
-让 Agent 遵循当前报告的最高优先级指示、保留已有工作，并在每次产生可观察变更后
-重新运行命令。只有默认输出明确显示
-`当前状态：navigation-ready` 时才算整备完成；受阻报告或任何其他状态都不表示
-已就绪。项目特定的整备方式应以当前报告为准，而不是依赖 README 中固定的命令清单。
+只有默认输出明确显示 `当前状态：navigation-ready` 时才算整备完成；受阻报告或
+任何其他状态都不表示已就绪。项目特定的整备方式应以当前报告为准，而不是依赖
+README 中固定的命令清单。
 
 navigation 就绪后，继续让 Agent 推进：
 
