@@ -125,10 +125,12 @@ This required Git synchronization is part of the idea workflow, not an npm
 package release. It does not require `/publish` authorization, does not publish
 to npm, and does not record approval or change `status.yaml`.
 
-An Agent may derive a concise, unique alias; do not ask for a name solely for
-the alias. Pass `create-idea --language <tag>` only when the user explicitly
-requests a stable content-language override. Unlike the temporary output
-override, creation accepts any canonical BCP 47 tag and persists it.
+When creating a new idea, proactively assign a concise, unique alias in its
+`status.yaml`: use an alias supplied by the user, or derive one from the idea's
+goal. Do not leave the alias absent or ask for a name solely to choose one.
+Pass `create-idea --language <tag>` only when the user explicitly requests a
+stable content-language override. Unlike the temporary output override,
+creation accepts any canonical BCP 47 tag and persists it.
 
 ## Continue The Selected Idea
 
