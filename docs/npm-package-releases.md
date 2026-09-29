@@ -98,6 +98,10 @@ The [`publish-npm.yml`](../.github/workflows/publish-npm.yml) workflow then:
    `pnpm check:skills`;
 5. creates an isolated `git archive` staging tree and generates commit-pinned
    English and Chinese package READMEs without changing the tagged checkout;
+   the repository READMEs use canonical `./assets/...` image paths so branch,
+   pull-request, and local previews show the current checkout, while staging
+   converts those images to release-commit-pinned jsDelivr URLs and converts
+   ordinary relative document links to commit-pinned GitHub blob URLs;
 6. records the tagged commit as `gitHead` and the canonical `README.md` content
    in the isolated package manifest, creates one tarball, records its path,
    SHA-256, npm shasum, registry integrity, and complete file list, then passes
@@ -116,6 +120,9 @@ The post-publication verifier requires the exact version and dist-tag, matching
 tarball and registry `gitHead`, registry integrity and tarball bytes, both
 tarball READMEs, npm publish and SLSA provenance attestations, tagged Git
 commit, and commit-pinned jsDelivr SVG responses to match the candidate.
+README generation rejects traversal, non-canonical paths, and relative resources
+outside the approved `./assets/...` image namespace rather than guessing a
+published destination.
 Releases on the `latest` dist-tag additionally require npm's package-level
 README to match the candidate; prerelease channels leave that `latest` package
 page state unchanged. A successful run prints `VERIFY_NPM_RELEASE_OK` with the

@@ -21,18 +21,117 @@ function blobUrl(commit, path, anchor = "") {
   return `https://github.com/${repository}/blob/${commit}/${path}${anchor}`;
 }
 
+function assetUrl(commit, path) {
+  return `${jsDelivrRepository}@${commit}/${path}`;
+}
+
+function parseCanonicalRelativeReference(destination, kind, { asset = false } = {}) {
+  if (destination !== destination.trim()) {
+    throw new Error(
+      `Relative repository ${kind} must use a canonical path: ${destination}`,
+    );
+  }
+  if (!destination.startsWith("./")) {
+    throw new Error(
+      `Unrecognized relative repository ${kind}: ${destination}`,
+    );
+  }
+  const anchorIndex = destination.indexOf("#");
+  const pathWithPrefix =
+    anchorIndex === -1 ? destination : destination.slice(0, anchorIndex);
+  const anchor = anchorIndex === -1 ? "" : destination.slice(anchorIndex);
+  if (
+    pathWithPrefix.includes("?") ||
+    (asset && anchor) ||
+    !/^\.\/[A-Za-z0-9][A-Za-z0-9._/-]*$/.test(pathWithPrefix)
+  ) {
+    throw new Error(
+      `Relative repository ${kind} must use a canonical path: ${destination}`,
+    );
+  }
+  const path = pathWithPrefix.slice(2);
+  const segments = path.split("/");
+  if (
+    segments.some(
+      (segment) =>
+        !/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(segment) ||
+        segment === "." ||
+        segment === "..",
+    )
+  ) {
+    throw new Error(
+      `Relative repository ${kind} must not traverse or leave the repository: ${destination}`,
+    );
+  }
+  if (
+    asset &&
+    (!path.startsWith("assets/") ||
+      !/\.(?:avif|gif|jpe?g|png|svg|webp)$/.test(path))
+  ) {
+    throw new Error(
+      `Unrecognized relative repository ${kind}: ${destination}`,
+    );
+  }
+  return { path, anchor };
+}
+
+function rewriteMarkdownRelativeImages(source, commit) {
+  return source.replace(
+    /(!\[[^\]]*\]\()([^)]+)(\))/g,
+    (match, prefix, rawDestination, suffix) => {
+      const destination = normalizeDestination(rawDestination);
+      if (!isRelativeRepositoryReference(destination)) return match;
+      const { path } = parseCanonicalRelativeReference(
+        destination,
+        "Markdown image",
+        { asset: true },
+      );
+      return `${prefix}${assetUrl(commit, path)}${suffix}`;
+    },
+  );
+}
+
 function rewriteMarkdownRelativeLinks(source, commit) {
   return source.replace(
-    /(?<!!)\]\(\.\/([^)\s#]+)(#[^)\s]*)?(?:\s+(?:"[^"]*"|'[^']*'))?\)/g,
-    (_match, path, anchor = "") => `](${blobUrl(commit, path, anchor)})`,
+    /(?<!!)(\]\()([^)]+)(\))/g,
+    (match, prefix, rawDestination, suffix) => {
+      const destination = normalizeDestination(rawDestination);
+      if (!isRelativeRepositoryReference(destination)) return match;
+      const { path, anchor } = parseCanonicalRelativeReference(
+        destination,
+        "Markdown link",
+      );
+      return `${prefix}${blobUrl(commit, path, anchor)}${suffix}`;
+    },
   );
 }
 
 function rewriteHtmlRelativeHrefs(source, commit) {
   return source.replace(
-    /href=(["'])\.\/([^"'#\s]+)(#[^"']*)?\1/g,
-    (_match, quote, path, anchor = "") =>
-      `href=${quote}${blobUrl(commit, path, anchor)}${quote}`,
+    /\bhref=(["'])(.*?)\1/gi,
+    (match, quote, destination) => {
+      if (!isRelativeRepositoryReference(destination.trim())) return match;
+      const { path, anchor } = parseCanonicalRelativeReference(
+        destination,
+        "HTML href",
+      );
+      return `href=${quote}${blobUrl(commit, path, anchor)}${quote}`;
+    },
+  );
+}
+
+function rewriteHtmlRelativeSources(source, commit) {
+  return source.replace(
+    /\bsrc=(["'])(.*?)\1/gi,
+    (match, quote, destination) => {
+      if (!isRelativeRepositoryReference(destination.trim())) return match;
+      const { path } = parseCanonicalRelativeReference(
+        destination,
+        "HTML resource",
+        { asset: true },
+      );
+      return `src=${quote}${assetUrl(commit, path)}${quote}`;
+    },
   );
 }
 
@@ -55,26 +154,6 @@ function isRelativeRepositoryReference(destination) {
     !destination.startsWith("#") &&
     !destination.startsWith("//")
   );
-}
-
-function assertNoRelativeResourceRefs(source) {
-  for (const match of source.matchAll(/!\[[^\]]*\]\(([^)]+)\)/g)) {
-    const destination = normalizeDestination(match[1]);
-    if (isRelativeRepositoryReference(destination)) {
-      throw new Error(
-        `Relative repository Markdown image is not allowed: ${destination}`,
-      );
-    }
-  }
-
-  for (const match of source.matchAll(/\bsrc=(["'])(.*?)\1/gi)) {
-    const destination = match[2].trim();
-    if (isRelativeRepositoryReference(destination)) {
-      throw new Error(
-        `Relative repository HTML resource is not allowed: ${destination}`,
-      );
-    }
-  }
 }
 
 function assertFullObjectId(reference, kind) {
@@ -140,6 +219,26 @@ function assertNoMovableOrRelativeRefs(source, releaseCommit) {
       );
     }
   }
+
+  for (const match of source.matchAll(
+    /\b(?:href|src)\s*=\s*(?:(["'])(.*?)\1|([^\s"'=<>`]+))/gi,
+  )) {
+    const destination = (match[2] ?? match[3]).trim();
+    if (isRelativeRepositoryReference(destination)) {
+      throw new Error(
+        `Unrecognized relative repository HTML reference: ${destination}`,
+      );
+    }
+  }
+
+  for (const match of source.matchAll(/^\s*\[[^\]]+\]:\s*(\S+)/gm)) {
+    const destination = normalizeDestination(match[1]);
+    if (isRelativeRepositoryReference(destination)) {
+      throw new Error(
+        `Unrecognized relative repository Markdown reference: ${destination}`,
+      );
+    }
+  }
 }
 
 export function generateNpmReadme({ source, commit }) {
@@ -150,7 +249,6 @@ export function generateNpmReadme({ source, commit }) {
   if (source.trim().length === 0) {
     throw new Error("README source is empty; refusing to generate an empty npm README.");
   }
-  assertNoRelativeResourceRefs(source);
 
   let result = source.replaceAll(
     jsDelivrMainPrefix,
@@ -160,6 +258,8 @@ export function generateNpmReadme({ source, commit }) {
     rawMainPrefix,
     `${jsDelivrRepository}@${releaseCommit}/`,
   );
+  result = rewriteMarkdownRelativeImages(result, releaseCommit);
+  result = rewriteHtmlRelativeSources(result, releaseCommit);
   result = rewriteMarkdownRelativeLinks(result, releaseCommit);
   result = rewriteHtmlRelativeHrefs(result, releaseCommit);
   assertNoMovableOrRelativeRefs(result, releaseCommit);

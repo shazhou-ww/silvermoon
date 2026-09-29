@@ -15,6 +15,8 @@ const commit = "b".repeat(40);
 
 test("rewrites the real repository README onto an immutable commit without touching the source file", async () => {
   const before = await readFile(readmePath, "utf8");
+  assert.match(before, /src="\.\/assets\/silvermoon\.svg"/);
+  assert.match(before, /src="\.\/assets\/silvermoon-mascot\.png"/);
   const output = generateNpmReadme({ source: before, commit });
 
   assert.doesNotMatch(
@@ -51,6 +53,8 @@ test("rewrites the real repository README onto an immutable commit without touch
       `https://github\\.com/shazhou-ww/silvermoon/blob/${commit}/docs/getting-started\\.md`,
     ),
   );
+  assert.match(output, /https:\/\/img\.shields\.io\/npm\/v\/silvermoon/);
+  assert.match(output, /https:\/\/www\.youtube\.com\/watch\?v=GJgezoCBIHM/);
 
   const after = await readFile(readmePath, "utf8");
   assert.equal(after, before);
