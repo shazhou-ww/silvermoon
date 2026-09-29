@@ -2,10 +2,10 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import {
-  assertVersionUnpublished,
   createReleasePlan,
   deriveNpmDistTag,
   formatGitHubOutput,
+  observeVersionPublication,
   parseReleaseTag,
 } from "../../scripts/prepare-npm-release.mjs";
 
@@ -99,36 +99,37 @@ test("derives named prerelease channels without using latest", () => {
   assert.throws(() => deriveNpmDistTag("1.0.0-latest.1"), /must not use the latest/);
 });
 
-test("fails closed for published versions and registry errors", async () => {
+test("observes published versions and fails closed for registry errors", async () => {
   const release = plan();
-  await assert.doesNotReject(() =>
-    assertVersionUnpublished(release, {
+  assert.equal(
+    await observeVersionPublication(release, {
       fetchImpl: async () => ({ status: 404 }),
     }),
+    "absent",
   );
-  await assert.doesNotReject(() =>
-    assertVersionUnpublished(release, {
+  assert.equal(
+    await observeVersionPublication(release, {
       fetchImpl: async () => ({
         json: async () => ({ versions: { "0.1.0": {} } }),
         ok: true,
         status: 200,
       }),
     }),
+    "absent",
   );
-  await assert.rejects(
-    () =>
-      assertVersionUnpublished(release, {
-        fetchImpl: async () => ({
-          json: async () => ({ versions: { "0.1.1": {} } }),
-          ok: true,
-          status: 200,
-        }),
+  assert.equal(
+    await observeVersionPublication(release, {
+      fetchImpl: async () => ({
+        json: async () => ({ versions: { "0.1.1": {} } }),
+        ok: true,
+        status: 200,
       }),
-    /already published/,
+    }),
+    "published",
   );
   await assert.rejects(
     () =>
-      assertVersionUnpublished(release, {
+      observeVersionPublication(release, {
         fetchImpl: async () => ({ ok: false, status: 503 }),
       }),
     /registry returned 503/,
@@ -137,13 +138,14 @@ test("fails closed for published versions and registry errors", async () => {
 
 test("emits fixed GitHub outputs for later workflow steps", () => {
   assert.equal(
-    formatGitHubOutput(plan()),
+    formatGitHubOutput({ ...plan(), publicationState: "absent" }),
     [
       "release_key=silvermoon",
       "package_name=silvermoon",
       "package_directory=.",
       "version=0.1.1",
       "dist_tag=latest",
+      "publication_state=absent",
     ].join("\n"),
   );
 });

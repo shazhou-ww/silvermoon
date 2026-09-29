@@ -74,25 +74,81 @@ jobs:
       - name: Discover agent skills
         run: pnpm check:skills
 
+      - name: Stage selected package
+        id: stage
+        env:
+          PACKAGE_DIRECTORY: ${{ steps.release.outputs.package_directory }}
+        run: |
+          STAGE_ROOT="$RUNNER_TEMP/npm-stage"
+          ARTIFACT_DIRECTORY="$RUNNER_TEMP/npm-artifacts"
+          mkdir -p "$STAGE_ROOT" "$ARTIFACT_DIRECTORY"
+          git archive "$GITHUB_SHA" | tar -x -C "$STAGE_ROOT"
+          PACKAGE_ROOT="$(cd "$STAGE_ROOT/$PACKAGE_DIRECTORY" && pwd)"
+          echo "package_directory=$PACKAGE_ROOT" >> "$GITHUB_OUTPUT"
+          echo "artifact_directory=$ARTIFACT_DIRECTORY" >> "$GITHUB_OUTPUT"
+
       - name: Generate immutable npm README
-        working-directory: ${{ steps.release.outputs.package_directory }}
+        working-directory: ${{ steps.stage.outputs.package_directory }}
         env:
           RELEASE_COMMIT: ${{ github.sha }}
+        run: |
+          node "${{ github.workspace }}/scripts/generate-npm-readme.mjs" \
+            --commit "$RELEASE_COMMIT" --source README.md --out README.md
+          node "${{ github.workspace }}/scripts/generate-npm-readme.mjs" \
+            --commit "$RELEASE_COMMIT" --source README.zh-CN.md --out README.zh-CN.md
+
+      - name: Build selected package tarball
+        id: package
+        env:
+          PACKAGE_DIRECTORY: ${{ steps.stage.outputs.package_directory }}
+          ARTIFACT_DIRECTORY: ${{ steps.stage.outputs.artifact_directory }}
         run: >-
-          node ${{ github.workspace }}/scripts/generate-npm-readme.mjs
-          --commit "$RELEASE_COMMIT" --out README.md
+          node scripts/build-npm-tarball.mjs
+          --package-directory "$PACKAGE_DIRECTORY"
+          --output-directory "$ARTIFACT_DIRECTORY"
 
       - name: Verify selected package tarball
-        working-directory: ${{ steps.release.outputs.package_directory }}
+        working-directory: ${{ steps.stage.outputs.package_directory }}
+        env:
+          SILVERMOON_TARBALL: ${{ steps.package.outputs.tarball_path }}
+          SILVERMOON_TARBALL_SHA256: ${{ steps.package.outputs.tarball_sha256 }}
+          SILVERMOON_TARBALL_INTEGRITY: ${{ steps.package.outputs.tarball_integrity }}
         run: npm run pack:check
 
       - name: Test installed package
-        working-directory: ${{ steps.release.outputs.package_directory }}
+        working-directory: ${{ steps.stage.outputs.package_directory }}
+        env:
+          SILVERMOON_TARBALL: ${{ steps.package.outputs.tarball_path }}
         run: npm run test:e2e
 
       - name: Publish selected package
-        working-directory: ${{ steps.release.outputs.package_directory }}
+        if: steps.release.outputs.publication_state == 'absent'
+        working-directory: ${{ steps.stage.outputs.package_directory }}
         env:
           NPM_CONFIG_REGISTRY: https://registry.npmjs.org/
           NPM_DIST_TAG: ${{ steps.release.outputs.dist_tag }}
-        run: npm publish --access public --provenance --tag "$NPM_DIST_TAG"
+          SILVERMOON_TARBALL: ${{ steps.package.outputs.tarball_path }}
+          SILVERMOON_TARBALL_SHA256: ${{ steps.package.outputs.tarball_sha256 }}
+        run: |
+          echo "$SILVERMOON_TARBALL_SHA256  $SILVERMOON_TARBALL" |
+            sha256sum --check --strict -
+          npm publish "$SILVERMOON_TARBALL" \
+            --access public --provenance --tag "$NPM_DIST_TAG"
+
+      - name: Verify published package
+        working-directory: ${{ steps.stage.outputs.package_directory }}
+        env:
+          RELEASE_COMMIT: ${{ github.sha }}
+          RELEASE_TAG: ${{ github.ref_name }}
+          PACKAGE_NAME: ${{ steps.release.outputs.package_name }}
+          PACKAGE_VERSION: ${{ steps.release.outputs.version }}
+          NPM_DIST_TAG: ${{ steps.release.outputs.dist_tag }}
+          SILVERMOON_TARBALL: ${{ steps.package.outputs.tarball_path }}
+        run: >-
+          node "${{ github.workspace }}/scripts/verify-npm-release.mjs"
+          --package-name "$PACKAGE_NAME"
+          --version "$PACKAGE_VERSION"
+          --dist-tag "$NPM_DIST_TAG"
+          --commit "$RELEASE_COMMIT"
+          --tag "$RELEASE_TAG"
+          --tarball "$SILVERMOON_TARBALL"

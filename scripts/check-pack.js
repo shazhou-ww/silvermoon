@@ -1,12 +1,53 @@
+import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
+import { existsSync, readFileSync, statSync } from "node:fs";
+import { basename, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const packageRoot = fileURLToPath(new URL("..", import.meta.url));
-const windows = process.platform === "win32";
-const command = windows ? (process.env.ComSpec ?? "cmd.exe") : "npm";
-const args = windows
-  ? ["/d", "/s", "/c", "npm pack --dry-run --json"]
-  : ["pack", "--dry-run", "--json"];
+const configuredTarball = process.env.SILVERMOON_TARBALL?.trim();
+const expectedSha256 = process.env.SILVERMOON_TARBALL_SHA256?.trim();
+const expectedIntegrity = process.env.SILVERMOON_TARBALL_INTEGRITY?.trim();
+const tarball = configuredTarball
+  ? resolve(packageRoot, configuredTarball)
+  : null;
+if (tarball && (!existsSync(tarball) || !statSync(tarball).isFile())) {
+  process.stderr.write(`Configured npm tarball is not a file: ${tarball}\n`);
+  process.exit(1);
+}
+if (!tarball && (expectedSha256 || expectedIntegrity)) {
+  process.stderr.write(
+    "Tarball identity was configured without SILVERMOON_TARBALL.\n",
+  );
+  process.exit(1);
+}
+if (tarball && expectedSha256) {
+  const actualSha256 = createHash("sha256")
+    .update(readFileSync(tarball))
+    .digest("hex");
+  if (actualSha256 !== expectedSha256) {
+    process.stderr.write(
+      `Configured npm tarball SHA-256 mismatch: expected ${expectedSha256}, calculated ${actualSha256}.\n`,
+    );
+    process.exit(1);
+  }
+}
+
+const npmArguments = [
+  "pack",
+  ...(tarball ? [tarball] : []),
+  "--dry-run",
+  "--json",
+];
+const configuredNpmCli = process.env.npm_execpath;
+const npmCli =
+  configuredNpmCli && /^npm-cli\.js$/i.test(basename(configuredNpmCli))
+    ? configuredNpmCli
+    : resolve(dirname(process.execPath), "node_modules", "npm", "bin", "npm-cli.js");
+const command = process.platform === "win32" ? process.execPath : "npm";
+const args = process.platform === "win32"
+  ? [npmCli, ...npmArguments]
+  : npmArguments;
 const packed = spawnSync(command, args, {
   cwd: packageRoot,
   encoding: "utf8",
@@ -67,8 +108,10 @@ if (packed.status !== 0) {
   const emptyReadme = result.files.find(
     ({ path, size }) => path === "README.md" && !(size > 0),
   );
+  const integrityMismatch =
+    expectedIntegrity && result.integrity !== expectedIntegrity;
 
-  if (missing.length > 0 || unexpected.length > 0 || emptyReadme) {
+  if (missing.length > 0 || unexpected.length > 0 || emptyReadme || integrityMismatch) {
     if (missing.length > 0) process.stderr.write(`Missing packed files: ${missing.join(", ")}\n`);
     if (unexpected.length > 0) {
       process.stderr.write(`Unexpected packed files: ${unexpected.join(", ")}\n`);
@@ -76,8 +119,15 @@ if (packed.status !== 0) {
     if (emptyReadme) {
       process.stderr.write("Packed README.md is empty; the release README generation is broken.\n");
     }
+    if (integrityMismatch) {
+      process.stderr.write(
+        `Configured npm tarball integrity mismatch: expected ${expectedIntegrity}, found ${result.integrity}.\n`,
+      );
+    }
     process.exitCode = 1;
   } else {
-    process.stdout.write(`PACK_OK name=${result.name} version=${result.version} files=${files.length}\n`);
+    process.stdout.write(
+      `PACK_OK name=${result.name} version=${result.version} files=${files.length} source=${tarball ?? "directory-dry-run"} integrity=${result.integrity}\n`,
+    );
   }
 }

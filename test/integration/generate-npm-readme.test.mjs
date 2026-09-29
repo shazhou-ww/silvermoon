@@ -84,3 +84,52 @@ test("--out writes the generated README atomically without truncating the source
     await rm(outputDirectory, { recursive: true, force: true });
   }
 });
+
+test("--source generates an immutable alternate README without changing it", async () => {
+  const sourcePath = resolve(repositoryRoot, "README.zh-CN.md");
+  const before = await readFile(sourcePath, "utf8");
+  const outputDirectory = await mkdtemp(join(tmpdir(), "silvermoon-readme-"));
+  const outPath = join(outputDirectory, "README.zh-CN.md");
+  const cli = spawnSync(
+    process.execPath,
+    [
+      generatorPath,
+      "--commit",
+      commit,
+      "--source",
+      "README.zh-CN.md",
+      "--out",
+      outPath,
+    ],
+    { cwd: repositoryRoot, encoding: "utf8", windowsHide: true },
+  );
+  try {
+    assert.equal(cli.status, 0, cli.stderr);
+    const generated = await readFile(outPath, "utf8");
+    assert.match(
+      generated,
+      new RegExp(
+        `cdn\\.jsdelivr\\.net/gh/shazhou-ww/silvermoon@${commit}/assets/silvermoon-avatar\\.svg`,
+      ),
+    );
+    assert.equal(await readFile(sourcePath, "utf8"), before);
+  } finally {
+    await rm(outputDirectory, { recursive: true, force: true });
+  }
+});
+
+test("--source rejects paths outside the approved package READMEs", () => {
+  const cli = spawnSync(
+    process.execPath,
+    [
+      generatorPath,
+      "--commit",
+      commit,
+      "--source",
+      "../package.json",
+    ],
+    { cwd: repositoryRoot, encoding: "utf8", windowsHide: true },
+  );
+  assert.equal(cli.status, 1);
+  assert.match(cli.stderr, /Unsupported README source/);
+});
