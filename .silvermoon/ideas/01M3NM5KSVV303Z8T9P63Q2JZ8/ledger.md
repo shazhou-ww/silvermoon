@@ -42,7 +42,7 @@
 
 ### Deployment steps
 
-- [ ] **D-S01:** 确认 RC 发布前提与显式授权
+- [x] **D-S01:** 确认 RC 发布前提与显式授权
 - [ ] **D-S02:** 发布不可变的 0.2.0 RC
 - [ ] **D-S03:** 在真实消费者中验证 RC
 - [ ] **D-S04:** 处理 RC 缺陷或确认稳定候选
@@ -67,5 +67,10 @@
   `npm/silvermoon/v0.2.0-rc.1` tag。当前 `origin/main` 为
   `a28bc9d0bfbb75b3fc5ea6d142e77aa6e3ca3cf6`，其 package manifest 版本为
   `0.2.0-rc.1`，idea 状态为 deploying 且已记录 implementation acceptance。
-  D-S01 仍待用户显式调用 `/publish silvermoon 0.2.0-rc.1`；本次未创建 tag、
-  未运行 publish workflow，也未发布 package。
+- 2026-09-29: 用户在当前 session 明确调用 `/publish silvermoon 0.2.0-rc.1`。
+  发布 workflow 已核实使用 GitHub-hosted Ubuntu runner、`id-token: write`、
+  Node 24、npm 11.6.2 和 npmjs `registry-url`。`pnpm install --frozen-lockfile`
+  与 `pnpm check` 通过：65 unit、30 contract、113 integration（111 pass、
+  2 Windows 权限限制 skip）及 installed-package E2E 通过；pack candidate 为
+  `silvermoon@0.2.0-rc.1`。发布授权已满足，但仍须在刷新 `main`/tags 后再次
+  验证 commit 可达性、目标版本/tag 缺失并运行 release planner，才可创建 tag。
