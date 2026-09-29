@@ -1,24 +1,21 @@
-# Deployment
+# 部署方案
 
-## Steps
+## 部署步骤
 
-### D-S01: Verify the published repository candidate
+### D-S01: 验证已发布的仓库候选
 
-After this deployment contract is published, refresh `origin/main` and verify
-the accepted implementation from the primary branch. Run the complete
-repository check, validate the remote Silvermoon snapshot, and exercise the
-default human-readable `whats-next` output to confirm that Active ideas is
-rendered as an ID/Alias/State Markdown table.
+发布本部署合同后，刷新 `origin/main`，并从 primary 分支验证已验收的实现。
+运行完整仓库检查，验证远端 Silvermoon snapshot，并实际运行默认的人类可读
+`whats-next` 输出，确认 Active ideas 以 ID/Alias/State Markdown 表格呈现。
 
-This deployment ends with repository verification. It must not publish an npm
-package, create a release tag, or invoke the npm publishing workflow.
+本次部署止于仓库验证，不得发布 npm package、创建 release tag 或调用 npm
+发布工作流。
 
-## Acceptance criteria
+## 部署验收标准
 
-### D-AC01: Published primary passes repository verification
+### D-AC01: 已发布的 primary 通过仓库验证
 
-The implementation and this deployment contract are reachable from refreshed
-`origin/main`; `pnpm check` exits successfully; `silvermoon check --remote
---json` reports a valid remote snapshot; and the default human-readable
-`whats-next` output contains the Active ideas ID/Alias/State table. The recorded
-deployment evidence confirms that no npm publication was performed.
+实现与本部署合同均可从刷新后的 `origin/main` 到达；`pnpm check` 成功退出；
+`silvermoon check --remote --json` 报告远端 snapshot 有效；默认的人类可读
+`whats-next` 输出包含 Active ideas 的 ID/Alias/State 表格。记录的部署证据需
+确认未执行任何 npm 发布。

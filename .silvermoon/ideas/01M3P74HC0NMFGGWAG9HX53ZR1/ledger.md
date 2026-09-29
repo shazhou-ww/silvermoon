@@ -10,12 +10,12 @@
 
 - [x] **I-AC01:** 保持导航输出易读且向后兼容
 
-## Deployment
+## 部署
 
-### Deployment steps
+### 部署步骤
 
-- [ ] **D-S01:** Verify the published repository candidate
+- [ ] **D-S01:** 验证已发布的仓库候选
 
-### Deployment acceptance criteria
+### 部署验收标准
 
-- [ ] **D-AC01:** Published primary passes repository verification
+- [ ] **D-AC01:** 已发布的 primary 通过仓库验证
