@@ -18,8 +18,8 @@ manager 而异，Silvermoon 的 `whats-next` 已能根据实际观察提供下�
 
 ## Desired outcome
 
-- 中英文 README 的安装与整备说明聚焦于让项目 Agent 运行
-  `npx silvermoon whats-next`，遵循每次报告的提示并在需要时重复运行，
+- 中英文 README 的 Quick Start 简洁且一致：只保留必要前提，并告诉用户让项目
+  Agent 运行 `npx silvermoon whats-next`、遵循每次报告的提示并在需要时重复运行，
   直至状态明确为 `navigation-ready`。
 - 默认人类可读的 `whats-next` 标准输出明确展示当前状态；项目就绪时显示
   可直接识别的 `navigation-ready`，与结构化 observation 一致。
@@ -29,11 +29,14 @@ manager 而异，Silvermoon 的 `whats-next` 已能根据实际观察提供下�
 
 ### In scope
 
-- 简化 `README.md` 和 `README.zh-CN.md` 中的安装、首次整备指引，同时保留
-  使用者开始整备所需的必要前提。
+- 精简 `README.md` 和 `README.zh-CN.md` 的 Quick Start，移除需要用户自行理解的
+  package manager、根 manifest、依赖版本、skill 注册及 snapshot 检查等细节；
+  仅保留必要的运行前提和交由项目 Agent 操作的入口。
+- 移除会让用户误以为需要自行完成的冗长安装命令清单，明确引导用户让项目 Agent
+  运行 `npx silvermoon whats-next` 并按提示整备。
 - 明确规定普通 `whats-next` 文本输出展示其当前 observation 状态，至少覆盖
   `navigation-ready`，且不与 JSON 输出中的状态不一致。
-- 在实施该输出改动时创建并关联一个 GitHub issue，记录终端状态提示缺失的问题。
+- 创建并关联一个 GitHub issue，记录标准输出缺少当前状态提示的问题，以便共同跟踪。
 
 ### Out of scope
 
@@ -47,5 +50,5 @@ manager 而异，Silvermoon 的 `whats-next` 已能根据实际观察提供下�
   判定。
 - README 必须让 Agent 遵循当前报告的提示；报告被阻塞或尚未就绪时，不得声称
   已达到 `navigation-ready`。
-- GitHub issue 应在进入实施阶段时创建，并引用本 idea，避免 preparing 阶段执行
-  尚未获批准的实施工作。
+- 只调整 README 的说明，不改变 Silvermoon 的安装、依赖或 skill 注册行为。
+- GitHub issue 应引用本 idea；issue 的创建和跟踪不等于批准 idea 或授权实施其余工作。
