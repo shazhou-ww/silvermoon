@@ -32,8 +32,8 @@
   `outer/inner/Implementation.md`。
 - 2026-09-29: unit、contract、integration、pack、installed-package E2E、
   skill sync、schema fixtures、trace correlation/redaction 与 trace-on/off
-  differential checks 通过；聚合 `pnpm check` 通过 60 unit、29 contract、
-  103 integration（101 pass、2 skip）及 1 installed-package E2E，candidate
+  differential checks 通过；聚合 `pnpm check` 通过 61 unit、29 contract、
+  104 integration（102 pass、2 skip）及 1 installed-package E2E，candidate
   CLI worktree check 与 `git diff --check` 通过。
 - 2026-09-29: `0.2.0-rc.1` npm version 及 local/remote release tag 均不存在；
   candidate 未创建 tag、未执行 publish、未发布到 npm。

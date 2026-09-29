@@ -91,6 +91,31 @@ test("accepts an ecosystem-neutral Git repository with canonical configuration a
   await assert.rejects(readFile(join(root, "node_modules")), { code: "ENOENT" });
 });
 
+test("accepts canonical skill text across CRLF and LF checkouts", async () => {
+  const root = await temporaryDirectory();
+  const initialized = spawnSync(
+    "git",
+    ["-C", root, "init", "--initial-branch=main"],
+    { encoding: "utf8", windowsHide: true },
+  );
+  assert.equal(initialized.status, 0, initialized.stderr);
+  await configure(root);
+  const skillRoot = join(root, ...REPOSITORY_SKILL_PATH.split("/"));
+  await cp(canonicalSkill, skillRoot, { recursive: true });
+  const skillPath = join(skillRoot, "SKILL.md");
+  const source = await readFile(skillPath, "utf8");
+  const lf = source.replaceAll("\r\n", "\n");
+  await writeFile(
+    skillPath,
+    source.includes("\r\n") ? lf : lf.replaceAll("\n", "\r\n"),
+  );
+
+  const report = await inspectAdoption({ root });
+
+  assert.deepEqual(report.problems, []);
+  assert.deepEqual(report.instructions, []);
+});
+
 test("reports canonical skill drift against the running package", async () => {
   const root = await temporaryDirectory();
   const initialized = spawnSync(

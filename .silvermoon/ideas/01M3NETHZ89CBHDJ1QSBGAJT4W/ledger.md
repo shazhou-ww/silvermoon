@@ -10,6 +10,7 @@
 - [x] **I-S04:** 在 create-idea 成功路径附带 preparing guidance
 - [x] **I-S05:** 隔离渲染并更新 Agent 消费规则
 - [x] **I-S06:** 文档化契约并建立完整测试矩阵
+- [x] **I-S07:** 消除 canonical skill 的跨平台换行误差
 
 ### Implementation acceptance criteria
 
@@ -21,6 +22,7 @@
 - [x] **I-AC06:** check 完整验证所有 guidance
 - [x] **I-AC07:** 内容不被解释、泄露或隐式持久化
 - [x] **I-AC08:** 文档、skill 与发布级检查一致
+- [x] **I-AC09:** 发布包 skill 校验不受 Git 换行转换影响
 
 ### Implementation evidence
 
@@ -34,6 +36,19 @@
 - 2026-09-29: 最终候选通过 `pnpm check`、`pnpm check:skills`、
   `git diff --check`、`silvermoon check --worktree` 与
   `silvermoon check --staged`。
+- 2026-09-29: `silvermoon@0.1.3-rc.1` registry tarball
+  (`gitHead` `49c437ca46822d97066c924b2167b45d5c7c5e15`，integrity
+  `sha512-hAy0GpqBKOA8lwFwMey7+72lL//PbOfsxEdMRTHKoFveaX51f0LlcMMQg0rrJcfpH5YVCsBRuHxHxAn8qO52Ug==`)
+  包含 phase guidance；隔离 consumer 的 16 项功能与边界矩阵通过。
+- 2026-09-29: 仓库 installed-package E2E 使用同一 registry tarball 时在
+  Windows `core.autocrlf=true` 下失败为 `canonical-skill-mismatched`；将同一
+  consumer 的 `core.autocrlf` 改为 `false` 后通过。D-AC06 因此尚未满足，需
+  修复后发布新版本并重新运行部署矩阵。
+- 2026-09-29: canonical skill digest 现仅统一有效 UTF-8 文本的 CRLF/LF，
+  其他内容仍逐字节校验。反向换行 unit fixture、五种 snapshot target
+  integration regression 和强制 `core.autocrlf=true` 的 installed-package
+  E2E 均通过；完整 `pnpm check`、`pnpm check:skills`、`git diff --check` 与
+  `silvermoon check --worktree` 通过。
 
 ## Deployment
 

@@ -6,6 +6,7 @@ import {
 } from "node:fs/promises";
 import { relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
+import { TextDecoder } from "node:util";
 
 import { diagnosticProblem } from "./dialogue.js";
 import { loadConfig } from "./config.js";
@@ -16,9 +17,25 @@ const packageRoot = fileURLToPath(new URL("..", import.meta.url));
 const packageJson = JSON.parse(await readFile(resolve(packageRoot, "package.json"), "utf8"));
 const packagedSkillsRoot = resolve(packageRoot, "skills");
 const packagedSkill = resolve(packagedSkillsRoot, "silvermoon");
+const utf8Decoder = new TextDecoder("utf-8", {
+  fatal: true,
+  ignoreBOM: true,
+});
 
 export const SILVERMOON_VERSION = packageJson.version;
 export const REPOSITORY_SKILL_PATH = ".agents/skills/silvermoon";
+
+function canonicalSkillBytes(content) {
+  if (content.includes(0)) return content;
+  try {
+    return Buffer.from(
+      utf8Decoder.decode(content).replaceAll("\r\n", "\n"),
+      "utf8",
+    );
+  } catch {
+    return content;
+  }
+}
 
 async function directoryDigest(root) {
   const hash = createHash("sha256");
@@ -33,7 +50,7 @@ async function directoryDigest(root) {
       } else if (entry.isFile()) {
         hash.update(relative(root, path).split(sep).join("/"));
         hash.update("\0");
-        hash.update(await readFile(path));
+        hash.update(canonicalSkillBytes(await readFile(path)));
         hash.update("\0");
       } else if (entry.isSymbolicLink()) {
         await visit(path);

@@ -174,6 +174,7 @@ try {
   run("git", ["init", "--initial-branch=main"], consumer);
   run("git", ["config", "user.name", "silvermoon smoke"], consumer);
   run("git", ["config", "user.email", "silvermoon@example.invalid"], consumer);
+  run("git", ["config", "core.autocrlf", "true"], consumer);
   run("git", ["add", "."], consumer);
   run("git", ["commit", "-m", "Initialize smoke fixture"], consumer);
 

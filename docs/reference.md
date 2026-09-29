@@ -278,10 +278,11 @@ Problems have only stable `type` and natural-language `summary`; remediation
 belongs in `response.nextSteps`.
 
 Project setup is ecosystem-neutral. It checks Git, configuration schema
-compatibility, and exact canonical skill content at
-`.agents/skills/silvermoon`. It does not inspect execution source or require a
-package manager, `package.json`, project-local Silvermoon dependency, or
-`node_modules`.
+compatibility, and canonical skill content at `.agents/skills/silvermoon`.
+CRLF and LF are equivalent for valid UTF-8 skill text so Git checkout settings
+cannot create false drift; filenames and every other content change remain
+exact. The check does not inspect execution source or require a package manager,
+`package.json`, project-local Silvermoon dependency, or `node_modules`.
 
 `whats-next` checks local conflicts and changes before remote access, then HEAD
 and upstream identity, then fetch and ancestry. A local branch may have any

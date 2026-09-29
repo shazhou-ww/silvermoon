@@ -171,7 +171,7 @@ worktree/staged/remote checks 全部通过。候选提交从 `origin/main` 可�
   local/remote `npm/silvermoon/v0.2.0-rc.1` tag 均不存在；未创建 tag、未调用
   publish workflow、未发布 npm package。候选通过 unit、contract、integration、
   pack、installed-package E2E、skill sync 与针对性 schema/trace checks。最终
-  `pnpm check` 通过 60 unit、29 contract、103 integration（101 pass、2 个
+  `pnpm check` 通过 61 unit、29 contract、104 integration（102 pass、2 个
   Windows privilege skip）及 1 installed-package E2E；candidate CLI worktree
   check 与 `git diff --check` 通过。发布同一 candidate 时继续执行 staged 与
   refreshed remote snapshot checks。
