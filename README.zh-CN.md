@@ -2,7 +2,7 @@
 
 <p align="center">
   <!-- markdownlint-disable-next-line MD013 -->
-  <img src="https://cdn.jsdelivr.net/gh/shazhou-ww/silvermoon@main/assets/silvermoon.svg" width="960" alt="Silvermoon，项目的器灵">
+  <img src="./assets/silvermoon.svg" width="960" alt="Silvermoon，项目的器灵">
 </p>
 
 <p align="center">
@@ -57,7 +57,7 @@ npx silvermoon whats-next <idea>
   <tr>
     <td width="160" align="center" valign="top">
       <!-- markdownlint-disable-next-line MD013 -->
-      <img src="https://cdn.jsdelivr.net/gh/shazhou-ww/silvermoon@main/assets/silvermoon-mascot.png" width="160" alt="项目器灵银月的全身立绘">
+      <img src="./assets/silvermoon-mascot.png" width="160" alt="项目器灵银月的全身立绘">
     </td>
     <td valign="top">
       Silvermoon 得名于《凡人修仙传》中的银月。她来自灵界的银月狼族，是玲珑公主分裂出的
