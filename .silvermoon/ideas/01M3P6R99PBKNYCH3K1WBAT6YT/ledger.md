@@ -15,15 +15,15 @@
 - [x] **I-AC03:** The output gap remains jointly trackable
 - [x] **I-AC04:** Repository validation passes
 
-## 部署
+## Deployment
 
-### 部署步骤
+### Deployment steps
 
 - [ ] **D-S01:** 发布仓库验证契约
 - [ ] **D-S02:** 验证已发布的 primary snapshot
 - [ ] **D-S03:** 验证真实的默认导航输出
 
-### 部署验收标准
+### Deployment acceptance criteria
 
 - [ ] **D-AC01:** Primary 包含已验证的候选
 - [ ] **D-AC02:** 仓库 release-grade 检查通过
