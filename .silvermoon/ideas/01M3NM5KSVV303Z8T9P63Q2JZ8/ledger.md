@@ -53,8 +53,19 @@
   `pnpm check`（65 unit、30 contract、113 integration；111 pass、2 Windows
   symlink permission skips）、pack（46 files）及 installed-package E2E 通过。
   Stable release planner 对该 main commit 返回 `publicationState: absent`、
-  `distTag: latest`；未创建 `npm/silvermoon/v0.2.0` tag、未执行 stable publish，
-  也未记录新的 implementation acceptance。
+  `distTag: latest`；候选发布时未创建 `npm/silvermoon/v0.2.0` tag、未执行
+  stable publish，也未预先记录 implementation acceptance。
+
+### Deployment evidence update
+
+- 2026-09-29: 用户明确验收 implementation revision
+  `4d8bd5c4bf990096602f9b6e60a34bbac61fb7cf`。仅
+  `implementationAcceptedRevision` 更新为该 exact revision，worktree/staged
+  checks 通过；status-only commit `bc6cab097d18c47d08abe913a798d4425d33a734`
+  已发布到 `main`。Silvermoon 随后重新推导为 deploying，当前精确
+  `deploymentRevision` 为 `4d51144828fbc0bbe5ce666a748322627376cecc`；
+  deployment acceptance 尚未记录。Stable `0.2.0` 仍未发布，仍需单独的显式
+  `/publish silvermoon 0.2.0` 授权。
 
 ## Deployment
 
@@ -64,7 +75,7 @@
 - [x] **D-S02:** 发布不可变的 0.2.0 RC
 - [x] **D-S03:** 在真实消费者中验证 RC
 - [x] **D-S04:** 处理 RC 缺陷或确认稳定候选
-- [ ] **D-S05:** 重新验收 0.2.0 stable implementation
+- [x] **D-S05:** 重新验收 0.2.0 stable implementation
 - [ ] **D-S06:** 发布并验证稳定 0.2.0
 - [ ] **D-S07:** 请求最终 deployment acceptance
 
@@ -74,7 +85,7 @@
 - [x] **D-AC02:** RC 真实验证新的 command runtime
 - [x] **D-AC03:** Phase guidance 与既有安全边界不回归
 - [ ] **D-AC04:** RC 失败只产生新的不可变候选
-- [ ] **D-AC05:** Stable candidate 经第二次 implementation gate
+- [x] **D-AC05:** Stable candidate 经第二次 implementation gate
 - [ ] **D-AC06:** Stable 0.2.0 独立发布并完整验证
 - [ ] **D-AC07:** 最终验收证据完整可追溯
 
