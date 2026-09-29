@@ -23,13 +23,18 @@
 
 ### Deployment steps
 
-- [ ] **D-S01:** 发布明确授权的 Silvermoon 版本
+- [x] **D-S01:** 发布明确授权的 Silvermoon 版本
+  - Evidence: `npm/silvermoon/v0.2.1` points to the published primary release commit; GitHub Actions run `36537400522` succeeded and npm `latest` resolves to `0.2.1`.
 - [ ] **D-S02:** 在干净消费者仓库验证 npm 整备
-- [ ] **D-S03:** 验证非 npm 与自举场景
+  - Evidence: npm and pnpm workspaces passed. Yarn 1.22.22 saved `0.2.1` instead of the required `^0.2.1`; Bun 1.3.10 wrote the caret range, but `bun install` repeatedly failed linking a transitive package (`ENOENT`), so its installed CLI was not verified.
+- [x] **D-S03:** 验证非 npm 与自举场景
+  - Evidence: Published `silvermoon@0.2.1` reached `project-ready` in a no-manifest/no-lockfile/no-node_modules Git fixture; a clean source clone at the release commit passed frozen install, `whats-next`, temporary `create-idea`, and `check --worktree`.
 
 ### Deployment acceptance criteria
 
 - [ ] **D-AC01:** 已发布 npm 项目获得阻塞且可执行的版本对齐指令
 - [ ] **D-AC02:** 安装来源、skill 与运行版本保持一致
-- [ ] **D-AC03:** 非 npm 项目不承担 npm 整备成本
-- [ ] **D-AC04:** Silvermoon source checkout 保持可开发
+- [x] **D-AC03:** 非 npm 项目不承担 npm 整备成本
+  - Evidence: Published `silvermoon@0.2.1` returned `project-ready` for an isolated non-npm Git fixture with canonical config and skill, and no root `package.json`, `node_modules`, or lockfile.
+- [x] **D-AC04:** Silvermoon source checkout 保持可开发
+  - Evidence: Release source checkout has no `devDependencies.silvermoon`; from a clean clone, `pnpm install --frozen-lockfile`, `whats-next`, `create-idea`, and `check --worktree` succeeded.
