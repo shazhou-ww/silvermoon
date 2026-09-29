@@ -87,6 +87,12 @@
   与默认 `npm install silvermoon`，两者均安装 `0.2.0`；对 exact-version 与
   default-version 下载的 registry tarball 分别运行完整 installed-package E2E，
   两轮均通过，覆盖四个 public commands、输出合同、guidance 与预期失败。
+- 2026-09-29: 用户明确验收 deployment revision
+  `4d51144828fbc0bbe5ce666a748322627376cecc`；`deploymentAcceptedRevision` 已在
+  status-only commit `217ecab05a1830d65ec99ddfde5cdd55982b0d78` 精确记录并发布。
+  Silvermoon 最终报告 idea 为 completed，remote snapshot 通过；official npm
+  `latest` 为 `0.2.0`、`rc` 仍为 `0.2.0-rc.1`，两个 immutable tags 均可从
+  primary 读取。
 
 ## Deployment
 
@@ -98,7 +104,7 @@
 - [x] **D-S04:** 处理 RC 缺陷或确认稳定候选
 - [x] **D-S05:** 重新验收 0.2.0 stable implementation
 - [x] **D-S06:** 发布并验证稳定 0.2.0
-- [ ] **D-S07:** 请求最终 deployment acceptance
+- [x] **D-S07:** 请求最终 deployment acceptance
 
 ### Deployment acceptance criteria
 
