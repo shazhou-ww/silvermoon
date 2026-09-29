@@ -37,6 +37,7 @@ Human 与 Agent 可能逐渐需要不同的信息组织方式。仅依赖 TTY �
 - 要求 Agent 或 CI 拥有 TTY，或在无 TTY 时启动交互式渲染。
 - 修改 shell profile、安装外部 Markdown renderer，或依赖 glow 等系统命令。
 - 本次实现 CLI 以外的桌面、Web 或 IDE UI。
+- 发布新的 npm package 版本；本 idea 的 deployment 仅验证仓库修改，不执行 npm 发版。
 
 ## Constraints
 
