@@ -43,6 +43,7 @@ manager 而异，Silvermoon 的 `whats-next` 已能根据实际观察提供下�
 - 改变 Silvermoon 的项目就绪、repository 同步或 idea 导航判定逻辑。
 - 改变 `whats-next` 的 JSON 数据结构或其他命令的输出契约。
 - 为 README 快速开始增加自动安装、依赖修改或 skill 注册副作用。
+- 发布新的 npm package 版本；本 idea 的 deployment 仅验证仓库修改，不执行 npm 发版。
 
 ## Constraints
 
