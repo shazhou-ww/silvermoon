@@ -32,6 +32,7 @@ branch.
 ```sh
 npm install --global silvermoon
 silvermoon whats-next
+silvermoon list-ideas
 ```
 
 Silvermoon is ecosystem-neutral: the target repository does not need
@@ -56,6 +57,13 @@ override when the idea is created. Otherwise Silvermoon checks
 These stored values choose the language for project-owned content. To change
 only one command's built-in output, use `whats-next --language en-US|zh-CN` or
 `check --language en-US|zh-CN`; the temporary override is never persisted.
+
+Use `list-ideas` when you only need the current local inventory. It defaults to
+active ideas and supports repeatable `--state`, `--all`, literal `--query`,
+RFC 3339 `--created-since` / `--created-before`, `--sort`, and `--limit`.
+Unlike lifecycle navigation, this read-only query uses the valid worktree
+snapshot without checking branch, upstream, cleanliness, network, or primary
+synchronization.
 
 Then create an idea and let the registered Silvermoon skill guide one safe
 next action at a time:

@@ -13,6 +13,15 @@ const expected = [
   "create-primary-upstream",
   "dirty",
   "diverged",
+  "inventory-cli",
+  "inventory-conflict",
+  "inventory-default",
+  "inventory-empty",
+  "inventory-filters",
+  "inventory-layout",
+  "inventory-readiness",
+  "inventory-usage",
+  "inventory-worktree",
   "partial-write-failure",
   "primary-relocation",
   "selector-known",
@@ -26,6 +35,7 @@ const expected = [
 test("executes the approved behavior case manifest", async () => {
   const sources = await Promise.all([
     readFile(new URL("../integration/create-idea.test.js", import.meta.url), "utf8"),
+    readFile(new URL("../integration/list-ideas.test.js", import.meta.url), "utf8"),
     readFile(new URL("../integration/whatsnext.test.js", import.meta.url), "utf8"),
   ]);
   const actual = [];

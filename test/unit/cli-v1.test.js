@@ -66,16 +66,32 @@ test("registers only the approved command surface", () => {
   const program = createProgram(capture().io);
   assert.deepEqual(
     program.commands.map((command) => command.name()).sort(),
-    ["check", "create-idea", "whats-next"],
+    ["check", "create-idea", "list-ideas", "whats-next"],
   );
   const create = program.commands.find((command) =>
     command.name() === "create-idea"
   );
   assert.ok(create.options.some(({ long }) => long === "--language"));
-  for (const command of program.commands) {
+  for (const command of program.commands.filter((candidate) =>
+    candidate.name() !== "list-ideas"
+  )) {
     assert.ok(command.options.some(({ long }) => long === "--trace"));
     assert.ok(command.options.some(({ long }) => long === "--language"));
   }
+  const list = program.commands.find((command) => command.name() === "list-ideas");
+  for (const option of [
+    "--all",
+    "--created-before",
+    "--created-since",
+    "--limit",
+    "--query",
+    "--sort",
+    "--state",
+    "--trace",
+  ]) {
+    assert.ok(list.options.some(({ long }) => long === option), option);
+  }
+  assert.equal(list.options.some(({ long }) => long === "--language"), false);
 });
 
 test("normalizes trace paths to the exact lowercase suffix", () => {
@@ -104,6 +120,7 @@ test("help describes the four projections and unified trace", async () => {
   const help = logs.join("\n");
   assert.match(help, /\bcheck\b/);
   assert.match(help, /\bcreate-idea\b/);
+  assert.match(help, /\blist-ideas\b/);
   assert.match(help, /\bwhats-next\b/);
   assert.doesNotMatch(help, /help \[command\]|\bwhatsnext\b|\bnewidea\b|\bnew-idea\b/);
 

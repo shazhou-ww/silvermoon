@@ -10,6 +10,7 @@ The shared authority is `https://github.com/shazhou-ww/silvermoon.git` on
 optional transport and are not protocol state.
 
 ```sh
+silvermoon list-ideas
 silvermoon whats-next [idea]
 silvermoon whats-next [idea] --language zh-CN
 silvermoon create-idea
@@ -24,16 +25,19 @@ silvermoon check --remote
 Use the primary commit stated in the report as the expected remote tip. When
 primary moves, reobserve instead of replaying approval or acceptance.
 
-Choose the entry command from the user's intent. Explicit new-idea requests use
+Choose the entry command from the user's intent. Explicit inventory requests
+use `silvermoon list-ideas`; explicit new-idea requests use
 `silvermoon create-idea` even when unrelated active ideas exist; all navigation
 uses `silvermoon whats-next [idea]`. Add `--json` only for a programmatic
-consumer. Both commands apply the
-same project checks, but their repository readiness differs. `whats-next`
-checks local hygiene and remote ancestry. `create-idea` requires the configured
-primary branch and upstream plus a clean worktree, without fetching or requiring
-HEAD to match the remote tip. If hygiene blocks explicit creation, perform only
-that blocking action and then retry `create-idea` so active-idea selection
-cannot replace the pending create intent.
+consumer. All three apply the same project and complete idea-layout checks,
+but their repository readiness differs. `list-ideas` reads the valid local
+worktree snapshot without hygiene, branch, upstream, network, or ancestry
+checks. `whats-next` checks local hygiene and remote ancestry. `create-idea`
+requires the configured primary branch and upstream plus a clean worktree,
+without fetching or requiring HEAD to match the remote tip. If hygiene blocks
+explicit creation, perform only that blocking action and then retry
+`create-idea` so active-idea selection cannot replace the pending create
+intent.
 
 Use `--language en-US|zh-CN` with `whats-next` or `check` only when the user
 explicitly requests a temporary output locale. Preserve the canonical option

@@ -10,6 +10,8 @@ import {
   canonicalizeLanguageTag,
   canonicalizeOutputLanguage,
 } from "./language.js";
+import { normalizeIdeaQuery } from "./idea-query.js";
+import { listIdeas } from "./list-ideas.js";
 import { checkRepository } from "./index.js";
 import { createIdea } from "./create-idea.js";
 import { renderResponse } from "./response.js";
@@ -68,6 +70,10 @@ function outputLanguageArgument(value) {
   }
 }
 
+function collectOption(value, previous = []) {
+  return [...previous, value];
+}
+
 export function createProgram(io = console) {
   const program = new Command();
   program
@@ -86,6 +92,8 @@ export function createProgram(io = console) {
     .exitOverride()
     .addHelpText("after", `
 Examples:
+  $ silvermoon list-ideas
+  $ silvermoon list-ideas --state completed --sort oldest --limit 10
   $ silvermoon whats-next
   $ silvermoon whats-next <idea>
   $ silvermoon whats-next <idea> --language zh-CN
@@ -98,6 +106,57 @@ Examples:
   $ silvermoon check --staged
   $ silvermoon check --commit HEAD
   $ silvermoon check --remote`);
+
+  addCommonOptions(
+    program
+      .command("list-ideas")
+      .description("query the current local idea inventory")
+      .option(
+        "--state <state>",
+        "include a lifecycle state or active (repeatable)",
+        collectOption,
+      )
+      .option("--all", "include all five lifecycle states")
+      .option("--query <text>", "match ID, alias, or title literally")
+      .option(
+        "--created-since <timestamp>",
+        "include ideas created at or after an RFC 3339 timestamp",
+      )
+      .option(
+        "--created-before <timestamp>",
+        "include ideas created before an RFC 3339 timestamp",
+      )
+      .option("--sort <order>", "sort by creation time: newest or oldest")
+      .option("--limit <count>", "return at most this positive number of ideas"),
+  ).action(async (options) => {
+    const query = normalizeIdeaQuery({
+      all: options.all,
+      createdBefore: options.createdBefore,
+      createdSince: options.createdSince,
+      limit: options.limit,
+      query: options.query,
+      sort: options.sort,
+      states: options.state,
+    });
+    const report = await withTraceFile(
+      options.trace,
+      "command.list-ideas",
+      {
+        command: "list-ideas",
+        hasQuery: query.query !== null,
+        stateCount: query.states.length,
+      },
+      () => listIdeas({
+        ...query,
+        root: options.root,
+      }),
+    );
+    render(report, options.json, io);
+    program.setOptionValue(
+      "resultCode",
+      report.observation.state === "ideas-listed" ? 0 : 1,
+    );
+  });
 
   addCommonOptions(
     program

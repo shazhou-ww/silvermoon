@@ -262,6 +262,7 @@ try {
   );
   run("git", ["push", "--set-upstream", "origin", "main"], consumer);
   const help = npm(["exec", "--", "silvermoon", "--help"], consumer);
+  assert.match(help, /silvermoon list-ideas/);
   assert.match(help, /silvermoon whats-next/);
   assert.match(help, /silvermoon create-idea/);
   assert.match(help, /silvermoon check/);
@@ -278,14 +279,39 @@ try {
     [
       "--input-type=module",
       "-e",
-      "import * as silvermoon from 'silvermoon'; const names = ['CommandRun', 'checkRepository', 'createIdea', 'deriveIdeaState', 'driveCommand', 'generateUlid', 'parseIdeaStatus', 'renderResponse', 'respond', 'whatsNext']; console.log(`${names.map((name) => typeof silvermoon[name]).join(',')}|${silvermoon.DOMAIN_MESSAGE_SCHEMA_VERSION},${silvermoon.TRACE_SCHEMA_VERSION}|${Object.hasOwn(silvermoon, 'implementationCriterionIds')},${Object.hasOwn(silvermoon, 'verifyCriteriaEvidence')}`);",
+      "import * as silvermoon from 'silvermoon'; const names = ['CommandRun', 'checkRepository', 'createIdea', 'deriveIdeaState', 'driveCommand', 'generateUlid', 'listIdeas', 'normalizeIdeaQuery', 'parseIdeaStatus', 'queryIdeaInventory', 'renderResponse', 'respond', 'whatsNext']; console.log(`${names.map((name) => typeof silvermoon[name]).join(',')}|${silvermoon.DOMAIN_MESSAGE_SCHEMA_VERSION},${silvermoon.TRACE_SCHEMA_VERSION}|${Object.hasOwn(silvermoon, 'implementationCriterionIds')},${Object.hasOwn(silvermoon, 'verifyCriteriaEvidence')}`);",
     ],
     consumer,
   );
   assert.equal(
     exported,
-    "function,function,function,function,function,function,function,function,function,function|1,2|false,false",
+    "function,function,function,function,function,function,function,function,function,function,function,function,function|1,2|false,false",
   );
+  const inventory = JSON.parse(
+    npm(
+      ["exec", "--", "silvermoon", "list-ideas", "--all", "--json"],
+      consumer,
+    ),
+  );
+  assert.deepEqual(Object.keys(inventory), [
+    "intention",
+    "observation",
+    "actions",
+    "response",
+  ]);
+  assert.equal(inventory.observation.state, "ideas-listed");
+  assert.deepEqual(inventory.actions, []);
+  assert.equal(inventory.response.kind, "idea-list");
+  assert.deepEqual(inventory.response.items, inventory.observation.ideas);
+  assert.equal(inventory.observation.ideas[0].alias, "installed-smoke");
+  assert.equal(inventory.observation.ideas[0].title, "Installed package smoke");
+  const inventoryText = npm(
+    ["exec", "--", "silvermoon", "list-ideas", "--state", "active"],
+    consumer,
+  );
+  assert.match(inventoryText, /^## Ideas/);
+  assert.match(inventoryText, /installed-smoke/);
+  assert.doesNotMatch(inventoryText, /Next steps/);
   const localizedCheck = JSON.parse(
     npm(
       ["exec", "--", "silvermoon", "check", "--language", "ZH-cn", "--json"],

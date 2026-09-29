@@ -214,3 +214,35 @@ test("documents the four projections and unified event trace", async () => {
     /intention\s*\/\s*observation\s*\/\s*outcomes\s*\/\s*instructions/,
   );
 });
+
+test("documents the dedicated local idea inventory query", async () => {
+  const paths = [
+    "README.md",
+    "README.zh-CN.md",
+    "docs/getting-started.md",
+    "docs/operations.md",
+    "docs/reference.md",
+    "docs/repository-tasks.md",
+    "skills/silvermoon/SKILL.md",
+  ];
+  const sources = await Promise.all(
+    paths.map((path) => readFile(resolve(repositoryRoot, path), "utf8")),
+  );
+  for (const source of sources) assert.match(source, /list-ideas/);
+  const detailed = sources.slice(2, 5).join("\n");
+  for (const option of [
+    "--state",
+    "--all",
+    "--query",
+    "--created-since",
+    "--created-before",
+    "--sort",
+    "--limit",
+  ]) {
+    assert.match(detailed, new RegExp(option));
+  }
+  assert.match(detailed, /worktree snapshot/);
+  assert.match(detailed, /never fetches|never\s+fetches/);
+  assert.match(detailed, /ideas-listed/);
+  assert.match(detailed, /idea-list/);
+});

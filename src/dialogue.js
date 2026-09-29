@@ -1,13 +1,10 @@
 import { localize } from "./language.js";
+import {
+  ACTIVE_IDEA_STATES,
+  IDEA_STATES,
+} from "./ideas.js";
 
-const ACTIVE_STATES = new Set(["preparing", "implementing", "deploying"]);
-const IDEA_STATES = [
-  "preparing",
-  "implementing",
-  "deploying",
-  "completed",
-  "abandoned",
-];
+const ACTIVE_STATES = new Set(ACTIVE_IDEA_STATES);
 
 export function diagnosticProblem(diagnostic, language = "en-US") {
   const location = diagnostic.path ? ` (${diagnostic.path})` : "";

@@ -16,6 +16,8 @@ test("exports the versioned command event model and pure response API", () => {
     "DomainInvariantError",
     "driveCommand",
     "initialInternalObservation",
+    "listIdeas",
+    "normalizeIdeaQuery",
     "projectActions",
     "projectIntention",
     "projectPublicObservation",
@@ -24,6 +26,7 @@ test("exports the versioned command event model and pure response API", () => {
     "renderResponse",
     "replayObservation",
     "respond",
+    "queryIdeaInventory",
   ]) {
     assert.equal(typeof silvermoon[name], "function", name);
   }

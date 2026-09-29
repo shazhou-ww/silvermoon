@@ -20,6 +20,7 @@ Silvermoon 需要 Node.js 22 或更高版本，并且能够通过 Git 访问仓�
 ```sh
 npm install --global silvermoon
 silvermoon whats-next
+silvermoon list-ideas
 ```
 
 Silvermoon 不依赖目标仓库的技术栈：目标项目无需 `package.json`、package manager、
@@ -42,6 +43,12 @@ preferredLanguage: zh-CN
 这些持久化值决定项目内容所用语言。若只需改变单次命令的内置输出语言，可使用
 `whats-next --language en-US|zh-CN` 或 `check --language en-US|zh-CN`；该临时覆盖
 不会写入任何配置或 idea。
+
+只想查看当前本地 inventory 时使用 `list-ideas`。它默认返回 active ideas，并支持
+可重复的 `--state`、`--all`、literal `--query`、RFC 3339
+`--created-since` / `--created-before`、`--sort` 和 `--limit`。与 lifecycle
+导航不同，这个只读查询使用有效的 worktree snapshot，不检查 branch、upstream、
+cleanliness、网络或 primary 同步。
 
 然后创建一个 idea，让已注册的 Silvermoon skill 每次引导一个安全的下一步行动：
 

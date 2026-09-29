@@ -8,6 +8,7 @@ export const IDEA_STATES = [
   "completed",
   "abandoned",
 ];
+export const ACTIVE_IDEA_STATES = IDEA_STATES.slice(0, 3);
 
 const ULID = /^[0-7][0-9A-HJKMNP-TV-Z]{25}$/;
 const OBJECT_ID = /^(?:[0-9a-f]{40}|[0-9a-f]{64})$/;

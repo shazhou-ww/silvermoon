@@ -333,12 +333,22 @@ export async function checkRepository({
 }
 
 export {
+  ACTIVE_IDEA_STATES,
   deriveIdeaState,
+  IDEA_STATES,
   isValidUlid,
   parseIdeaStatus,
   serializeIdeaStatus,
   validateIdeaStatus,
 } from "./ideas.js";
+export {
+  extractIdeaTitle,
+  ideaCreatedAt,
+  ideaInventoryItem,
+  normalizeIdeaQuery,
+  queryIdeaInventory,
+} from "./idea-query.js";
+export { listIdeas } from "./list-ideas.js";
 export { createIdea, generateUlid } from "./create-idea.js";
 export {
   inspectAdoption,

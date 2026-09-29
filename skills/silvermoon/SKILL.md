@@ -1,21 +1,23 @@
 ---
 name: silvermoon
-description: "Navigate or create repository-owned ideas through structured observations and responses."
-argument-hint: "[new | idea ULID or alias]"
+description: "Query, navigate, or create repository-owned ideas through structured observations and responses."
+argument-hint: "[list | new | idea ULID or alias]"
 user-invocable: true
 ---
 
 # Silvermoon
 
-Use Silvermoon to navigate or create ideas against the configured primary.
-The CLI observes repository and lifecycle state; the Agent performs instructed
+Use Silvermoon to query, navigate, or create repository-owned ideas.
+The CLI observes project and lifecycle state; the Agent performs instructed
 repository or external actions with ordinary tools and Git.
 
 ## Choose And Run The Command
 
-- `/silvermoon new` and other explicit new-idea requests use
-  `silvermoon create-idea`. Otherwise use `silvermoon whats-next [idea]`, passing
-  a selector only when the user supplied or previously selected it.
+- Explicit requests to view, search, or filter the local idea inventory use
+  `silvermoon list-ideas`. `/silvermoon new` and other explicit new-idea
+  requests use `silvermoon create-idea`. Otherwise use
+  `silvermoon whats-next [idea]`, passing a selector only when the user supplied
+  or previously selected it.
 - Bare `whats-next` lists active ideas and offers creation, even when exactly one idea is active.
   Never infer selection; require an explicit ULID or alias.
 - Use `--json` only when a programmatic consumer needs all four report
@@ -32,6 +34,14 @@ repository or external actions with ordinary tools and Git.
   Reobserve after resolving a blocker or making an expected change.
 - Markdown is a rendering of the report, not a second decision model. A
   selected idea reports its lifecycle state; creation reports its new identity.
+
+`list-ideas` validates the local project and complete idea layout, then queries
+the current worktree snapshot without checking conflicts, cleanliness, branch,
+upstream, network, or primary ancestry. It never fetches. Use its repeatable
+`--state`, `--all`, literal `--query`, RFC 3339 creation bounds,
+`--sort newest|oldest`, and positive `--limit` options only when the user asks
+for those filters; the default is all active ideas. It has no `--language`
+override.
 
 `whats-next` may fetch and inspect but never changes files, branches, index, or
 refs. `create-idea` requires the configured primary branch and upstream plus a

@@ -133,6 +133,7 @@ State is derived in order:
 ## Public Commands
 
 ```sh
+silvermoon list-ideas [--state <state>] [--all] [--query <text>] [--created-since <RFC3339>] [--created-before <RFC3339>] [--sort <newest|oldest>] [--limit <positive-integer>] [--trace <file.trace.jsonl>]
 silvermoon whats-next [idea] [--language <en-US|zh-CN>] [--trace <file.trace.jsonl>]
 silvermoon create-idea [--language <tag>] [--trace <file.trace.jsonl>]
 silvermoon check [--remote | --commit <revision> | --staged | --worktree] [--language <en-US|zh-CN>] [--trace <file.trace.jsonl>]
@@ -173,7 +174,9 @@ projections:
 
 - `intention` contains the command and normalized business arguments. For
   `whats-next` and `check`, `args.language` is the canonical temporary output
-  override or `null`. Output format is not part of the intention.
+  override or `null`. For `list-ideas`, args contain the expanded canonical
+  state set, normalized UTC bounds, sort, and numeric limit. Output format is
+  not part of the intention.
 - `observation` describes the reliable facts for the requested command and
   intent, not a mandatory global idea inventory. `outputLanguage` is present
   even when Git, configuration, or a requested snapshot is unavailable.
@@ -210,11 +213,14 @@ projection.
 
 Default Markdown renders only `response`, never the intention, observation, or
 action history. It begins with the answer, then includes only relevant idea
-references, validation details, problems, next steps, and blockquoted guidance.
-`--json` serializes the four projections from the same domain stream; there is
-no YAML output or second reasoning path. A trustworthy blocked report still
-exits `0` for `whats-next` and `create-idea`; `1` means an internal failure
-prevented a trustworthy report, and `2` means invalid CLI usage.
+references, inventory details, validation details, problems, next steps, and
+blockquoted guidance. `--json` serializes the four projections from the same
+domain stream; there is no YAML output or second reasoning path. A trustworthy
+blocked report still exits `0` for `whats-next` and `create-idea`.
+`list-ideas` exits `0` only for a trustworthy inventory (including an empty
+result) and exits `1` for setup or layout unavailability. `check` exits `0`
+only for a valid snapshot and otherwise exits `1`. Internal failures also exit
+`1`; invalid CLI usage exits `2`.
 
 All commands accept `--trace <file.trace.jsonl>`. If the supplied path does not
 end with the exact lowercase `.trace.jsonl` suffix, Silvermoon appends it while
@@ -239,8 +245,9 @@ repository cannot affect that invocation's worktree observation. The file is
 written after measured command work finishes and uses exclusive creation, so
 an existing normalized target is never overwritten.
 
-Unsupported output locales, empty values, and invalid BCP 47 tags are usage
-errors with exit status `2`, before repository inspection or fetch.
+Unsupported output locales, empty values, invalid BCP 47 tags, and invalid
+`list-ideas` filters are usage errors with exit status `2`, before repository
+inspection, trace creation, or fetch.
 
 Observations are discriminated by command intent and `state`:
 
@@ -270,6 +277,13 @@ Observations are discriminated by command intent and `state`:
   returns `idea-create-failed` without `createdIdea`, records separate
   scaffold and cleanup actions, and exposes cleanup facts; preflight failures
   retain their setup or local preparation state.
+- Successful `list-ideas` returns `ideas-listed`. Its observation contains the
+  normalized snapshot facts, all-five-state counts for the filtered set,
+  matched/returned/truncated totals, and ordered items with ID, lifecycle
+  state, UTC `createdAt`, and optional alias/title. Its empty `actions` and
+  `idea-list` response are deterministic projections of the same command run.
+  Setup or layout failures remain cumulative `project-setup-required`
+  observations and never return a partial inventory.
 
 Dialogue versions have `version.type: "worktree"`. When present, `ideas.counts` has
 `preparing`, `implementing`, `deploying`, `completed`, and `abandoned`;
@@ -300,6 +314,21 @@ ancestry, or require local HEAD to match the remote tip. Its optional
 content-language choice accepts any canonical BCP 47 tag, is normalized before
 preflight, and is persisted to the new idea; without it the status remains
 dynamically inherited. It does not stage, commit, push, or record approval.
+
+`list-ideas` is a local worktree query, not lifecycle navigation. With no
+filters it selects the three active states. Repeated `--state` values form a
+deduplicated union and `active` expands to those states; `--all` selects all
+five states and is mutually exclusive with `--state`. Case-insensitive literal
+`--query` matches ID, alias, or the first level-one `Idea.md` heading. RFC 3339
+creation bounds use `[created-since, created-before)` against the timestamp
+encoded in each ULID. Sorting defaults to stable newest-first, and limit is
+applied after filtering and sorting without changing matched counts.
+
+The query validates Git presence, configuration, canonical skill, and the
+complete idea layout before filtering. It reads staged, unstaged, and
+untracked idea changes from the current worktree snapshot but never checks
+worktree hygiene, branch, upstream, or primary ancestry, and never fetches or
+accesses the network. It has no temporary `--language` option.
 
 ## Validation Targets
 

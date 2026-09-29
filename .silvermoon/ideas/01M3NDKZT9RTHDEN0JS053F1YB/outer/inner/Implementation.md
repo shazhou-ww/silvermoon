@@ -27,10 +27,11 @@ hygiene、branch/upstream、fetch 或 ancestry 比较。保证过滤前先验证
 ### I-S04: 接入 CLI、API 与纯查询 renderer
 
 注册 `list-ideas` 及 common `--root`、`--json`、`--trace`，再加入 state、all、
-query、created-since/before、sort 和 limit options。输出只含
-`intention`/`observation`；文本呈现筛选摘要、数量、截断事实和有序 items，
-不复用 dialogue instructions。实现成功 `0`、unavailable `1`、usage `2` 的
-明确退出行为。
+query、created-since/before、sort 和 limit options。输出统一包含
+`intention`/`observation`/`actions`/`response` 四个 projection；纯查询的
+actions 为空，成功 response 使用 `idea-list`。文本仅从 response 呈现筛选摘要、
+数量、截断事实和有序 items，不复用 lifecycle instructions。实现成功 `0`、
+unavailable `1`、usage `2` 的明确退出行为。
 
 ### I-S05: 更新操作指南与自动化证据
 
@@ -74,11 +75,13 @@ index、refs、配置或 status。
 
 ### I-AC05: 纯查询输出完整且不伪造
 
-成功 JSON 恰好含 `intention` 与 `observation`，规范化参数、五态 counts、
-matched/returned/truncated 以及有序 items 与文本一致；不存在 `outcomes`、
-`instructions` 或 lifecycle 建议。alias 或标题缺失时，对应可选 key 与文本片段
-均省略，不以其他字段冒充；empty 与 limited 结果都明确表达完整性。通过
-renderer、CLI contract 和 installed-package E2E 的 exact-key/semantic
+成功 JSON 恰好含 `intention`、`observation`、`actions` 与 `response`，其中
+actions 为空，response 是从 normalized intention 与 final observation 纯函数
+生成的 `idea-list`。规范化参数、五态 counts、matched/returned/truncated 以及
+有序 items 在 observation、response 与文本之间一致；不存在旧 `outcomes`、
+顶层 `instructions` 或 lifecycle 建议。alias 或标题缺失时，对应可选 key 与
+文本片段均省略，不以其他字段冒充；empty 与 limited 结果都明确表达完整性。
+通过 renderer、CLI contract 和 installed-package E2E 的 exact-key/semantic
 assertions 证明。
 
 ### I-AC06: 不可信项目或 layout 显式失败

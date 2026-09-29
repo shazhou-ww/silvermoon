@@ -26,7 +26,7 @@ entries, same-world supporting artifacts, and the ledger. A caller may use
 `whats-next` invocation. Commands, identifiers, schema fields, protocol
 markers, and verbatim tool output retain their original form.
 
-Every invocation follows three strict layers. It first checks Git,
+Every `whats-next` invocation follows three strict layers. It first checks Git,
 configuration compatibility, and `.agents/skills/silvermoon`. It then checks
 local conflicts, changes, HEAD, and upstream identity before any remote access.
 Only after those checks pass does it fetch primary, compare ancestry, and
@@ -41,6 +41,42 @@ only its path, phase, and content revision. Invalid current-phase guidance
 returns a `phase-guidance-invalid` observation with remediation instead of
 lifecycle next steps. Bare navigation, unknown selectors, terminal ideas, and any
 higher-priority setup, hygiene, fetch, or ancestry block do not read guidance.
+
+## Query The Local Inventory
+
+Use `list-ideas` for an explicit inventory query that must not choose work or
+perform repository synchronization:
+
+```sh
+silvermoon list-ideas
+silvermoon list-ideas --state active --state completed
+silvermoon list-ideas --all --query documentation
+silvermoon list-ideas --created-since 2026-09-01T00:00:00Z
+silvermoon list-ideas --created-before 2026-10-01T00:00:00Z
+silvermoon list-ideas --sort oldest --limit 25 --json
+```
+
+The command reads one valid local worktree snapshot. It checks the project
+configuration, canonical skill, and complete idea layout, but deliberately
+does not check conflicts, cleanliness, current branch, upstream, primary
+ancestry, or network availability. It never fetches. Filters cannot hide an
+invalid idea; setup or layout failures return a `blocked` four-projection
+report and exit `1`.
+
+The default state set is `preparing`, `implementing`, and `deploying`.
+Repeated `--state` values form a deduplicated union, `active` expands to those
+three states, and `--all` selects all five states but conflicts with
+`--state`. Literal case-insensitive `--query` matches ULID, alias, or the first
+level-one heading in `Idea.md`. Creation bounds are RFC 3339 timestamps and use
+`[created-since, created-before)` against UTC time decoded from the ULID.
+`--sort newest|oldest` is stable for same-millisecond IDs, and positive
+`--limit` is applied after filtering and sorting while preserving full
+matched counts.
+
+Success uses `observation.state: "ideas-listed"`, records no actions, and
+returns an `idea-list` response without lifecycle instructions. Usage errors
+exit `2` before repository inspection or trace creation. `list-ideas` does not
+accept the temporary `--language` option.
 
 ## Create An Idea
 

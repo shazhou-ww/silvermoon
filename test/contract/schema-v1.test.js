@@ -156,6 +156,50 @@ test("publishes command report, domain message, and trace event schemas", async 
       JSON.stringify(domainMessage.errors),
     );
   }
+
+  const listRuntime = createCommandRun({
+    command: "list-ideas",
+    args: {
+      states: ["preparing", "implementing", "deploying"],
+      query: null,
+      createdSince: null,
+      createdBefore: null,
+      sort: "newest",
+      limit: null,
+    },
+  });
+  const listReport = listRuntime.complete({
+    state: "ideas-listed",
+    root: "C:\\repository",
+    version: { type: "worktree" },
+    outputLanguage: "en-US",
+    problems: [],
+    summary: {
+      matched: 0,
+      returned: 0,
+      truncated: false,
+      counts: {
+        preparing: 0,
+        implementing: 0,
+        deploying: 0,
+        completed: 0,
+        abandoned: 0,
+      },
+    },
+    ideas: [],
+  });
+  assert.equal(
+    commandReport(listReport),
+    true,
+    JSON.stringify(commandReport.errors),
+  );
+  for (const message of listRuntime.events) {
+    assert.equal(
+      domainMessage(message),
+      true,
+      JSON.stringify(domainMessage.errors),
+    );
+  }
 });
 
 test("rejects invalid repository configuration through its public schema", async () => {

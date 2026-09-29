@@ -115,6 +115,37 @@ the resolved content language and can therefore differ from `outputLanguage`.
 Without a temporary override, Chinese content tags use `zh-CN` output and all
 other content tags use the built-in `en-US` output.
 
+## Inspect The Local Idea Inventory
+
+Use the dedicated read-only query when the question is which ideas exist,
+rather than what lifecycle action comes next:
+
+```sh
+silvermoon list-ideas
+silvermoon list-ideas --state implementing --state deploying
+silvermoon list-ideas --all --query release --sort oldest --limit 20
+silvermoon list-ideas \
+  --created-since 2026-09-01T00:00:00Z \
+  --created-before 2026-10-01T00:00:00Z
+```
+
+The default set is `preparing`, `implementing`, and `deploying`. Repeated state
+values form a deduplicated union, while text and time filters intersect with
+that set. `active` expands to the default three states; `--all` selects all
+five lifecycle states and cannot be combined with `--state`. Sorting is
+newest-first unless `--sort oldest` is given, and `--limit` is applied only
+after filtering and stable sorting.
+
+`list-ideas` validates Git presence, project configuration, the canonical
+skill, and the complete idea layout, then reads the current worktree snapshot.
+It does not inspect cleanliness, branch, upstream, or ancestry and never
+fetches or contacts the configured primary. Staged, unstaged, and untracked
+idea changes are therefore visible when they form a valid snapshot. Invalid
+query arguments fail with exit `2` before repository or trace access; an
+untrusted project or layout exits `1` instead of returning a partial list.
+The command has no temporary `--language` option and uses the project's
+resolved output language.
+
 ## Create The First Idea
 
 Run:

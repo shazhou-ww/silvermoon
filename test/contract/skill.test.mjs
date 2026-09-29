@@ -62,8 +62,8 @@ test("exposes one consolidated silvermoon skill", async () => {
   assert.deepEqual(document.toJS(), {
     name: "silvermoon",
     description:
-      "Navigate or create repository-owned ideas through structured observations and responses.",
-    "argument-hint": "[new | idea ULID or alias]",
+      "Query, navigate, or create repository-owned ideas through structured observations and responses.",
+    "argument-hint": "[list | new | idea ULID or alias]",
     "user-invocable": true,
   });
 
@@ -72,6 +72,7 @@ test("exposes one consolidated silvermoon skill", async () => {
     "retry `create-idea`,",
     "silvermoon whats-next [idea]",
     "silvermoon create-idea",
+    "silvermoon list-ideas",
     "--language en-US|zh-CN",
     "temporary output locale",
     "create-idea --language <tag>",

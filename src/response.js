@@ -217,6 +217,7 @@ function dialogueResponse(intention, internalObservation, language) {
         `Matched ${observation.summary.matched} idea(s) and returned ${observation.summary.returned}.`,
         `匹配 ${observation.summary.matched} 个 idea，返回 ${observation.summary.returned} 个。`,
       ),
+      query: clone(intention.args),
       inventory: clone(observation.summary),
       items: clone(observation.ideas),
     };
@@ -300,6 +301,45 @@ export function renderResponse(response) {
   const language = response.language ?? DEFAULT_LANGUAGE;
   const lines = [`## ${responseTitle(response)}`, "", response.summary];
 
+  if (response.inventory) {
+    const counts = Object.entries(response.inventory.counts)
+      .map(([state, count]) => `${state}=${count}`)
+      .join(", ");
+    lines.push(
+      "",
+      `- ${localize(language, "States", "状态")}: ${response.query.states
+        .map(codeSpan)
+        .join(", ")}`,
+    );
+    if (response.query.query !== null) {
+      lines.push(
+        `- ${localize(language, "Query", "查询")}: ${codeSpan(response.query.query)}`,
+      );
+    }
+    if (response.query.createdSince !== null) {
+      lines.push(
+        `- ${localize(language, "Created since", "创建时间下界")}: ${codeSpan(response.query.createdSince)}`,
+      );
+    }
+    if (response.query.createdBefore !== null) {
+      lines.push(
+        `- ${localize(language, "Created before", "创建时间上界")}: ${codeSpan(response.query.createdBefore)}`,
+      );
+    }
+    lines.push(
+      `- ${localize(language, "Sort", "排序")}: ${codeSpan(response.query.sort)}`,
+      `- ${localize(language, "Limit", "上限")}: ${response.query.limit === null
+        ? localize(language, "none", "无")
+        : codeSpan(response.query.limit)}`,
+      `- ${localize(language, "Matched", "匹配")}: ${response.inventory.matched}`,
+      `- ${localize(language, "Returned", "返回")}: ${response.inventory.returned}`,
+      `- ${localize(language, "Truncated", "已截断")}: ${response.inventory.truncated
+        ? localize(language, "yes", "是")
+        : localize(language, "no", "否")}`,
+      `- ${localize(language, "Counts", "计数")}: ${counts}`,
+    );
+  }
+
   if (response.validation) {
     const target = response.validation.target.type === "commit"
       ? `${response.validation.target.type} ${response.validation.target.revision}`
@@ -359,8 +399,21 @@ export function renderResponse(response) {
       lines.push(localize(language, "No ideas matched.", "没有匹配的 idea。"));
     } else {
       for (const idea of response.items) {
-        const alias = idea.alias === undefined ? "" : ` (${idea.alias})`;
-        lines.push(`- ${codeSpan(idea.id)}${alias} ${idea.state}`);
+        const details = [
+          `${localize(language, "State", "状态")}=${codeSpan(idea.state)}`,
+          `${localize(language, "Created", "创建时间")}=${codeSpan(idea.createdAt)}`,
+        ];
+        if (idea.alias !== undefined) {
+          details.push(
+            `${localize(language, "Alias", "Alias")}=${codeSpan(idea.alias)}`,
+          );
+        }
+        if (idea.title !== undefined) {
+          details.push(
+            `${localize(language, "Title", "标题")}=${codeSpan(idea.title)}`,
+          );
+        }
+        lines.push(`- ${codeSpan(idea.id)}: ${details.join("; ")}`);
       }
     }
   }
