@@ -1,34 +1,33 @@
-# Implementation
+# 实施方案
 
-## Steps
-
-<!--
-Give every step a stable I-Sxx identifier and a level-three heading.
-Describe what will change, its boundaries, and important design details.
-Do not use task-list checkboxes in this document.
--->
-
-### I-S01: Render Active ideas using the list-ideas table style
-
-Update the human-readable `whats-next` renderer to show available active idea
-fields in an ID/Alias/State Markdown table following `list-ideas` conventions.
-Reuse the shared cell escaping behavior for backslashes, pipes, and line breaks,
-and retain an explicit empty-list message under the Active ideas heading.
-Preserve summary, counts, selection behavior, next steps, and the existing JSON
-report. Add focused regression tests for populated and empty lists, escaped
-cells, and unchanged `list-ideas` rendering.
-
-## Acceptance criteria
+## 实施步骤
 
 <!--
-Give every criterion a stable I-ACxx identifier and a level-three heading.
-Describe both the observable outcome and the method that proves it.
-Do not create a separate validation section or use task-list checkboxes.
+为每个步骤分配稳定的 I-Sxx 标识符和三级标题。
+说明修改内容、边界和重要设计细节。
+不要在本文档中使用任务列表复选框。
 -->
 
-### I-AC01: Keep navigation output readable and backward compatible
+### I-S01: 使用 list-ideas 表格样式呈现 Active ideas
 
-Targeted navigation, response contract, and `list-ideas` integration tests prove
-that human-readable Active ideas uses an ID/Alias/State table, handles empty
-results and Markdown-special cell content, and retains summary, counts,
-selection guidance, next steps, JSON shape, and existing `list-ideas` output.
+更新人类可读的 `whats-next` 渲染器，按照 `list-ideas` 约定，以
+ID/Alias/State Markdown 表格展示可用的 active idea 字段。复用共享的单元格
+转义行为，正确处理反斜杠、竖线和换行，并在 Active ideas 标题下保留明确的
+空列表提示。保持 summary、计数、选择行为、下一步以及现有 JSON 报告不变。
+添加聚焦的回归测试，覆盖非空和空列表、转义后的单元格，以及保持不变的
+`list-ideas` 渲染。
+
+## 验收标准
+
+<!--
+为每项标准分配稳定的 I-ACxx 标识符和三级标题。
+同时说明可观察结果及其证明方法。
+不要创建单独的验证章节，也不要使用任务列表复选框。
+-->
+
+### I-AC01: 保持导航输出易读且向后兼容
+
+聚焦的导航、响应契约和 `list-ideas` 集成测试证明：人类可读的 Active ideas
+使用 ID/Alias/State 表格，能够处理空结果和包含 Markdown 特殊字符的单元格，
+并保留 summary、计数、选择指引、下一步、JSON 结构以及现有的 `list-ideas`
+输出。

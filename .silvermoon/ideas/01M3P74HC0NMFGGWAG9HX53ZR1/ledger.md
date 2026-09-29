@@ -1,14 +1,14 @@
-# Ledger
+# 执行台账
 
-## Implementation
+## 实施
 
-### Implementation steps
+### 实施步骤
 
-- [x] **I-S01:** Render Active ideas using the list-ideas table style
+- [x] **I-S01:** 使用 list-ideas 表格样式呈现 Active ideas
 
-### Implementation acceptance criteria
+### 实施验收标准
 
-- [x] **I-AC01:** Keep navigation output readable and backward compatible
+- [x] **I-AC01:** 保持导航输出易读且向后兼容
 
 ## Deployment
 

@@ -193,13 +193,17 @@ test("keeps repository idea titles specific and ledger headings unique", async (
     const headings = [...ledger.matchAll(/^#{1,6} (.+)$/gm)]
       .map(([, heading]) => heading);
     assert.equal(new Set(headings).size, headings.length, idea.name);
-    for (const heading of [
-      "Implementation steps",
-      "Implementation acceptance criteria",
-      "Deployment steps",
-      "Deployment acceptance criteria",
+    for (const alternatives of [
+      ["Implementation steps", "实施步骤"],
+      ["Implementation acceptance criteria", "实施验收标准"],
+      ["Deployment steps", "部署步骤"],
+      ["Deployment acceptance criteria", "部署验收标准"],
     ]) {
-      assert.ok(headings.includes(heading), `${idea.name} is missing: ${heading}`);
+      assert.equal(
+        alternatives.filter((heading) => headings.includes(heading)).length,
+        1,
+        `${idea.name} must contain exactly one of: ${alternatives.join(", ")}`,
+      );
     }
   }
 });
