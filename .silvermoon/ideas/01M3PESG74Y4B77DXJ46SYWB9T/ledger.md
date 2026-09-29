@@ -20,8 +20,12 @@
 
 ### Deployment steps
 
-- [ ] **D-S01:** 步骤标题
+- [x] **D-S01:** 发布仓库部署契约
+- [x] **D-S02:** 验证已发布的 primary snapshot
+- [x] **D-S03:** 验证真实内容语言行为
 
 ### Deployment acceptance criteria
 
-- [ ] **D-AC01:** 标准标题
+- [x] **D-AC01:** Primary 包含完整部署候选
+- [x] **D-AC02:** 内容语言契约在真实 CLI 中成立
+- [x] **D-AC03:** Release-grade 验证保持通过

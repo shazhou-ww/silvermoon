@@ -74,11 +74,15 @@ test("keeps both READMEs reader-first and structurally aligned", async () => {
   for (const source of [english, chinese]) {
     assert.match(
       source,
-      /cdn\.jsdelivr\.net\/gh\/shazhou-ww\/silvermoon@main\/assets\/silvermoon\.svg/,
+      /src="\.\/assets\/silvermoon\.svg"/,
     );
     assert.match(
       source,
-      /cdn\.jsdelivr\.net\/gh\/shazhou-ww\/silvermoon@main\/assets\/silvermoon-mascot\.png" width="160"/,
+      /src="\.\/assets\/silvermoon-mascot\.png" width="160"/,
+    );
+    assert.doesNotMatch(
+      source,
+      /cdn\.jsdelivr\.net\/gh\/shazhou-ww\/silvermoon@main\/assets\//,
     );
     assert.doesNotMatch(source, /raw\.githubusercontent\.com\/shazhou-ww\/silvermoon/);
     assert.match(source, /<table>[\s\S]*silvermoon-mascot\.png[\s\S]*<\/table>/);

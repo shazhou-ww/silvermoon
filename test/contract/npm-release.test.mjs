@@ -292,6 +292,8 @@ test("documents trusted-publisher setup and the protected release procedure", as
     "verify-npm-release.mjs",
     "package-level README",
     "jsDelivr",
+    "canonical `./assets/...` image paths",
+    "release-commit-pinned jsDelivr URLs",
   ]) {
     assert.ok(guide.includes(required), `Release guide is missing: ${required}`);
   }

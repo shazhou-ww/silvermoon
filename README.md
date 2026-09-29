@@ -2,7 +2,7 @@
 
 <p align="center">
   <!-- markdownlint-disable-next-line MD013 -->
-  <img src="https://cdn.jsdelivr.net/gh/shazhou-ww/silvermoon@main/assets/silvermoon.svg" width="960" alt="Silvermoon, the artifact spirit of the project">
+  <img src="./assets/silvermoon.svg" width="960" alt="Silvermoon, the artifact spirit of the project">
 </p>
 
 <p align="center">
@@ -78,7 +78,7 @@ sessions, Agents, and hosting platforms.
   <tr>
     <td width="160" align="center" valign="top">
       <!-- markdownlint-disable-next-line MD013 -->
-      <img src="https://cdn.jsdelivr.net/gh/shazhou-ww/silvermoon@main/assets/silvermoon-mascot.png" width="160" alt="Full-body portrait of Silvermoon, the project's artifact spirit">
+      <img src="./assets/silvermoon-mascot.png" width="160" alt="Full-body portrait of Silvermoon, the project's artifact spirit">
     </td>
     <td valign="top">
       Silvermoon is named after a character in <em>A Record of a Mortal's

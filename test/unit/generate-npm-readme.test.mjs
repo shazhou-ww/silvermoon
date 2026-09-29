@@ -24,6 +24,20 @@ test("migrates the legacy raw main endpoint to commit-pinned jsDelivr", () => {
   );
 });
 
+test("rewrites safe relative Markdown images and HTML sources to jsDelivr", () => {
+  const source = [
+    "![Logo](./assets/silvermoon.svg)",
+    '<img src="./assets/silvermoon-mascot.png" width="160">',
+  ].join("\n");
+  assert.equal(
+    generateNpmReadme({ source, commit }),
+    [
+      `![Logo](https://cdn.jsdelivr.net/gh/shazhou-ww/silvermoon@${commit}/assets/silvermoon.svg)`,
+      `<img src="https://cdn.jsdelivr.net/gh/shazhou-ww/silvermoon@${commit}/assets/silvermoon-mascot.png" width="160">`,
+    ].join("\n"),
+  );
+});
+
 test("rewrites Markdown relative links to immutable blob URLs", () => {
   const source = "[Getting Started](./docs/getting-started.md)";
   assert.equal(
@@ -67,6 +81,16 @@ test("is deterministic for the same source and commit", () => {
   );
 });
 
+test("preserves external images, links, and HTML references", () => {
+  const source = [
+    "![badge](https://img.shields.io/npm/v/silvermoon)",
+    "[video](https://www.youtube.com/watch?v=GJgezoCBIHM)",
+    '<img src="https://example.com/logo.svg">',
+    '<a href="//example.com/docs">Docs</a>',
+  ].join("\n");
+  assert.equal(generateNpmReadme({ source, commit }), source);
+});
+
 test("rejects malformed release commits", () => {
   assert.throws(
     () => generateNpmReadme({ source: "# ok", commit: "abc" }),
@@ -105,23 +129,27 @@ test("fails closed on movable hosted repository references", () => {
   );
 });
 
-test("fails closed on relative repository links and resources", () => {
-  assert.throws(
-    () => generateNpmReadme({ source: "[Docs](docs/getting-started.md)", commit }),
-    /Unrecognized relative repository Markdown link/,
-  );
-  assert.throws(
-    () => generateNpmReadme({ source: '<img src="./assets/silvermoon.svg">', commit }),
-    /Relative repository HTML resource/,
-  );
-  assert.throws(
-    () => generateNpmReadme({ source: "![Logo](./assets/silvermoon.svg)", commit }),
-    /Relative repository Markdown image/,
-  );
-  assert.throws(
-    () => generateNpmReadme({ source: "[Up](../package.json)", commit }),
-    /Unrecognized relative repository Markdown link/,
-  );
+test("fails closed on unsafe or unknown relative repository references", () => {
+  const cases = [
+    ["[Docs](docs/getting-started.md)", /Unrecognized relative repository Markdown link/],
+    ["[Up](../package.json)", /Unrecognized relative repository Markdown link/],
+    ["[Traversal](./docs/../package.json)", /must not traverse/],
+    ['<a href="./docs//reference.md">Docs</a>', /must not traverse/],
+    ['<a href="/docs/reference.md">Docs</a>', /Unrecognized relative repository HTML href/],
+    ["![Logo](./docs/logo.svg)", /Unrecognized relative repository Markdown image/],
+    ["![Logo](./assets/logo.txt)", /Unrecognized relative repository Markdown image/],
+    ["![Logo](./assets/../package.json)", /must not traverse/],
+    ['<img src="./scripts/logo.svg">', /Unrecognized relative repository HTML resource/],
+    ['<img src="./assets/%2e%2e/package.json">', /canonical path/],
+    ['<img src="./assets/silvermoon.svg#icon">', /canonical path/],
+    ['<img src=" ./assets/silvermoon.svg">', /canonical path/],
+    ['<img src = "./assets/silvermoon.svg">', /Unrecognized relative repository HTML reference/],
+    ["<img src=./assets/silvermoon.svg>", /Unrecognized relative repository HTML reference/],
+    ["![Logo][logo]\n[logo]: ./assets/silvermoon.svg", /Unrecognized relative repository Markdown reference/],
+  ];
+  for (const [source, error] of cases) {
+    assert.throws(() => generateNpmReadme({ source, commit }), error, source);
+  }
 });
 
 test("does not mutate the provided source string", () => {
