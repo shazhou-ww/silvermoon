@@ -47,13 +47,39 @@
 
 ### Deployment steps
 
-- [ ] **D-S01:** 发布无发版部署契约
-- [ ] **D-S02:** 验证精确 primary commit 的托管 CI
-- [ ] **D-S03:** 复核无发版交付边界与 Silvermoon 导航
+- [x] **D-S01:** 发布无发版部署契约
+- [x] **D-S02:** 验证精确 primary commit 的托管 CI
+- [x] **D-S03:** 复核无发版交付边界与 Silvermoon 导航
 
 ### Deployment acceptance criteria
 
-- [ ] **D-AC01:** 已验收实现与部署契约存在于 configured primary
-- [ ] **D-AC02:** 精确部署候选的 GitHub Actions CI 成功
-- [ ] **D-AC03:** deployment 不产生 release artifact 或发布动作
-- [ ] **D-AC04:** 发布后导航与 deployment revision 一致
+- [x] **D-AC01:** 已验收实现与部署契约存在于 configured primary
+- [x] **D-AC02:** 精确部署候选的 GitHub Actions CI 成功
+- [x] **D-AC03:** deployment 不产生 release artifact 或发布动作
+- [x] **D-AC04:** 发布后导航与 deployment revision 一致
+
+### Deployment evidence
+
+- 2026-09-29：无发版部署契约以普通 non-force commit
+  `fa10d5f3dc35f07388219dfefe979577b34db35d` 发布到 `origin/main`；
+  重新观察得到稳定 `deploymentRevision`
+  `ace89b2d5596184ccf16c5cf9669d1ca88894666`。
+- 2026-09-29：fresh `refs/heads/main` 精确指向
+  `fa10d5f3dc35f07388219dfefe979577b34db35d`；Git ancestry 核验确认
+  implementation commit `ec633e3aeea87c6cb7fa042a18d29b9ff279bba0`
+  与 implementation acceptance commit
+  `6531da416b7e6203873d8d001726263094e7d3f1` 都是该 commit 的祖先。
+- 2026-09-29：GitHub Actions `CI` run
+  https://github.com/shazhou-ww/silvermoon/actions/runs/36528124882 在 exact head
+  `fa10d5f3dc35f07388219dfefe979577b34db35d` 上以
+  `completed/success` 结束；repository contracts、Git integration 和 Linux、
+  macOS、Windows 上的 Node.js 22/24 unit jobs 共 8 项全部成功。
+- 2026-09-29：从 implementation acceptance commit 到部署契约 commit 的 diff
+  仅包含本 idea 的 `Deployment.md` 与 `ledger.md`。remote 无 tag 指向相关
+  commits，exact deployment commit 只有 `CI` push run；未修改 package version
+  或发布 workflow，未创建 npm release tag，未 dispatch `publish-npm.yml`，
+  未执行 npm publish。
+- 2026-09-29：CI 完成后再次运行
+  `silvermoon whats-next list-ideas --json`，成功 fetch exact primary commit，
+  `problems` 为空，idea 保持 `deploying`，待验收 revision 仍精确为
+  `ace89b2d5596184ccf16c5cf9669d1ca88894666`。
