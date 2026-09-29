@@ -17,75 +17,27 @@
 
 Silvermoon 需要 Node.js 22 或更高版本，并且能够通过 Git 访问仓库的 primary branch。
 
-```sh
-npm install --global silvermoon
-silvermoon whats-next
-silvermoon list-ideas
-```
-
-Silvermoon 对非 npm 仓库保持生态中立：当仓库根目录没有 `package.json` 时，无需
-package manager、Silvermoon dependency 或 `node_modules`。如果根目录存在
-`package.json`，它必须是有效 JSON，并在 `devDependencies.silvermoon` 中逐字声明
-`^<当前运行版本>`。首次报告会按项目 package manager 提供修复命令。安装根依赖后，
-从 `./node_modules/silvermoon/skills` 注册 canonical skill；非 npm 项目继续使用当前
-运行实例随附的 skill。整备检查只读取所选 repository snapshot，不会安装依赖，也不要求
-存在 `node_modules`。
-
-创建 `.silvermoon/config.yaml`：
-
-```yaml
-version: 1
-primaryRepository: https://github.com/example/repository.git
-primaryBranch: main
-preferredLanguage: zh-CN
-```
-
-`preferredLanguage` 可省略。具体 idea 可以通过 `status.yaml` 的 `language`
-覆盖它，创建时也可以使用 `create-idea --language <tag>` 设置该值。否则 Silvermoon 会继续
-读取 `~/.config/silvermoon/config.yaml`，最后稳定回退到 `en-US`。
-这些持久化值决定项目内容所用语言。若只需改变单次命令的内置输出语言，可使用
-`whats-next --language en-US|zh-CN` 或 `check --language en-US|zh-CN`；该临时覆盖
-不会写入任何配置或 idea。
-
-只想查看当前本地 inventory 时使用 `list-ideas`。它默认返回 active ideas，并支持
-可重复的 `--state`、`--all`、literal `--query`、RFC 3339
-`--created-since` / `--created-before`、`--sort` 和 `--limit`。与 lifecycle
-导航不同，这个只读查询使用有效的 worktree snapshot，不检查 branch、upstream、
-cleanliness、网络或 primary 同步。
-
-然后创建一个 idea，让已注册的 Silvermoon skill 每次引导一个安全的下一步行动：
+请项目 Agent 运行以下命令来整备仓库：
 
 ```sh
-silvermoon create-idea
-silvermoon whats-next <idea>
-silvermoon whats-next <idea> --language zh-CN
+npx silvermoon whats-next
 ```
 
-在生成的 `Idea.md` 中描述想要抵达的世界，审阅并批准这个精确 revision。此后，
-Silvermoon 会让目标、实现、仓库状态与现实结果始终相连。完整的首次工作流见英文
-[Getting Started](./docs/getting-started.md)。
-每个命令都处理一条有序且带版本的 domain-message stream。程序消费者可使用
-`--json` 获取四个确定性 projection：`intention`、`observation`、`actions` 与
-`response`。`actions` 只记录已经尝试的副作用，未来工作只位于
-`response.nextSteps`。默认 Markdown 只渲染自足的 response，不暴露内部
-projection。提交前使用 `silvermoon check --staged` 验证 index；无参数 `check`
-只验证已提交的 `HEAD`，不能替代提交前检查。只有项目快照有效时检查才以退出码
-`0` 放行，详见英文 [Technical Reference](./docs/reference.md)。
+让 Agent 遵循当前报告的最高优先级指示、保留已有工作，并在每次产生可观察变更后
+重新运行命令。只有默认输出明确显示
+`当前状态：navigation-ready` 时才算整备完成；受阻报告或任何其他状态都不表示
+已就绪。项目特定的整备方式应以当前报告为准，而不是依赖 README 中固定的命令清单。
 
-任何命令都可以添加 `--trace <file.trace.jsonl>`，写出一条 schema-versioned
-JSONL timeline。`domain` channel 保存经过 allowlist 的 message 摘要，
-`telemetry` channel 保存成对 performance span；两者共享同一个 trace ID 和全局
-sequence。Trace 不记录 guidance/文件正文、Git 参数或输出、环境数据或
-credential。参数若没有以精确的小写 `.trace.jsonl` 结尾，Silvermoon 会自动追加；
-repository 内的 `*.trace.jsonl` 会被忽略。trace 文件采用缓冲写入，只在命令工作
-完成后创建，并且绝不覆盖已有文件。
+navigation 就绪后，继续让 Agent 推进：
 
-项目可按需添加 `.silvermoon/guidance/preparing.md`、`implementing.md` 与
-`deploying.md`。Silvermoon 只会在 `response.guidance` 中返回当前可行动阶段里
-与 snapshot 绑定的 repository-owned Markdown；`observation.guidance` 仅保留
-provenance。`create-idea` 可返回 preparing guidance。这些 guidance 只能追加
-约束，不是第四份 contract 或 decision fact；`check` 会验证完整的固定目录。详见英文
-[Core Concepts](./docs/core-concepts.md)。
+```sh
+npx silvermoon create-idea
+npx silvermoon whats-next <idea>
+```
+
+在生成的 `Idea.md` 中描述想要抵达的世界，审阅并批准这个精确 revision。完整工作流见
+[Getting Started](./docs/getting-started.md)；命令、验证、JSON、语言、guidance
+与 trace 细节见 [Technical Reference](./docs/reference.md)。
 
 ## 为什么需要 Silvermoon
 

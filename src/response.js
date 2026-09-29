@@ -163,13 +163,13 @@ function dialogueResponse(intention, internalObservation, language) {
         summary: choices.length === 0
           ? localize(
             language,
-            "No active ideas are available.",
-            "当前没有 active idea。",
+            "Current state: navigation-ready. No active ideas are available.",
+            "当前状态：navigation-ready。当前没有 active idea。",
           )
           : localize(
             language,
-            `${choices.length} active idea(s) are available.`,
-            `当前有 ${choices.length} 个 active idea。`,
+            `Current state: navigation-ready. ${choices.length} active idea(s) are available.`,
+            `当前状态：navigation-ready。当前有 ${choices.length} 个 active idea。`,
           ),
         choices,
         nextSteps,

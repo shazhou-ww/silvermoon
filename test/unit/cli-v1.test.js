@@ -148,6 +148,7 @@ test("renders JSON verbatim and default output from response only", () => {
   ]);
   const text = human.logs[0];
   assert.match(text, /^## Choose what to continue\n\n/);
+  assert.match(text, /Current state: navigation-ready/);
   assert.match(text, /1 active idea\(s\) are available/);
   assert.match(text, /### Available ideas/);
   assert.match(text, /### Next steps/);
@@ -168,6 +169,7 @@ test("response rendering uses the observation output language", () => {
   render(report, false, output.io);
 
   assert.match(output.logs[0], /^## 选择要继续的工作\n\n/);
+  assert.match(output.logs[0], /当前状态：navigation-ready/);
   assert.match(output.logs[0], /当前有 1 个 active idea/);
   assert.match(output.logs[0], /### 可用 ideas/);
   assert.match(output.logs[0], /### 下一步/);
