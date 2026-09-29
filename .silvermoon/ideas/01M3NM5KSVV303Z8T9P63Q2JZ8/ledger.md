@@ -11,6 +11,7 @@
 - [x] **I-S05:** 整合 domain messages 与 performance trace
 - [x] **I-S06:** 迁移 feature integrations、文档与测试
 - [x] **I-S07:** 准备 0.2.0 RC implementation candidate
+- [ ] **I-S08:** 准备已验证 RC 之后的 stable implementation candidate
 
 ### Implementation acceptance criteria
 
@@ -23,6 +24,7 @@
 - [x] **I-AC07:** Trace 不泄露完整 domain payload
 - [x] **I-AC08:** 现有行为完成一致迁移
 - [x] **I-AC09:** 0.2.0-rc.1 candidate 可供明确验收
+- [ ] **I-AC10:** Stable 0.2.0 implementation candidate 独立通过第二次验收门
 
 ### Implementation evidence
 
@@ -37,6 +39,9 @@
   CLI worktree check 与 `git diff --check` 通过。
 - 2026-09-29: `0.2.0-rc.1` npm version 及 local/remote release tag 均不存在；
   candidate 未创建 tag、未执行 publish、未发布到 npm。
+- 2026-09-29: RC `0.2.0-rc.1` 已按 Deployment evidence 发布和验证。用户明确同意
+  返回 implementing 准备 stable candidate；新增 I-S08/I-AC10 以限定版本变更、
+  验证和再次 acceptance gate。Stable manifest 与发布尚未处理。
 
 ## Deployment
 
@@ -45,7 +50,7 @@
 - [x] **D-S01:** 确认 RC 发布前提与显式授权
 - [x] **D-S02:** 发布不可变的 0.2.0 RC
 - [x] **D-S03:** 在真实消费者中验证 RC
-- [ ] **D-S04:** 处理 RC 缺陷或确认稳定候选
+- [x] **D-S04:** 处理 RC 缺陷或确认稳定候选
 - [ ] **D-S05:** 重新验收 0.2.0 stable implementation
 - [ ] **D-S06:** 发布并验证稳定 0.2.0
 - [ ] **D-S07:** 请求最终 deployment acceptance
@@ -101,3 +106,7 @@
   1245.55 ms。完整 `pnpm check` 的 trace schema、event correlation、
   redaction、hostile guidance、repository readiness、SHA-1/SHA-256 与包装测试
   亦全部通过（仅 2 项 Windows symlink 权限用例按预期跳过）。
+- 2026-09-29: RC 无已知 source、manifest、contract、performance 或 external
+  verification defect；用户明确要求按 D-S04 从已验证 RC 返回 implementing，
+  为 stable `0.2.0` 准备独立 implementation candidate。RC tag/package 保持不可变；
+  本次未更改 status acceptance facts、未创建 stable tag、未发布 stable package。

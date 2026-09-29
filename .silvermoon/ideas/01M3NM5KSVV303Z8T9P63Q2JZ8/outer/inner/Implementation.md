@@ -61,6 +61,15 @@ E2E 与 property-style tests。
 release-grade 验证并发布实现证据到 primary，但不创建 Git tag、不调用 npm
 publish，也不把 implementation completion 当作发布授权。
 
+### I-S08: 准备已验证 RC 之后的 stable implementation candidate
+
+仅在 `0.2.0-rc.1` 已从真实 registry 消费者验证通过并按 Deployment 合同返回
+implementing 后，将 package manifest 与相关精确版本引用更新为 `0.2.0`。候选
+只包含 RC 已验证的功能、必要缺陷修复和 release metadata，不加入无关 feature
+工作。运行 frozen install、完整 `pnpm check`、pack 与 installed-package 验证，
+发布候选到 primary 并记录 exact implementation revision；不得创建 stable tag
+或执行 stable publish，直至用户另行明确授权。
+
 ## Acceptance criteria
 
 ### I-AC01: 同一 domain stream 可确定性重建 report
@@ -131,6 +140,16 @@ package E2E 证明。
 installed E2E、Markdown links、`git diff --check` 和 Silvermoon
 worktree/staged/remote checks 全部通过。候选提交从 `origin/main` 可达，但 npm
 和 release tag 均未因实现完成自动产生。
+
+### I-AC10: Stable 0.2.0 implementation candidate 独立通过第二次验收门
+
+候选 manifest 与相关精确版本引用为 `0.2.0`，其功能范围仅来自已验证 RC 与必要
+修复/metadata；frozen install、完整 `pnpm check`、pack、installed-package E2E
+及 Silvermoon snapshot checks 全部通过。候选发布到 primary 后，Silvermoon
+仍报告 implementing，且 ledger 提供 exact implementation revision 与可审阅的
+commit-pinned `Implementation.md`；未记录新的 implementation acceptance，未创建
+stable release tag 或发布 stable package。通过 manifest、版本引用、测试证据、
+primary ancestry 与 lifecycle observation 证明。
 
 ## Verification evidence
 
