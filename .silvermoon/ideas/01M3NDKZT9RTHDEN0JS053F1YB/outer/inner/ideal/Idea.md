@@ -71,14 +71,15 @@ primary ancestry 或访问网络。
 RFC 3339 时间、反向或空时间区间、未知 state/sort 值以及非正整数 limit 都是
 usage error，在读取 repository 或创建 trace 前退出 `2`。
 
-### 查询专用输出
+### 查询专用 response 与统一 report
 
-默认文本只呈现有效筛选摘要、匹配/返回/截断数量和逐项结果，不生成
-`whats-next` 风格的“下一步建议”、候选选择或 lifecycle instructions。每项始终
-显示 ID、state 和 UTC `createdAt`，并只在值存在时显示 alias 与标题；空结果被
-明确显示，而不是伪装成 setup failure。
+默认文本只渲染查询专用 `response`：呈现有效筛选摘要、匹配/返回/截断数量和
+逐项结果，不生成 `whats-next` 风格的“下一步建议”、候选选择或 lifecycle
+instructions。每项始终显示 ID、state 和 UTC `createdAt`，并只在值存在时显示
+alias 与标题；空结果被明确显示，而不是伪装成 setup failure。
 
-`--json` 返回且只返回：
+`--json` 遵循所有 Silvermoon public commands 的统一协议，返回且只返回
+`intention`、`observation`、`actions` 和 `response` 四个 projection：
 
 ```json
 {
@@ -106,20 +107,38 @@ usage error，在读取 repository 或创建 trace 前退出 `2`。
       "counts": {}
     },
     "ideas": []
+  },
+  "actions": [],
+  "response": {
+    "kind": "idea-list",
+    "language": "<resolved-output-language>",
+    "summary": "<localized-inventory-summary>",
+    "inventory": {
+      "matched": 0,
+      "returned": 0,
+      "truncated": false,
+      "counts": {}
+    },
+    "items": []
   }
 }
 ```
 
 `intention.args` 始终呈现规范化后的有效业务参数，而不是 Commander 的别名或
 重复输入。`summary.counts` 对 limit 之前的匹配集合按五种 canonical state
-给出数量；`ideas` 是 limit 之后的有序结果。报告没有 `outcomes` 或
-`instructions`，JSON key、state 和枚举不本地化；文本标签与诊断使用现有
-preferred language 解析。
+给出数量；`ideas` 是 limit 之后的有序结果。纯查询不执行 public side effect，
+因此成功报告的 `actions` 为空。成功 `response.kind` 为 `idea-list`，
+`response.inventory` 和 `response.items` 必须由 normalized intention 与 final
+observation 纯函数生成，并与 observation 中的 summary 和 ideas 一致；response
+同时携带默认文本完整呈现所需的本地化 language、summary 和 snapshot details。
+报告不保留旧 `outcomes` 或顶层 `instructions`，JSON key、state 和枚举不本地化；
+文本标签与诊断使用现有 preferred language 解析。
 
 项目基础或 idea layout 不可信时，命令返回明确的 unavailable/setup
-observation、完整已知 problems 和退出码 `1`，不返回可能遗漏无效条目的部分
-inventory。成功形成可信查询时退出 `0`，即使结果为空；CLI usage error 退出
-`2`。
+observation、完整已知 problems、空 `actions`、由该 observation 纯函数生成的
+`blocked` response 和退出码 `1`，不返回可能遗漏无效条目的部分 inventory。
+成功形成可信查询时退出 `0`，即使结果为空；CLI usage error 在 command run
+开始前退出 `2`，不伪造四 projection report。
 
 ## 范围
 
@@ -131,8 +150,8 @@ inventory。成功形成可信查询时退出 `0`，即使结果为空；CLI usa
 - 从 ULID 派生稳定创建时间，从 `Idea.md` 第一个一级标题提取可选标题。
 - 在同一个本地 worktree snapshot 上完成项目检查、idea 读取、过滤、排序和
   limit，同时完全绕过 Git hygiene、upstream 与 remote synchronization。
-- 为成功、空结果、setup/layout failure 和 usage failure 定义文本、JSON
-  shape 与退出码。
+- 为成功、空结果和 setup/layout failure 定义统一四 projection JSON、纯
+  response 文本与退出码，并为 pre-run usage failure 定义退出行为。
 - 更新 CLI help、README、operations/reference/getting-started、canonical
   Silvermoon skill 与生成副本，并覆盖 unit、contract、integration 和
   installed-package E2E。
@@ -169,5 +188,7 @@ inventory。成功形成可信查询时退出 `0`，即使结果为空；CLI usa
   显式失败。命令不得通过回退到 HEAD 隐藏本地事实。
 - 除显式 trace 外，成功和失败路径都不得 fetch、联网或改变 worktree、index、
   refs、status/config 内容。错误不得被空列表、默认值或成功退出码吞掉。
-- 新命令的纯查询 report 与 `whats-next` dialogue envelope 有意不同；公共文档、
-  CLI contract tests 和 package E2E 必须明确这种差异。
+- 新命令与 `whats-next` 共享统一四 projection report；差异只存在于
+  command-specific intention、observation 和 response variant。公共文档、CLI
+  contract tests 和 package E2E 必须明确 `idea-list` 不携带 lifecycle 建议，
+  同时不得为纯查询恢复旧的双 projection shape。
