@@ -54,15 +54,46 @@
 
 ### Deployment steps
 
-- [ ] **D-S01:** 发布明确授权的 Silvermoon 版本
-- [ ] **D-S02:** 在真实项目验证三个阶段的指导交付
-- [ ] **D-S03:** 验证缺省、阻塞与恶意内容边界
+- [x] **D-S01:** 发布明确授权的 Silvermoon 版本
+- [x] **D-S02:** 在真实项目验证三个阶段的指导交付
+- [x] **D-S03:** 验证缺省、阻塞与恶意内容边界
 
 ### Deployment acceptance criteria
 
-- [ ] **D-AC01:** 已发布 CLI 可按阶段交付项目指导
-- [ ] **D-AC02:** 更高优先级动作与终止状态不泄露 guidance
-- [ ] **D-AC03:** guidance 缺省兼容且错误按作用域阻塞
-- [ ] **D-AC04:** 项目 Markdown 保持数据边界
-- [ ] **D-AC05:** 项目要求仍由 world revision 与人类决定承载
-- [ ] **D-AC06:** 已发布版本保持既有命令兼容
+- [x] **D-AC01:** 已发布 CLI 可按阶段交付项目指导
+- [x] **D-AC02:** 更高优先级动作与终止状态不泄露 guidance
+- [x] **D-AC03:** guidance 缺省兼容且错误按作用域阻塞
+- [x] **D-AC04:** 项目 Markdown 保持数据边界
+- [x] **D-AC05:** 项目要求仍由 world revision 与人类决定承载
+- [x] **D-AC06:** 已发布版本保持既有命令兼容
+
+### Deployment evidence
+
+- 2026-09-29: 用户明确授权把已发布的稳定版 `silvermoon@0.1.3`
+  作为本 idea 的部署目标并取消过时的 `0.1.3-rc.5` 发布。不可变 tag
+  `npm/silvermoon/v0.1.3` 指向从 `origin/main` 可达的
+  `36f91ea380cfbe132eeda6431dfc81ed6b542557`；受保护 trusted-publishing
+  workflow run `36521754553` 成功。
+- 2026-09-29: npm registry 元数据的 version 与 `gitHead` 分别为 `0.1.3`
+  和 `36f91ea380cfbe132eeda6431dfc81ed6b542557`，integrity 为
+  `sha512-f8aHS4ob8yntOyZvtps/3g1pBT0L/Imlq9u2/d5IOCStQpm+zzWSWbuGyJD/0qzUGYr6iaIOsXd2xx6gq7l1fw==`，
+  且 registry provenance 存在。registry tarball 的 installed-package E2E
+  在 Windows `core.autocrlf=true` consumer 中通过。
+- 2026-09-29: 隔离 consumer 针对同一 registry tarball 的 16 场景矩阵全部
+  通过。preparing、implementing、deploying 只交付当前 actionable phase；
+  `create-idea` 成功路径交付 preparing guidance；JSON/Markdown 的 phase、
+  path、content revision 与 content 一致，并与所选 snapshot 的 Git blob
+  核对一致，language override 不翻译项目内容。
+- 2026-09-29: bare/unknown selector、completed/abandoned、project setup、
+  dirty/upstream/fetch 等更高优先级状态均不读取或泄露 guidance。无 guidance
+  与缺失当前 phase 保持兼容；其他 phase 无效不阻断当前 `whats-next`，当前
+  phase 无效给出作用域明确的问题并使 `create-idea` 在写 scaffold 前停止；
+  worktree、staged、HEAD、commit 与 remote 的 `check` 均验证各自 snapshot。
+- 2026-09-29: hostile headings、fences、模板、URL 与命令片段只作为 inert
+  Markdown 数据返回；没有执行 sentinel 命令，本地 HTTP probe 收到 0 个请求，
+  trace 不含 guidance 正文，报告 section 和文件树保持隔离。
+- 2026-09-29: guidance blob revision
+  `e08d46f6e4ec5ab24055c0aa357933bc9eaa5b93` 本身不改变 status 或 world
+  revision；只有把适用要求写入当前 world contract 与 ledger 后，outer
+  revision 才从 `c4e7d8408570d0978f9914e480fbe2da0b7d92d3` 变为
+  `69715e0d357b0b47eae0d025af7eab07d5f0a5e8`，且 status 不变。
