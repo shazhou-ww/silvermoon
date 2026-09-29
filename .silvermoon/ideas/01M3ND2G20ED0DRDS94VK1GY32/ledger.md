@@ -23,13 +23,13 @@
 
 ### Deployment steps
 
-- [ ] **D-S01:** 发布明确授权的 Silvermoon 版本
-- [ ] **D-S02:** 从已发布包验证双语 override
-- [ ] **D-S03:** 验证持久化与错误边界
+- [x] **D-S01:** 发布明确授权的 Silvermoon 版本
+- [x] **D-S02:** 从已发布包验证双语 override
+- [x] **D-S03:** 验证持久化与错误边界
 
 ### Deployment acceptance criteria
 
-- [ ] **D-AC01:** 已发布命令可稳定选择英文或中文输出
-- [ ] **D-AC02:** override 不改变项目或 lifecycle 状态
-- [ ] **D-AC03:** unsupported language 快速且安全地失败
-- [ ] **D-AC04:** create-idea 的既有多语言能力不回归
+- [x] **D-AC01:** 已发布命令可稳定选择英文或中文输出
+- [x] **D-AC02:** override 不改变项目或 lifecycle 状态
+- [x] **D-AC03:** unsupported language 快速且安全地失败
+- [x] **D-AC04:** create-idea 的既有多语言能力不回归
