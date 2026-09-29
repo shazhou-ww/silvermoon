@@ -135,7 +135,7 @@ jobs:
         run: |
           echo "$SILVERMOON_TARBALL_SHA256  $SILVERMOON_TARBALL" |
             sha256sum --check --strict -
-          npm publish "$SILVERMOON_TARBALL" \
+          npm publish . \
             --access public --provenance --tag "$NPM_DIST_TAG"
 
       - name: Verify published package

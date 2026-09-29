@@ -34,6 +34,7 @@ test("builds one tarball and records its verified identity and files", async () 
   temporaryDirectories.push(root);
   const packageDirectory = join(root, "package");
   const outputDirectory = join(root, "output");
+  const comparisonDirectory = join(root, "comparison");
   const githubOutput = join(root, "github-output");
   await mkdir(packageDirectory, { recursive: true });
   await writeFile(
@@ -90,6 +91,23 @@ test("builds one tarball and records its verified identity and files", async () 
   assert.equal(inspected.manifest.gitHead, gitHead);
   assert.equal(inspected.manifest.readmeFilename, "README.md");
   assert.equal(inspected.manifest.readme, readme);
+  const comparison = spawnSync(process.execPath, [
+    builderPath,
+    "--package-directory",
+    packageDirectory,
+    "--output-directory",
+    comparisonDirectory,
+    "--git-head",
+    gitHead,
+  ], {
+    encoding: "utf8",
+    windowsHide: true,
+  });
+  assert.equal(comparison.status, 0, comparison.stderr || comparison.error?.message);
+  assert.deepEqual(
+    await readFile(JSON.parse(comparison.stdout).tarballPath),
+    bytes,
+  );
   assert.equal(
     await readFile(githubOutput, "utf8"),
     `${formatGitHubOutput(metadata)}\n`,

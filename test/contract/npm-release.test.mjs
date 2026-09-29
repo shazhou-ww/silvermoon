@@ -222,7 +222,7 @@ test("uses a protected, least-privilege trusted-publishing workflow", async () =
   assert.match(publication.run, /sha256sum --check --strict/);
   assert.match(
     publication.run,
-    /npm publish "\$SILVERMOON_TARBALL" \\\n\s+--access public --provenance/,
+    /npm publish \. \\\n\s+--access public --provenance/,
   );
   assert.equal(
     publish.steps.filter(({ run = "" }) => run.includes("build-npm-tarball.mjs")).length,
@@ -239,6 +239,7 @@ test("uses a protected, least-privilege trusted-publishing workflow", async () =
   assert.doesNotMatch(npmTarball, /from "(?!node:)/);
   assert.match(buildTarball, /readmeFilename/);
   assert.match(checkPack, /package README metadata does not match README\.md/);
+  assert.match(checkPack, /does not match a deterministic directory pack/);
   assert.match(checkPack, /--dry-run/);
   assert.match(installedPackage, /process\.env\.SILVERMOON_TARBALL/);
   assert.ok(

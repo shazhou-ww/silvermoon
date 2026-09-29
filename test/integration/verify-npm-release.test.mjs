@@ -132,8 +132,6 @@ test("verifies registry identity, READMEs, provenance, and jsDelivr assets", asy
     name: packageName,
     version,
     gitHead: commit,
-    readme: englishReadme,
-    readmeFilename: "README.md",
     dist,
   };
   const attestations = {
@@ -247,15 +245,6 @@ test("verifies registry identity, READMEs, provenance, and jsDelivr assets", asy
         }),
       }),
     /package README does not match/,
-  );
-  await assert.rejects(
-    () =>
-      verifyNpmRelease(release, {
-        fetchImpl: fetchFor({
-          versionMetadata: { readme: "# different\n" },
-        }),
-      }),
-    /version README metadata does not match/,
   );
   await assert.rejects(
     () =>

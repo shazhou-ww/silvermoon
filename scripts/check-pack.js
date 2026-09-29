@@ -1,7 +1,9 @@
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, statSync } from "node:fs";
-import { basename, dirname, resolve } from "node:path";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { inspectNpmTarball } from "./npm-tarball.mjs";
@@ -143,6 +145,58 @@ if (packed.status !== 0) {
   }
   const gitHeadMismatch =
     expectedGitHead && actualGitHead !== expectedGitHead;
+  let directoryPackMismatch = false;
+  if (expectedGitHead) {
+    const comparisonDirectory = await mkdtemp(
+      join(tmpdir(), "silvermoon-pack-compare-"),
+    );
+    try {
+      const comparisonArguments = [
+        "pack",
+        "--json",
+        "--pack-destination",
+        comparisonDirectory,
+      ];
+      const comparison = spawnSync(
+        command,
+        process.platform === "win32"
+          ? [npmCli, ...comparisonArguments]
+          : comparisonArguments,
+        {
+          cwd: packageRoot,
+          encoding: "utf8",
+          windowsHide: true,
+        },
+      );
+      if (comparison.status !== 0) {
+        process.stderr.write(
+          comparison.stderr ||
+            comparison.error?.message ||
+            "Deterministic npm directory pack failed.\n",
+        );
+        process.exit(1);
+      }
+      const comparisonResults = JSON.parse(comparison.stdout);
+      const comparisonFilename = comparisonResults?.[0]?.filename;
+      if (
+        comparisonResults.length !== 1 ||
+        typeof comparisonFilename !== "string" ||
+        basename(comparisonFilename) !== comparisonFilename
+      ) {
+        process.stderr.write(
+          "Deterministic npm directory pack returned invalid metadata.\n",
+        );
+        process.exit(1);
+      }
+      const [candidateBytes, comparisonBytes] = await Promise.all([
+        readFile(tarball),
+        readFile(resolve(comparisonDirectory, comparisonFilename)),
+      ]);
+      directoryPackMismatch = !candidateBytes.equals(comparisonBytes);
+    } finally {
+      await rm(comparisonDirectory, { force: true, recursive: true });
+    }
+  }
 
   if (
     missing.length > 0 ||
@@ -150,7 +204,8 @@ if (packed.status !== 0) {
     emptyReadme ||
     integrityMismatch ||
     gitHeadMismatch ||
-    readmeMetadataMismatch
+    readmeMetadataMismatch ||
+    directoryPackMismatch
   ) {
     if (missing.length > 0) process.stderr.write(`Missing packed files: ${missing.join(", ")}\n`);
     if (unexpected.length > 0) {
@@ -172,6 +227,11 @@ if (packed.status !== 0) {
     if (readmeMetadataMismatch) {
       process.stderr.write(
         "Configured npm tarball package README metadata does not match README.md.\n",
+      );
+    }
+    if (directoryPackMismatch) {
+      process.stderr.write(
+        "Configured npm tarball does not match a deterministic directory pack.\n",
       );
     }
     process.exitCode = 1;

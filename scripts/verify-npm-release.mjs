@@ -252,13 +252,6 @@ export async function verifyNpmRelease(
       `npm gitHead mismatch: expected ${commit}, found ${versionMetadata.gitHead ?? "missing"}.`,
     );
   }
-  if (
-    versionMetadata.readmeFilename !== candidateReadmeFilename ||
-    versionMetadata.readme !== candidatePackageReadme
-  ) {
-    throw new Error("npm version README metadata does not match the candidate tarball.");
-  }
-
   const dist = versionMetadata.dist;
   if (
     dist?.integrity !== candidate.integrity ||

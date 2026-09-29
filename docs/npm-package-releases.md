@@ -102,9 +102,12 @@ The [`publish-npm.yml`](../.github/workflows/publish-npm.yml) workflow then:
    SHA-256, npm shasum, registry integrity, and complete file list, then passes
    that same file to `npm run pack:check` and `npm run test:e2e`; the
    pre-publication check requires the tarball manifest to contain that exact
-   commit and README metadata;
-7. publishes that exact tarball with provenance and the derived npm dist-tag
-   when the version was absent; and
+   commit and README metadata and requires a fresh directory pack to be
+   byte-identical;
+7. publishes the unchanged staged directory with provenance and the derived npm
+   dist-tag when the version was absent, allowing npm to include package-level
+   README metadata while the deterministic pack check and post-publication
+   verifier guarantee the registry tarball matches the candidate bytes; and
 8. runs `verify-npm-release.mjs` until the registry is consistent or the
    bounded retry window expires.
 
