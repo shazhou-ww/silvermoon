@@ -1,21 +1,21 @@
 # Ledger
 
-## 实施
+## Implementation
 
-### 实施步骤
+### Implementation steps
 
 - [ ] **I-S01:** 步骤标题
 
-### 实施验收标准
+### Implementation acceptance criteria
 
 - [ ] **I-AC01:** 标准标题
 
-## 部署
+## Deployment
 
-### 部署步骤
+### Deployment steps
 
 - [ ] **D-S01:** 步骤标题
 
-### 部署验收标准
+### Deployment acceptance criteria
 
 - [ ] **D-AC01:** 标准标题

@@ -26,7 +26,8 @@ Silvermoon skill 说明了内容语言的来源与持久化方式，却没有明
 - 对于无法由内置模板直接呈现的 canonical BCP 47 内容语言，行为必须明确且不能
   静默声称英文占位符合指定语言，并为 Agent 提供可执行的语言转换要求。
 - Silvermoon skill 明确规定所有世界合同、同世界辅助文件和 ledger 中的自然语言
-  都使用报告中的有效内容语言；稳定 ID、路径和 schema 标识不翻译。
+  都使用报告中的有效内容语言；稳定 ID、路径和 canonical 结构标题等 schema
+  标识不翻译，并明确区分结构标识与自然语言内容。
 - `whats-next` 为选中 idea 生成 lifecycle next step 时，明确指出当前有效内容语言，
   并要求 Agent 使用该语言编写当前阶段允许修改的合同和 ledger 内容。
 - 临时 output language 只控制 Silvermoon 自身报告的呈现，不得改变 next step 中
@@ -60,4 +61,5 @@ Silvermoon skill 说明了内容语言的来源与持久化方式，却没有明
 - 模板、skill、文档和测试必须使用同一套术语，不能把“报告语言”误写成“内容语言”。
 - 生成器无法本地化任意 BCP 47 tag 时必须给出诚实、可执行且可测试的行为，不得
   静默回退后仍暗示生成内容符合指定语言。
-- stable ID、文件名、CLI 参数和 schema 字段等机器契约保持不变。
+- stable ID、文件名、CLI 参数、canonical 结构标题和 schema 字段等机器契约
+  保持不变。
