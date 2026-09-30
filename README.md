@@ -143,16 +143,18 @@ Watch *A Record of a Mortal's Journey to Immortality*:
 A project is more than a task list or a transcript. It is an ideal becoming
 real across three nested worlds.
 
-**Ideal World (道心)** names the outcome worth pursuing. **Inner World (内景)**
-gives that intent shape in repository artifacts. **Outer World (现世)** asks
-whether the shaped work holds true where it must actually run.
+**Ideal World (道心)** is the world of ideals, **Inner World (内景)** the
+subjective world, and **Outer World (现世)** the world of reality.
 
 > 道心立志，内景化形，现世求真。
 
-The worlds nest from the inside out: implementation contains the ideal it
-serves, and deployment contains both. This is an engineering relationship, not
-merely a metaphor — when an inner world changes, the conclusions of an outer
-world lose their foundation and must be proven again.
+The worlds nest from the inside out: the subjective world contains the ideal it
+serves, and is itself part of the real world — just as a person holds ideals yet
+must live in reality.
+
+So the ideal is first argued out in the Ideal World, then given form in the
+Inner World, and finally deployed into the Outer World. That is consciousness
+acting back upon matter.
 
 Humans own approval and acceptance. Agents own continuation: they read the
 contracts, the ledger, and the facts in Git; preserve concurrent work; carry
