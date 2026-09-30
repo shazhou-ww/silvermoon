@@ -23,6 +23,19 @@
   - AGENTS、maintaining、repository-tasks、npm-package-releases 对齐，
     明确部分暂存边界、外部工具和无隐式 npm 发布。
 - [ ] **I-S06:** 验证并发布实现证据
+  - 契约先发布于 `547f7dff32dde01f59e9dc4898184dfe5e300e6f`；
+    实现和同世界证据发布于 `9e41052f05a9dbe8fb1ce16f61545ec9a74dffe0`，
+    已刷新 primary 并验证可达，观察 implementation revision
+    `48b8a37df2ebaec17a37b1f1eaea893e370046e4`。
+  - 最终候选 `pnpm check` 退出 0：247 项、245 pass、2 原有 skip；
+    CHECK_TOTAL 132,563 ms。lint/quick/integration/pack/E2E/skills
+    分别为 3,223/28,345/111,936/8,740/132,505/15,549 ms。
+    `PACK_OK`（49 文件）、`PACK_SMOKE_OK`、外部 discovery 均通过。
+  - worktree/staged Silvermoon 校验、`git diff --check`、
+    `git diff --cached --check` 均退出 0；提交前 index 与 worktree 无差异。
+  - 托管 CI [36668763265](https://github.com/shazhou-ww/silvermoon/actions/runs/36668763265)
+    对实现 commit 已排队；等待三平台双 Node、核心 job 及条件 package/E2E
+    的实际结果，尚不记录托管验证成功。
 
 ### Implementation acceptance criteria
 
@@ -39,8 +52,12 @@
     未承诺隔离的暂存代码测试，入口始终打印范围。
 - [x] **I-AC05:** 风险升级与发布保障完整
   - 风险单元/真实 Git 与 CI/release workflow 契约全部通过；未执行 npm 发布。
-- [ ] **I-AC06:** 指令一致且全量验收通过
-- [ ] **I-AC07:** 普通 Git 发布与决定隔离
+- [x] **I-AC06:** 指令一致且全量验收通过
+  - 窄测试、两轮本地 full、最终性能样本、Markdown 链接/格式、package/E2E、
+    技能本地/外部和精确快照检查全部通过；托管 CI 等待记录在 I-S06。
+- [x] **I-AC07:** 普通 Git 发布与决定隔离
+  - 契约先于实现发布，普通非强制 push 到刷新后的 origin/main；未修改
+    本 idea 的 Ideal/status、其他 idea 或 npm 版本，未记录新的人工决定。
 
 ## Deployment
 
