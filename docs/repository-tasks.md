@@ -48,14 +48,26 @@ recorded in project, user, or idea configuration. `create-idea --language
 <tag>` remains a separate persistent content-language choice and accepts any
 canonical BCP 47 tag.
 
-## Decisions And Publication
+## Decisions And Synchronization
 
 `whats-next` may fetch after local readiness passes, but it does not move the
 worktree, index, branches, or named refs. Human approvals, implementation
 acceptance, deployment acceptance, and abandonment are ordinary edits to one
-idea `status.yaml` after an explicit decision. Validate the candidate and
-publish a normal non-force commit. Prefer status-only decision commits when
-practical.
+idea `status.yaml` after an explicit decision.
+
+Before requesting a human decision, validate the candidate, synchronize its
+normal non-force commit to primary, confirm reachability from the refreshed
+primary, and reobserve the exact world revision and effective content language.
+This synchronization is Agent work and does not require a lifecycle decision.
+Keep the review message short: use that language to state the review focus and
+exact decision question, and provide local plus commit-pinned remote links to
+the canonical contract, same-world supporting files, ledger, evidence, and key
+deliverables. Durable detail belongs in those repository files, not in the
+chat message.
+
+After an explicit decision, change only the corresponding status fact,
+validate it, prefer a status-only commit when practical, synchronize it to
+primary, and reobserve the resulting lifecycle state.
 
 The required idea-root `ledger.md` is the Agent continuation surface. After
 repository hygiene and lifecycle routing, combine the reported

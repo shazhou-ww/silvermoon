@@ -28,6 +28,46 @@ function inventory(items, language = "zh-CN") {
   };
 }
 
+test("inventory counts omit zero states and use localized punctuation", () => {
+  const counts = {
+    preparing: 2,
+    implementing: 1,
+    deploying: 1,
+    completed: 0,
+    abandoned: 0,
+  };
+  const chinese = renderResponse({
+    ...inventory([]),
+    summary: "匹配 4 个 idea，返回 4 个。",
+    inventory: { counts },
+  }, { now });
+  const english = renderResponse({
+    ...inventory([], "en-US"),
+    summary: "Matched 4 idea(s) and returned 4.",
+    inventory: { counts },
+  }, { now });
+
+  assert.match(
+    chinese,
+    /匹配 4 个 idea，返回 4 个。计数：preparing=2，implementing=1，deploying=1。/,
+  );
+  assert.match(
+    english,
+    /Matched 4 idea\(s\) and returned 4\. Counts: preparing=2, implementing=1, deploying=1\./,
+  );
+  assert.doesNotMatch(chinese, /completed|abandoned/);
+  assert.doesNotMatch(english, /completed|abandoned/);
+
+  const empty = renderResponse({
+    ...inventory([]),
+    summary: "没有匹配的 idea。",
+    inventory: {
+      counts: Object.fromEntries(Object.keys(counts).map((state) => [state, 0])),
+    },
+  }, { now });
+  assert.doesNotMatch(empty, /计数/);
+});
+
 test("text dates use short localized relative durations and local dates only after seven days", () => {
   const ages = [
     0,
