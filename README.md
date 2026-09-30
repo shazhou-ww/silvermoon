@@ -146,7 +146,7 @@ real through three nested worlds.
 gives that intent shape in repository artifacts. **Outer World (现世)** asks
 whether the shaped work is true where it must actually operate.
 
-> 道心立意，内景成形，现世验真。
+> 道心立志，内景化形，现世求真。
 
 The worlds nest from the inside out. Implementation contains the ideal it
 serves, and deployment contains both. This is an engineering relationship, not
