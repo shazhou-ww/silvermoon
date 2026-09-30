@@ -73,6 +73,7 @@ if (packed.status !== 0) {
   const result = JSON.parse(packed.stdout)[0];
   const files = result.files.map(({ path }) => path).sort();
   const expected = [
+    "LICENSE",
     "README.md",
     "README.zh-CN.md",
     "assets/silvermoon-avatar.svg",

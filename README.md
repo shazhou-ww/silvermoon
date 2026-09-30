@@ -11,7 +11,9 @@
   <!-- markdownlint-disable-next-line MD013 -->
   <a href="https://npmx.dev/package/silvermoon"><img src="https://img.shields.io/node/v/silvermoon?style=flat-square" alt="Node.js version"></a>
   <!-- markdownlint-disable-next-line MD013 -->
-  <a href="https://npmx.dev/package/silvermoon"><img src="https://img.shields.io/npm/unpacked-size/silvermoon?style=flat-square" alt="npm unpacked size"></a>
+  <a href="https://npmx.dev/package/silvermoon"><img src="https://img.shields.io/npm/dm/silvermoon?style=flat-square" alt="monthly npm downloads"></a>
+  <!-- markdownlint-disable-next-line MD013 -->
+  <a href="./LICENSE"><img src="https://img.shields.io/github/license/shazhou-ww/silvermoon?style=flat-square" alt="MIT license"></a>
   <!-- markdownlint-disable-next-line MD013 -->
   <a href="https://github.com/shazhou-ww/silvermoon/actions/workflows/ci.yml?query=branch%3Amain"><img src="https://img.shields.io/github/actions/workflow/status/shazhou-ww/silvermoon/ci.yml?branch=main&style=flat-square&label=CI" alt="CI status"></a>
 </p>
@@ -168,3 +170,13 @@ the project, not to a fleeting conversation.
   reports, validation targets, and schemas.
 - [Maintaining Silvermoon](./docs/maintaining.md) — development checks,
   documentation ownership, and release guidance.
+
+## Image Copyright Disclaimer
+
+The Silvermoon character images used in this project are AI-generated
+derivative images based on the animated adaptation of *A Record of a Mortal's
+Journey to Immortality*. Rights in the original character and animation belong
+to their respective rights holders, and these images are not covered by this
+project's [MIT License](./LICENSE). If a rights holder believes that the use of
+any image infringes their rights, please contact the author; the affected image
+will be replaced.
