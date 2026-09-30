@@ -75,13 +75,15 @@ afterEach(async () => {
   );
 });
 
-async function fixture() {
+async function fixture({ withRemote = false, withUpstream = false } = {}) {
   const repository = await createRepository({
     ideas: IDEAS.map(({ id, alias }) => ({
       id,
       status: alias === undefined ? {} : { alias },
     })),
     prefix: "silvermoon-list-ideas-",
+    withRemote,
+    withUpstream,
   });
   temporaryDirectories.push(repository.base);
   for (const idea of IDEAS) {
@@ -190,6 +192,7 @@ test("[inventory-empty] returns a successful complete shape for an empty invento
   const repository = await createRepository({
     ideas: [],
     prefix: "silvermoon-list-empty-",
+    withRemote: false,
   });
   temporaryDirectories.push(repository.base);
 
@@ -288,7 +291,7 @@ test("[inventory-worktree] includes staged, unstaged, and untracked idea content
 });
 
 test("[inventory-readiness] ignores worktree, branch, upstream, ancestry, and network readiness", async () => {
-  const repository = await fixture();
+  const repository = await fixture({ withUpstream: true });
   git(repository.root, "branch", "--unset-upstream");
   git(repository.root, "checkout", "--detach");
   await writeFile(join(repository.root, "dirty-untracked.txt"), "local only\n");
@@ -313,7 +316,7 @@ test("[inventory-readiness] ignores worktree, branch, upstream, ancestry, and ne
 });
 
 test("[inventory-conflict] ignores an unrelated unresolved merge conflict", async () => {
-  const repository = await fixture();
+  const repository = await fixture({ withRemote: true });
   await writeFile(join(repository.root, "conflict.txt"), "base\n");
   git(repository.root, "add", ".");
   git(repository.root, "commit", "-m", "Add conflict base");

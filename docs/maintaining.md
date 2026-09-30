@@ -27,6 +27,14 @@ pnpm check:skills      # skill discovery and structure
 for all of them before reporting every failure. Run the narrower commands above
 while iterating, then use `pnpm check` before delivery.
 
+Each full check reports `CHECK_DURATION` for every gate and `CHECK_TOTAL` for
+the complete run. These values use a monotonic clock and are diagnostic, not
+machine-independent budgets. To compare performance, record the Node.js and
+pnpm versions and test counts, run `pnpm check` once to warm the checkout, then
+repeat it five times and compare the median under the same machine and checkout
+conditions. Keep each sample; do not count network, queueing, or cache
+fluctuations in installed-package smoke tests as code performance gains.
+
 Edit the canonical skill only under `skills/silvermoon`, then run
 `pnpm sync:skills`. The checked-in `.agents/skills/silvermoon` directory is a
 generated copy so repository skill discovery works without symbolic-link

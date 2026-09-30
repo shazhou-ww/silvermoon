@@ -32,9 +32,10 @@ afterEach(async () => {
   );
 });
 
-async function fixture() {
+async function fixture({ withRemote = false } = {}) {
   const repository = await createRepository({
     prefix: "silvermoon-check-",
+    withRemote,
   });
   temporaryDirectories.push(repository.base);
   return repository;
@@ -70,7 +71,7 @@ test("checks HEAD with a project-only observation and resolved commit version", 
 });
 
 test("checks root npm dependency from each selected snapshot without node_modules", async () => {
-  const repository = await fixture();
+  const repository = await fixture({ withRemote: true });
   const manifestPath = join(repository.root, "package.json");
   const expectedRange = `^${SILVERMOON_VERSION}`;
   const invalidRange = expectedRange === "^0.0.0" ? "^0.0.1" : "^0.0.0";
@@ -128,7 +129,7 @@ test("checks root npm dependency from each selected snapshot without node_module
 });
 
 test("accepts canonical skill line endings across every snapshot target", async () => {
-  const repository = await fixture();
+  const repository = await fixture({ withRemote: true });
   const skillPath = join(
     repository.root,
     ...REPOSITORY_SKILL_PATH.split("/"),
@@ -217,7 +218,7 @@ test("applies a canonical output override independently across every check targe
 });
 
 test("validates identical trees independently of target and parent topology", async () => {
-  const repository = await fixture();
+  const repository = await fixture({ withRemote: true });
   const paths = ideaPaths(FIRST_ID);
   const rootCommit = git(repository.root, "rev-parse", "HEAD");
   const historicalRevision = "0".repeat(40);
@@ -373,7 +374,7 @@ test("validates isolated staged and worktree candidates without Git worktree com
 });
 
 test("fetches and validates remote without a dialogue outcome", async () => {
-  const repository = await fixture();
+  const repository = await fixture({ withRemote: true });
   const expected = git(repository.root, "rev-parse", "HEAD");
 
   const report = await checkRepository({
@@ -400,7 +401,7 @@ test("fetches and validates remote without a dialogue outcome", async () => {
 });
 
 test("valid remote snapshot is not blocked by unrelated local HEAD skill damage", async () => {
-  const repository = await fixture();
+  const repository = await fixture({ withRemote: true });
   const skill = join(repository.root, ".agents", "skills", "silvermoon");
   await rm(skill, { recursive: true });
   git(repository.root, "add", "--all");
@@ -521,7 +522,7 @@ test("uses the shared root-stage setup observation for every target outside Git"
 });
 
 test("returns check-unavailable when remote fetch fails", async () => {
-  const repository = await fixture();
+  const repository = await fixture({ withRemote: true });
   await rm(repository.remote, { recursive: true });
 
   const report = await checkRepository({
@@ -569,7 +570,7 @@ test("rejects an unsupported programmatic output language before Git inspection"
 });
 
 test("validates complete guidance independently for every snapshot target", async () => {
-  const repository = await fixture();
+  const repository = await fixture({ withRemote: true });
   await mkdir(join(repository.root, ...GUIDANCE_ROOT.split("/")), {
     recursive: true,
   });
