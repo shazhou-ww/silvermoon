@@ -75,6 +75,25 @@ package/E2E、`git diff --check` 及 Silvermoon worktree/staged 校验。
 发布证据后刷新 primary、确认可达性和精确 implementation revision；
 如主线移动则保留两边历史并重新观察，不写入新的接受状态。
 
+### I-S07: 修复部署发现的测试归属与 CI 入口缺口
+
+2026-09-30 部署候选 `1505e2918321f4b46a0bdb18f0a62ff50efa436d` 的
+sanity 因后续主线新增的 `test/unit/repository.test.js` 调用真实 Git 而失败；
+两条旧 CI 成功未检测此边界。用户明确同意修订实施契约并重新验收，不删除
+旧 implementationAcceptedRevision，不修改已批准 Ideal 或其他 idea。
+
+将真实 `git check-ref-format --branch` 对照测试完整移至 runtime，保留原
+语料、测试名称和断言，unit 保留纯输入拒绝测试。普通 CI 的原三平台双 Node
+矩阵先执行真正的 `pnpm check:sanity`（含语法检查与 guard），再执行完整
+`pnpm test:unit`；无条件运行、不按路径跳过，不增加并发。更新 workflow
+契约测试及维护文档，防止再次以不带 guard 的 unit 成功冒充 sanity 成功。
+
+先用窄测试和负向试验确认 CI 契约会拒绝丢失/跳过 sanity 的 workflow，
+再跑 sanity、commit 和 `pnpm check`。无需新做性能基线：保留 I-S01/I-AC01
+已发布候选的完整历史样本；本次单次运行只证明修复后的功能、边界及覆盖，
+不声称新的性能改善。发布修复并取得实际矩阵 CI 证据后请求新精确实施验收，
+再恢复部署。部署旧候选的失败证据保留，不能直接转成新候选成功记录。
+
 ## Acceptance criteria
 
 ### I-AC01: 性能目标与边界可复现
@@ -116,3 +135,12 @@ skip 不扩大，runtime 仍进入原 unit 的三平台双 Node 矩阵。
 本契约先于实现发布；实现、ledger 和证据经普通非强制 Git 到达刷新后的 primary，
 报告精确 commit/revision。Idea/status 不变，不推进其他 idea，不请求或记录未获
 明确授权的批准、接受或 npm 发布。
+
+### I-AC08: 部署回归已修复且 CI 检查真实 sanity
+
+真实 Git 对照测试的语料和断言不变，仍进入全部六个 unit/runtime 平台组合；
+纯测试留在 sanity。当前候选的 sanity、commit、full 检查退出 0，没有新增
+skip。workflow 契约的负向试验拒绝缺少或条件跳过 sanity 步骤，托管矩阵六个
+job 都实际执行 `pnpm check:sanity` 且成功，再运行完整 unit/runtime。
+本次复验不复写历史性能样本，不修改 status 中的旧接受事实；修复完成后必须
+请求新的 implementationRevision 验收才能继续部署。
