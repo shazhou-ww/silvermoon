@@ -10,19 +10,19 @@
     实施前目标固定为 10,315.5/65,382.5 ms。完整数据见同世界证据。
   - 测量后 primary 移至 `9fbce63cf348d079d4728afcaefba929da040b39`，
     已 fast-forward 并重新观察 implementing；保留并发历史，未修改其他 idea。
-- [ ] **I-S02:** 按真实成本拆分并守恒测试
+- [x] **I-S02:** 按真实成本拆分并守恒测试
   - 35 个原测试 body 保持，17 个 runtime 测试仍进入 unit 原平台矩阵；
     dialogue 的真实 Git 测试进入 integration。最终完整计数 237 -> 248。
 - [x] **I-S03:** 实现场景调度与快照边界
   - sanity/commit/release 复用 runner；check/quick 兼容语义保留；技能拆分。
     真实部分暂存 fixture 验证警告、候选差异、失败传播及 index/worktree 不变。
-- [ ] **I-S04:** 保守升级 CI 与对齐发布
+- [x] **I-S04:** 保守升级 CI 与对齐发布
   - 仅 idea metadata-only 跳过 package/E2E；未知或无 baseline 均升级。
     core 矩阵不筛选，发布静态检查补齐，权限及实际产物路径未变。
-- [ ] **I-S05:** 对齐贡献者与 Agent 指令
+- [x] **I-S05:** 对齐贡献者与 Agent 指令
   - AGENTS、maintaining、repository-tasks、npm-package-releases 对齐，
     明确部分暂存边界、外部工具和无隐式 npm 发布。
-- [ ] **I-S06:** 验证并发布实现证据
+- [x] **I-S06:** 验证并发布实现证据
   - 契约先发布于 `547f7dff32dde01f59e9dc4898184dfe5e300e6f`；
     实现和同世界证据发布于 `9e41052f05a9dbe8fb1ce16f61545ec9a74dffe0`，
     已刷新 primary 并验证可达，当时观察 implementation revision
@@ -46,34 +46,50 @@
     刷新确认可达；[CI 36669180127](https://github.com/shazhou-ww/silvermoon/actions/runs/36669180127)
     10/10 jobs 成功，包括实际 package/E2E 和全部三平台双 Node 矩阵。
     最新 full 248 项、246 pass、2 原有 skip，CHECK_TOTAL 133,239 ms。
-- [ ] **I-S07:** 修复部署发现的测试归属与 CI 入口缺口
+- [x] **I-S07:** 修复部署发现的测试归属与 CI 入口缺口
   - 用户明确同意修订实现并修复，旧验收事实保持；修订契约后重新观察
     implementing，再修复真实 Git 测试归属及矩阵 sanity 步骤。
     I-S02/I-S04/I-S05/I-S06、I-AC01/I-AC02/I-AC05/I-AC06/I-AC07
-    因新候选需重新证明而重置；下列历史结果不删除，也不冒充新候选证据。
+    曾因新候选需重新证明而重置；下列历史结果不删除，也不冒充新候选证据。
+  - 契约修订 `65d533ab86315ddf3ebc8d2451327957787f965c` 先同步并观察
+    implementing；修复 `7b1bf4b97437578a8a6b30b9f3405bb995ce5c00`
+    后同步主线。两段原测试 body/语料精确一致，只移动真实 Git 测试到 runtime。
+  - 窄测 5/5，sanity 93/93，commit exit 0，full 260 项（258 pass、
+    2 原有 skip）；快照和 diff 检查通过。维护文档与 workflow 契约对齐。
+    负向测试拒绝移除、替换、跳过、忽略错误和错序六种 sanity 门禁变体。
+  - [CI 36672310740](https://github.com/shazhou-ww/silvermoon/actions/runs/36672310740)
+    对修复 SHA 的 10/10 jobs 成功；六个矩阵 job 的 `Run sanity checks`
+    步骤均实际 success，随后完整 unit/runtime 成功，package/E2E 实际成功。
+    完整细节见同世界 validation-evidence 的“部署回归后的实施修复”。
 
 ### Implementation acceptance criteria
 
-- [ ] **I-AC01:** 性能目标与边界可复现
+- [x] **I-AC01:** 性能目标与边界可复现
   - POSIX 修复后的最终一次预热加五次测量全部通过，中位数 sanity 3,360 ms、
     commit 9,800 ms；比对应基线下降 83.71%/92.51%，达到预先 50% 目标。
-- [ ] **I-AC02:** 覆盖与平台守恒
+  - 本次依 I-S07 保留上述固定候选历史样本、不新做性能比较；
+    新候选的 guard 边界由本地 93/93 和六个平台 CI sanity 成功重新证明。
+- [x] **I-AC02:** 覆盖与平台守恒
   - 最终完整 248 项包含新增 11 项，仅原 Windows 2 项 skip；迁移 body、
     测试归属和 unit/runtime 平台矩阵保持，托管矩阵也已通过，详见同世界证据。
+  - 修复候选 260 项，两个 branch 测试 body/语料保持，仅新增 1 个
+    CI contract；其余数量增长来自并发主线，2 项原有 skip 不变。
 - [x] **I-AC03:** 场景与失败行为确定
   - runner 精确集合、空/未知参数、启动/退出失败、等待汇总定向测试通过。
 - [x] **I-AC04:** 暂存与工作区不混淆
   - fixture 证明暂存 status 无效而 worktree 有效仍失败，候选不被改写；
     未承诺隔离的暂存代码测试，入口始终打印范围。
-- [ ] **I-AC05:** 风险升级与发布保障完整
+- [x] **I-AC05:** 风险升级与发布保障完整
   - 风险单元/真实 Git 与 CI/release workflow 契约全部通过；未执行 npm 发布。
-- [ ] **I-AC06:** 指令一致且全量验收通过
+- [x] **I-AC06:** 指令一致且全量验收通过
   - 窄测试、三轮本地 full、最终性能样本、Markdown 链接/格式、package/E2E、
     技能本地/外部和精确快照检查全部通过；托管 CI 失败及修复实证保留于 I-S06。
-- [ ] **I-AC07:** 普通 Git 发布与决定隔离
+- [x] **I-AC07:** 普通 Git 发布与决定隔离
   - 契约先于实现发布，普通非强制 push 到刷新后的 origin/main；未修改
     本 idea 的 Ideal/status、其他 idea 或 npm 版本，未记录新的人工决定。
-- [ ] **I-AC08:** 部署回归已修复且 CI 检查真实 sanity
+- [x] **I-AC08:** 部署回归已修复且 CI 检查真实 sanity
+  - 本地三种入口和精确 SHA 的实际六平台 sanity 均通过；实现修订先发布，
+    没有写入新的接受决定，等待用户对新 implementationRevision 明确验收。
 
 ## Deployment
 
