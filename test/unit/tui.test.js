@@ -4,10 +4,18 @@ import { test } from "node:test";
 
 import {
   copyWindowsClipboard,
+  copyStatusColor,
   copyTuiSelection,
   renderTuiMarkdown,
   tuiOutputStream,
 } from "../../src/tui.js";
+
+test("uses distinct readable colors for copy outcomes and restores the hint color", () => {
+  assert.equal(copyStatusColor(null), "#6b6b6b");
+  assert.equal(copyStatusColor({ kind: "success" }), "#9ccb9e");
+  assert.equal(copyStatusColor({ kind: "warning" }), "#e2b86b");
+  assert.throws(() => copyStatusColor({ kind: "unknown" }), /Unsupported copy status kind/);
+});
 
 test("copies the selected Unicode text and reports missing clipboard support", () => {
   const copied = [];
@@ -18,21 +26,27 @@ test("copies the selected Unicode text and reports missing clipboard support", (
       return true;
     },
   };
-  assert.equal(copyTuiSelection(renderer), "Copy sent to terminal clipboard");
+  assert.deepEqual(copyTuiSelection(renderer), {
+    message: "Copy sent to terminal clipboard",
+    kind: "success",
+  });
   assert.deepEqual(copied, ["中文 ┌─┐"]);
 
   renderer.getSelection = () => null;
-  assert.equal(
+  assert.deepEqual(
     copyTuiSelection(renderer),
-    "Select text first",
+    { message: "Select text first", kind: "warning" },
   );
   assert.deepEqual(copied, ["中文 ┌─┐"]);
 
   renderer.getSelection = () => ({ getSelectedText: () => "中文" });
   renderer.copyToClipboardOSC52 = () => false;
-  assert.match(copyTuiSelection(renderer, { stdout: {} }), /No clipboard; Shift\+drag/);
+  assert.deepEqual(copyTuiSelection(renderer, { stdout: {} }), {
+    message: "No clipboard; Shift+drag",
+    kind: "warning",
+  });
   const localCopies = [];
-  assert.equal(
+  assert.deepEqual(
     copyTuiSelection(renderer, {
       platform: "win32",
       windowsClipboard: (text) => {
@@ -40,15 +54,15 @@ test("copies the selected Unicode text and reports missing clipboard support", (
         return { ok: true };
       },
     }),
-    "Copied to Windows clipboard",
+    { message: "Copied to Windows clipboard", kind: "success" },
   );
   assert.deepEqual(localCopies, ["中文"]);
-  assert.equal(
+  assert.deepEqual(
     copyTuiSelection(renderer, {
       platform: "win32",
       windowsClipboard: () => ({ ok: false, reason: "clipboard locked" }),
     }),
-    "Copy failed: clipboard locked",
+    { message: "Copy failed: clipboard locked", kind: "warning" },
   );
 });
 
@@ -190,9 +204,10 @@ test("Windows TUI mouse selection and y shortcut report clipboard outcome", {
     assert.match(output(), /Shift\+drag/);
     assert.doesNotMatch(output(), /Select text first/);
     const statusFrame = Buffer.concat(chunks).subarray(beforeCopy).toString("utf8");
-    assert.match(statusFrame, /\x1B\[2;4H/);
+    assert.match(statusFrame, /\x1B\[2;2H/);
     assert.match(statusFrame, /No clipboard;/);
     assert.match(statusFrame, /Shift\+drag/);
+    assert.match(statusFrame, /\x1B\[38;2;226;184;107m/);
     assert.doesNotMatch(statusFrame, /\x1B\[5;6H[^\x1B]*选择/);
 
     const afterFirstCopy = Buffer.concat(chunks).length;
@@ -208,6 +223,7 @@ test("Windows TUI mouse selection and y shortcut report clipboard outcome", {
     }
     const restored = Buffer.concat(chunks).subarray(afterFirstCopy).toString("utf8");
     assert.match(restored, /\[q\/Esc\] quit/);
+    assert.match(restored, /\x1B\[38;2;107;107;107m/);
     assert.doesNotMatch(restored, /\x1B\[5;6H[^\x1B]*选择/);
   } finally {
     stdin.write("q");

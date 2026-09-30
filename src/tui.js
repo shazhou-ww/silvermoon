@@ -12,6 +12,15 @@ import { Markdown } from "tui-md";
 
 const COPY_STATUS_DURATION_MS = 3000;
 const SHORTCUT_HINT = "  [q/Esc] quit  [scroll] navigate  [drag, y] copy";
+const SUCCESS_COLOR = "#9ccb9e";
+const WARNING_COLOR = "#e2b86b";
+
+export function copyStatusColor(status) {
+  if (status === null) return "#6b6b6b";
+  if (status.kind === "success") return SUCCESS_COLOR;
+  if (status.kind === "warning") return WARNING_COLOR;
+  throw new Error(`Unsupported copy status kind: ${status.kind}`);
+}
 
 export function copyWindowsClipboard(
   text,
@@ -52,19 +61,23 @@ export function copyTuiSelection(renderer, {
   windowsClipboard = copyWindowsClipboard,
 } = {}) {
   const text = renderer.getSelection()?.getSelectedText();
-  if (!text) return "Select text first";
-  if (renderer.copyToClipboardOSC52(text)) return "Copy sent to terminal clipboard";
+  if (!text) return { message: "Select text first", kind: "warning" };
+  if (renderer.copyToClipboardOSC52(text)) {
+    return { message: "Copy sent to terminal clipboard", kind: "success" };
+  }
   if (platform === "win32" && stdout === process.stdout) {
     const result = windowsClipboard(text);
-    return result.ok ? "Copied to Windows clipboard" : `Copy failed: ${result.reason}`;
+    return result.ok
+      ? { message: "Copied to Windows clipboard", kind: "success" }
+      : { message: `Copy failed: ${result.reason}`, kind: "warning" };
   }
-  return "No clipboard; Shift+drag";
+  return { message: "No clipboard; Shift+drag", kind: "warning" };
 }
 
 function MarkdownViewer({ content, stdout }) {
   const renderer = useRenderer();
   const { height, width } = useTerminalDimensions();
-  const [copyStatus, setCopyStatus] = useState("");
+  const [copyStatus, setCopyStatus] = useState(null);
   const copyStatusTimeout = useRef(null);
 
   useEffect(() => () => clearTimeout(copyStatusTimeout.current), []);
@@ -75,7 +88,7 @@ function MarkdownViewer({ content, stdout }) {
       clearTimeout(copyStatusTimeout.current);
       setCopyStatus(copyTuiSelection(renderer, { stdout }));
       copyStatusTimeout.current = setTimeout(() => {
-        setCopyStatus("");
+        setCopyStatus(null);
         copyStatusTimeout.current = null;
       }, COPY_STATUS_DURATION_MS);
     }
@@ -100,13 +113,13 @@ function MarkdownViewer({ content, stdout }) {
       createElement(
         "text",
         {
-          fg: "#6b6b6b",
+          fg: copyStatusColor(copyStatus),
           height: 1,
           truncate: true,
           width: "100%",
           wrapMode: "none",
         },
-        copyStatus ? `  ${copyStatus}` : SHORTCUT_HINT,
+        copyStatus ? `  ${copyStatus.message}` : SHORTCUT_HINT,
       ),
     ),
     createElement(

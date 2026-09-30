@@ -226,8 +226,9 @@ omitted, the audience is `human`: stdin and stdout must both be TTYs for the
 bundled `tui-md` view to start. That view supports scrolling; drag to select
 text and press `y` to copy it. On local Windows terminals, the built-in
 PowerShell clipboard command is used when the terminal clipboard protocol is
-unavailable. Copy feedback temporarily replaces the shortcut hint, then clears
-after about three seconds without shifting the document. If copying fails, the
+unavailable. Copy feedback temporarily replaces the shortcut hint, using a
+muted green for success or amber for problems, then clears after about three
+seconds without shifting the document. If copying fails, the
 view displays a diagnostic; terminal-native selection may be available with
 Shift+drag. Exit with `q`, `Esc`, or `Ctrl+C`.
 If either stream is not a TTY, human output is raw
