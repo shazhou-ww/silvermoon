@@ -95,14 +95,20 @@
 
 ### Deployment steps
 
-- [x] **D-S01:** 发布契约并固定主线候选
+- [ ] **D-S01:** 发布契约并固定主线候选
+  - 修复后用户明确验收 `c5264f272e1ef724686d9a2b0b5364b6b4ca4201`；
+    status-only commit `89cea38179fc42bbd05503b7b250b4abea3528b6` 已同步。
+    先 fast-forward 保留主线 `cdaccfccb3f5a24a3d6deaaffd721e97c35205f3`
+    的 MIT 许可证、包测试及另一 idea 历史，重新观察相同实施 revision 后记录决定。
+    当前部署契约更新为新验收身份，重新发布并固定新候选后再执行验证。
+    以下首次尝试的契约、失败和 CI 证据作为历史保留，不视为新候选证明。
   - 2026-09-30，刷新并 fast-forward 到 `27867cfe132017fe5b14e6846f649e37cd1b688f`，
     保留并发历史；实施验收仍为 `66f8f63c4574ac59655ab65836836a13b1f80963`。
   - 部署契约先同步于 `1505e2918321f4b46a0bdb18f0a62ff50efa436d`，
     刷新确认 primary 可达，再观察 deploymentRevision
     `59645981ed071aff98900b354c8caafae4803cbd`。以下验证固定在此候选。
 - [ ] **D-S02:** 在全新 checkout 验证使用路径
-  - **阻塞**：从远端新建会话所属 clone，detached checkout 精确候选，
+  - **首次尝试失败（历史）**：从远端新建会话所属 clone，detached checkout 精确候选，
     Windows / Node.js v24.11.1 / pnpm 11.22.0。运行前后 Git status 为空。
     pnpm 初次执行自动按现有锁文件恢复 218 个依赖，随后实际运行 sanity；
     没有修改 manifest/lockfile，也没有把自动安装时间作为性能样本。
@@ -129,13 +135,14 @@
     按 metadata-only 规则 skipped，手动 full 的 package job 实际执行成功。
     CI 的完整 unit 路径不带 sanity guard，不能用其绿色结果替代 D-S02。
 - [ ] **D-S04:** 同步证据并请求精确部署验收
-  - 先同步本次失败和未执行事项；部署未完成，不请求部署验收。
-    只改本 idea 的 Deployment/ledger，不改变内层世界、status 或其他 idea。
+  - 首次尝试已同步失败和未执行事项；当前修复实施已重新验收，
+    等待新候选部署实证。只改本 idea 的 Deployment/ledger，
+    不改变内层世界或其他 idea；部署决定仍须用户明确验收。
 
 ### Deployment acceptance criteria
 
-- [x] **D-AC01:** 发布候选与验收身份准确
-  - 契约先发布、精确候选和 deploymentRevision 已记录于 D-S01。
+- [ ] **D-AC01:** 发布候选与验收身份准确
+  - 旧候选身份保留于 D-S01；需重新发布契约并记录修复后的候选。
 - [ ] **D-AC02:** 全新环境的分层入口可用
 - [ ] **D-AC03:** 托管路由符合风险契约
 - [ ] **D-AC04:** 指令与发布边界没有漂移

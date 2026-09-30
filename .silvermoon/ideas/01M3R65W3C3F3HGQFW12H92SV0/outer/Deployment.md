@@ -5,11 +5,15 @@
 ### D-S01: 发布契约并固定主线候选
 
 本次部署是仓库验证策略的实际启用，不是 npm 版本发布。保留已验收的
-implementation revision `66f8f63c4574ac59655ab65836836a13b1f80963` 和内层世界，
+implementation revision `c5264f272e1ef724686d9a2b0b5364b6b4ca4201` 和内层世界，
 仅维护本 idea 的 Deployment/ledger。先将本契约与匹配 ledger 普通非强制
 同步到主线，刷新确认可达并重新观察稳定 deploymentRevision，再执行以下验证。
 记录契约 commit、候选 SHA、Node.js/pnpm 版本；不沿用全局安装 CLI 的状态，
 使用候选的 `node bin/silvermoon.js` 检查。
+
+首次部署在旧候选发现 sanity 回归后停止；经用户同意修订实施、修复并重新验收，
+本次重新固定包含修复及并发主线更新的候选，重跑以下部署验证。旧失败与旧 CI
+证据保留在 ledger，不能代替本次结果；旧实施验收事实仍可从 Git 历史复查。
 
 ### D-S02: 在全新 checkout 验证使用路径
 
