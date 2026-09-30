@@ -18,6 +18,8 @@ Human 与 Agent 可能逐渐需要不同的信息组织方式。仅依赖 TTY �
 - 显式指定 `--audience` 与 `--json` 互斥；未显式指定 audience 时，`--json` 仍提供完整的机器可读报告。
 - 初始实现中 human 和 agent 的报告内容一致，仅呈现方式不同；报告建模明确区分受众与 renderer，以便未来在不改变事实来源的前提下提供受众专属内容。
 - 常见终端使用不要求用户安装、配置或通过 shell 管道调用外部 Markdown 渲染工具。
+- 文本报告中的问题列表以 Markdown 表格呈现；结构化时间默认以简短的相对时间显示，超过一周只显示日期。
+- `whats-next` 的 active idea 列表与 `list-ideas` 使用一致的带标题表格；两者合并 ID 与 Alias 列为 `Alias / ID`，有 Alias 时优先显示 Alias。
 
 ## Scope
 
@@ -27,12 +29,13 @@ Human 与 Agent 可能逐渐需要不同的信息组织方式。仅依赖 TTY �
 - 定义 audience、TTY 检测、`--json` 互斥和输出路由的可观察行为。
 - 将 `tui-md` 渲染能力作为 Silvermoon 自身提供的功能，不要求额外安装外部 CLI。
 - 为 human TTY、human 非 TTY、agent TTY/非 TTY、JSON、显式冲突参数及终端缺失等情形建立回归覆盖。
-- 更新 CLI help、参考文档、README 或相关操作文档，说明 audience 语义和管道行为。
+- 更新 CLI help、参考文档及相关操作文档，说明 audience 语义和管道行为；README 不承载终端内部技术细节。
+- 统一文本报告的表格和时间呈现，保持筛选依据及机器可读时间戳不变；为 active idea 列表提供与本地 idea 文档一致的标题和创建时间。
 
 ### Out of scope
 
 - 在初始实现中为 human 与 agent 生成不同的业务事实、报告内容或状态判断。
-- 改变四投影 command report、JSON shape、命令退出码、诊断顺序或生命周期语义。
+- 除 active idea 元数据新增标题与创建时间以支持文本列表外，改变四投影 command report、JSON shape、命令退出码、诊断顺序或生命周期语义。
 - 将 Agent 输出改成纯文本、专用 JSON schema 或模型专用提示词；Agent 初始仍接收原始 Markdown。
 - 要求 Agent 或 CI 拥有 TTY，或在无 TTY 时启动交互式渲染。
 - 修改 shell profile、安装外部 Markdown renderer，或依赖 glow 等系统命令。
@@ -47,4 +50,6 @@ Human 与 Agent 可能逐渐需要不同的信息组织方式。仅依赖 TTY �
 - `--json` 在未显式指定 audience 时继续工作；显式同时传入 `--json` 和 `--audience` 必须明确报错，不得静默选择一种格式。
 - `tui-md` 能力须随 Silvermoon 安装提供；运行时不得假设宿主机装有 glow、`tui-md` 可执行文件或其他外部 renderer。
 - 初始 human 与 agent projection 必须源自同一次命令报告，不得因渲染路径不同而产生状态、事实或诊断差异。
+- 文本报告中的相对时间只用于呈现，包括结果的创建时间和筛选条件中的时间，不覆盖四投影中供筛选和自动化使用的精确时间戳；中英文输出均遵循不足一分钟为“刚刚”、按整分钟／小时／天简写、超过一周显示本地日期且不含时刻的规则。
+- active idea 的标题取自同一次可信 repository snapshot 的 `Idea.md`，没有一级标题时明确显示为空值；不得从 guidance、Alias 或其他自由文本推断标题。新增元数据不得改变其他 JSON 字段的含义。
 - renderer 错误不得伪装成成功响应或静默吞掉；遵循项目既有 CLI 错误处理与退出状态约定。

@@ -34,6 +34,23 @@ requirements, TUI controls, and pipeline guidance.
 不改变非 Windows、agent、非 TTY 或 JSON 的输出路由。加入针对 Windows 输出流
 选择和 Unicode 字节转发的回归测试，并更新终端使用说明。
 
+### I-S05: 支持 TUI 选区复制
+
+保留 OpenTUI 鼠标滚动与表格交互，并为鼠标拖选的文本提供可见的 `y` 复制快捷键。
+优先通过终端剪贴板协议发送选区；本地 Windows 终端不支持该协议时使用系统
+PowerShell 剪贴板命令，不复制整个报告。没有选区或复制失败时在 TUI 中明确提示。
+成功或失败提示暂时占用原有快捷键栏，约三秒后自动恢复；重复复制重新计时，
+不插入新行或推动文档内容。成功用柔和绿色，失败和操作提示用柔和琥珀色；
+不添加闪烁、动画或影响提示栏高度的装饰。只更新 reference 文档，
+不在 README 中记录终端内部技术细节。
+
+### I-S06: 指引 Agent 显式选择原始 Markdown
+
+在 canonical Silvermoon skill 中提醒 Agent 调用报告命令时显式使用
+`--audience agent` 并在重试中保留，以免双 TTY 打开人类 TUI；
+需要四投影 JSON 时改用 `--json`，两者不能合用。同步仓库注册副本，
+更新相应操作文档与契约测试，不在 README 中增加技术细节。
+
 ## Acceptance criteria
 
 ### I-AC01: Audience options have one consistent CLI contract
@@ -73,3 +90,19 @@ Windows human TTY 下中文内容和 Unicode 表格边框不再以旧代码页�
 测试验证 Windows 使用 OpenTUI 的 byte feed 将 UTF-8 字节交由 Node 输出流写入，
 其他平台仍使用原终端流；验证 TTY 交互渲染、agent 原始 Markdown 和 JSON
 行为保持不变，并运行 `pnpm check`。
+
+### I-AC06: 鼠标选区可显式复制
+
+human TTY 的鼠标拖选后按 `y` 可把中文与 Unicode 文本发送到终端剪贴板，
+本地 Windows 不支持协议时可通过系统剪贴板回退；没有选区或复制失败时
+显示失败原因，不误报复制成功。测试覆盖真实 TUI 鼠标选区、UTF-8 剪贴板
+输入、失败反馈及 TUI 控制提示；验证复制提示保持单行、不移动正文、
+约三秒后消失且重复复制重新计时；验证 agent、非 TTY 与 JSON 输出不变。
+复制成功与失败分别使用易读的柔和绿、琥珀色，普通快捷键提示恢复原色；
+单元测试验证状态分类和 native TUI 反馈颜色。
+
+### I-AC07: Skill 默认指引 Agent 避开交互式 UI
+
+canonical skill 与注册副本一致，明确要求 Agent 优先显式使用
+`--audience agent`，并注明 `--json` 互斥。技能契约测试验证指引内容，
+`pnpm check:skills` 和 `pnpm check` 验证同步与仓库候选。
