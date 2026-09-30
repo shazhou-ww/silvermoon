@@ -25,6 +25,8 @@ GitHub settings 与 npm/GitHub Release 结果属于 Deployment evidence，不在
   `de2cf95f34f91912e97292a29b2513a5c4940eef`
 - RC2 repository deliverables commit:
   `868148b3fad3e41766e5f0df527d691c9ccf979d`
+- Stable transition baseline commit:
+  `696f84067d70db0336297933cc3d9cd5c1aef886`
 - Implementation revision: 由最终同步后的 `whats-next` report 提供；world tree
   不记录自己的 revision，避免内容寻址自引用
 
@@ -51,17 +53,33 @@ avatar artwork，最终失败且未创建 GitHub prerelease。tag、npm version 
 不得修改 rc.1 tag 或覆盖 registry bytes；它只修复 verifier 根因、增加 regression
 coverage、准备新的 rc.2 manifest/changelog/notes，并重新通过完整 validation。
 
+## Stable 0.3.0 authorization
+
+2026-09-30T09:02:42Z，用户显式调用 `/publish 0.3.0`。该调用授权准备和后续可信
+发布 exact stable version `silvermoon@0.3.0`，不授权跳过新的 implementation
+candidate、revision acceptance、fresh preflight 或 post-publication verifier。
+
+授权时已观察：
+
+- `0.3.0-rc.2` 的 protected tag、npm version、attestations、SLSA provenance、
+  hosted verifier 与 GitHub prerelease 均成功且保持不可变；
+- official npm `latest=0.2.2`、`rc=0.3.0-rc.2`；
+- `npm/silvermoon/v0.3.0` tag、GitHub stable Release 与 npm exact `0.3.0`
+  均不存在；
+- 当前 stable candidate 只允许版本、changelog、release notes、对应 contract tests
+  与 Silvermoon implementation evidence 变更，不夹带新功能。
+
 ## Current stable-ID evidence
 
 | Stable ID | Repository evidence | Verification | 状态 |
 | --- | --- | --- | --- |
-| `I-AC01` | RC2 recovery scope 已写入 `Implementation.md`、`open-source-contract.md`、本文件与 `ledger.md` | `silvermoon check --worktree`、`pnpm check:commit`、stable-ID diff | 通过 |
+| `I-AC01` | stable `/publish 0.3.0` scope 写入 `Implementation.md`、`open-source-contract.md`、本文件与 `ledger.md` | Silvermoon worktree/staged checks、stable-ID diff、primary revision | 待同步 |
 | `I-AC02` | `.github/dependabot.yml` 与三项外部 settings 应用协议 | readiness contract tests | 通过 |
 | `I-AC03` | `.github/rulesets/main.json` 与 CI `Required checks` | workflow/ruleset contract tests；GitHub Actions app ID `15368` 读回 | 通过 |
 | `I-AC04` | 当前两个 workflow 的全部 `uses` SHA pin 与 Actions update entry | 全 workflow scan；exact version comments | 通过 |
-| `I-AC05` | rc.2 `package.json`、reference、release planner 与 registry verifier | manifest/doc/release-plan tests、pack check、installed-package E2E | 通过 |
-| `I-AC06` | rc.1 历史、`CHANGELOG.md` 与 `0.3.0-rc.2` GitHub prerelease notes | release artifact tests；tag/release/registry absence observation | 通过 |
-| `I-AC07` | 定向、sanity、release-grade 与 Silvermoon validations | RC2 命令证据 | 通过 |
+| `I-AC05` | stable `package.json`、reference、release planner 与 registry verifier | manifest/doc/release-plan tests、pack check、installed-package E2E | 待实施 |
+| `I-AC06` | rc.1/rc.2 历史、stable changelog 与 `0.3.0` GitHub Release notes | release artifact tests；tag/release/registry absence observation | 待实施 |
+| `I-AC07` | 定向、sanity、release-grade 与 Silvermoon validations | stable candidate 命令证据 | 待验证 |
 | `I-AC08` | verifier 接受实际 immutable asset references 且不要求未引用 artwork | integration regression、真实 rc.1 re-verification | 通过 |
 
 ## RC2 implementation results

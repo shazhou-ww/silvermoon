@@ -28,10 +28,9 @@ Repository candidate 应包含：
   ruleset body；
 - `.github/workflows/ci.yml` 中唯一稳定的 `Required checks` 聚合 context；
 - 全部 workflow action 的完整 SHA pin 与同行精确版本注释；
-- `package.json` 中的 `0.3.0-rc.2` 版本、MIT 许可与显式公共 metadata；
+- `package.json` 中明确授权的 `0.3.0` 稳定版本、MIT 许可与显式公共 metadata；
 - `docs/reference.md` 中的 pre-1.0 experimental JavaScript API contract；
-- `CHANGELOG.md`、不可变的 rc.1 历史、
-  `.github/release-notes/0.3.0-rc.2.md` 与保留供后续稳定版使用的
+- `CHANGELOG.md`、不可变的 rc.1/rc.2 历史与 release notes，以及完成的
   `.github/release-notes/0.3.0.md`；
 - 只要求 generated README 的实际 artwork references 为 commit-pinned URL、
   同时独立验证 repository artwork allowlist 的可达性与 MIME、但不要求每份 README
@@ -98,29 +97,27 @@ non-fast-forward 限制；maintainer bypass 保留故障恢复和 Silvermoon ord
 non-force synchronization 路径，但不授权 force push。部署后用一个已通过 CI 的
 ordinary non-force candidate 验证同步路径，不用 force 操作测试规则。
 
-## 0.3.0-rc.2 发布与 GitHub prerelease 顺序
+## 0.3.0 稳定发布与 GitHub Release 顺序
 
 以下动作必须同时满足 implementation acceptance、idea 已进入 Deployment、候选 commit
-可从最新 `origin/main` 到达，以及用户对 rc.1 failure 后
-`0.3.0-rc.2` recovery 的明确选择：
+可从最新 `origin/main` 到达，以及用户通过 `/publish 0.3.0` 给出的明确稳定发布授权：
 
 1. 刷新 `origin/main` 与 tags，确认 `package.json`、changelog、release notes 和
    candidate commit；
 2. 在精确 `origin/main` commit 创建不可变
-   `npm/silvermoon/v0.3.0-rc.2` tag，并通过 ordinary Git push；
+   `npm/silvermoon/v0.3.0` tag，并通过 ordinary Git push；
 3. 等待 `.github/workflows/publish-npm.yml` 成功，保存 run、job、attestation、
-   tarball identity、npm `rc` dist-tag 与 `VERIFY_NPM_RELEASE_OK` 证据，同时证明
-   npm `latest` 仍指向先前稳定版本；
-4. 使用既有 tag 和 `.github/release-notes/0.3.0-rc.2.md` 创建 GitHub
-   prerelease，不让 release 命令隐式创建或移动 tag；
+   tarball identity、npm `latest` dist-tag 与 `VERIFY_NPM_RELEASE_OK` 证据；
+4. 使用既有 tag 和 `.github/release-notes/0.3.0.md` 创建 GitHub stable Release，
+   不让 release 命令隐式创建或移动 tag；
 5. 读回 GitHub Release、npm registry metadata、provenance、README、MIT license、
-   `rc` dist-tag 与 `gitHead`，要求全部指向同一版本和 commit。
+   `latest` dist-tag 与 `gitHead`，要求全部指向同一版本和 commit；既有 `rc`
+   dist-tag 与 RC releases 继续保留不可变历史。
 
 不得本地运行 `npm publish`，不得创建 npm token，不得移动、删除或重建 release tag。
 发布前失败时修复 `main` 并选择新版本；发布后验证失败时保留不可变版本与 tag，按既有
-release runbook 处理。RC 成功不授权稳定 `0.3.0`：稳定版必须通过后续 repository
-candidate 将 manifest 切换到 `0.3.0`，重新完成 implementation acceptance、
-release-grade validation 与明确发布授权。
+release runbook 处理。既有 RC 成功、当前授权和本 candidate 的验收是三个独立事实；
+缺少任一项都不得创建 stable tag。
 
 ## 外部验证矩阵
 
@@ -135,8 +132,8 @@ Deployment evidence 至少记录：
 | CodeQL | default setup configured 且 default branch analysis 成功 | default-setup API 与成功 run/analysis 链接 |
 | main ruleset | active contract 与 repository 文件一致 | ruleset API 响应、ID 与普通 non-force 同步结果 |
 | release tag | tag 不可移动且 commit 可从 `main` 到达 | tag ruleset、tag ref 与 ancestry 输出 |
-| GitHub Release | `0.3.0-rc.2` prerelease notes 与 tag/commit 一致 | immutable release URL 与 API 响应 |
-| npm | RC version、MIT、README、provenance、`rc` dist-tag、未改变的 `latest` 与 `gitHead` 一致 | registry、attestation 与 workflow verifier 输出 |
+| GitHub Release | `0.3.0` stable notes 与 tag/commit 一致 | immutable release URL 与 API 响应 |
+| npm | stable version、MIT、README、provenance、`latest` dist-tag 与 `gitHead` 一致，既有 `rc` history 保留 | registry、attestation 与 workflow verifier 输出 |
 
 任一外部结果缺失、权限受限或不一致时，保持 Deployment ledger 未完成并显式报告阻塞；
 不得使用推断、截图占位或成功形状 fallback。

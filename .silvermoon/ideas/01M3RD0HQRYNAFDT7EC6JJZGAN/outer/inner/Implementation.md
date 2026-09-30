@@ -32,28 +32,27 @@ gate，只有核心测试成功且按风险需要的 package job 成功或明确
 
 ### I-S05: 明确 npm metadata 与 experimental JavaScript API
 
-将恢复候选版本设为 `0.3.0-rc.2`，并在 `package.json` 显式声明项目主页、
+将明确授权的稳定候选版本设为 `0.3.0`，并保留 `package.json` 中显式的项目主页、
 问题入口、作者、贡献者和维护者身份。`docs/reference.md` 作为根 package export
 在 `1.0.0` 前属于 experimental 的权威 reader documentation：minor release 可以
 发生 breaking change，使用者应固定精确版本；CLI、schema 与文件格式的独立契约
-不由该声明降级。RC 必须发布到 npm `rc` dist-tag，不能改写 `latest`。
+不由该声明降级。release planner 必须把稳定版本映射到 npm `latest`，但 tag 创建与
+`latest` 更新仍只发生在本 revision 明确验收后的 Deployment。
 
-### I-S06: 准备 0.3.0-rc.2 changelog 与 GitHub Release
+### I-S06: 准备稳定 0.3.0 changelog 与 GitHub Release
 
-保留已经发布的 `0.3.0-rc.1` changelog 与 notes，按
-`npm/silvermoon/v0.3.0-rc.1..0.3.0-rc.2` 的实际 recovery changes 增加
-`CHANGELOG.md` entry 和 `.github/release-notes/0.3.0-rc.2.md`，明确 rc.1 的
-hosted verifier 假阴性、rc.2 的修复范围、MIT 许可、npm `rc` dist-tag 和
-trusted-publishing 路径。保留
-`.github/release-notes/0.3.0.md` 作为后续稳定版草案，不用 RC tag 消耗稳定版本。
-GitHub prerelease 只准备 notes；release tag、workflow publication 与 GitHub
-prerelease 创建都留到新 implementation revision 明确验收后的 Deployment。
-稳定 `0.3.0` 仍需后续独立候选、重新验证和明确发布授权。
+保留已经发布的 `0.3.0-rc.1` 与 `0.3.0-rc.2` changelog、notes 和不可变历史，在
+`CHANGELOG.md` 增加稳定 `0.3.0` entry，并完成
+`.github/release-notes/0.3.0.md`。稳定材料必须准确汇总 release series、MIT
+许可、Node compatibility、pre-1.0 API 边界、npm `latest` channel、protected
+tag、OIDC trusted-publishing 与 post-publication verifier。release tag、workflow
+publication 和 GitHub stable Release 都留到本 implementation revision 明确验收后的
+Deployment，不修改或替换任何 RC tag、npm version 或 prerelease。
 
 ### I-S07: 验证候选并固化实施证据
 
 增加针对 Dependabot、ruleset、CI gate、Actions SHA、npm metadata、experimental
-API 文档、RC dist-tag 和 release artifacts 的 contract tests。运行定向测试、
+API 文档、稳定 `latest` dist-tag 和 release artifacts 的 contract tests。运行定向测试、
 `pnpm check:sanity`、release-grade `pnpm check` 及 Silvermoon worktree/staged
 snapshot validation，把命令、结果和候选身份记录到 `implementation-evidence.md`。
 
@@ -71,8 +70,8 @@ avatar 不阻塞发布”回归测试，不降低 tarball、README、integrity �
 
 `Implementation.md`、`open-source-contract.md`、
 `implementation-evidence.md` 与 `ledger.md` 使用一致稳定 ID，明确区分
-repository implementation、已完成的 GitHub settings deployment、经明确授权的
-`0.3.0-rc.1` publication 与仍未授权的稳定 `0.3.0`；通过 Silvermoon snapshot
+repository implementation、已完成的 GitHub settings/RC deployment，以及用户通过
+`/publish 0.3.0` 明确授权但尚未部署的稳定 candidate；通过 Silvermoon snapshot
 validation 和人工 diff 复核证明。
 
 ### I-AC02: 安全与依赖更新候选可验证
@@ -97,19 +96,19 @@ contract test 证明，不以抽样代替。
 
 ### I-AC05: npm metadata 与 pre-1.0 API 边界显式
 
-`package.json` 的 `version` 为 `0.3.0-rc.2`，显式 metadata 指向本 repository、
+`package.json` 的 `version` 为 `0.3.0`，显式 metadata 指向本 repository、
 issues 与 maintainer；`docs/reference.md` 说明 experimental 根 export、允许的
 pre-1.0 breaking-change 边界及精确版本固定建议。发布规划器将该版本映射为 npm
-`rc` dist-tag 而不是 `latest`；通过 manifest/doc/release-plan contract tests 和
-`npm pack --dry-run` 证明。
+`latest` dist-tag；通过 manifest/doc/release-plan contract tests 和
+`npm pack --dry-run` 证明。Implementation 不创建 tag 或更新 registry。
 
-### I-AC06: 0.3.0-rc.2 发布材料完整但未部署
+### I-AC06: 稳定 0.3.0 发布材料完整但未部署
 
-`CHANGELOG.md` 与 rc.2 GitHub Release notes 保留 rc.1 历史并准确说明 recovery
-差异、兼容性、MIT 许可和 prerelease 状态；候选中不存在新建的
-`npm/silvermoon/v0.3.0-rc.2` 或 `npm/silvermoon/v0.3.0` tag、GitHub Release 或
-本地 publish 行为。通过 Git diff、release contract tests 和 tag/registry
-observation 证明。
+`CHANGELOG.md` 与稳定 GitHub Release notes 保留 rc.1/rc.2 历史并准确说明稳定
+release scope、兼容性、MIT 许可和 `latest` channel；既有 RC surfaces 保持不可变，
+候选中不存在新建的 `npm/silvermoon/v0.3.0` tag、GitHub stable Release、npm exact
+version 或本地 publish 行为。通过 Git diff、release contract tests 和
+tag/registry observation 证明。
 
 ### I-AC07: Repository candidate 通过完整验证
 
