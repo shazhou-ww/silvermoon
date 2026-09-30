@@ -34,8 +34,8 @@ contents、Markdown lint 与 canonical skill 同步检查均通过。未创建 r
 
 ### Deployment steps
 
-- [ ] **D-S01:** 步骤标题
+- [ ] **D-S01:** 核验 GitHub 主分支 README
 
 ### Deployment acceptance criteria
 
-- [ ] **D-AC01:** 标准标题
+- [ ] **D-AC01:** 两种语言 README 的项目图片在线可用
