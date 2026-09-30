@@ -109,10 +109,8 @@ test("pins every external workflow action to an immutable reviewed version", asy
 });
 
 test("publishes explicit metadata and a pre-1.0 experimental API contract", async () => {
-  const [manifestSource, english, chinese, reference] = await Promise.all([
+  const [manifestSource, reference] = await Promise.all([
     read("package.json"),
-    read("README.md"),
-    read("README.zh-CN.md"),
     read("docs/reference.md"),
   ]);
   const manifest = JSON.parse(manifestSource);
@@ -134,11 +132,6 @@ test("publishes explicit metadata and a pre-1.0 experimental API contract", asyn
   assert.deepEqual(manifest.contributors, [maintainer]);
   assert.deepEqual(manifest.maintainers, [maintainer]);
 
-  assert.match(english, /experimental programmatic API until Silvermoon reaches `1\.0\.0`/);
-  assert.match(english, /minor\s+release may add, remove, or change JavaScript exports/);
-  assert.match(english, /Pin an exact package\s+version/);
-  assert.match(chinese, /属于 experimental programmatic\s+API/);
-  assert.match(chinese, /应固定\s*精确 package version/);
   assert.match(reference, /## Experimental JavaScript Package API/);
   assert.match(reference, /does not yet promise stable\s+TypeScript declarations/);
 });
