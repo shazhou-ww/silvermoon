@@ -1,5 +1,4 @@
 import { createHash } from "node:crypto";
-import { spawnSync } from "node:child_process";
 
 const CONTROL_CHARACTER = /[\u0000-\u001f\u007f]/;
 const ENCODED_SEPARATOR = /%(?:2f|5c)/i;
@@ -58,6 +57,7 @@ export function validBranchName(value) {
     typeof value !== "string" ||
     value.length === 0 ||
     value === "@" ||
+    value === "HEAD" ||
     value.startsWith("-") ||
     value.startsWith("refs/") ||
     value.startsWith("remotes/") ||
@@ -74,13 +74,7 @@ export function validBranchName(value) {
   const structurallyValid = value
     .split("/")
     .every((component) => component && !component.startsWith(".") && !component.endsWith(".lock"));
-  if (!structurallyValid) return false;
-
-  const checked = spawnSync("git", ["check-ref-format", "--branch", value], {
-    encoding: "utf8",
-    windowsHide: true,
-  });
-  return checked.status === 0;
+  return structurallyValid;
 }
 
 export function effectiveSourceRepository(config, record) {

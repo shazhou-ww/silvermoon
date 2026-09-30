@@ -74,6 +74,12 @@ jobs:
       - name: Discover agent skills
         run: pnpm check:skills
 
+      - name: Validate local static checks
+        run: |
+          pnpm lint:markdown
+          pnpm check:diff
+          node bin/silvermoon.js check --commit HEAD --audience agent
+
       - name: Stage selected package
         id: stage
         env:

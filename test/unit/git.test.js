@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { parseWorktreeChanges, sanitizeGitMessage } from "../../src/git.js";
+import {
+  parseRepositoryStatus,
+  parseWorktreeChanges,
+  sanitizeGitMessage,
+} from "../../src/git.js";
 
 test("redacts credentials and sensitive query values from Git messages", () => {
   const message = [
@@ -33,5 +37,42 @@ test("parses porcelain v2 worktree changes into stable arrays", () => {
     unstaged: [{ path: "modified.txt", kind: "modified" }],
     untracked: [{ path: "new.txt" }],
     conflicted: [{ path: "conflict.txt", kind: "both-modified" }],
+  });
+});
+
+test("parses porcelain v2 branch identity with worktree changes", () => {
+  const head = "a".repeat(64);
+  const source = [
+    `# branch.oid ${head}`,
+    "# branch.head feature/performance",
+    "# branch.upstream origin/main",
+    "# branch.ab +0 -0",
+    "? untracked.txt",
+    "",
+  ].join("\0");
+
+  assert.deepEqual(parseRepositoryStatus(source), {
+    branch: "feature/performance",
+    changes: {
+      conflicted: [],
+      staged: [],
+      unstaged: [],
+      untracked: [{ path: "untracked.txt" }],
+    },
+    head,
+  });
+  assert.deepEqual(parseRepositoryStatus([
+    "# branch.oid (initial)",
+    "# branch.head (detached)",
+    "",
+  ].join("\0")), {
+    branch: null,
+    changes: {
+      conflicted: [],
+      staged: [],
+      unstaged: [],
+      untracked: [],
+    },
+    head: null,
   });
 });

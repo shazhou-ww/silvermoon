@@ -50,7 +50,7 @@ test("writes paired nested spans with wall-clock timestamps and monotonic durati
   const events = await readEvents(path);
   assert.deepEqual(
     events.map(({ sequence }) => sequence),
-    [1, 2, 3, 4, 5, 6],
+    [1, 2, 3, 4, 5, 6, 7, 8],
   );
   assert.equal(new Set(events.map(({ traceId }) => traceId)).size, 1);
   assert.ok(
@@ -72,6 +72,7 @@ test("writes paired nested spans with wall-clock timestamps and monotonic durati
       .map((event) => [event.name, event]),
   );
   assert.equal(starts.get("command.test").parentSpanId, null);
+  assert.equal(starts.get("trace.flush").parentSpanId, null);
   assert.equal(
     starts.get("async.task").parentSpanId,
     starts.get("command.test").spanId,
@@ -176,13 +177,17 @@ test("records command failures and never overwrites an existing trace", async ()
     /expected failure/,
   );
   const failedEvents = await readEvents(failedPath);
-  const failedEnd = failedEvents.at(-1);
+  const failedEnd = failedEvents.find(
+    ({ event, name }) => event === "span-end" && name === "command.fail",
+  );
   assert.equal(failedEnd.event, "span-end");
   assert.equal(failedEnd.name, "command.fail");
   assert.equal(failedEnd.parentSpanId, null);
   assert.equal(failedEnd.status, "error");
   assert.deepEqual(failedEnd.attributes, { errorName: "TypeError" });
   assert.ok(failedEnd.durationMs >= 0);
+  assert.equal(failedEvents.at(-1).name, "trace.flush");
+  assert.equal(failedEvents.at(-1).status, "ok");
 
   const existingPath = await temporaryTrace("existing.jsonl");
   await writeFile(existingPath, "preserve me\n");

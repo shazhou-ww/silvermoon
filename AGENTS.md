@@ -21,8 +21,13 @@
 
 ## Validation
 
-- Run `pnpm check` after CLI, schema, repository model, release, or skill changes.
-- Run `pnpm check:skills` after changing skill frontmatter or structure.
+- Iterate with `pnpm check:sanity` plus change-specific tests; use
+  `pnpm check:commit` before committing. Its tests use the worktree;
+  `silvermoon check --staged` checks metadata, not staged-code test results.
+- Run `pnpm check` (alias `check:release`) before delivery of CLI, schema,
+  repository model, release, or skill changes; it remains full release-grade.
+- Run `pnpm check:skills:local` while editing skills and `pnpm check:skills`
+  before delivering skill frontmatter or structure changes.
 - Do not commit secrets, credentials, tokens, or private customer data.
 
 ## npm releases

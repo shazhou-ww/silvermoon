@@ -21,6 +21,7 @@ const expected = [
   "inventory-language",
   "inventory-layout",
   "inventory-readiness",
+  "inventory-title-budget",
   "inventory-usage",
   "inventory-worktree",
   "partial-write-failure",

@@ -159,8 +159,23 @@ test("writes schema-valid domain and telemetry events without changing the repor
     assert.equal(events[0].event, "span-start");
     assert.equal(events[0].name, "command.whats-next");
     assert.equal(events[0].attributes.outputLanguage, "zh-CN");
+    assert.equal(events[0].attributes.outputRenderer, "json");
     assert.equal(events.at(-1).event, "span-end");
-    assert.equal(events.at(-1).name, "command.whats-next");
+    assert.equal(events.at(-1).name, "trace.flush");
+    assert.equal(events.at(-1).parentSpanId, null);
+    const commandEnd = events.find(({ event, name }) =>
+      event === "span-end" && name === "command.whats-next"
+    );
+    const renderStart = events.find(({ event, name }) =>
+      event === "span-start" && name === "output.render"
+    );
+    const renderEnd = events.find(({ event, name }) =>
+      event === "span-end" && name === "output.render"
+    );
+    assert.equal(renderStart.parentSpanId, events[0].spanId);
+    assert.equal(renderStart.attributes.renderer, "json");
+    assert.ok(renderEnd.sequence < commandEnd.sequence);
+    assert.ok(commandEnd.sequence < events.at(-1).sequence);
     assert.ok(events.some(({ name }) => name === "snapshot.observe"));
     assert.ok(events.some(({ name }) => name === "adoption.inspect"));
     assert.ok(events.some(({ name }) => name === "user-config.load"));
@@ -198,7 +213,44 @@ test("writes schema-valid domain and telemetry events without changing the repor
       )
       .map(({ attributes }) => attributes.subcommand);
     assert.ok(gitSubcommands.includes("fetch"));
+    assert.equal(gitSubcommands.includes("check-ref-format"), false);
     assert.equal(gitSubcommands.includes("ls-remote"), false);
+  } finally {
+    await rm(repository.base, { recursive: true, force: true });
+  }
+});
+
+test("executable traces include bootstrap-to-dispatch duration", async () => {
+  const repository = await createRepository({
+    prefix: "silvermoon-cli-bootstrap-",
+    withRemote: false,
+  });
+  const tracePath = join(repository.root, "bootstrap.trace.jsonl");
+  try {
+    const result = spawnSync(
+      process.execPath,
+      [
+        join(repositoryRoot, "bin", "silvermoon.js"),
+        "list-ideas",
+        "--root",
+        repository.root,
+        "--trace",
+        tracePath,
+        "--json",
+      ],
+      { encoding: "utf8", windowsHide: true },
+    );
+    assert.equal(result.status, 0, result.stderr);
+    const events = (await readFile(tracePath, "utf8"))
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line));
+    const commandStart = events.find(
+      ({ event, name }) =>
+        event === "span-start" && name === "command.list-ideas",
+    );
+    assert.ok(commandStart.attributes.bootstrapDurationMs >= 0);
+    assert.equal(commandStart.attributes.outputRenderer, "json");
   } finally {
     await rm(repository.base, { recursive: true, force: true });
   }

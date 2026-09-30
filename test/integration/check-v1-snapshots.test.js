@@ -53,6 +53,34 @@ test("checks HEAD with a project-only observation and resolved commit version", 
   assert.deepEqual(report.observation.problems, []);
 });
 
+test("validates every snapshot target in a SHA-256 repository", async () => {
+  const repository = await fixture({
+    objectFormat: "sha256",
+    withRemote: true,
+  });
+  const commit = git(repository.root, "rev-parse", "HEAD");
+
+  for (const target of [
+    {},
+    { commit: "HEAD" },
+    { staged: true },
+    { worktree: true },
+    { remote: true },
+  ]) {
+    const report = await checkRepository({
+      ...target,
+      root: repository.root,
+      userHome: repository.base,
+    });
+    assert.equal(report.observation.state, "project-ready");
+    assert.deepEqual(report.observation.problems, []);
+    if (report.observation.version.commit) {
+      assert.equal(report.observation.version.commit, commit);
+      assert.match(report.observation.version.commit, /^[0-9a-f]{64}$/);
+    }
+  }
+});
+
 test("checks root npm dependency from each selected snapshot without node_modules", async () => {
   const repository = await fixture({ withRemote: true });
   const manifestPath = join(repository.root, "package.json");
@@ -354,6 +382,10 @@ test("validates isolated staged and worktree candidates without Git worktree com
     commands.some(([name]) => name === "worktree"),
     false,
   );
+  const checkoutCommands = commands.filter(
+    ([name]) => name === "checkout-index",
+  );
+  assert.deepEqual(checkoutCommands, []);
 });
 
 test("fetches and validates remote without a dialogue outcome", async () => {

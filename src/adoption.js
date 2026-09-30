@@ -15,6 +15,7 @@ import { traceAsync } from "./trace.js";
 
 const packageRoot = fileURLToPath(new URL("..", import.meta.url));
 const packageJson = JSON.parse(await readFile(resolve(packageRoot, "package.json"), "utf8"));
+const DEFAULT_FILESYSTEM = { lstat, readFile, readdir };
 const packagedSkillsRoot = resolve(packageRoot, "skills");
 const packagedSkill = resolve(packagedSkillsRoot, "silvermoon");
 const localSkillsRoot = "./node_modules/silvermoon/skills";
@@ -95,7 +96,7 @@ function packageManagerDescriptor(manager, workspace, reason = null) {
   };
 }
 
-async function detectPackageManager(root, manifest) {
+async function detectPackageManager(root, manifest, filesystem) {
   const workspace = workspaceRoot(manifest);
   if (Object.hasOwn(manifest, "packageManager")) {
     const declaration = manifest.packageManager;
@@ -116,7 +117,7 @@ async function detectPackageManager(root, manifest) {
   const uncertain = [];
   for (const [filename, manager] of lockfileManagers) {
     try {
-      const metadata = await lstat(resolve(root, filename));
+      const metadata = await filesystem.lstat(resolve(root, filename));
       if (metadata.isFile()) detected.push({ filename, manager });
       else uncertain.push(filename);
     } catch (caught) {
@@ -220,12 +221,15 @@ function skillInstruction(skill, packageManager) {
 export async function inspectNpmProject(
   snapshotRoot,
   repositoryRoot,
-  { readManifest = readFile } = {},
+  {
+    filesystem = DEFAULT_FILESYSTEM,
+    readManifest = filesystem.readFile,
+  } = {},
 ) {
   const manifestPath = resolve(snapshotRoot, "package.json");
   let metadata;
   try {
-    metadata = await lstat(manifestPath);
+    metadata = await filesystem.lstat(manifestPath);
   } catch (caught) {
     if (caught.code === "ENOENT") return { npmProject: false, findings: [] };
     return {
@@ -295,7 +299,11 @@ export async function inspectNpmProject(
     };
   }
 
-  const packageManager = await detectPackageManager(snapshotRoot, manifest);
+  const packageManager = await detectPackageManager(
+    snapshotRoot,
+    manifest,
+    filesystem,
+  );
   const findings = [];
   const sourceCheckout = isSilvermoonSourceCheckout(repositoryRoot, manifest);
   if (!expectedDependency) {
@@ -369,11 +377,13 @@ function canonicalSkillBytes(content) {
   }
 }
 
-async function directoryDigest(root) {
+async function directoryDigest(root, filesystem) {
   const hash = createHash("sha256");
 
   async function visit(directory) {
-    const entries = (await readdir(directory, { withFileTypes: true }))
+    const entries = (
+      await filesystem.readdir(directory, { withFileTypes: true })
+    )
       .sort((left, right) => left.name.localeCompare(right.name));
     for (const entry of entries) {
       const path = resolve(directory, entry.name);
@@ -382,7 +392,7 @@ async function directoryDigest(root) {
       } else if (entry.isFile()) {
         hash.update(relative(root, path).split(sep).join("/"));
         hash.update("\0");
-        hash.update(canonicalSkillBytes(await readFile(path)));
+        hash.update(canonicalSkillBytes(await filesystem.readFile(path)));
         hash.update("\0");
       } else if (entry.isSymbolicLink()) {
         await visit(path);
@@ -396,16 +406,16 @@ async function directoryDigest(root) {
   return hash.digest("hex");
 }
 
-async function inspectSkill(contentRoot) {
+async function inspectSkill(contentRoot, filesystem) {
   const path = resolve(contentRoot, ...REPOSITORY_SKILL_PATH.split("/"));
   const expectedDigest = await traceAsync(
     "skill.digest-packaged",
     {},
-    () => directoryDigest(packagedSkill),
+    () => directoryDigest(packagedSkill, DEFAULT_FILESYSTEM),
   );
   let metadata;
   try {
-    metadata = await lstat(path);
+    metadata = await filesystem.lstat(path);
   } catch (caught) {
     if (caught.code !== "ENOENT") {
       return {
@@ -444,7 +454,7 @@ async function inspectSkill(contentRoot) {
     actualDigest = await traceAsync(
       "skill.digest-repository",
       {},
-      () => directoryDigest(path),
+      () => directoryDigest(path, filesystem),
     );
   } catch (caught) {
     return {
@@ -473,10 +483,14 @@ async function inspectSkill(contentRoot) {
 
 export async function inspectAdoption({
   contentRoot,
+  filesystem = DEFAULT_FILESYSTEM,
+  repositoryRoot: knownRepositoryRoot,
   root = process.cwd(),
 } = {}) {
   const requestedRoot = resolve(root);
-  const git = runGit(requestedRoot, ["rev-parse", "--show-toplevel"]);
+  const git = knownRepositoryRoot === undefined
+    ? runGit(requestedRoot, ["rev-parse", "--show-toplevel"])
+    : { ok: true, stdout: resolve(knownRepositoryRoot) };
   const repositoryRoot = git.ok ? resolve(git.stdout) : requestedRoot;
   const snapshotRoot = resolve(contentRoot ?? repositoryRoot);
   const findings = [];
@@ -495,7 +509,7 @@ export async function inspectAdoption({
   const loadedConfig = await traceAsync(
     "config.load",
     {},
-    () => loadConfig({ root: snapshotRoot }),
+    () => loadConfig({ filesystem, root: snapshotRoot }),
   );
   for (const diagnostic of loadedConfig.diagnostics) {
     findings.push({
@@ -509,7 +523,7 @@ export async function inspectAdoption({
   const npm = await traceAsync(
     "npm-project.inspect",
     {},
-    () => inspectNpmProject(snapshotRoot, repositoryRoot),
+    () => inspectNpmProject(snapshotRoot, repositoryRoot, { filesystem }),
   );
   findings.push(...npm.findings);
   const skillSource = npm.npmProject && !npm.sourceCheckout
@@ -518,7 +532,7 @@ export async function inspectAdoption({
   const skill = await traceAsync(
     "skill.inspect",
     {},
-    () => inspectSkill(snapshotRoot, skillSource),
+    () => inspectSkill(snapshotRoot, filesystem),
   );
   if (!skill.ok) {
     findings.push({

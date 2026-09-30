@@ -64,7 +64,8 @@ the release namespace.
 ## Publish a version
 
 1. Update the selected package's `version` in its committed `package.json`.
-2. Run `pnpm install --frozen-lockfile` and `pnpm check`. The complete check
+2. Run `pnpm install --frozen-lockfile` and `pnpm check` (or `pnpm check:release`).
+   Neither validation command publishes a package. The complete check
    includes unit, contract, integration, package contents, installed-package
    E2E, and skill discovery.
 3. Merge the version change to `main`; do not tag an unmerged branch or local
@@ -95,7 +96,8 @@ The [`publish-npm.yml`](../.github/workflows/publish-npm.yml) workflow then:
 3. runs the allowlisted release planner and confirms the version is absent
    from npm, or records that an exact-version rerun must skip publication;
 4. runs `pnpm test:unit`, `pnpm test:contract`, `pnpm test:integration`, and
-   `pnpm check:skills`;
+   `pnpm check:skills`, Markdown/whitespace and checked-out Silvermoon snapshot
+   validation, all unconditionally;
 5. creates an isolated `git archive` staging tree and generates commit-pinned
    English and Chinese package READMEs without changing the tagged checkout;
    the repository READMEs use canonical `./assets/...` image paths so branch,

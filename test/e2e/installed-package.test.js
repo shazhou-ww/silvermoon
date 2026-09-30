@@ -10,14 +10,11 @@ import {
   writeFile,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { basename, dirname, join, resolve } from "node:path";
+import { join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { npmCommand } from "../../scripts/npm-command.mjs";
 
 const packageRoot = fileURLToPath(new URL("../..", import.meta.url));
-const configuredNpmCli = process.env.npm_execpath;
-const npmCli = configuredNpmCli && /^npm-cli\.js$/i.test(basename(configuredNpmCli))
-  ? configuredNpmCli
-  : resolve(dirname(process.execPath), "node_modules", "npm", "bin", "npm-cli.js");
 const id = "01M36QGPNTXEPP61DA4KP4AVZF";
 
 function responseText(report) {
@@ -62,7 +59,8 @@ function npm(args, cwd) {
 }
 
 function npmResult(args, cwd) {
-  return spawnSync(process.execPath, [npmCli, ...args], {
+  const invocation = npmCommand(args);
+  return spawnSync(invocation.command, invocation.args, {
     cwd,
     encoding: "utf8",
     timeout: 600_000,
