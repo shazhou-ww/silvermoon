@@ -95,19 +95,46 @@
 
 ### Deployment steps
 
-- [ ] **D-S01:** 发布契约并固定主线候选
+- [x] **D-S01:** 发布契约并固定主线候选
   - 修复后用户明确验收 `c5264f272e1ef724686d9a2b0b5364b6b4ca4201`；
     status-only commit `89cea38179fc42bbd05503b7b250b4abea3528b6` 已同步。
     先 fast-forward 保留主线 `cdaccfccb3f5a24a3d6deaaffd721e97c35205f3`
     的 MIT 许可证、包测试及另一 idea 历史，重新观察相同实施 revision 后记录决定。
-    当前部署契约更新为新验收身份，重新发布并固定新候选后再执行验证。
+    当前部署契约更新为新验收身份。
+  - 修订部署契约先同步于 `8ff32647427edeccf6ee15125b45a92341c1aad4`，
+    刷新 primary 确认可达，重新观察 deploying 与 deploymentRevision
+    `6aba0d52227026d225d1481a5d6874578b8c5a5c`，再开始验证。
+    下述本次 clone、普通 push、手动 full 全部使用同一候选 SHA。
     以下首次尝试的契约、失败和 CI 证据作为历史保留，不视为新候选证明。
   - 2026-09-30，刷新并 fast-forward 到 `27867cfe132017fe5b14e6846f649e37cd1b688f`，
     保留并发历史；实施验收仍为 `66f8f63c4574ac59655ab65836836a13b1f80963`。
   - 部署契约先同步于 `1505e2918321f4b46a0bdb18f0a62ff50efa436d`，
     刷新确认 primary 可达，再观察 deploymentRevision
-    `59645981ed071aff98900b354c8caafae4803cbd`。以下验证固定在此候选。
-- [ ] **D-S02:** 在全新 checkout 验证使用路径
+    `59645981ed071aff98900b354c8caafae4803cbd`。仅首次尝试固定在此候选。
+- [x] **D-S02:** 在全新 checkout 验证使用路径
+  - **本次成功**：从远端新建会话所属 `deployment-repaired-clone`，
+    detached checkout `8ff32647427edeccf6ee15125b45a92341c1aad4`。
+    Windows / Node.js v24.11.1 / pnpm 11.22.0；sanity 初次执行自动按
+    现有锁文件恢复 218 个依赖（lockfile up to date），未修改依赖声明或锁文件。
+    未声称手动执行 frozen install，不计自动准备时间为性能收益。
+  - 顺序执行一次 `pnpm check:sanity`、`pnpm check:commit`、
+    `pnpm check:release`，均退出 0：
+    sanity 93/93；commit 的 93 sanity、26 contract、10 smoke 全通过，
+    七门禁全部成功；release 共 260 项（258 pass、2 原有 Windows skip），
+    包括 103 unit/runtime、26 contract、130 integration、1 E2E。
+  - release 的六门禁全部实际执行：Markdown、quick、integration、pack、
+    E2E、skills；`PACK_OK silvermoon@0.2.2 files=52`、`PACK_SMOKE_OK`、
+    `SKILLS_CHECK_OK files=2`、外部 discovery 发现 2 skills。
+    包文件数从修复候选的 51 增至 52，来自保留的并发主线 MIT LICENSE，
+    本次安装包 E2E 已同时覆盖此变化。
+  - 日志包含 `COMMIT_SCOPE`：worktree 测试不证明暂存代码，
+    staged 检查只验证 Silvermoon 元数据。clone 验证前后 `git status --short`
+    均为空，结束时 worktree/index diff 均无差异；
+    候选自身 `node bin/silvermoon.js check --commit HEAD --audience agent` 成功。
+  - 原始日志位于会话 artifacts 的 `redeployment-sanity.log`、
+    `redeployment-commit.log`、`redeployment-release.log`；
+    未做新基线/重复性能采样。只删除明确归属本次操作的 clone，
+    验证其路径已不存在，日志保留在 clone 外。
   - **首次尝试失败（历史）**：从远端新建会话所属 clone，detached checkout 精确候选，
     Windows / Node.js v24.11.1 / pnpm 11.22.0。运行前后 Git status 为空。
     pnpm 初次执行自动按现有锁文件恢复 218 个依赖，随后实际运行 sanity；
@@ -125,8 +152,28 @@
   - 按部署契约停止本地后续 commit/release 检查，不关闭 guard、不删断言、
     不扩大 skip、不在部署阶段移动测试。恢复条件：实现侧保留真实 Git 断言并
     修正其 runtime 归属，重新发布并确认适用候选后重跑 D-S02。
-- [ ] **D-S03:** 验证实际托管 CI 与使用说明
-  - 普通 push run
+- [x] **D-S03:** 验证实际托管 CI 与使用说明
+  - **本次成功**：普通 push
+    [36673292405](https://github.com/shazhou-ww/silvermoon/actions/runs/36673292405)
+    与手动 workflow_dispatch
+    [36673319084](https://github.com/shazhou-ww/silvermoon/actions/runs/36673319084)
+    均 completed/success，head SHA 均为
+    `8ff32647427edeccf6ee15125b45a92341c1aad4`，不存在跨候选混用。
+    本次只触发一次普通 CI 手动 full，未触发 publish-npm。
+  - 普通 push：9 jobs success，仅 Package contents and installed CLI skipped；
+    手动 full：10/10 jobs success，Verify package contents 和
+    Test installed package 均实际 success。两条 run 的 Ubuntu/Windows/macOS
+    × Node 22/24 全六组合均先 `Run sanity checks` success，
+    再 `Run unit tests` success；contract、integration、risk 均 success。
+  - 读取固定候选的 maintaining、repository-tasks、AGENTS、
+    npm-package-releases、package scripts、runner、CI/publish workflow：
+    check 与 check:release 共用 CHECK_SCRIPTS 六门禁，quick 未缩水；
+    文档的暂存边界、sanity/runtime 归属、保守 package 风险及显式 full 一致。
+    release 中的全部 contract 测试通过，包括 CI 与发布契约。
+  - 发布 workflow 的主线 ancestry、不可变 tag 约束、npm environment、
+    OIDC 权限、实际 tarball 验证和发布后校验均保留。
+    本次无 npm 发布、tag 创建或 registry/provenance/CDN 验证成果声明。
+  - **首次尝试（历史）**：普通 push run
     [36671536066](https://github.com/shazhou-ww/silvermoon/actions/runs/36671536066)
     和唯一一次手动 full run
     [36671553805](https://github.com/shazhou-ww/silvermoon/actions/runs/36671553805)
@@ -134,16 +181,25 @@
   - 最新外部结果：两条 run 均 completed/success；普通 push 的 package job
     按 metadata-only 规则 skipped，手动 full 的 package job 实际执行成功。
     CI 的完整 unit 路径不带 sanity guard，不能用其绿色结果替代 D-S02。
-- [ ] **D-S04:** 同步证据并请求精确部署验收
+- [x] **D-S04:** 同步证据并请求精确部署验收
   - 首次尝试已同步失败和未执行事项；当前修复实施已重新验收，
     等待新候选部署实证。只改本 idea 的 Deployment/ledger，
     不改变内层世界或其他 idea；部署决定仍须用户明确验收。
+  - 本次所有部署实证已齐，无剩余技术 blocker。证据仅更新本 ledger，
+    不改变已发布的 deploymentRevision；按 worktree/staged、commit 门禁及
+    普通非强制 Git 同步后，重新观察精确部署 revision 并请求人工验收。
+    implementationAcceptedRevision 保持用户新决定，部署接受事实仍空缺。
 
 ### Deployment acceptance criteria
 
-- [ ] **D-AC01:** 发布候选与验收身份准确
-  - 旧候选身份保留于 D-S01；需重新发布契约并记录修复后的候选。
-- [ ] **D-AC02:** 全新环境的分层入口可用
-- [ ] **D-AC03:** 托管路由符合风险契约
-- [ ] **D-AC04:** 指令与发布边界没有漂移
-- [ ] **D-AC05:** 可审阅证据已同步且等待明确决定
+- [x] **D-AC01:** 发布候选与验收身份准确
+  - 新契约先发布、新验收身份与精确候选/revision 见 D-S01；旧证据保留。
+- [x] **D-AC02:** 全新环境的分层入口可用
+  - D-S02 的三个入口成功、260 项覆盖及包/技能通过，前后快照干净。
+- [x] **D-AC03:** 托管路由符合风险契约
+  - D-S03 两条真实 CI 对同一 SHA 的 metadata-only/full 路由符合契约。
+- [x] **D-AC04:** 指令与发布边界没有漂移
+  - 固定候选文档/脚本/工作流核对及 contract 通过；无隐式 npm 发布。
+- [x] **D-AC05:** 可审阅证据已同步且等待明确决定
+  - 证据与候选按 D-S04 校验同步；没有写入 deploymentAcceptedRevision，
+    下一步仅等待用户对精确部署 revision 的决定。
