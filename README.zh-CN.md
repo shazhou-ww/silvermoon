@@ -49,6 +49,9 @@ response；使用 `q`、`Esc` 或 `Ctrl+C` 退出。human 输出被重定向或�
 `check` 只验证已提交的 `HEAD`，不能替代提交前检查。只有项目快照有效时检查才以
 退出码 `0` 放行，详见英文 [Technical Reference](./docs/reference.md)。
 
+Windows TTY 的 TUI 帧经 Node 终端流输出 UTF-8，不要求手动切换终端代码页；
+这不影响管道中的原始 Markdown 或 JSON。
+
 任何命令都可以添加 `--trace <file.trace.jsonl>`，写出一条 schema-versioned
 JSONL timeline。`domain` channel 保存经过 allowlist 的 message 摘要，
 `telemetry` channel 保存成对 performance span；两者共享同一个 trace ID 和全局

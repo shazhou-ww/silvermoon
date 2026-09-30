@@ -226,9 +226,11 @@ omitted, the audience is `human`: stdin and stdout must both be TTYs for the
 bundled `tui-md` view to start. That view supports scrolling and exits with
 `q`, `Esc`, or `Ctrl+C`. If either stream is not a TTY, human output is raw
 Markdown. `--audience agent` always emits raw Markdown without TUI control
-sequences. Both Markdown paths render only `response`, never the intention,
-observation, or action history, and derive their content from the same command
-report. They begin with the answer, then include only relevant idea references,
+sequences. On Windows, TUI frames use Node's terminal stream for UTF-8 output
+without changing the console code page. Both Markdown paths render only
+`response`, never the intention, observation, or action history, and derive their
+content from the same command report. They begin with the answer, then include
+only relevant idea references,
 inventory details, validation details, problems, next steps, and blockquoted
 guidance.
 

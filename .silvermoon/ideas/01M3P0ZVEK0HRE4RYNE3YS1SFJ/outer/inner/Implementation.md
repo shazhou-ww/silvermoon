@@ -27,6 +27,13 @@ and installed-package behavior. Update help, README, getting-started,
 operations, and reference documentation with the audience semantics, TTY
 requirements, TUI controls, and pipeline guidance.
 
+### I-S04: 修复 Windows TTY 的 Unicode 输出
+
+在 Windows human TTY 中避免 OpenTUI native renderer 直接按终端旧代码页写入 UTF-8
+字节，使中文与 Unicode 表格边框通过 Node 的终端输出流显示；不修改用户终端代码页，
+不改变非 Windows、agent、非 TTY 或 JSON 的输出路由。加入针对 Windows 输出流
+选择和 Unicode 字节转发的回归测试，并更新终端使用说明。
+
 ## Acceptance criteria
 
 ### I-AC01: Audience options have one consistent CLI contract
@@ -59,3 +66,10 @@ CLI help and user documentation describe the default audience, raw pipeline
 mode, JSON conflict, dual-TTY requirement, and TUI quit controls. `pnpm check`
 proves the complete repository candidate, including Markdown, unit,
 integration, end-to-end, skill, and package checks.
+
+### I-AC05: Windows human TTY 正确显示 Unicode
+
+Windows human TTY 下中文内容和 Unicode 表格边框不再以旧代码页乱码显示。
+测试验证 Windows 使用 OpenTUI 的 byte feed 将 UTF-8 字节交由 Node 输出流写入，
+其他平台仍使用原终端流；验证 TTY 交互渲染、agent 原始 Markdown 和 JSON
+行为保持不变，并运行 `pnpm check`。

@@ -56,6 +56,20 @@ function MarkdownViewer({ content }) {
   );
 }
 
+export function tuiOutputStream(stdout, platform = process.platform) {
+  if (platform !== "win32") return stdout;
+
+  // A distinct stream makes OpenTUI use its byte feed instead of writing UTF-8
+  // directly through the native Windows console's legacy output code page.
+  return {
+    get columns() { return stdout.columns; },
+    get rows() { return stdout.rows; },
+    get isTTY() { return stdout.isTTY; },
+    write: (...args) => stdout.write(...args),
+    getColorDepth: (...args) => stdout.getColorDepth(...args),
+  };
+}
+
 export async function renderTuiMarkdown(content, { stdin, stdout }) {
   let renderer;
   try {
@@ -64,7 +78,7 @@ export async function renderTuiMarkdown(content, { stdin, stdout }) {
       exitOnCtrlC: true,
       screenMode: "alternate-screen",
       stdin,
-      stdout,
+      stdout: tuiOutputStream(stdout),
     });
     renderer.setTerminalTitle("Silvermoon");
     createRoot(renderer).render(createElement(MarkdownViewer, { content }));
