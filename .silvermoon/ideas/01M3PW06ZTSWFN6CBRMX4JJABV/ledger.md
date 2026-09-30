@@ -33,8 +33,12 @@
 
 ### Deployment steps
 
-- [ ] **D-S01:** 步骤标题
+- [ ] **D-S01:** 发布并锁定实际采用的 primary 候选
+- [ ] **D-S02:** 在干净消费者 checkout 验证完整开发检查
+- [ ] **D-S03:** 核实托管 CI 并发布外部证据
 
 ### Deployment acceptance criteria
 
-- [ ] **D-AC01:** 标准标题
+- [ ] **D-AC01:** 已验收实现与操作说明在 primary 可获取
+- [ ] **D-AC02:** 干净 checkout 可运行完整检查且诊断完整
+- [ ] **D-AC03:** 固定候选的远端 CI 通过且证据可审阅
