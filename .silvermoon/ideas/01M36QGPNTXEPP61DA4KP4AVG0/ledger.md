@@ -47,3 +47,13 @@
 - 本次只推进 Ideal World 与 ledger：未修改 Implementation.md、Deployment.md、
   status.yaml 或其他 idea，也未新增或改写任何 status revision 事实；仍等待用户对
   精确 idealRevision `267c5492ba1554acb430fcc00e80b643adc68d1a` 的明确批准。
+- 2026-09-30（preparing，就绪复核）：逐节核对
+  `.silvermoon/ideas/01M36QGPNTXEPP61DA4KP4AVG0/outer/inner/ideal/Idea.md`，确认
+  Goal、Context、Scope、Out of scope、Constraints、五个 required human review
+  checkpoint 与 References 均已就绪，References 中的仓库内相对路径存在，且首批
+  scenario 与当前 Silvermoon 的 `whats-next`、`create-idea`、`check` 及 lifecycle
+  gate 契约一致。复核期间未改动 Idea.md 内容，因此
+  `silvermoon whats-next` 报告的 idealRevision 仍为
+  `267c5492ba1554acb430fcc00e80b643adc68d1a`；本次只向 ledger 追加本条就绪证据，
+  未修改 Implementation.md、Deployment.md、status.yaml 或其他 idea。证据同步到
+  primary 后，即可请求用户对该精确 revision 的明确批准。
