@@ -13,6 +13,7 @@ import { pathToFileURL } from "node:url";
 
 import { observeGitCommands } from "../../src/git.js";
 import { inspectPhaseGuidance } from "../../src/guidance.js";
+import { ideaCreatedAt } from "../../src/idea-query.js";
 import {
   GUIDANCE_ROOT,
   phaseGuidancePath,
@@ -178,7 +179,11 @@ test("[selector-unknown] reports an unknown selector without guessing", async ()
   assert.deepEqual(report.observation.problems, []);
   assert.equal(report.observation.state, "idea-not-found");
   assert.deepEqual(report.observation.candidates, [{
-    id: FIRST_ID, alias: "fixture", state: "preparing",
+    id: FIRST_ID,
+    state: "preparing",
+    createdAt: ideaCreatedAt(FIRST_ID),
+    alias: "fixture",
+    title: "Fixture",
   }]);
   assert.equal(report.observation.outputLanguage, "zh-CN");
   assert.equal(Object.hasOwn(report.observation, "selectedIdea"), false);
@@ -292,4 +297,3 @@ test("uses a canonical output override without changing content language or pers
     /silvermoon whats-next "localized" --language zh-CN/,
   );
 });
-

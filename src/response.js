@@ -314,31 +314,70 @@ function renderMarkdownTable(headers, rows) {
   ];
 }
 
-function renderIdeaList(response, language) {
+function formatDate(timestamp, language, now) {
+  const date = new Date(timestamp);
+  if (!Number.isFinite(date.getTime()) || !Number.isFinite(now.getTime())) {
+    throw new TypeError("Cannot render an invalid timestamp");
+  }
+  const duration = now.getTime() - date.getTime();
+  const elapsed = Math.abs(duration);
+  const minute = 60_000;
+  const hour = 60 * minute;
+  const day = 24 * hour;
+  if (elapsed > 7 * day) {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+  }
+  if (elapsed < minute) {
+    return duration < 0
+      ? localize(language, "soon", "马上")
+      : localize(language, "just now", "刚刚");
+  }
+  const [amount, unit, chineseUnit] = elapsed < hour
+    ? [Math.floor(elapsed / minute), "m", "分钟"]
+    : elapsed < day
+      ? [Math.floor(elapsed / hour), "h", "小时"]
+      : [Math.floor(elapsed / day), "d", "天"];
+  return duration < 0
+    ? localize(language, `in ${amount}${unit}`, `${amount}${chineseUnit}后`)
+    : localize(language, `${amount}${unit} ago`, `${amount}${chineseUnit}前`);
+}
+
+function renderIdeaTable(ideas, language, now) {
   const headers = [
-    localize(language, "ID", "ID"),
-    localize(language, "Alias", "Alias"),
+    "Alias / ID",
     localize(language, "State", "状态"),
     localize(language, "Created", "创建时间"),
     localize(language, "Title", "标题"),
   ];
+  return renderMarkdownTable(
+    headers,
+    ideas.map((idea) => [
+      idea.alias ?? idea.id,
+      idea.state,
+      formatDate(idea.createdAt, language, now),
+      idea.title,
+    ]),
+  );
+}
+
+function renderIdeaList(response, language, now) {
   const counts = Object.entries(response.inventory.counts)
     .map(([state, count]) => `${state}=${count}`)
     .join(", ");
   const lines = [
     `${response.summary} ${localize(language, "Counts", "计数")}: ${counts}.`,
-    "",
-    ...renderMarkdownTable(
-      headers,
-      response.items.map((idea) => [
-        idea.id,
-        idea.alias,
-        idea.state,
-        idea.createdAt,
-        idea.title,
-      ]),
-    ),
   ];
+  if (response.query?.createdSince) {
+    lines.push(
+      `- ${localize(language, "Created since", "创建时间下界")}: ${formatDate(response.query.createdSince, language, now)}`,
+    );
+  }
+  if (response.query?.createdBefore) {
+    lines.push(
+      `- ${localize(language, "Created before", "创建时间上界")}: ${formatDate(response.query.createdBefore, language, now)}`,
+    );
+  }
+  lines.push("", ...renderIdeaTable(response.items, language, now));
   if (response.items.length === 0) {
     lines.push(
       "",
@@ -348,55 +387,16 @@ function renderIdeaList(response, language) {
   return lines.join("\n");
 }
 
-export function renderResponse(response) {
+export function renderResponse(response, { now = new Date() } = {}) {
   const language = response.language ?? DEFAULT_LANGUAGE;
   if (response.kind === "idea-list") {
     return [
       `## ${responseTitle(response)}`,
       "",
-      renderIdeaList(response, language),
+      renderIdeaList(response, language, now),
     ].join("\n");
   }
   const lines = [`## ${responseTitle(response)}`, "", response.summary];
-
-  if (response.inventory) {
-    const counts = Object.entries(response.inventory.counts)
-      .map(([state, count]) => `${state}=${count}`)
-      .join(", ");
-    lines.push(
-      "",
-      `- ${localize(language, "States", "状态")}: ${response.query.states
-        .map(codeSpan)
-        .join(", ")}`,
-    );
-    if (response.query.query !== null) {
-      lines.push(
-        `- ${localize(language, "Query", "查询")}: ${codeSpan(response.query.query)}`,
-      );
-    }
-    if (response.query.createdSince !== null) {
-      lines.push(
-        `- ${localize(language, "Created since", "创建时间下界")}: ${codeSpan(response.query.createdSince)}`,
-      );
-    }
-    if (response.query.createdBefore !== null) {
-      lines.push(
-        `- ${localize(language, "Created before", "创建时间上界")}: ${codeSpan(response.query.createdBefore)}`,
-      );
-    }
-    lines.push(
-      `- ${localize(language, "Sort", "排序")}: ${codeSpan(response.query.sort)}`,
-      `- ${localize(language, "Limit", "上限")}: ${response.query.limit === null
-        ? localize(language, "none", "无")
-        : codeSpan(response.query.limit)}`,
-      `- ${localize(language, "Matched", "匹配")}: ${response.inventory.matched}`,
-      `- ${localize(language, "Returned", "返回")}: ${response.inventory.returned}`,
-      `- ${localize(language, "Truncated", "已截断")}: ${response.inventory.truncated
-        ? localize(language, "yes", "是")
-        : localize(language, "no", "否")}`,
-      `- ${localize(language, "Counts", "计数")}: ${counts}`,
-    );
-  }
 
   if (response.validation) {
     const target = response.validation.target.type === "commit"
@@ -454,45 +454,7 @@ export function renderResponse(response) {
         ),
       );
     } else {
-      lines.push(
-        ...renderMarkdownTable(
-          [
-            localize(language, "ID", "ID"),
-            localize(language, "Alias", "Alias"),
-            localize(language, "State", "状态"),
-          ],
-          response.choices.map((idea) => [
-            idea.id,
-            idea.alias,
-            idea.state,
-          ]),
-        ),
-      );
-    }
-  }
-
-  if (response.items) {
-    lines.push("", `### ${localize(language, "Results", "结果")}`, "");
-    if (response.items.length === 0) {
-      lines.push(localize(language, "No ideas matched.", "没有匹配的 idea。"));
-    } else {
-      for (const idea of response.items) {
-        const details = [
-          `${localize(language, "State", "状态")}=${codeSpan(idea.state)}`,
-          `${localize(language, "Created", "创建时间")}=${codeSpan(idea.createdAt)}`,
-        ];
-        if (idea.alias !== undefined) {
-          details.push(
-            `${localize(language, "Alias", "Alias")}=${codeSpan(idea.alias)}`,
-          );
-        }
-        if (idea.title !== undefined) {
-          details.push(
-            `${localize(language, "Title", "标题")}=${codeSpan(idea.title)}`,
-          );
-        }
-        lines.push(`- ${codeSpan(idea.id)}: ${details.join("; ")}`);
-      }
+      lines.push(...renderIdeaTable(response.choices, language, now));
     }
   }
 
@@ -502,9 +464,13 @@ export function renderResponse(response) {
       `### ${localize(language, "Issues to address", "需要处理的问题")}`,
       "",
     );
-    for (const problem of response.problems) {
-      lines.push(`- [${problem.type}] ${problem.summary}`);
-    }
+    lines.push(...renderMarkdownTable(
+      [
+        localize(language, "Type", "类型"),
+        localize(language, "Summary", "概要"),
+      ],
+      response.problems.map(({ type, summary }) => [type, summary]),
+    ));
   }
 
   if (response.nextSteps?.length > 0) {

@@ -10,6 +10,10 @@ import {
 import { createCommandRun } from "./domain.js";
 import { inspectPhaseGuidance } from "./guidance.js";
 import {
+  metadataFailureObservation,
+  readIdeaInventoryItem,
+} from "./idea-metadata.js";
+import {
   compareCommits,
   fetchPrimary,
   inspectCurrentBranch,
@@ -604,9 +608,49 @@ export async function whatsNext({
     );
   }
 
+  let navigationObservation = readiness.observation;
+  if (selector === undefined || !selected) {
+    let activeItems;
+    try {
+      const activeIds = new Set(
+        readiness.observation.ideas.activeIdeas.map(({ id }) => id),
+      );
+      activeItems = await traceAsync(
+        "ideas.navigation-metadata",
+        { ideaCount: activeIds.size },
+        () => Promise.all(
+          observed.layout.ideas
+            .filter(({ id }) => activeIds.has(id))
+            .map((idea) => readIdeaInventoryItem(observed.observation.root, idea)),
+        ),
+      );
+    } catch (caught) {
+      const failure = metadataFailureObservation(
+        observed,
+        caught,
+        recheckCommand,
+      );
+      return runtime.complete(failure.observation, failure.responseContext);
+    }
+    const itemsById = new Map(activeItems.map((item) => [item.id, item]));
+    navigationObservation = {
+      ...readiness.observation,
+      ideas: {
+        ...readiness.observation.ideas,
+        activeIdeas: readiness.observation.ideas.activeIdeas.map(({ id }) => {
+          const item = itemsById.get(id);
+          if (item === undefined) {
+            throw new Error(`Missing observed navigation metadata for ${id}`);
+          }
+          return item;
+        }),
+      },
+    };
+  }
+
   if (selector === undefined) {
     return runtime.complete(
-      { ...readiness.observation, state: "navigation-ready" },
+      { ...navigationObservation, state: "navigation-ready" },
       {
         nextSteps: navigationInstruction(
           observed.layout.ideas,
@@ -617,8 +661,8 @@ export async function whatsNext({
   }
   if (!selected) {
     return runtime.complete(
-      dialogueReadyObservation(readiness.observation, "idea-not-found", {
-        candidates: readiness.observation.ideas.activeIdeas,
+      dialogueReadyObservation(navigationObservation, "idea-not-found", {
+        candidates: navigationObservation.ideas.activeIdeas,
       }),
       {
         nextSteps: joinInstructions([

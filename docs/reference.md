@@ -239,7 +239,14 @@ without changing the console code page. Both Markdown paths render only
 content from the same command report. They begin with the answer, then include
 only relevant idea references,
 inventory details, validation details, problems, next steps, and blockquoted
-guidance.
+guidance. Text reports render problems as a Markdown table. `list-ideas` and
+`whats-next` active choices use the same `Alias / ID`, state, created, title
+columns: an alias replaces the ID in that column when present. Structured
+dates in these lists and any displayed creation-time filter bounds are short
+relative times (just now, minutes, hours, days); after seven days they show a
+local calendar date without a time.
+Future dates are labelled as upcoming, not as elapsed. JSON retains exact
+UTC timestamps and all filtering still uses the exact values.
 
 `--json` without an explicitly selected audience serializes the four
 projections from the same domain stream; explicit `--json --audience ...` is a
@@ -288,12 +295,16 @@ Observations are discriminated by command intent and `state`:
   safety checks fail. It includes `root`, `version`, `configuration`, and at
   least one `problem`, but no idea inventory or remote synchronization facts.
 - Bare `whats-next` returns `navigation-ready` with `ideas.counts` and
-  `ideas.activeIdeas` (possibly empty). It never selects a candidate.
+  `ideas.activeIdeas` (possibly empty). Each active item includes `id`,
+  lifecycle `state`, UTC `createdAt`, and optional alias/title read from the
+  current idea document; missing titles render as `-`. It never selects a
+  candidate.
 - Selected `whats-next` returns `idea-selected` with only `selectedIdea`
   (`id`, optional `alias`, lifecycle `state`), including terminal ideas.
-  Unknown selectors return `idea-not-found` with `candidates`, not a
-  fabricated selected idea. An actionable selection may also contain
-  snapshot-bound guidance provenance; captured content is in the response.
+  Unknown selectors return `idea-not-found` with the same enriched active
+  `candidates`, not a fabricated selected idea. An actionable selection may
+  also contain snapshot-bound guidance provenance; captured content is in
+  the response.
 - `phase-guidance-invalid` means command readiness reached the current
   actionable phase, but that phase's optional file exists and is invalid. It
   contains problems and repair instructions, not lifecycle instructions or
@@ -315,7 +326,8 @@ Observations are discriminated by command intent and `state`:
 
 Dialogue versions have `version.type: "worktree"`. When present, `ideas.counts` has
 `preparing`, `implementing`, `deploying`, `completed`, and `abandoned`;
-`activeIdeas` contains only minimal references for the first three states.
+`activeIdeas` contains only minimal references for the first three states
+outside navigation; navigation enriches those references after readiness.
 Problems have only stable `type` and natural-language `summary`; remediation
 belongs in `response.nextSteps`.
 

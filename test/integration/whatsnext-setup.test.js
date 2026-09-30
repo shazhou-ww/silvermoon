@@ -13,8 +13,10 @@ import { pathToFileURL } from "node:url";
 
 import { observeGitCommands } from "../../src/git.js";
 import { inspectPhaseGuidance } from "../../src/guidance.js";
+import { ideaCreatedAt } from "../../src/idea-query.js";
 import {
   GUIDANCE_ROOT,
+  ideaPaths,
   phaseGuidancePath,
 } from "../../src/layout.js";
 import {
@@ -156,8 +158,10 @@ test("[selector-none] naked navigation lists one active idea without selecting i
   assert.equal(report.observation.state, "navigation-ready");
   assert.deepEqual(report.observation.ideas.activeIdeas, [{
     id: FIRST_ID,
-    alias: "fixture",
     state: "preparing",
+    createdAt: ideaCreatedAt(FIRST_ID),
+    alias: "fixture",
+    title: "Fixture",
   }]);
   assert.equal(
     report.response.summary,
@@ -166,10 +170,10 @@ test("[selector-none] naked navigation lists one active idea without selecting i
   assert.deepEqual(report.response.choices, report.observation.ideas.activeIdeas);
   const rendered = renderResponse(report.response);
   assert.match(rendered, /### Active ideas/);
-  assert.match(rendered, /\| ID \| Alias \| State \|/);
+  assert.match(rendered, /\| Alias \/ ID \| State \| Created \| Title \|/);
   assert.match(
     rendered,
-    new RegExp(`\\| ${FIRST_ID} \\| fixture \\| preparing \\|`),
+    /\| fixture \| preparing \| .* \| Fixture \|/,
   );
   assert.doesNotMatch(responseText(report), new RegExp(FIRST_ID));
   assert.match(responseText(report), /silvermoon whats-next <ULID-or-alias>/);
@@ -212,6 +216,33 @@ test("empty navigation stays ready without selecting an idea", async () => {
   assert.match(responseText(report), /create-idea/);
 });
 
+test("navigation renders an alias-less idea without a level-one title", async () => {
+  const repository = await fixture({
+    ideas: [{ id: FIRST_ID, status: {} }],
+  });
+  const path = ideaPaths(FIRST_ID).ideaDocumentPath;
+  await writeFile(join(repository.root, ...path.split("/")), "## Not a title\n");
+  git(repository.root, "add", ".");
+  git(repository.root, "commit", "-m", "Remove level-one title");
+  git(repository.root, "push", "origin", "main");
+
+  const report = await whatsNext({
+    root: repository.root,
+    userHome: repository.base,
+  });
+  assert.deepEqual(report.response.choices, [{
+    id: FIRST_ID,
+    state: "preparing",
+    createdAt: ideaCreatedAt(FIRST_ID),
+  }]);
+  assert.match(
+    renderResponse(report.response, {
+      now: new Date(Date.parse(ideaCreatedAt(FIRST_ID)) + 7 * 24 * 60 * 60_000),
+    }),
+    new RegExp(`\\| ${FIRST_ID} \\| preparing \\| 7d ago \\| - \\|`),
+  );
+});
+
 test("resolves the repository root when invoked from a nested directory", async () => {
   const repository = await fixture();
   const nested = join(repository.root, "nested", "directory");
@@ -234,4 +265,3 @@ test("resolves the repository root when invoked from a nested directory", async 
   assert.match(responseText(report), /approvedRevision/);
   assert.doesNotMatch(responseText(report), /道心|内景|现世/);
 });
-
