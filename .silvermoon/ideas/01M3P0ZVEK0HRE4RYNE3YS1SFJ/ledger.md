@@ -29,8 +29,12 @@
 
 ### Deployment steps
 
-- [ ] **D-S01:** Step title
+- [ ] **D-S01:** 发布并锁定验收候选
+- [ ] **D-S02:** 检查非交互输出和机器报告
+- [ ] **D-S03:** 在真实 Windows 终端核对交互体验
 
 ### Deployment acceptance criteria
 
-- [ ] **D-AC01:** Criterion title
+- [ ] **D-AC01:** 受检候选来自已发布 primary
+- [ ] **D-AC02:** 管道、Agent 和 JSON 输出保持可靠
+- [ ] **D-AC03:** 真实 human TTY 体验由使用者确认
