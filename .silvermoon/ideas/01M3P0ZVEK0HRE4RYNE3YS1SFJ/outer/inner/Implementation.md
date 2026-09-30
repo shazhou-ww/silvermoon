@@ -51,6 +51,22 @@ PowerShell 剪贴板命令，不复制整个报告。没有选区或复制失败
 需要四投影 JSON 时改用 `--json`，两者不能合用。同步仓库注册副本，
 更新相应操作文档与契约测试，不在 README 中增加技术细节。
 
+### I-S07: 统一文本报告的列表、问题和时间
+
+复用同一 Markdown 表格渲染，使 `list-ideas` 和 `whats-next` 的 active
+列表使用 `Alias / ID`、状态、创建时间、标题四列；通过同一 idea 文档读取
+路径补全导航标题，保留没有标题时的空值。将 problems 渲染成表格。
+仅在文本渲染时按当前时间本地化结构化时间，不改动 JSON 时间戳、筛选
+或其他报告事实。更新 reference 文档，不在 README 中补充技术细节。
+
+### I-S08: 让宽终端中的表格使用可用宽度
+
+移除 human TUI 正文容器的固定 100 列上限，使表格在宽终端中能够利用
+屏幕剩余宽度；对能容纳的 Unicode 表格按终端显示宽度排版，避免中文
+列被误判为半宽而换行。保留正文边距、滚动和窄终端提示栏布局。
+在真实 TTY 渲染测试中验证宽表格末列和中文时间完整可见，并更新 reference 文档，
+不在 README 中增加终端内部技术细节。
+
 ## Acceptance criteria
 
 ### I-AC01: Audience options have one consistent CLI contract
@@ -106,3 +122,20 @@ human TTY 的鼠标拖选后按 `y` 可把中文与 Unicode 文本发送到终�
 canonical skill 与注册副本一致，明确要求 Agent 优先显式使用
 `--audience agent`，并注明 `--json` 互斥。技能契约测试验证指引内容，
 `pnpm check:skills` 和 `pnpm check` 验证同步与仓库候选。
+
+### I-AC08: 文本报告呈现一致且保留机器事实
+
+单元与集成测试证明两类 idea 列表共用表头和 `Alias / ID` 选择规则，
+导航展示从当前 idea 文档读取的标题、无一级标题的空值及创建时间，
+问题表格正确转义特殊字符。固定当前时间测试中英文的刚刚、分钟、
+小时、天、恰好一周、超过一周日期及未来时间；文本输出不改变
+四投影中的精确 UTC 时间戳、筛选边界和非导航命令的行为。
+`pnpm check` 及 Silvermoon 候选检查通过。
+
+### I-AC09: 宽终端表格不受固定列数截断
+
+真实 TUI 渲染测试验证宽于 100 列的表格在足够宽的终端中完整显示
+最后一列及中文时间，不在一个单元格内错误换行；窄终端仍可滚动，
+复制提示不插入新行或移动正文。
+验证非 TTY、agent 原始 Markdown 与 JSON 路由不变，并通过
+`pnpm check` 和 Silvermoon 候选检查。

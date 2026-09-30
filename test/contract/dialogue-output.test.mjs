@@ -148,6 +148,8 @@ test("renders active idea choices as an escaped Markdown table", () => {
       id: "01M36QGPNTXEPP61DA4KP4AVZF",
       alias: "first|line\nsecond\\line",
       state: "preparing",
+      createdAt: "2026-09-29T00:00:00.000Z",
+      title: "First idea",
     }],
     nextSteps: [{
       type: "instruction",
@@ -158,10 +160,10 @@ test("renders active idea choices as an escaped Markdown table", () => {
   const rendered = renderResponse(response);
 
   assert.match(rendered, /### Active ideas/);
-  assert.match(rendered, /\| ID \| Alias \| State \|/);
+  assert.match(rendered, /\| Alias \/ ID \| State \| Created \| Title \|/);
   assert.match(
     rendered,
-    /\| 01M36QGPNTXEPP61DA4KP4AVZF \| first\\\|line second\\\\line \| preparing \|/,
+    /\| first\\\|line second\\\\line \| preparing \| .* \| First idea \|/,
   );
   assert.match(rendered, /### Next steps\n\nChoose an idea\./);
   assert.equal(response.choices[0].alias, "first|line\nsecond\\line");

@@ -75,13 +75,15 @@ afterEach(async () => {
   );
 });
 
-async function fixture() {
+async function fixture({ withRemote = false, withUpstream = false } = {}) {
   const repository = await createRepository({
     ideas: IDEAS.map(({ id, alias }) => ({
       id,
       status: alias === undefined ? {} : { alias },
     })),
     prefix: "silvermoon-list-ideas-",
+    withRemote,
+    withUpstream,
   });
   temporaryDirectories.push(repository.base);
   for (const idea of IDEAS) {
@@ -191,6 +193,7 @@ test("[inventory-empty] returns a successful complete shape for an empty invento
   const repository = await createRepository({
     ideas: [],
     prefix: "silvermoon-list-empty-",
+    withRemote: false,
   });
 
   test("[inventory-language] overrides only this inventory report's output language", async () => {
@@ -304,7 +307,7 @@ test("[inventory-worktree] includes staged, unstaged, and untracked idea content
 });
 
 test("[inventory-readiness] ignores worktree, branch, upstream, ancestry, and network readiness", async () => {
-  const repository = await fixture();
+  const repository = await fixture({ withUpstream: true });
   git(repository.root, "branch", "--unset-upstream");
   git(repository.root, "checkout", "--detach");
   await writeFile(join(repository.root, "dirty-untracked.txt"), "local only\n");
@@ -329,7 +332,7 @@ test("[inventory-readiness] ignores worktree, branch, upstream, ancestry, and ne
 });
 
 test("[inventory-conflict] ignores an unrelated unresolved merge conflict", async () => {
-  const repository = await fixture();
+  const repository = await fixture({ withRemote: true });
   await writeFile(join(repository.root, "conflict.txt"), "base\n");
   git(repository.root, "add", ".");
   git(repository.root, "commit", "-m", "Add conflict base");
@@ -466,8 +469,10 @@ test("[inventory-cli] CLI renders complete local inventory without lifecycle ins
     text.logs[0],
     /Counts: preparing=1, implementing=1, deploying=1, completed=0, abandoned=0\./,
   );
-  assert.match(text.logs[0], /\| ID \| Alias \| State \| Created \| Title \|/);
-  assert.match(text.logs[0], /\| .* \| .* \| preparing \| 2026-/);
+  assert.match(text.logs[0], /\| Alias \/ ID \| State \| Created \| Title \|/);
+  assert.match(text.logs[0], /\| alpha \| preparing \| .* \| Alpha inventory \|/);
+  assert.match(text.logs[0], new RegExp(`\\| ${IDEAS[2].id} \\| deploying \\|`));
+  assert.doesNotMatch(text.logs[0], /2026-09-25T00:00:00/);
   assert.doesNotMatch(text.logs[0], /Next steps|create-idea|whats-next/);
   assert.deepEqual(text.errors, []);
 });

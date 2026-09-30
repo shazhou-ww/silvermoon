@@ -585,7 +585,10 @@ try {
     lifecycleText,
     /^## Blocked\n\nThe repository must be synchronized before this command can continue\./,
   );
-  assert.match(lifecycleText, /\n\n### Issues to address\n\n- \[worktree-changes\]/);
+  assert.match(
+    lifecycleText,
+    /\n\n### Issues to address\n\n\| Type \| Summary \|\n\| --- \| --- \|\n\| worktree-changes \|/,
+  );
   assert.doesNotMatch(lifecycleText, /### Ideas you can continue/);
   assert.doesNotMatch(lifecycleText, /## Actions and results/);
   await writeFile(

@@ -70,6 +70,7 @@ test("runs every check concurrently", async () => {
   const started = [];
   const execution = runChecks({
     scripts: ["first", "second", "third"],
+    writeOutput() {},
     runScript(script) {
       started.push(script);
       return new Promise((resolve) => pending.set(script, resolve));
@@ -82,11 +83,31 @@ test("runs every check concurrently", async () => {
   await execution;
 });
 
+test("reports monotonic per-check and total durations", async () => {
+  const output = [];
+  let tick = 0;
+
+  await runChecks({
+    scripts: ["first", "second"],
+    now: () => tick++ * 10,
+    writeOutput: (message) => output.push(message),
+    runScript: async () => {},
+  });
+
+  assert.deepEqual(output, [
+    "CHECK_DURATION first 20ms\n",
+    "CHECK_DURATION second 20ms\n",
+    "CHECK_TOTAL 50ms\n",
+  ]);
+});
+
 test("waits for all checks and reports every failure", async () => {
   let completed = false;
+  const output = [];
   await assert.rejects(
     runChecks({
       scripts: ["passes-late", "fails-one", "fails-two"],
+      writeOutput: (message) => output.push(message),
       runScript(script) {
         if (script === "passes-late") {
           return new Promise((resolve) =>
@@ -106,6 +127,8 @@ test("waits for all checks and reports every failure", async () => {
       return true;
     },
   );
+  assert.equal(output.filter((message) => message.startsWith("CHECK_DURATION")).length, 3);
+  assert.equal(output.filter((message) => message.startsWith("CHECK_TOTAL")).length, 1);
 });
 
 test("surfaces process startup and nonzero exit failures", async () => {
