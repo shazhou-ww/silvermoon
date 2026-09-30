@@ -3,6 +3,38 @@
 This changelog starts with the Silvermoon 0.3.0 release series. Earlier release
 history remains available through npm and Git tags.
 
+## [0.3.0]
+
+### Stable release
+
+- Promotes the validated 0.3.0 release-candidate series to the stable npm
+  `latest` channel.
+- Adds audience-aware CLI output, independent content/output language
+  contracts, localized idea navigation, and layered repository checks for
+  coding-agent workflows.
+- Publishes the MIT-licensed community, security, contribution, issue, and
+  release contracts prepared for the public repository.
+
+### Compatibility and packaging
+
+- Requires Node.js 22 or newer and retains the documented CLI, schema, trace,
+  and repository-file compatibility contracts.
+- Keeps the root JavaScript package API experimental before `1.0.0`; consumers
+  should pin an exact version when using programmatic exports.
+- Uses checkout-relative README artwork in the repository and immutable
+  release-commit URLs in npm READMEs without shipping artwork in the tarball.
+- Includes the rc.2 release verification fix for READMEs that intentionally
+  reference only a subset of the repository artwork allowlist.
+
+### Supply-chain safeguards
+
+- Keeps GitHub Actions dependencies pinned to immutable commits with weekly
+  Dependabot update PRs.
+- Protects `main` through the repository-owned `Required checks` contract and
+  protects npm release tags from mutation.
+- Publishes only through GitHub OIDC trusted publishing with npm provenance,
+  exact tarball identity checks, and post-publication verification.
+
 ## [0.3.0-rc.2]
 
 ### Release verification fix
@@ -59,5 +91,6 @@ history remains available through npm and Git tags.
   GitHub OIDC trusted publishing, provenance, and post-publication identity
   verification, now including MIT and public package metadata.
 
+[0.3.0]: https://github.com/shazhou-ww/silvermoon/compare/npm/silvermoon/v0.2.2...npm/silvermoon/v0.3.0
 [0.3.0-rc.2]: https://github.com/shazhou-ww/silvermoon/compare/npm/silvermoon/v0.3.0-rc.1...npm/silvermoon/v0.3.0-rc.2
 [0.3.0-rc.1]: https://github.com/shazhou-ww/silvermoon/compare/npm/silvermoon/v0.2.2...npm/silvermoon/v0.3.0-rc.1

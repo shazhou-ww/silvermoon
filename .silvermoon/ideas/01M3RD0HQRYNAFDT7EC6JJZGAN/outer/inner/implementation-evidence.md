@@ -81,10 +81,49 @@ candidate、revision acceptance、fresh preflight 或 post-publication verifier�
 | `I-AC02` | `.github/dependabot.yml` 与三项外部 settings 应用协议 | readiness contract tests | 通过 |
 | `I-AC03` | `.github/rulesets/main.json` 与 CI `Required checks` | workflow/ruleset contract tests；GitHub Actions app ID `15368` 读回 | 通过 |
 | `I-AC04` | 当前两个 workflow 的全部 `uses` SHA pin 与 Actions update entry | 全 workflow scan；exact version comments | 通过 |
-| `I-AC05` | stable `package.json`、reference、release planner 与 registry verifier | manifest/doc/release-plan tests、pack check、installed-package E2E | 待实施 |
-| `I-AC06` | rc.1/rc.2 历史、stable changelog 与 `0.3.0` GitHub Release notes | release artifact tests；tag/release/registry absence observation | 待实施 |
-| `I-AC07` | 定向、sanity、release-grade 与 Silvermoon validations | stable candidate 命令证据 | 待验证 |
+| `I-AC05` | stable `package.json`、reference、release planner 与 registry verifier | manifest/doc/release-plan tests、pack check、installed-package E2E | 通过 |
+| `I-AC06` | rc.1/rc.2 历史、stable changelog 与 `0.3.0` GitHub Release notes | release artifact tests；tag/release/registry absence observation | 通过 |
+| `I-AC07` | 定向、sanity、release-grade 与 Silvermoon validations | stable candidate 命令证据 | 通过 |
 | `I-AC08` | verifier 接受实际 immutable asset references 且不要求未引用 artwork | integration regression、真实 rc.1 re-verification | 通过 |
+
+## Stable 0.3.0 candidate results
+
+2026-09-30，stable release-only candidate 完成以下变更：
+
+- `package.json` version 从 `0.3.0-rc.2` 切换为 `0.3.0`，其余 package identity、
+  public metadata、dependencies 与 pre-1.0 API contract 不变；
+- `CHANGELOG.md` 增加稳定 release entry，同时保留 rc.1/rc.2 历史与 compare links；
+- `.github/release-notes/0.3.0.md` 明确 npm `latest`、GitHub stable Release、
+  compatibility、MIT 与 trusted-publishing identity；
+- `open-source-readiness` contract test 切换到 exact stable manifest 和 release
+  materials，并继续证明两份 RC notes 保留。
+
+初步验证与外部 observation：
+
+| 命令/表面 | 结果 | 关键证据 |
+| --- | --- | --- |
+| `pnpm install --frozen-lockfile` | exit 0 | lockfile 通过 supply-chain policies，依赖已是最新 |
+| targeted release tests | exit 0 | 18/18；覆盖 stable metadata、notes、planner、registry verifier 与 primary ancestry |
+| stable release planner | exit 0 | `version=0.3.0`、`distTag=latest`、`publicationState=absent` |
+| Git/npm absence | 通过 | stable local/remote tag、GitHub Release、npm exact version 均不存在 |
+| official npm channels | 通过 | `latest=0.2.2`、`rc=0.3.0-rc.2` |
+
+planner 的 commit 参数使用当前可从 `origin/main` 到达的 implementation baseline；
+在 deliverables 同步后必须针对新的 exact candidate commit 重新执行，不能把本次结果
+当作 tag preflight。
+
+完整 stable candidate validation：
+
+| 命令 | 结果 | 关键证据 |
+| --- | --- | --- |
+| `pnpm check:sanity` | exit 0 | 93/93；`CHECK_TOTAL 2439ms` |
+| `pnpm check` | exit 0 | Markdown 0 issues；pack 49 files；integration 128 passed + 2 privilege skips；installed-package E2E 1/1；`PACK_SMOKE_OK name=silvermoon version=0.3.0`；`CHECK_TOTAL 125081ms` |
+| `silvermoon check --worktree --audience agent` | exit 0 | 完整 stable implementation snapshot 通过 |
+| `git diff --check` | exit 0 | stable release-only diff 无 whitespace error |
+
+candidate 没有修改 runtime source、dependencies、schemas 或既有 RC artifacts。完整
+validation 针对包含 Silvermoon contract/evidence 的同一 worktree；提交并同步后仍需
+对 exact commit 重新运行 planner、hosted CI 和 ancestry checks。
 
 ## RC2 implementation results
 
