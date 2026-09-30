@@ -2,27 +2,112 @@
 
 ## Steps
 
-<!--
-为每个步骤分配稳定的 D-Sxx 标识符和三级标题。
-描述部署或现实世界验证工作。
-不要在本文档中使用任务列表复选框。
--->
+### D-S01: 发布外层契约并建立部署证据
 
-### D-S01: 配置并验证开源项目公共表面
+同步本 Deployment contract、`deployment-evidence.md` 与 ledger stable IDs 到
+primary，重新观察精确 deployment revision，再执行任何外部写入。证据必须区分
+repository candidate、GitHub settings、release authorization 与实际 npm/GitHub
+Release 结果；任何失败都保留为显式阻塞。
 
-在 implementation acceptance 与明确发布授权之后，配置批准的 GitHub settings，
-发布并验证 `0.3.0`，记录 Community Profile、security automation、rulesets、
-GitHub Release 与 npm registry 的现实世界证据。
+### D-S02: 启用私密报告与依赖安全更新
+
+按主体世界协议重新读取当前状态，幂等启用 GitHub private vulnerability reporting
+与 Dependabot security updates，立即读回 API，并验证私密 advisory 入口和 default
+branch 上的 npm/GitHub Actions Dependabot 配置。若外部状态与实施基线不同，先保留
+并分析并发变更，不覆盖未知设置。
+
+### D-S03: 启用并验证 CodeQL default setup
+
+幂等配置 CodeQL default setup，使用 default query suite 和 GitHub 自动检测的
+JavaScript/TypeScript 语言。读回 `configured` 状态后等待该精确 default branch
+revision 的首次 analysis 完成；setup、workflow 或 analysis 失败均阻塞此步骤，不增加
+并行 advanced-setup workflow。
+
+### D-S04: 应用并验证 main ruleset
+
+按名称唯一匹配 `Protect main`，使用 `.github/rulesets/main.json` 创建或更新，
+再读回 canonical fields。确认 `main` 禁止删除和 non-fast-forward update、只接受
+GitHub Actions app `15368` 产生的 `Required checks`、strict policy 生效且
+maintainer bypass 保留。不得修改既有 `Protect npm release tags`；用后续普通
+non-force evidence commit 证明维护路径仍可用，不执行 force 测试。
+
+### D-S05: 核验 GitHub 公共开源表面
+
+通过 GitHub API 与公开 URL 验证 Community Profile、issue chooser、贡献与行为准则、
+支持和安全入口均指向 default branch 上的 repository-owned 文件；同时记录 private
+reporting、Dependabot、CodeQL、branch ruleset 与 tag ruleset 的可复核链接或最小必要
+响应字段。页面或 API 不一致时不使用文档声明代替实际结果。
+
+### D-S06: 保持 0.3.0 发布门禁并刷新候选
+
+在用户完成 README 文案并明确调用 `/publish silvermoon 0.3.0` 之前，保持
+`npm/silvermoon/v0.3.0` tag、GitHub Release 与 npm `0.3.0` 均不存在。获得授权后先
+刷新 primary 与 tags，确认 README 变更已包含在精确 release commit，重新运行
+release-grade checks，并复核 `package.json`、changelog 与 release notes 仍与候选
+一致；任何新变更都会使旧 preflight 失效。
+
+### D-S07: 通过可信链路发布 0.3.0
+
+只在 D-S06 满足后，于最新 `origin/main` 精确 commit 创建并普通推送不可变
+`npm/silvermoon/v0.3.0` tag。等待 `.github/workflows/publish-npm.yml` 成功并输出
+`VERIFY_NPM_RELEASE_OK`，随后用已存在 tag 和 repository-owned notes 创建 GitHub
+Release；不本地运行 `npm publish`，不创建 token，也不移动或重建 tag。
+
+### D-S08: 验证发布身份并封存外部证据
+
+读回 GitHub Release、npm exact version、`latest` dist-tag、MIT license、homepage、
+bugs、maintainer、package README、tarball integrity、`gitHead`、npm publish
+attestation 与 SLSA provenance，要求全部指向同一 release commit。将成功 hosted
+run、immutable URLs、API 最小字段和验证器输出记录到 `deployment-evidence.md`，
+同步到 primary 后再请求 deployment acceptance。
 
 ## Acceptance criteria
 
-<!--
-为每项标准分配稳定的 D-ACxx 标识符和三级标题。
-同时说明可观察的外部结果及其证明方法。
-不要创建单独的验证章节，也不要使用任务列表复选框。
--->
+### D-AC01: 外层契约稳定且证据可追溯
 
-### D-AC01: 公共开源契约可用且一致
+Deployment contract、supporting evidence 与 ledger 使用一致 stable IDs，精确
+deployment revision 已同步到 primary；通过 Silvermoon remote/snapshot validation、
+primary ancestry 和 commit-pinned links 证明。
 
-GitHub 与 npm 的公开结果满足批准契约，版本、许可、release notes、provenance、
-保护规则和安全入口相互一致，并由 durable deployment evidence 证明。
+### D-AC02: 安全报告与 Dependabot 已实际启用
+
+Private vulnerability reporting 与 Dependabot security updates API 均读回 enabled，
+私密 advisory 入口可用，default branch 上 npm 与 GitHub Actions update config
+可见；通过 API 响应、公开入口和 commit-pinned config 证明。
+
+### D-AC03: CodeQL default setup 产生成功分析
+
+CodeQL API 读回 `state: configured`、default query suite 与预期语言，且 default
+branch 的 analysis 成功完成；通过 default-setup API、analysis/run URL 与精确 commit
+证明。
+
+### D-AC04: main 与 release tag 保护同时成立
+
+Active `Protect main` ruleset 与 repository JSON canonical fields 一致，后续
+non-force synchronization 成功；既有 active `Protect npm release tags` 保持不变。
+通过两个 ruleset 的 API 响应、稳定 ID 与 push/ancestry 证据证明。
+
+### D-AC05: GitHub Community Profile 与入口一致
+
+GitHub 识别 repository community files，issue chooser routes 与 security/support
+指引一致，公开链接可达；通过 Community Profile API、公开 URL 与 commit-pinned 文件
+证明。
+
+### D-AC06: 发布授权门禁没有被提前绕过
+
+用户 README 工作完成且明确授权前，远端 tag、GitHub Release 与 npm `0.3.0` 均不存在；
+授权后使用包含最终 README 的最新 primary commit 重新验证。通过带时间的 absence
+observations、明确授权和 release preflight 证明。
+
+### D-AC07: 0.3.0 发布身份不可变且一致
+
+`npm/silvermoon/v0.3.0`、GitHub Release、npm `silvermoon@0.3.0`、`latest` dist-tag、
+tarball `gitHead`、integrity 与 provenance 全部解析到同一 primary commit，MIT 与公共
+metadata 正确；通过 hosted workflow、`VERIFY_NPM_RELEASE_OK`、registry 和 immutable
+release URLs 证明。
+
+### D-AC08: 公共开源契约完整可用
+
+GitHub 与 npm 的最终公共结果同时满足 D-AC02 至 D-AC07，所有 evidence 已同步到
+primary 且没有未解释的失败、权限缺口或成功形状 fallback；通过
+`deployment-evidence.md`、ledger、Silvermoon checks 与最终 candidate diff 证明。
