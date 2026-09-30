@@ -17,6 +17,8 @@ GitHub settings 与 npm/GitHub Release 结果属于 Deployment evidence，不在
   `e7e453e039498a6636c5c4df8881a7b33bb17e61`
 - RC rescope baseline commit:
   `3fba961d8b63419c92f18e7b36cacd9f9fbac6c9`
+- RC contract commit:
+  `f6a870c287f1aa10c0571ecde5a5bd45c7eaf641`
 - Implementation revision: 由最终同步后的 `whats-next` report 提供；world tree
   不记录自己的 revision，避免内容寻址自引用
 
@@ -39,10 +41,55 @@ test 更新。RC implementation 因此必须针对 `3fba961d8b63419c92f18e7b36ca
 | `I-AC01` | RC scope 已写入 `Implementation.md`、`open-source-contract.md`、本文件与 `ledger.md` | `silvermoon check --worktree`、`pnpm check:commit`、stable-ID diff | 通过 |
 | `I-AC02` | `.github/dependabot.yml` 与三项外部 settings 应用协议 | readiness contract tests | 通过 |
 | `I-AC03` | `.github/rulesets/main.json` 与 CI `Required checks` | workflow/ruleset contract tests；GitHub Actions app ID `15368` 读回 | 通过 |
-| `I-AC04` | 当前两个 workflow 的全部 `uses` SHA pin 与 Actions update entry | 全 workflow scan；上游 tag ref 解析 | 待重新验证 |
-| `I-AC05` | `package.json`、reference、release planner 与 registry verifier | manifest/doc/release-plan tests、pack check、installed-package E2E | 待实施 |
-| `I-AC06` | `CHANGELOG.md` 与 `0.3.0-rc.1` GitHub prerelease notes | release artifact tests；tag/release/registry absence observation | 待实施 |
-| `I-AC07` | 定向、sanity、release-grade 与 Silvermoon validations | 下方 RC 命令证据 | 待验证 |
+| `I-AC04` | 当前两个 workflow 的全部 `uses` SHA pin 与 Actions update entry | 全 workflow scan；exact version comments | 通过 |
+| `I-AC05` | `package.json`、reference、release planner 与 registry verifier | manifest/doc/release-plan tests、pack check、installed-package E2E | 通过 |
+| `I-AC06` | `CHANGELOG.md` 与 `0.3.0-rc.1` GitHub prerelease notes | release artifact tests；tag/release/registry absence observation | 通过 |
+| `I-AC07` | 定向、sanity、release-grade 与 Silvermoon validations | 下方 RC 命令证据 | 通过 |
+
+## RC implementation results
+
+### Immutable Action identities
+
+同步后的两个 workflow 只使用下列 full-SHA identities；同行 version comment 与
+Dependabot 更新后的实际 action version 一致：
+
+| Action | Version | Commit |
+| --- | --- | --- |
+| `actions/checkout` | `v7.0.1` | `3d3c42e5aac5ba805825da76410c181273ba90b1` |
+| `actions/setup-node` | `v7.0.0` | `820762786026740c76f36085b0efc47a31fe5020` |
+| `pnpm/action-setup` | `v6.1.0` | `ea17c68df8912ef543352723c149a84f56e3d413` |
+
+### Local validation
+
+RC candidate 本地验证完成于 2026-09-30T07:34:12Z：
+
+| 命令 | 结果 | 关键证据 |
+| --- | --- | --- |
+| `node --test test/contract/open-source-readiness.test.mjs test/unit/prepare-npm-release.test.mjs test/integration/verify-npm-release.test.mjs` | exit 0 | 14/14；覆盖 exact RC materials、named dist-tag 与 prerelease registry verification |
+| `node scripts/prepare-npm-release.mjs --tag npm/silvermoon/v0.3.0-rc.1 --commit <baseline>` | exit 0 | `version=0.3.0-rc.1`、`distTag=rc`、`publicationState=absent` |
+| `pnpm check:sanity` | exit 0 | 93/93；`CHECK_TOTAL 2945ms` |
+| `pnpm pack:check` | exit 0 | `PACK_OK name=silvermoon version=0.3.0-rc.1 files=49` |
+| `pnpm test:e2e` | exit 0 | installed package 与 CLI 通过；`PACK_SMOKE_OK name=silvermoon version=0.3.0-rc.1` |
+| `pnpm check` | exit 0 | contract 31/31、integration 128 passed + 2 privilege skips、E2E 1/1；`CHECK_TOTAL 129261ms` |
+| `silvermoon check --worktree --audience agent` | exit 0 | RC candidate snapshot 通过 |
+| `silvermoon check --staged --audience agent` | exit 0 | 完整 RC implementation index 通过；记录本结果后重新 stage 并复验 |
+
+### Release absence and channel observation
+
+2026-09-30T07:34:12Z 的只读 preflight 返回：
+
+- `TAG_ABSENT npm/silvermoon/v0.3.0-rc.1`；
+- `GITHUB_RELEASE_ABSENT npm/silvermoon/v0.3.0-rc.1`；
+- `NPM_VERSION_ABSENT silvermoon@0.3.0-rc.1`；
+- npm `latest=0.2.2`、历史 `rc=0.2.0-rc.1`。
+
+这些 facts 证明 RC version 尚未被消耗，且当前 `latest` 不受候选准备影响。它们不代替
+implementation acceptance，也不授权稳定 `0.3.0`。
+
+RC contract commit 的 hosted
+[CI run 36683894662](https://github.com/shazhou-ww/silvermoon/actions/runs/36683894662)
+成功，`Required checks` job `109785607420` 为 success。repository deliverables
+candidate 同步后的 hosted CI 仍需单独记录。
 
 ## Accepted implementation baseline
 
