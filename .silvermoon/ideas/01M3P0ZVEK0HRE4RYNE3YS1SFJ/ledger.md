@@ -31,13 +31,13 @@
 
 - [x] **D-S01:** 发布并锁定验收候选
 - [x] **D-S02:** 检查非交互输出和机器报告
-- [ ] **D-S03:** 在真实 Windows 终端核对交互体验
+- [x] **D-S03:** 在真实 Windows 终端核对交互体验
 
 ### Deployment acceptance criteria
 
 - [x] **D-AC01:** 受检候选来自已发布 primary
 - [x] **D-AC02:** 管道、Agent 和 JSON 输出保持可靠
-- [ ] **D-AC03:** 真实 human TTY 体验由使用者确认
+- [x] **D-AC03:** 真实 human TTY 体验由使用者确认
 
 ### Deployment evidence
 
@@ -57,5 +57,7 @@
   返回四投影及原始 UTC `createdAt`。`--json --audience agent`
   退出码为 2；无效 commit 的 `check --audience agent`
   退出码为 1，problems 使用 Markdown 表格。
-- D-S03 / D-AC03 仍等待使用者在真实 Windows PowerShell 终端
-  完成宽窄屏、复制和提示栏验证；模拟的 native TUI 测试不替代此项。
+- 在收到上述真实 Windows PowerShell TTY 验收步骤后，
+  使用者于 2026-09-30 反馈“没问题了”，据此记录 D-S03 / D-AC03
+  的外部观察通过；这不是对精确 deployment revision 的正式验收，
+  未写入 `deploymentAcceptedRevision`。
