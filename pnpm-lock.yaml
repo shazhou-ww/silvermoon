@@ -32,6 +32,9 @@ importers:
       react-devtools-core:
         specifier: ^7.0.1
         version: 7.0.1
+      string-width:
+        specifier: ^8.3.0
+        version: 8.3.0
       tui-md:
         specifier: ^0.2.0
         version: 0.2.0(@jitl/opentui-core@0.4.0(typescript@5.9.3)(web-tree-sitter@0.25.10))(@jitl/opentui-react@0.4.0(react-devtools-core@7.0.1)(react@19.3.0)(typescript@5.9.3)(web-tree-sitter@0.25.10)(ws@8.22.0))(react@19.3.0)
@@ -717,6 +720,10 @@ packages:
 
   string-width@8.2.1:
     resolution: {integrity: sha512-IIaP0g3iy9Cyy18w3M9YcaDudujEAVHKt3a3QJg1+sr/oX96TbaGUubG0hJyCjCBThFH+tFpcIyoUHUn1ogaLA==}
+    engines: {node: '>=20'}
+
+  string-width@8.3.0:
+    resolution: {integrity: sha512-ZbmZM0JCihQN91dWnxoipT2KOEyHqEyfRXUyjuRhW8b/xnqPDoq4gWEVApTVa9db2wN8mmoikgFBbjh71+cGeQ==}
     engines: {node: '>=20'}
 
   stringify-entities@4.0.4:
@@ -1856,6 +1863,11 @@ snapshots:
       strip-ansi: 7.2.0
 
   string-width@8.2.1:
+    dependencies:
+      get-east-asian-width: 1.7.0
+      strip-ansi: 7.2.0
+
+  string-width@8.3.0:
     dependencies:
       get-east-asian-width: 1.7.0
       strip-ansi: 7.2.0

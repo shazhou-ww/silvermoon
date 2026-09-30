@@ -231,6 +231,10 @@ muted green for success or amber for problems, then clears after about three
 seconds without shifting the document. If copying fails, the
 view displays a diagnostic; terminal-native selection may be available with
 Shift+drag. Exit with `q`, `Esc`, or `Ctrl+C`.
+The TUI document uses the available terminal width rather than a fixed
+100-column limit. Tables that fit the view measure Chinese characters by
+terminal cells so wide screens do not wrap otherwise-fitting columns; tables
+too wide for the screen retain horizontal navigation.
 If either stream is not a TTY, human output is raw
 Markdown. `--audience agent` always emits raw Markdown without TUI control
 sequences. On Windows, TUI frames use Node's terminal stream for UTF-8 output

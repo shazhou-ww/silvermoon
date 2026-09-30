@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import { PassThrough, Writable } from "node:stream";
 import { test } from "node:test";
+import stringWidth from "string-width";
 
+import { tuiMarkdownBlocks } from "../../src/tui-table.js";
 import {
   copyWindowsClipboard,
   copyStatusColor,
@@ -160,6 +162,73 @@ test("Windows native TUI feed preserves Chinese and box-drawing characters", {
     assert.match(output, /文/);
     assert.match(output, /┌/);
     assert.doesNotMatch(output, /\uFFFD/);
+  } finally {
+    stdin.write("q");
+    stdin.destroy();
+    stdout.destroy();
+  }
+});
+
+test("Unicode tables use terminal-cell widths without altering Markdown or narrow layouts", () => {
+  const content = [
+    "## 结果",
+    "",
+    "| Alias / ID | 状态 | 创建时间 | 标题 |",
+    "| --- | --- | --- | --- |",
+    "| a\\|b | implementing | 18小时前 | 中文标题 |",
+    "",
+    "### 下一步",
+  ].join("\n");
+  const blocks = tuiMarkdownBlocks(content, 120);
+  assert.equal(blocks[0].content, "## 结果\n\n");
+  assert.equal(blocks[1].kind, "table");
+  assert.ok(blocks[1].lines.every((line) =>
+    stringWidth(line) === blocks[1].width
+  ));
+  assert.match(blocks[1].lines[3], /a\|b.*18小时前.*中文标题/);
+  assert.equal(blocks[2].content, "\n\n### 下一步");
+  assert.deepEqual(
+    tuiMarkdownBlocks(content, 35),
+    [{ kind: "markdown", content }],
+  );
+});
+
+test("wide TUI shows table columns beyond the first 100 cells", {
+  skip: process.platform !== "win32",
+  timeout: 10_000,
+}, async () => {
+  const chunks = [];
+  const stdin = new PassThrough();
+  stdin.isTTY = true;
+  stdin.setRawMode = () => stdin;
+  const stdout = new Writable({
+    write(chunk, _encoding, callback) {
+      chunks.push(chunk);
+      callback();
+    },
+  });
+  stdout.isTTY = true;
+  stdout.columns = 160;
+  stdout.rows = 25;
+  stdout.getColorDepth = () => 8;
+
+  const content = [
+    "X".repeat(120),
+    "",
+    "| Alias / ID | State | Created | Title |",
+    "| --- | --- | --- | --- |",
+    `| ${"a".repeat(35)} | implementing | 18小时前 | ${"Title ".repeat(11)}END-OF-TITLE |`,
+  ].join("\n");
+  const output = () => Buffer.concat(chunks).toString("utf8");
+  try {
+    await renderTuiMarkdown(content, { stdin, stdout });
+    for (let attempt = 0; !output().includes("END-OF-TITLE") && attempt < 80; attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+    assert.match(output(), /X{110}/);
+    assert.match(output(), /┌[─┬]{110,}┐/);
+    assert.match(output(), /END-OF-TITLE/);
+    assert.match(output(), /18小时前/);
   } finally {
     stdin.write("q");
     stdin.destroy();

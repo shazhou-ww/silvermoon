@@ -7,8 +7,10 @@ import {
   useRenderer,
   useTerminalDimensions,
 } from "@opentui/react";
-import { createElement, useEffect, useRef, useState } from "react";
+import { createElement, useEffect, useMemo, useRef, useState } from "react";
 import { Markdown } from "tui-md";
+
+import { tuiMarkdownBlocks } from "./tui-table.js";
 
 const COPY_STATUS_DURATION_MS = 3000;
 const SHORTCUT_HINT = "  [q/Esc] quit  [scroll] navigate  [drag, y] copy";
@@ -79,6 +81,11 @@ function MarkdownViewer({ content, stdout }) {
   const { height, width } = useTerminalDimensions();
   const [copyStatus, setCopyStatus] = useState(null);
   const copyStatusTimeout = useRef(null);
+  const contentWidth = Math.max(1, width - 4);
+  const blocks = useMemo(
+    () => tuiMarkdownBlocks(content, contentWidth),
+    [content, contentWidth],
+  );
 
   useEffect(() => () => clearTimeout(copyStatusTimeout.current), []);
 
@@ -136,9 +143,24 @@ function MarkdownViewer({ content, stdout }) {
           flexDirection: "column",
           paddingX: 2,
           paddingY: 1,
-          width: Math.max(1, Math.min(width - 4, 100)),
+          width: contentWidth,
         },
-        createElement(Markdown, { content }),
+        ...blocks.map((block, index) =>
+          block.kind === "markdown"
+            ? createElement(Markdown, { key: index, content: block.content })
+            : createElement(
+              "box",
+              { key: index, flexDirection: "column", marginBottom: 1, width: "100%" },
+              ...block.lines.map((line, lineIndex) =>
+                createElement("text", {
+                  key: lineIndex,
+                  fg: lineIndex === 1 ? "#569cd6" : "#d4d4d4",
+                  width: block.width,
+                  wrapMode: "none",
+                }, line)
+              ),
+            )
+        ),
       ),
     ),
   );
