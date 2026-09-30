@@ -13,6 +13,18 @@ function step(job, name) {
   return job.steps.find((candidate) => candidate.name === name);
 }
 
+function assertSanityGate(unit) {
+  const sanity = step(unit, "Run sanity checks");
+  assert.ok(sanity, "unit matrix must run the actual sanity entrypoint");
+  assert.equal(sanity.run, "pnpm check:sanity");
+  assert.equal(sanity.if, undefined, "sanity must be unconditional");
+  assert.equal(sanity["continue-on-error"], undefined, "sanity failure must fail CI");
+  assert.ok(
+    unit.steps.indexOf(sanity) < unit.steps.indexOf(step(unit, "Run unit tests")),
+    "sanity must run before the complete unit/runtime suite",
+  );
+}
+
 test("runs fast layered validation in ordinary CI", async () => {
   const [manifestSource, workflowSource] = await Promise.all([
     readFile(packageUrl, "utf8"),
@@ -49,7 +61,7 @@ test("runs fast layered validation in ordinary CI", async () => {
     os: ["ubuntu-latest", "windows-latest", "macos-latest"],
     node: [22, 24],
   });
-  assert.equal(step(unit, "Validate CLI syntax").run, "node --check bin/silvermoon.js");
+  assertSanityGate(unit);
   assert.equal(step(unit, "Run unit tests").run, "pnpm test:unit");
 
   assert.equal(contract["runs-on"], "ubuntu-latest");
@@ -85,6 +97,26 @@ test("runs fast layered validation in ordinary CI", async () => {
   assert.equal(step(packaged, "Verify package contents").run, "pnpm pack:check");
   assert.equal(step(packaged, "Test installed package").run, "pnpm test:e2e");
   assert.deepEqual(workflow.permissions, { contents: "read" });
+});
+
+test("CI contract rejects absent, bypassed or non-blocking sanity validation", async () => {
+  const workflow = parseDocument(await readFile(workflowUrl, "utf8")).toJS();
+  for (const mutate of [
+    (unit) => { unit.steps = unit.steps.filter(({ name }) => name !== "Run sanity checks"); },
+    (unit) => { step(unit, "Run sanity checks").run = "node --check bin/silvermoon.js"; },
+    (unit) => { step(unit, "Run sanity checks").run = "pnpm test:unit"; },
+    (unit) => { step(unit, "Run sanity checks").if = "false"; },
+    (unit) => { step(unit, "Run sanity checks")["continue-on-error"] = true; },
+    (unit) => {
+      const sanity = step(unit, "Run sanity checks");
+      unit.steps = unit.steps.filter((candidate) => candidate !== sanity);
+      unit.steps.push(sanity);
+    },
+  ]) {
+    const unit = structuredClone(workflow.jobs.unit);
+    mutate(unit);
+    assert.throws(() => assertSanityGate(unit), { name: "AssertionError" });
+  }
 });
 
 test("every test file belongs to an unconditional core suite or package E2E", async () => {

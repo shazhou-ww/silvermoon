@@ -71,8 +71,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Validate CLI syntax
-        run: node --check bin/silvermoon.js
+      - name: Run sanity checks
+        run: pnpm check:sanity
 
       - name: Run unit tests
         run: pnpm test:unit
