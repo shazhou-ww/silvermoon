@@ -4,7 +4,7 @@
 
 ### Implementation steps
 
-- [ ] **I-S01:** 固化主体世界实施与外部设置契约
+- [x] **I-S01:** 固化主体世界实施与外部设置契约
 - [x] **I-S02:** 建立依赖与安全更新自动化
 - [x] **I-S03:** 固化 main ruleset 与必需 CI gate
 - [x] **I-S04:** 固定 Actions 引用并约定自动升级
@@ -15,7 +15,7 @@
 
 ### Implementation acceptance criteria
 
-- [ ] **I-AC01:** 主体世界契约与阶段边界完整
+- [x] **I-AC01:** 主体世界契约与阶段边界完整
 - [x] **I-AC02:** 安全与依赖更新候选可验证
 - [x] **I-AC03:** main 保护与 CI gate 保持协作路径
 - [x] **I-AC04:** Actions 供应链引用不可变且可更新

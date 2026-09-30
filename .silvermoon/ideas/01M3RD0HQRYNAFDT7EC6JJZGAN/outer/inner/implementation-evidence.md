@@ -27,6 +27,10 @@ GitHub settings 与 npm/GitHub Release 结果属于 Deployment evidence，不在
   `868148b3fad3e41766e5f0df527d691c9ccf979d`
 - Stable transition baseline commit:
   `696f84067d70db0336297933cc3d9cd5c1aef886`
+- Stable implementation contract commit:
+  `76771c5e096a918527ce3e7072a94e02c5e281f1`
+- Stable implementation contract revision:
+  `ad45a20dea8ac3dd13410dcb94ddcbe040f19f3d`
 - Implementation revision: 由最终同步后的 `whats-next` report 提供；world tree
   不记录自己的 revision，避免内容寻址自引用
 
@@ -73,7 +77,7 @@ candidate、revision acceptance、fresh preflight 或 post-publication verifier�
 
 | Stable ID | Repository evidence | Verification | 状态 |
 | --- | --- | --- | --- |
-| `I-AC01` | stable `/publish 0.3.0` scope 写入 `Implementation.md`、`open-source-contract.md`、本文件与 `ledger.md` | Silvermoon worktree/staged checks、stable-ID diff、primary revision | 待同步 |
+| `I-AC01` | stable `/publish 0.3.0` scope 写入 `Implementation.md`、`open-source-contract.md`、本文件与 `ledger.md` | Silvermoon worktree/staged checks、stable-ID diff、primary revision | 通过 |
 | `I-AC02` | `.github/dependabot.yml` 与三项外部 settings 应用协议 | readiness contract tests | 通过 |
 | `I-AC03` | `.github/rulesets/main.json` 与 CI `Required checks` | workflow/ruleset contract tests；GitHub Actions app ID `15368` 读回 | 通过 |
 | `I-AC04` | 当前两个 workflow 的全部 `uses` SHA pin 与 Actions update entry | 全 workflow scan；exact version comments | 通过 |
