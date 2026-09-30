@@ -185,6 +185,11 @@
   metadata 和 diff gates 全部通过；最终 release-grade `pnpm check`
   也全部通过，其中 integration 130 项为 128 项通过、2 项按既有环境
   条件跳过，installed-package e2e 通过。
+- Primary 随后前进 8 个 commits；通过普通 merge 保留双方历史，得到
+  commit `596bde6ac73ae98f88f55306027c801214e014dc`。该 commit 再次通过
+  `pnpm check:commit`、`silvermoon check --commit HEAD` 与完整
+  release-grade `pnpm check`，idea 仍为 deploying，Implementation /
+  Deployment revisions 均未改变。
 - 最终保留 61 份安全 trace（50 measured、10 warm-up、1 compatibility）
   和 `summary.json` 于 session artifact
   `cli-performance-deployment-2026-09-30T04-59-36-642Z/`；source 与
