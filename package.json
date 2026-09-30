@@ -16,6 +16,7 @@
     "docs",
     "skills/silvermoon",
     "src",
+    "LICENSE",
     "README.md",
     "README.zh-CN.md",
     "schema"
@@ -55,7 +56,7 @@
     "validation",
     "whats-next"
   ],
-  "license": "UNLICENSED",
+  "license": "MIT",
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org/"

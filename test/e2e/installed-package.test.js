@@ -93,6 +93,11 @@ try {
     ),
   );
   assert.equal(installedManifest.name, "silvermoon");
+  assert.equal(installedManifest.license, "MIT");
+  assert.match(
+    await readFile(join(bootstrap, "node_modules", "silvermoon", "LICENSE"), "utf8"),
+    /^MIT License\r?\n\r?\nCopyright \(c\) 2026 Silvermoon contributors\r?\n/,
+  );
   for (const dependency of [
     "@opentui/core",
     "@opentui/react",
