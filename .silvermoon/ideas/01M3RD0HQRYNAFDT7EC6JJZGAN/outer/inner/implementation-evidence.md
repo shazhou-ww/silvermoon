@@ -31,6 +31,10 @@ GitHub settings 与 npm/GitHub Release 结果属于 Deployment evidence，不在
   `76771c5e096a918527ce3e7072a94e02c5e281f1`
 - Stable implementation contract revision:
   `ad45a20dea8ac3dd13410dcb94ddcbe040f19f3d`
+- Stable repository deliverables commit:
+  `3044943fb0ee476cd5ea3991fd384b1610e395af`
+- Stable deliverables revision:
+  `c8c03ed3e019b01b0088cc505097c95fecb5b903`
 - Implementation revision: 由最终同步后的 `whats-next` report 提供；world tree
   不记录自己的 revision，避免内容寻址自引用
 
@@ -124,6 +128,20 @@ planner 的 commit 参数使用当前可从 `origin/main` 到达的 implementati
 candidate 没有修改 runtime source、dependencies、schemas 或既有 RC artifacts。完整
 validation 针对包含 Silvermoon contract/evidence 的同一 worktree；提交并同步后仍需
 对 exact commit 重新运行 planner、hosted CI 和 ancestry checks。
+
+同步到 primary 后，对 exact deliverables commit 重新验证：
+
+- release planner 返回 `version=0.3.0`、`distTag=latest`、
+  `publicationState=absent`；
+- stable local/remote tag、GitHub Release 与 npm exact version 仍不存在；
+- [CI run 36694457890](https://github.com/shazhou-ww/silvermoon/actions/runs/36694457890)
+  对该 commit conclusion 为 success；
+- integration job `109818977590`、package/installed-CLI job `109819018350`
+  与 `Required checks` job `109819486298` 均为 success。
+
+该 hosted run 对 actual version-changing commit 执行完整 package path，而不是
+docs-only risk skip。后续 evidence/status-only commits 不改变 package candidate；
+tag 前仍必须刷新 primary 并对最终 exact commit 重新执行 planner 与 absence checks。
 
 ## RC2 implementation results
 
