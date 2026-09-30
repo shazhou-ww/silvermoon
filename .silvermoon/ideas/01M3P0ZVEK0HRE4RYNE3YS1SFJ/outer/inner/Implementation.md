@@ -59,6 +59,14 @@ PowerShell 剪贴板命令，不复制整个报告。没有选区或复制失败
 仅在文本渲染时按当前时间本地化结构化时间，不改动 JSON 时间戳、筛选
 或其他报告事实。更新 reference 文档，不在 README 中补充技术细节。
 
+### I-S08: 让宽终端中的表格使用可用宽度
+
+移除 human TUI 正文容器的固定 100 列上限，使表格在宽终端中能够利用
+屏幕剩余宽度；对能容纳的 Unicode 表格按终端显示宽度排版，避免中文
+列被误判为半宽而换行。保留正文边距、滚动和窄终端提示栏布局。
+在真实 TTY 渲染测试中验证宽表格末列和中文时间完整可见，并更新 reference 文档，
+不在 README 中增加终端内部技术细节。
+
 ## Acceptance criteria
 
 ### I-AC01: Audience options have one consistent CLI contract
@@ -123,3 +131,11 @@ canonical skill 与注册副本一致，明确要求 Agent 优先显式使用
 小时、天、恰好一周、超过一周日期及未来时间；文本输出不改变
 四投影中的精确 UTC 时间戳、筛选边界和非导航命令的行为。
 `pnpm check` 及 Silvermoon 候选检查通过。
+
+### I-AC09: 宽终端表格不受固定列数截断
+
+真实 TUI 渲染测试验证宽于 100 列的表格在足够宽的终端中完整显示
+最后一列及中文时间，不在一个单元格内错误换行；窄终端仍可滚动，
+复制提示不插入新行或移动正文。
+验证非 TTY、agent 原始 Markdown 与 JSON 路由不变，并通过
+`pnpm check` 和 Silvermoon 候选检查。
