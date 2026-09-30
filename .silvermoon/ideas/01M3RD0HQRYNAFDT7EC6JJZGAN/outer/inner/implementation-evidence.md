@@ -15,20 +15,40 @@ GitHub settings 与 npm/GitHub Release 结果属于 Deployment evidence，不在
   `b36ad1b28e13b7c44ff75b871e81d99f166d2e54`
 - Repository deliverables commit:
   `e7e453e039498a6636c5c4df8881a7b33bb17e61`
+- RC rescope baseline commit:
+  `3fba961d8b63419c92f18e7b36cacd9f9fbac6c9`
 - Implementation revision: 由最终同步后的 `whats-next` report 提供；world tree
   不记录自己的 revision，避免内容寻址自引用
 
-## Stable-ID evidence
+## RC change authorization
+
+2026-09-30，用户要求优先发布 release candidate，并明确选择
+`silvermoon@0.3.0-rc.1`。该决定授权准备和后续可信发布 RC，不授权
+`npm/silvermoon/v0.3.0`、稳定 GitHub Release 或 npm `latest` 更新。
+
+同步后的 `origin/main` 比上一 deployment evidence candidate 前进 19 个 commits，
+包含双语 README 文案、Actions major upgrades、production dependency 与相关 contract
+test 更新。RC implementation 因此必须针对 `3fba961d8b63419c92f18e7b36cacd9f9fbac6c9`
+重新验证，不能复用旧 release-grade 结果。初步只读 observation 显示远端不存在
+`npm/silvermoon/v0.3.0*` tag，npm 已发布版本止于 `0.2.2`。
+
+## Current stable-ID evidence
 
 | Stable ID | Repository evidence | Verification | 状态 |
 | --- | --- | --- | --- |
-| `I-AC01` | `Implementation.md`、`open-source-contract.md`、本文件与 `ledger.md` | `silvermoon check --worktree`、stable-ID diff | 通过 |
+| `I-AC01` | RC scope 已写入 `Implementation.md`、`open-source-contract.md`、本文件与 `ledger.md` | `silvermoon check --worktree`、`pnpm check:commit`、stable-ID diff | 通过 |
 | `I-AC02` | `.github/dependabot.yml` 与三项外部 settings 应用协议 | readiness contract tests | 通过 |
 | `I-AC03` | `.github/rulesets/main.json` 与 CI `Required checks` | workflow/ruleset contract tests；GitHub Actions app ID `15368` 读回 | 通过 |
-| `I-AC04` | 两个 workflow 的全部 `uses` SHA pin 与 Actions update entry | 全 workflow scan；上游 tag ref 解析 | 通过 |
-| `I-AC05` | `package.json`、双语 README、reference 与 registry verifier | manifest/doc tests、pack check、installed-package E2E | 通过 |
-| `I-AC06` | `CHANGELOG.md` 与 `0.3.0` GitHub Release notes | release artifact tests；tag/release/registry absence observation | 通过 |
-| `I-AC07` | 定向、sanity、release-grade 与 Silvermoon validations | 下方命令证据 | 通过 |
+| `I-AC04` | 当前两个 workflow 的全部 `uses` SHA pin 与 Actions update entry | 全 workflow scan；上游 tag ref 解析 | 待重新验证 |
+| `I-AC05` | `package.json`、reference、release planner 与 registry verifier | manifest/doc/release-plan tests、pack check、installed-package E2E | 待实施 |
+| `I-AC06` | `CHANGELOG.md` 与 `0.3.0-rc.1` GitHub prerelease notes | release artifact tests；tag/release/registry absence observation | 待实施 |
+| `I-AC07` | 定向、sanity、release-grade 与 Silvermoon validations | 下方 RC 命令证据 | 待验证 |
+
+## Accepted implementation baseline
+
+以下 identities、validation 与 hosted CI 证明历史上已验收的 implementation revision
+`276b88c0c55afa47717991105f67bc768f4aeb38`。它们保留为审计记录，但不替代
+`0.3.0-rc.1` candidate 的重新验证。
 
 ## Immutable Action identities
 
@@ -78,7 +98,7 @@ repository contracts、Git integration、package contents/installed CLI，以及
 聚合 gate。该 context 由 GitHub Actions app integration ID `15368` 产生，与
 `.github/rulesets/main.json` 一致。
 
-## Release absence observation
+## Baseline release absence observation
 
 2026-09-30T05:56:47Z 的只读预检返回：
 
@@ -91,8 +111,8 @@ repository contracts、Git integration、package contents/installed CLI，以及
 
 ## External handoff
 
-Implementation acceptance 后，Deployment 必须重新观察外部状态并按
-`open-source-contract.md` 执行。当前 implementation evidence 不代表已经启用
+新 implementation acceptance 后，Deployment 必须重新观察 release surfaces 并按
+`open-source-contract.md` 执行。既有 `deployment-evidence.md` 继续证明已启用的
 private vulnerability reporting、Dependabot security updates、CodeQL default
-setup 或 `main` ruleset，也不代表已经创建 `0.3.0` tag、GitHub Release 或 npm
-publication。
+setup 与 `main` ruleset；它不证明已经创建 `0.3.0-rc.1` tag、GitHub prerelease
+或 npm publication。
