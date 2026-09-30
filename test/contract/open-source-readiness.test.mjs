@@ -118,7 +118,7 @@ test("publishes explicit metadata and a pre-1.0 experimental API contract", asyn
     url: "https://github.com/shazhou-ww",
   };
 
-  assert.equal(manifest.version, "0.3.0-rc.1");
+  assert.equal(manifest.version, "0.3.0-rc.2");
   assert.equal(manifest.license, "MIT");
   assert.equal(
     manifest.homepage,
@@ -135,13 +135,16 @@ test("publishes explicit metadata and a pre-1.0 experimental API contract", asyn
   assert.match(reference, /does not yet promise stable\s+TypeScript declarations/);
 });
 
-test("prepares complete 0.3.0-rc.1 changelog and GitHub prerelease materials", async () => {
-  const [changelog, releaseNotes, stableReleaseNotes] = await Promise.all([
+test("prepares complete 0.3.0-rc.2 changelog and GitHub prerelease materials", async () => {
+  const [changelog, releaseNotes, rc1ReleaseNotes, stableReleaseNotes] =
+    await Promise.all([
     read("CHANGELOG.md"),
+    read(".github/release-notes/0.3.0-rc.2.md"),
     read(".github/release-notes/0.3.0-rc.1.md"),
     read(".github/release-notes/0.3.0.md"),
-  ]);
+    ]);
 
+  assert.match(changelog, /## \[0\.3\.0-rc\.2\]/);
   assert.match(changelog, /## \[0\.3\.0-rc\.1\]/);
   assert.doesNotMatch(changelog, /## Unreleased/);
   for (const required of [
@@ -155,13 +158,13 @@ test("prepares complete 0.3.0-rc.1 changelog and GitHub prerelease materials", a
     assert.ok(changelog.includes(required), `Changelog is missing: ${required}`);
   }
   for (const required of [
-    "Silvermoon 0.3.0-rc.1",
-    "release candidate",
-    "silvermoon@0.3.0-rc.1",
+    "Silvermoon 0.3.0-rc.2",
+    "recovery release candidate",
+    "silvermoon@0.3.0-rc.2",
     "npm dist-tag: `rc`",
-    "npm/silvermoon/v0.3.0-rc.1",
-    "npm/silvermoon/v0.2.2...npm/silvermoon/v0.3.0-rc.1",
-    "latest",
+    "npm/silvermoon/v0.3.0-rc.2",
+    "npm/silvermoon/v0.3.0-rc.1...npm/silvermoon/v0.3.0-rc.2",
+    "avatar",
     "License: MIT",
     "Node.js 22",
     "experimental before `1.0.0`",
@@ -172,6 +175,7 @@ test("prepares complete 0.3.0-rc.1 changelog and GitHub prerelease materials", a
       `Release notes are missing: ${required}`,
     );
   }
+  assert.match(rc1ReleaseNotes, /^# Silvermoon 0\.3\.0-rc\.1$/m);
   assert.match(stableReleaseNotes, /^# Silvermoon 0\.3\.0$/m);
   assert.match(stableReleaseNotes, /npm\/silvermoon\/v0\.3\.0/);
 });

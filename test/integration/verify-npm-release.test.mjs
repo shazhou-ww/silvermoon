@@ -96,16 +96,21 @@ test("verifies registry identity, READMEs, provenance, and jsDelivr assets", asy
   const assetUrls = assets.map(
     (path) => `https://cdn.jsdelivr.net/gh/${repository}@${commit}/${path}`,
   );
+  const readmeAssetUrls = assetUrls.filter(
+    (url) => !url.endsWith("/assets/silvermoon-avatar.svg"),
+  );
   const englishReadme = [
     "# Fixture",
-    ...assetUrls.map((url) => `<img src="${url}">`),
+    ...readmeAssetUrls.map((url) => `<img src="${url}">`),
     "",
   ].join("\n");
   const chineseReadme = [
     "# 测试",
-    ...assetUrls.map((url) => `<img src="${url}">`),
+    ...readmeAssetUrls.map((url) => `<img src="${url}">`),
     "",
   ].join("\n");
+  assert.doesNotMatch(englishReadme, /silvermoon-avatar\.svg/);
+  assert.doesNotMatch(chineseReadme, /silvermoon-avatar\.svg/);
   await Promise.all([
     writeFile(
       join(packageDirectory, "package.json"),

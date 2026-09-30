@@ -21,6 +21,8 @@ GitHub settings 与 npm/GitHub Release 结果属于 Deployment evidence，不在
   `f6a870c287f1aa10c0571ecde5a5bd45c7eaf641`
 - RC repository deliverables commit:
   `e23f3d0d298a4a8e0c4f390719914abe69d62946`
+- RC2 recovery contract commit:
+  `de2cf95f34f91912e97292a29b2513a5c4940eef`
 - Implementation revision: 由最终同步后的 `whats-next` report 提供；world tree
   不记录自己的 revision，避免内容寻址自引用
 
@@ -51,14 +53,59 @@ coverage、准备新的 rc.2 manifest/changelog/notes，并重新通过完整 va
 
 | Stable ID | Repository evidence | Verification | 状态 |
 | --- | --- | --- | --- |
-| `I-AC01` | RC scope 已写入 `Implementation.md`、`open-source-contract.md`、本文件与 `ledger.md` | `silvermoon check --worktree`、`pnpm check:commit`、stable-ID diff | 通过 |
+| `I-AC01` | RC2 recovery scope 已写入 `Implementation.md`、`open-source-contract.md`、本文件与 `ledger.md` | `silvermoon check --worktree`、`pnpm check:commit`、stable-ID diff | 通过 |
 | `I-AC02` | `.github/dependabot.yml` 与三项外部 settings 应用协议 | readiness contract tests | 通过 |
 | `I-AC03` | `.github/rulesets/main.json` 与 CI `Required checks` | workflow/ruleset contract tests；GitHub Actions app ID `15368` 读回 | 通过 |
 | `I-AC04` | 当前两个 workflow 的全部 `uses` SHA pin 与 Actions update entry | 全 workflow scan；exact version comments | 通过 |
-| `I-AC05` | rc.2 `package.json`、reference、release planner 与 registry verifier | manifest/doc/release-plan tests、pack check、installed-package E2E | 待实施 |
-| `I-AC06` | rc.1 历史、`CHANGELOG.md` 与 `0.3.0-rc.2` GitHub prerelease notes | release artifact tests；tag/release/registry absence observation | 待实施 |
-| `I-AC07` | 定向、sanity、release-grade 与 Silvermoon validations | RC2 命令证据 | 待验证 |
-| `I-AC08` | verifier 接受实际 immutable asset references 且不要求未引用 artwork | integration regression、真实 README fixture | 待实施 |
+| `I-AC05` | rc.2 `package.json`、reference、release planner 与 registry verifier | manifest/doc/release-plan tests、pack check、installed-package E2E | 通过 |
+| `I-AC06` | rc.1 历史、`CHANGELOG.md` 与 `0.3.0-rc.2` GitHub prerelease notes | release artifact tests；tag/release/registry absence observation | 通过 |
+| `I-AC07` | 定向、sanity、release-grade 与 Silvermoon validations | RC2 命令证据 | 通过 |
+| `I-AC08` | verifier 接受实际 immutable asset references 且不要求未引用 artwork | integration regression、真实 rc.1 re-verification | 通过 |
+
+## RC2 implementation results
+
+RC2 candidate 本地验证完成于 2026-09-30T08:17:37Z：
+
+| 命令 | 结果 | 关键证据 |
+| --- | --- | --- |
+| `node --test test/integration/verify-npm-release.test.mjs test/contract/open-source-readiness.test.mjs test/unit/prepare-npm-release.test.mjs` | exit 0 | 14/14；README fixture 只引用 logo/mascot，未引用 avatar，同时完整 asset/MIME/provenance checks 通过 |
+| `node scripts/prepare-npm-release.mjs --tag npm/silvermoon/v0.3.0-rc.2 --commit <baseline>` | exit 0 | `version=0.3.0-rc.2`、`distTag=rc`、`publicationState=absent` |
+| `pnpm check:sanity` | exit 0 | 93/93；`CHECK_TOTAL 2367ms` |
+| `pnpm check` | exit 0 | contract 31/31、integration 128 passed + 2 privilege skips、E2E 1/1；`PACK_SMOKE_OK name=silvermoon version=0.3.0-rc.2`；`CHECK_TOTAL 110261ms` |
+| `silvermoon check --worktree --audience agent` | exit 0 | RC2 candidate snapshot 通过 |
+| `silvermoon check --staged --audience agent` | exit 0 | 完整 RC2 implementation index 通过；记录本结果后重新 stage 并复验 |
+
+第一次 `pnpm check` 唯一失败是 `CHANGELOG.md` 的重复 `### Fixed` heading 触发
+MD024；将 rc.2 heading 改为 `### Release verification fix` 后，
+`pnpm lint:markdown` 与完整 `pnpm check` 重新执行并通过。没有把第一次失败删除或解释为
+成功。
+
+修复后的 verifier 还对已发布 rc.1 的真实 registry tarball 与 metadata 重新执行。
+为避免 Windows `core.autocrlf=true` 改写 SVG worktree bytes，验证 fixture 从 rc.1 tag
+使用 `git cat-file` materialize 原始 asset blobs；这些 blob 与 commit-pinned
+jsDelivr bytes 的 SHA-256 一致。最终输出
+`VERIFY_NPM_RELEASE_OK`，并验证：
+
+- version `0.3.0-rc.1`、dist-tag `rc` 与 release commit
+  `5e116d1fed423bbd1ebed3ec08f2c0b955823022`；
+- tarball SHA-256
+  `193cf12d62e9b18a6176cef8442442cded14cd58fd48bf96fb48468e1d379961`；
+- registry integrity、49 files、MIT metadata、README；
+- publish 与 SLSA provenance attestations；
+- 三张 repository artwork 的 commit-pinned bytes 与 MIME。
+
+这证明删除“每份 README 必须引用 allowlist 全集”的断言修复了 rc.1 假阴性，同时保留
+tarball、实际 README references、全部 artwork 与 provenance 的 fail-closed 验证。
+
+2026-09-30T08:17:37Z 对 official registry
+`https://registry.npmjs.org` 和 GitHub 的只读 preflight 返回：
+
+- `TAG_ABSENT npm/silvermoon/v0.3.0-rc.2`；
+- `GITHUB_RELEASE_ABSENT npm/silvermoon/v0.3.0-rc.2`；
+- `NPM_VERSION_ABSENT silvermoon@0.3.0-rc.2`；
+- npm `latest=0.2.2`、`rc=0.3.0-rc.1`。
+
+这些 facts 证明 rc.2 尚未被消耗，rc.1 保持不可变；它们不代表 rc.2 已部署。
 
 ## RC implementation results
 

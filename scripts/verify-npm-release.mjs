@@ -89,13 +89,6 @@ function assertImmutableReadme(readme, filename, commit) {
   if (regenerated !== readme) {
     throw new Error(`${filename} still contains references that require release rewriting.`);
   }
-  for (const assetPath of assetPaths) {
-    const expected =
-      `https://cdn.jsdelivr.net/gh/${repository}@${commit}/${assetPath}`;
-    if (!readme.includes(expected)) {
-      throw new Error(`${filename} is missing immutable asset URL ${expected}.`);
-    }
-  }
 }
 
 function assertPerson(value, description) {

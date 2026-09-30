@@ -3,6 +3,15 @@
 This changelog starts with the Silvermoon 0.3.0 release series. Earlier release
 history remains available through npm and Git tags.
 
+## [0.3.0-rc.2]
+
+### Release verification fix
+
+- Post-publication verification now accepts generated package READMEs that use
+  only a subset of the repository artwork allowlist. It still rejects mutable
+  or relative release references and independently verifies every allowlisted
+  commit-pinned asset's bytes and media type.
+
 ## [0.3.0-rc.1]
 
 ### Added
@@ -50,4 +59,5 @@ history remains available through npm and Git tags.
   GitHub OIDC trusted publishing, provenance, and post-publication identity
   verification, now including MIT and public package metadata.
 
+[0.3.0-rc.2]: https://github.com/shazhou-ww/silvermoon/compare/npm/silvermoon/v0.3.0-rc.1...npm/silvermoon/v0.3.0-rc.2
 [0.3.0-rc.1]: https://github.com/shazhou-ww/silvermoon/compare/npm/silvermoon/v0.2.2...npm/silvermoon/v0.3.0-rc.1
