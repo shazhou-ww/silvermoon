@@ -8,8 +8,12 @@ contract，也不代表未执行动作已经完成。
 - Idea: `open-source-readiness`
 - ULID: `01M3RD0HQRYNAFDT7EC6JJZGAN`
 - Accepted implementation revision:
-  `728ceb204ec3a736d0bd9269db1582299c61dd28`
+  `9413b43d5912432927954f187a8a2023b1cb8140`
 - Implementation acceptance commit:
+  `a03ca2e9c920381374ed32c9d905551c7b89125e`
+- RC2 accepted implementation revision:
+  `728ceb204ec3a736d0bd9269db1582299c61dd28`
+- RC2 implementation acceptance commit:
   `ec34b05d3d5c04bca8f47ea1798b0df1c54911ae`
 - Deployment contract commit:
   `694a83d9b484642e34e8185f0e48ea51868d968b`
@@ -70,7 +74,7 @@ RC 成功后仍需用户评估，再通过新的 stable implementation candidate
 | `D-AC06` | RC2 recovery、accepted candidate 与 fresh preflight 精确绑定 | user choice、absence、planner、ancestry | 通过；cleanup race 单独跟踪 |
 | `D-AC07` | `0.3.0-rc.2` 不可变发布身份一致 | workflow、registry、release、provenance | 通过 |
 | `D-AC08` | npm `rc` 更新到 rc.2 且 `latest`/stable surfaces 不变 | dist-tags、prerelease 与 absence observations | 通过 |
-| `D-AC09` | 稳定 `0.3.0` 仍需新候选与授权 | lifecycle、status、absence observations | hold 生效 |
+| `D-AC09` | 稳定 `0.3.0` 仍需新候选、授权与 fresh preflight | lifecycle、status、absence observations | 候选已验收；待 preflight |
 | `D-AC10` | 最终稳定公共开源契约完整 | 本文件、ledger、final diff/checks | 等待前置项 |
 
 ## External observations
@@ -329,6 +333,26 @@ Trusted-publishing
 
 D-S07、D-S08、D-AC07 与 D-AC08 因此完成。D-S09/D-AC09 的 stable hold 继续
 生效；rc.2 成功不构成稳定 `0.3.0` 授权。
+
+2026-09-30T09:02:42Z，用户显式调用 `/publish 0.3.0`。随后通过新的 Inner World
+candidate 将 manifest 切换为 stable `0.3.0`，完成 changelog、GitHub Release
+notes、contract tests、release-grade checks 和 exact-commit hosted package
+validation：
+
+- stable repository deliverables commit：
+  `3044943fb0ee476cd5ea3991fd384b1610e395af`；
+- hosted [CI run 36694457890](https://github.com/shazhou-ww/silvermoon/actions/runs/36694457890)
+  的 integration、package/installed-CLI 与 `Required checks` jobs 均为 success；
+- accepted implementation revision：
+  `9413b43d5912432927954f187a8a2023b1cb8140`；
+- acceptance commit：
+  `a03ca2e9c920381374ed32c9d905551c7b89125e`；
+- acceptance 前再次确认 stable tag、GitHub Release 与 npm exact version 不存在，
+  planner 返回 `distTag=latest`、`publicationState=absent`。
+
+该明确授权与 exact candidate acceptance 完成 D-S09 的 return-to-implementation
+gate。D-AC09 仍需在最新 deployment primary commit 上完成 fresh preflight 后才能
+闭合；本节不代表 stable tag、npm version 或 GitHub Release 已创建。
 
 ## Failures and recovery
 
