@@ -23,6 +23,8 @@ GitHub settings 与 npm/GitHub Release 结果属于 Deployment evidence，不在
   `e23f3d0d298a4a8e0c4f390719914abe69d62946`
 - RC2 recovery contract commit:
   `de2cf95f34f91912e97292a29b2513a5c4940eef`
+- RC2 repository deliverables commit:
+  `868148b3fad3e41766e5f0df527d691c9ccf979d`
 - Implementation revision: 由最终同步后的 `whats-next` report 提供；world tree
   不记录自己的 revision，避免内容寻址自引用
 
@@ -106,6 +108,26 @@ tarball、实际 README references、全部 artwork 与 provenance 的 fail-clos
 - npm `latest=0.2.2`、`rc=0.3.0-rc.1`。
 
 这些 facts 证明 rc.2 尚未被消耗，rc.1 保持不可变；它们不代表 rc.2 已部署。
+
+RC2 deliverables commit 的 hosted
+[CI run 36689035973](https://github.com/shazhou-ww/silvermoon/actions/runs/36689035973)
+首轮仅 `Git integration - Node 24 on Ubuntu` 失败：130 个 integration tests 中
+129 passed，`validates identical trees independently of target and parent topology`
+在 fixture cleanup 时返回
+`ENOTEMPTY: directory not empty, rmdir '/tmp/.../work/.git/objects'`。同一轮 package
+job、repository contracts 与全部 Node 22/24 cross-platform unit jobs 均成功；
+`Required checks` 因 integration result fail-closed。
+
+没有将该失败视为成功，也没有修改 candidate。对 exact commit 仅 rerun failed jobs；
+[attempt 2](https://github.com/shazhou-ww/silvermoon/actions/runs/36689035973/attempts/2)
+成功：
+
+- `Git integration - Node 24 on Ubuntu` job `109802280129`：success；
+- `Required checks` job `109802455319`：success。
+
+这证明首次结果是临时目录 cleanup race，exact RC2 repository candidate 的最终 hosted
+required gate 成功；若后续同类 cleanup 失败复现，应作为独立 reliability work 修复，
+不得在 publication run 中忽略。
 
 ## RC implementation results
 
