@@ -467,8 +467,9 @@ test("[inventory-cli] CLI renders complete local inventory without lifecycle ins
   assert.match(text.logs[0], /Matched 3 idea\(s\) and returned 3\./);
   assert.match(
     text.logs[0],
-    /Counts: preparing=1, implementing=1, deploying=1, completed=0, abandoned=0\./,
+    /Counts: preparing=1, implementing=1, deploying=1\./,
   );
+  assert.doesNotMatch(text.logs[0], /completed=0|abandoned=0/);
   assert.match(text.logs[0], /\| Alias \/ ID \| State \| Created \| Title \|/);
   assert.match(text.logs[0], /\| alpha \| preparing \| .* \| Alpha inventory \|/);
   assert.match(text.logs[0], new RegExp(`\\| ${IDEAS[2].id} \\| deploying \\|`));

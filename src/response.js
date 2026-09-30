@@ -362,11 +362,16 @@ function renderIdeaTable(ideas, language, now) {
 
 function renderIdeaList(response, language, now) {
   const counts = Object.entries(response.inventory.counts)
+    .filter(([, count]) => count > 0)
     .map(([state, count]) => `${state}=${count}`)
-    .join(", ");
-  const lines = [
-    `${response.summary} ${localize(language, "Counts", "计数")}: ${counts}.`,
-  ];
+    .join(localize(language, ", ", "，"));
+  const lines = [counts.length === 0
+    ? response.summary
+    : localize(
+      language,
+      `${response.summary} Counts: ${counts}.`,
+      `${response.summary}计数：${counts}。`,
+    )];
   if (response.query?.createdSince) {
     lines.push(
       `- ${localize(language, "Created since", "创建时间下界")}: ${formatDate(response.query.createdSince, language, now)}`,
