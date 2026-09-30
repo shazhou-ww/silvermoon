@@ -328,4 +328,3 @@ test("[ulid-collision] retries without changing the colliding idea", async () =>
   assert.equal(report.actions.at(-1).result.createdIdea.id, secondId);
   assert.equal(await readFile(existingStatus, "utf8"), original);
 });
-

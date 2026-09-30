@@ -86,7 +86,6 @@ if (packed.status !== 0) {
     "assets/silvermoon-mascot.png",
     "assets/silvermoon.svg",
     "bin/silvermoon.js",
-    "docs/assets/silvermoon-avatar.svg",
     "docs/core-concepts.md",
     "docs/getting-started.md",
     "docs/maintaining.md",

@@ -4,10 +4,6 @@ import { test } from "node:test";
 
 const artworkUrl = new URL("../../assets/silvermoon.svg", import.meta.url);
 const avatarUrl = new URL("../../assets/silvermoon-avatar.svg", import.meta.url);
-const compatibilityAvatarUrl = new URL(
-  "../../docs/assets/silvermoon-avatar.svg",
-  import.meta.url,
-);
 const readmeUrl = new URL("../../README.md", import.meta.url);
 
 function luminance(hex) {
@@ -26,24 +22,17 @@ function contrast(first, second) {
   return (bright + 0.05) / (dark + 0.05);
 }
 
-test("ships safe canonical artwork with a byte-identical legacy avatar", async () => {
-  const [artwork, avatarBytes, compatibilityAvatarBytes, readme] = await Promise.all([
+test("ships safe canonical artwork from root assets", async () => {
+  const [artwork, avatarBytes, readme] = await Promise.all([
     readFile(artworkUrl, "utf8"),
     readFile(avatarUrl),
-    readFile(compatibilityAvatarUrl),
     readFile(readmeUrl, "utf8"),
   ]);
   const avatar = avatarBytes.toString("utf8");
-  const [avatarStatus, compatibilityAvatarStatus] = await Promise.all([
-    lstat(avatarUrl),
-    lstat(compatibilityAvatarUrl),
-  ]);
+  const avatarStatus = await lstat(avatarUrl);
 
   assert.equal(avatarStatus.isFile(), true);
   assert.equal(avatarStatus.isSymbolicLink(), false);
-  assert.equal(compatibilityAvatarStatus.isFile(), true);
-  assert.equal(compatibilityAvatarStatus.isSymbolicLink(), false);
-  assert.deepEqual(compatibilityAvatarBytes, avatarBytes);
   assert.match(artwork, /viewBox="0 400 1280 880"/);
   assert.match(avatar, /viewBox="0 0 1280 1280"/);
   assert.equal([...artwork.matchAll(/<path\b/g)].length, 23);

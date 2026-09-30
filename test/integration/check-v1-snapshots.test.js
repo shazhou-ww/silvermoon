@@ -382,4 +382,3 @@ test("fetches and validates remote without a dialogue outcome", async () => {
     [["fetch-primary", "success"]],
   );
 });
-

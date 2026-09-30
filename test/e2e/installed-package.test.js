@@ -225,22 +225,10 @@ try {
     ),
     /# Getting Started/,
   );
-  const [canonicalAvatar, compatibilityAvatar] = await Promise.all([
-    readFile(
-      join(consumer, "node_modules", "silvermoon", "assets", "silvermoon-avatar.svg"),
-    ),
-    readFile(
-      join(
-        consumer,
-        "node_modules",
-        "silvermoon",
-        "docs",
-        "assets",
-        "silvermoon-avatar.svg",
-      ),
-    ),
-  ]);
-  assert.deepEqual(compatibilityAvatar, canonicalAvatar);
+  const canonicalAvatar = await readFile(
+    join(consumer, "node_modules", "silvermoon", "assets", "silvermoon-avatar.svg"),
+  );
+  assert.ok(canonicalAvatar.length > 0);
   const mascot = await readFile(
     join(consumer, "node_modules", "silvermoon", "assets", "silvermoon-mascot.png"),
   );
