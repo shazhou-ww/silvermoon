@@ -269,6 +269,12 @@ The review index must:
   item when available;
 - end with one explicit decision question for the exact revision.
 
+Render the review index in ordinary assistant Markdown. If an interactive
+decision tool is available, invoke it only after that message and keep its
+question and choices limited to the exact decision. Do not put local file links
+in tool-owned question or choice surfaces; those surfaces may report valid
+workspace paths as unresolved resources.
+
 Use the latest report's effective content language for the review focus, link
 descriptions, and decision question. A temporary output language does not
 change this rule. Preserve aliases, ULIDs, revisions, paths, stable IDs, and
@@ -286,6 +292,12 @@ candidate if the local checkout has moved. Remote links should be a
 commit-pinned web URL to the primary candidate, not a moving branch URL. If no
 reliable remote permalink can be formed, provide the primary commit and
 repository-relative path and explain why.
+
+Follow the host's file-link convention in ordinary assistant Markdown. In
+VS Code on Windows, use an absolute drive path with forward slashes, such as
+`[Implementation.md](C:/repo/Implementation.md)`; never use backslashes or a
+`file://` URI. Filesystem existence alone does not prove that a tool-owned
+surface can resolve the link.
 
 Synchronization and links make review possible; neither constitutes a human
 decision.
