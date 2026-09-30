@@ -7,8 +7,11 @@ import {
   useRenderer,
   useTerminalDimensions,
 } from "@opentui/react";
-import { createElement, useState } from "react";
+import { createElement, useEffect, useRef, useState } from "react";
 import { Markdown } from "tui-md";
+
+const COPY_STATUS_DURATION_MS = 3000;
+const SHORTCUT_HINT = "  [q/Esc] quit  [scroll] navigate  [drag, y] copy";
 
 export function copyWindowsClipboard(
   text,
@@ -49,23 +52,33 @@ export function copyTuiSelection(renderer, {
   windowsClipboard = copyWindowsClipboard,
 } = {}) {
   const text = renderer.getSelection()?.getSelectedText();
-  if (!text) return "Select text with the mouse before pressing y";
+  if (!text) return "Select text first";
   if (renderer.copyToClipboardOSC52(text)) return "Copy sent to terminal clipboard";
   if (platform === "win32" && stdout === process.stdout) {
     const result = windowsClipboard(text);
     return result.ok ? "Copied to Windows clipboard" : `Copy failed: ${result.reason}`;
   }
-  return "Terminal clipboard unavailable (try Shift+drag)";
+  return "No clipboard; Shift+drag";
 }
 
 function MarkdownViewer({ content, stdout }) {
   const renderer = useRenderer();
   const { height, width } = useTerminalDimensions();
   const [copyStatus, setCopyStatus] = useState("");
+  const copyStatusTimeout = useRef(null);
+
+  useEffect(() => () => clearTimeout(copyStatusTimeout.current), []);
 
   useKeyboard((key) => {
     if (key.name === "q" || key.name === "escape") renderer.destroy();
-    if (key.name === "y") setCopyStatus(copyTuiSelection(renderer, { stdout }));
+    if (key.name === "y") {
+      clearTimeout(copyStatusTimeout.current);
+      setCopyStatus(copyTuiSelection(renderer, { stdout }));
+      copyStatusTimeout.current = setTimeout(() => {
+        setCopyStatus("");
+        copyStatusTimeout.current = null;
+      }, COPY_STATUS_DURATION_MS);
+    }
   });
 
   return createElement(
@@ -86,10 +99,15 @@ function MarkdownViewer({ content, stdout }) {
       createElement("text", { fg: "#569cd6" }, "Silvermoon"),
       createElement(
         "text",
-        { fg: "#6b6b6b" },
-        "  [q/Esc] quit  [scroll] navigate  [drag, y] copy",
+        {
+          fg: "#6b6b6b",
+          height: 1,
+          truncate: true,
+          width: "100%",
+          wrapMode: "none",
+        },
+        copyStatus ? `  ${copyStatus}` : SHORTCUT_HINT,
       ),
-      copyStatus && createElement("text", { fg: "#6b6b6b" }, `  ${copyStatus}`),
     ),
     createElement(
       "scrollbox",

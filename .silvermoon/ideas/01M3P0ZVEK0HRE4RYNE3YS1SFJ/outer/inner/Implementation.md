@@ -39,7 +39,8 @@ requirements, TUI controls, and pipeline guidance.
 保留 OpenTUI 鼠标滚动与表格交互，并为鼠标拖选的文本提供可见的 `y` 复制快捷键。
 优先通过终端剪贴板协议发送选区；本地 Windows 终端不支持该协议时使用系统
 PowerShell 剪贴板命令，不复制整个报告。没有选区或复制失败时在 TUI 中明确提示。
-只更新 reference 文档，不在 README 中记录终端内部技术细节。
+成功或失败提示暂时占用原有快捷键栏，约三秒后自动恢复；重复复制重新计时，
+不插入新行或推动文档内容。只更新 reference 文档，不在 README 中记录终端内部技术细节。
 
 ### I-S06: 指引 Agent 显式选择原始 Markdown
 
@@ -93,7 +94,8 @@ Windows human TTY 下中文内容和 Unicode 表格边框不再以旧代码页�
 human TTY 的鼠标拖选后按 `y` 可把中文与 Unicode 文本发送到终端剪贴板，
 本地 Windows 不支持协议时可通过系统剪贴板回退；没有选区或复制失败时
 显示失败原因，不误报复制成功。测试覆盖真实 TUI 鼠标选区、UTF-8 剪贴板
-输入、失败反馈及 TUI 控制提示；验证 agent、非 TTY 与 JSON 输出不变。
+输入、失败反馈及 TUI 控制提示；验证复制提示保持单行、不移动正文、
+约三秒后消失且重复复制重新计时；验证 agent、非 TTY 与 JSON 输出不变。
 
 ### I-AC07: Skill 默认指引 Agent 避开交互式 UI
 
