@@ -10,6 +10,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test, { afterEach } from "node:test";
+import { fileURLToPath } from "node:url";
 
 import { buildNpmTarball } from "../../scripts/build-npm-tarball.mjs";
 import {
@@ -28,6 +29,7 @@ const registry = "https://registry.npmjs.org";
 const tarballUrl = `${registry}/silvermoon/-/silvermoon-${version}.tgz`;
 const attestationUrl =
   `${registry}/-/npm/v1/attestations/silvermoon@${version}`;
+const repositoryRoot = fileURLToPath(new URL("../..", import.meta.url));
 const assets = [
   "assets/silvermoon.svg",
   "assets/silvermoon-avatar.svg",
@@ -73,11 +75,11 @@ test("verifies registry identity, READMEs, provenance, and jsDelivr assets", asy
   const packageDirectory = join(root, "package");
   const outputDirectory = join(root, "output");
   await mkdir(join(packageDirectory, "assets"), { recursive: true });
-  const assetContents = new Map([
-    ["assets/silvermoon.svg", Buffer.from("<svg>hero</svg>\n")],
-    ["assets/silvermoon-avatar.svg", Buffer.from("<svg>avatar</svg>\n")],
-    ["assets/silvermoon-mascot.png", Buffer.from("mascot")],
-  ]);
+  const assetContents = new Map(
+    await Promise.all(
+      assets.map(async (path) => [path, await readFile(join(repositoryRoot, path))]),
+    ),
+  );
   const assetUrls = assets.map(
     (path) => `https://cdn.jsdelivr.net/gh/${repository}@${commit}/${path}`,
   );
@@ -97,7 +99,7 @@ test("verifies registry identity, READMEs, provenance, and jsDelivr assets", asy
       `${JSON.stringify({
         name: packageName,
         version,
-        files: ["assets"],
+        files: ["README.md", "README.zh-CN.md"],
       }, null, 2)}\n`,
     ),
     writeFile(join(packageDirectory, "README.md"), englishReadme),
@@ -112,6 +114,10 @@ test("verifies registry identity, READMEs, provenance, and jsDelivr assets", asy
     outputDirectory,
     gitHead: commit,
   });
+  assert.equal(
+    candidate.files.some(({ path }) => path.startsWith("assets/")),
+    false,
+  );
   const tarball = await readFile(candidate.tarballPath);
   const sha512 = createHash("sha512").update(tarball).digest("hex");
   const dist = {

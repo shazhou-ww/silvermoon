@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -10,6 +11,7 @@ import { parseReleaseTag } from "./prepare-npm-release.mjs";
 
 const npmRegistry = "https://registry.npmjs.org";
 const repository = "shazhou-ww/silvermoon";
+const repositoryRoot = new URL("../", import.meta.url);
 const workflowPath = ".github/workflows/publish-npm.yml";
 const provenanceType = "https://slsa.dev/provenance/v1";
 const npmPublishType =
@@ -310,6 +312,15 @@ export async function verifyNpmRelease(
     throw new Error("Published npm tarball bytes do not match the verified candidate.");
   }
 
+  const sourceAssets = await Promise.all(
+    assetPaths.map(async (path) => {
+      try {
+        return await readFile(new URL(path, repositoryRoot));
+      } catch (error) {
+        throw new Error(`Could not read release checkout asset ${path}: ${error.message}`);
+      }
+    }),
+  );
   for (let index = 0; index < assetPaths.length; index += 1) {
     const path = assetPaths[index];
     const response = assetResponses[index];
@@ -318,8 +329,8 @@ export async function verifyNpmRelease(
       throw new Error(`jsDelivr asset ${path} did not return SVG content.`);
     }
     const publishedAsset = Buffer.from(await response.arrayBuffer());
-    if (!publishedAsset.equals(requiredEntry(candidate.entries, path))) {
-      throw new Error(`jsDelivr asset ${path} does not match the candidate tarball.`);
+    if (!publishedAsset.equals(sourceAssets[index])) {
+      throw new Error(`jsDelivr asset ${path} does not match the release checkout.`);
     }
   }
 

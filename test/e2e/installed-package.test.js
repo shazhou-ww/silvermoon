@@ -228,14 +228,10 @@ try {
     ),
     /# Getting Started/,
   );
-  const canonicalAvatar = await readFile(
-    join(consumer, "node_modules", "silvermoon", "assets", "silvermoon-avatar.svg"),
+  await assert.rejects(
+    stat(join(consumer, "node_modules", "silvermoon", "assets")),
+    { code: "ENOENT" },
   );
-  assert.ok(canonicalAvatar.length > 0);
-  const mascot = await readFile(
-    join(consumer, "node_modules", "silvermoon", "assets", "silvermoon-mascot.png"),
-  );
-  assert.ok(mascot.length > 0);
   for (const schema of [
     "config.schema.json",
     "definitions.schema.json",

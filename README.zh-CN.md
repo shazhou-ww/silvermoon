@@ -135,6 +135,15 @@ npx silvermoon list-ideas
 - [Technical Reference](./docs/reference.md) — 存储、派生状态、CLI report、验证 target 与 schema。
 - [Maintaining Silvermoon](./docs/maintaining.md) — 开发检查、文档职责与发布指南。
 
+## 社区
+
+- [贡献指南](./CONTRIBUTING.md)
+- [行为准则](./CODE_OF_CONDUCT.md)
+- [安全策略](./SECURITY.md)
+- [支持说明](./SUPPORT.md)
+- [变更记录](./CHANGELOG.md)
+- [MIT License](./LICENSE)
+
 ## 图片版权声明
 
 本项目中使用的银月（Silvermoon）形象均为基于《凡人修仙传》动画进行 AI

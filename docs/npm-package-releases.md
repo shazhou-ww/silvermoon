@@ -104,6 +104,8 @@ The [`publish-npm.yml`](../.github/workflows/publish-npm.yml) workflow then:
    pull-request, and local previews show the current checkout, while staging
    converts those images to release-commit-pinned jsDelivr URLs and converts
    ordinary relative document links to commit-pinned GitHub blob URLs;
+   repository artwork remains available at those immutable URLs but is
+   excluded from the npm tarball;
 6. records the tagged commit as `gitHead` and the canonical `README.md` content
    in the isolated package manifest, creates one tarball, records its path,
    SHA-256, npm shasum, registry integrity, and complete file list, then passes

@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Security policy
+    url: https://github.com/shazhou-ww/silvermoon/security/policy
+    about: Do not disclose vulnerability details in a public issue.
+  - name: Support guidance
+    url: https://github.com/shazhou-ww/silvermoon/blob/main/SUPPORT.md
+    about: Check the supported help channels before opening an issue.

@@ -171,6 +171,15 @@ the project, not to a fleeting conversation.
 - [Maintaining Silvermoon](./docs/maintaining.md) — development checks,
   documentation ownership, and release guidance.
 
+## Community
+
+- [Contributing](./CONTRIBUTING.md)
+- [Code of Conduct](./CODE_OF_CONDUCT.md)
+- [Security Policy](./SECURITY.md)
+- [Support](./SUPPORT.md)
+- [Changelog](./CHANGELOG.md)
+- [MIT License](./LICENSE)
+
 ## Image Copyright Disclaimer
 
 The Silvermoon character images used in this project are AI-generated
