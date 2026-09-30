@@ -52,6 +52,8 @@ function navigationObservation(outputLanguage = "en-US") {
       activeIdeas: [{
         id: "01M36QGPNTXEPP61DA4KP4AVZF",
         state: "preparing",
+        createdAt: "2026-09-29T00:00:00.000Z",
+        title: "Fixture",
       }],
     },
     problems: [],
@@ -162,7 +164,7 @@ test("renders JSON verbatim and default non-TTY output from response only", asyn
   assert.match(text, /Current state: navigation-ready/);
   assert.match(text, /1 active idea\(s\) are available/);
   assert.match(text, /### Active ideas/);
-  assert.match(text, /\| ID \| Alias \| State \|/);
+  assert.match(text, /\| Alias \/ ID \| State \| Created \| Title \|/);
   assert.match(text, /### Next steps/);
   assert.match(text, /Choose an idea or run/);
   assert.doesNotMatch(
@@ -184,7 +186,7 @@ test("response rendering uses the observation output language", async () => {
   assert.match(output.logs[0], /当前状态：navigation-ready/);
   assert.match(output.logs[0], /当前有 1 个 active idea/);
   assert.match(output.logs[0], /### Active ideas/);
-  assert.match(output.logs[0], /\| ID \| Alias \| 状态 \|/);
+  assert.match(output.logs[0], /\| Alias \/ ID \| 状态 \| 创建时间 \| 标题 \|/);
   assert.match(output.logs[0], /### 下一步/);
   assert.doesNotMatch(output.logs[0], /本次指示|项目现状|本次操作及结果/);
 });

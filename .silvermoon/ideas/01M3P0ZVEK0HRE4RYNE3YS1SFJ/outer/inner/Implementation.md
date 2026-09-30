@@ -51,6 +51,14 @@ PowerShell 剪贴板命令，不复制整个报告。没有选区或复制失败
 需要四投影 JSON 时改用 `--json`，两者不能合用。同步仓库注册副本，
 更新相应操作文档与契约测试，不在 README 中增加技术细节。
 
+### I-S07: 统一文本报告的列表、问题和时间
+
+复用同一 Markdown 表格渲染，使 `list-ideas` 和 `whats-next` 的 active
+列表使用 `Alias / ID`、状态、创建时间、标题四列；通过同一 idea 文档读取
+路径补全导航标题，保留没有标题时的空值。将 problems 渲染成表格。
+仅在文本渲染时按当前时间本地化结构化时间，不改动 JSON 时间戳、筛选
+或其他报告事实。更新 reference 文档，不在 README 中补充技术细节。
+
 ## Acceptance criteria
 
 ### I-AC01: Audience options have one consistent CLI contract
@@ -106,3 +114,12 @@ human TTY 的鼠标拖选后按 `y` 可把中文与 Unicode 文本发送到终�
 canonical skill 与注册副本一致，明确要求 Agent 优先显式使用
 `--audience agent`，并注明 `--json` 互斥。技能契约测试验证指引内容，
 `pnpm check:skills` 和 `pnpm check` 验证同步与仓库候选。
+
+### I-AC08: 文本报告呈现一致且保留机器事实
+
+单元与集成测试证明两类 idea 列表共用表头和 `Alias / ID` 选择规则，
+导航展示从当前 idea 文档读取的标题、无一级标题的空值及创建时间，
+问题表格正确转义特殊字符。固定当前时间测试中英文的刚刚、分钟、
+小时、天、恰好一周、超过一周日期及未来时间；文本输出不改变
+四投影中的精确 UTC 时间戳、筛选边界和非导航命令的行为。
+`pnpm check` 及 Silvermoon 候选检查通过。

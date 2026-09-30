@@ -112,6 +112,7 @@ if (packed.status !== 0) {
     "src/domain.js",
     "src/git.js",
     "src/guidance.js",
+    "src/idea-metadata.js",
     "src/idea-query.js",
     "src/idea-layout.js",
     "src/idea-templates.js",
