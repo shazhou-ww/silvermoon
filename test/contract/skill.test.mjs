@@ -66,8 +66,22 @@ test("exposes one consolidated silvermoon skill", async () => {
     "argument-hint": "[list | new | idea ULID or alias]",
     "user-invocable": true,
   });
+  assert.deepEqual(
+    [...source.matchAll(/^## (.+)$/gm)].map(([, heading]) => heading),
+    [
+      "Agent Contract",
+      "Route The Request",
+      "Follow One Report",
+      "Execute The Workflow",
+      "Maintain The Artifacts",
+      "Validate And Synchronize To Primary",
+      "Request Focused Review And Record Decisions",
+    ],
+  );
 
   for (const required of [
+    "--audience agent",
+    "Do not combine `--json` with `--audience agent`",
     "/silvermoon new",
     "retry `create-idea`,",
     "silvermoon whats-next [idea]",
@@ -111,9 +125,8 @@ test("exposes one consolidated silvermoon skill", async () => {
     "I-ACxx",
     "D-Sxx",
     "D-ACxx",
-    "Publish a new or materially changed deployment contract first",
+    "Synchronize a new or materially changed deployment contract to primary first",
     "reobserve its stable `deploymentRevision`",
-    "Author Contracts And Continue From The Ledger",
     "ledger.md",
     "reset completed items when",
     "If relevant entries remain unchecked",
@@ -134,7 +147,14 @@ test("exposes one consolidated silvermoon skill", async () => {
     "`check` validates all three fixed guidance files",
     "Never infer a decision from silence",
     "do not poll an unchanged observation",
-    "never ask for approval of unpublished content",
+    "Never request approval or acceptance for content that is not yet synchronized to primary",
+    "They are Agent responsibilities, not Silvermoon human decisions",
+    "index to durable repository artifacts",
+    "list every directly relevant canonical contract",
+    "host-clickable local link",
+    "immutable remote link",
+    "latest report's effective content language",
+    "A temporary output language does not change this rule",
     "commit-pinned web URL",
     "Confirm the commit is reachable from refreshed primary",
   ]) {

@@ -9,13 +9,18 @@
   [`docs/repository-tasks.md`](docs/repository-tasks.md) only when the user
   invokes `/silvermoon`, requests a new idea, or asks to navigate or continue
   an existing one.
-- Start new ideas with `silvermoon create-idea --json`; otherwise start with
-  `silvermoon whats-next [idea] --json`. Execute only the highest-priority
-  action and preserve creation intent across hygiene retries.
+- Start new ideas with `silvermoon create-idea --audience agent`; otherwise
+  start with `silvermoon whats-next [idea] --audience agent`. Use `--json`
+  instead only for programmatic four-projection consumption. Execute only the
+  highest-priority action and preserve invocation options and creation intent
+  across hygiene retries.
 - Preserve unknown and concurrent work. Never force-push, reset, clean, or
   silently replay a stale decision.
 - Record approval, acceptance, and abandonment only as explicit status facts,
-  validate the exact candidate, and publish through ordinary non-force Git.
+  validate the exact candidate, and synchronize through ordinary non-force Git.
+- Before a human gate, synchronize the candidate to primary, reobserve its
+  exact revision and content language, then provide a short review index with
+  local and commit-pinned remote links to durable repository artifacts.
 - Requery only after an observable change. Yield on human or external waits;
   stop on actionable errors or lack of progress.
 
