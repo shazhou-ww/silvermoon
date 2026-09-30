@@ -19,6 +19,8 @@ GitHub settings 与 npm/GitHub Release 结果属于 Deployment evidence，不在
   `3fba961d8b63419c92f18e7b36cacd9f9fbac6c9`
 - RC contract commit:
   `f6a870c287f1aa10c0571ecde5a5bd45c7eaf641`
+- RC repository deliverables commit:
+  `e23f3d0d298a4a8e0c4f390719914abe69d62946`
 - Implementation revision: 由最终同步后的 `whats-next` report 提供；world tree
   不记录自己的 revision，避免内容寻址自引用
 
@@ -89,7 +91,17 @@ implementation acceptance，也不授权稳定 `0.3.0`。
 RC contract commit 的 hosted
 [CI run 36683894662](https://github.com/shazhou-ww/silvermoon/actions/runs/36683894662)
 成功，`Required checks` job `109785607420` 为 success。repository deliverables
-candidate 同步后的 hosted CI 仍需单独记录。
+commit 的 hosted
+[CI run 36684657771](https://github.com/shazhou-ww/silvermoon/actions/runs/36684657771)
+也成功，精确 head SHA 为
+`e23f3d0d298a4a8e0c4f390719914abe69d62946`：
+
+- `Repository contracts` job `109787624326`：success；
+- `Package contents and installed CLI` job `109787671015`：success；
+- `Required checks` job `109787993033`：success。
+
+该 run 实际执行 package validation，证明同步到 primary 的 RC manifest、tarball 与
+installed CLI candidate 通过 hosted checks。
 
 ## Accepted implementation baseline
 
