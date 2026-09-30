@@ -38,19 +38,19 @@ non-force evidence commit 证明维护路径仍可用，不执行 force 测试�
 reporting、Dependabot、CodeQL、branch ruleset 与 tag ruleset 的可复核链接或最小必要
 响应字段。页面或 API 不一致时不使用文档声明代替实际结果。
 
-### D-S06: 刷新并预检 0.3.0-rc.1 候选
+### D-S06: 刷新并预检 0.3.0-rc.2 候选
 
-基于用户对 `silvermoon@0.3.0-rc.1` 的明确选择与发布意图，刷新 primary、tags、
-GitHub Releases 和 npm metadata，确认 accepted implementation、最终双语 README、
-`package.json`、changelog 与 RC notes 均包含在同一精确 primary commit。重新执行
-release planner 与 release-grade checks，要求 RC tag、GitHub prerelease 和 npm
-exact version 仍不存在，planner 返回 `distTag=rc`；任何新 primary 变更都会使旧
-preflight 失效。
+基于用户在 rc.1 verifier 假阴性后对 `silvermoon@0.3.0-rc.2` recovery 的明确选择，
+刷新 primary、tags、GitHub Releases 和 official npm metadata，确认 accepted
+implementation、verifier fix、regression tests、`package.json`、changelog 与 rc.2
+notes 均包含在同一精确 primary commit。重新执行 release planner 与 release-grade
+checks，要求 rc.2 tag、GitHub prerelease 和 npm exact version 仍不存在，planner
+返回 `distTag=rc`；任何新 primary 变更都会使旧 preflight 失效。
 
-### D-S07: 通过可信链路发布 0.3.0-rc.1
+### D-S07: 通过可信链路发布 0.3.0-rc.2
 
 只在 D-S06 满足后，于最新 `origin/main` 精确 commit 创建并普通推送不可变
-`npm/silvermoon/v0.3.0-rc.1` tag。等待 `.github/workflows/publish-npm.yml`
+`npm/silvermoon/v0.3.0-rc.2` tag。等待 `.github/workflows/publish-npm.yml`
 成功并输出 `VERIFY_NPM_RELEASE_OK`，随后用已存在 tag、repository-owned RC notes
 和 `--prerelease` 创建 GitHub prerelease；不本地运行 `npm publish`，不创建 token，
 也不移动或重建 tag。
@@ -60,7 +60,7 @@ preflight 失效。
 读回 GitHub prerelease、npm exact RC version、`rc` 与 `latest` dist-tags、MIT
 license、homepage、bugs、maintainer、package README、tarball integrity、
 `gitHead`、npm publish attestation 与 SLSA provenance。要求 RC 表面全部指向同一
-release commit，`rc` 指向 `0.3.0-rc.1`，`latest` 仍指向 `0.2.2`。将 successful
+release commit，`rc` 指向 `0.3.0-rc.2`，`latest` 仍指向 `0.2.2`。将 successful
 hosted run、immutable URLs、API 最小字段和 verifier 输出记录到
 `deployment-evidence.md` 并同步到 primary。
 
@@ -115,21 +115,22 @@ GitHub 识别 repository community files，issue chooser routes 与 security/sup
 
 ### D-AC06: RC 授权与 preflight 精确绑定
 
-用户明确选择 `0.3.0-rc.1`，accepted implementation 包含最终 README 与 exact RC
-materials；tag、GitHub prerelease 与 npm exact version 在创建前均不存在，release
-planner 返回 `distTag=rc`。通过带时间的 absence observations、primary ancestry、
-明确授权和重新执行的 release preflight 证明。
+用户明确选择以 `0.3.0-rc.2` 恢复 rc.1 verifier 假阴性，accepted implementation
+包含 verifier root fix、regression tests 与 exact rc.2 materials；tag、GitHub
+prerelease 与 npm exact version 在创建前均不存在，release planner 返回
+`distTag=rc`。通过带时间的 absence observations、primary ancestry、明确 recovery
+选择和重新执行的 release preflight 证明。
 
-### D-AC07: 0.3.0-rc.1 发布身份不可变且一致
+### D-AC07: 0.3.0-rc.2 发布身份不可变且一致
 
-`npm/silvermoon/v0.3.0-rc.1`、GitHub prerelease、npm
-`silvermoon@0.3.0-rc.1`、`rc` dist-tag、tarball `gitHead`、integrity 与 provenance
+`npm/silvermoon/v0.3.0-rc.2`、GitHub prerelease、npm
+`silvermoon@0.3.0-rc.2`、`rc` dist-tag、tarball `gitHead`、integrity 与 provenance
 全部解析到同一 primary commit，MIT 与公共 metadata 正确；通过 hosted workflow、
 `VERIFY_NPM_RELEASE_OK`、registry 和 immutable release URLs 证明。
 
 ### D-AC08: RC channel 不改变稳定消费者
 
-npm `rc` 指向 `0.3.0-rc.1`，`latest` 保持 `0.2.2`，GitHub Release 标记为
+npm `rc` 指向 `0.3.0-rc.2`，`latest` 保持 `0.2.2`，GitHub Release 标记为
 prerelease，稳定 tag/version 均不存在；通过 registry dist-tags、GitHub Release API
 与 absence observations 证明。
 

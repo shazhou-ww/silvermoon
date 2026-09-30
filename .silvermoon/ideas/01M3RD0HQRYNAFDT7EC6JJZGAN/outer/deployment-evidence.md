@@ -8,9 +8,9 @@ contract，也不代表未执行动作已经完成。
 - Idea: `open-source-readiness`
 - ULID: `01M3RD0HQRYNAFDT7EC6JJZGAN`
 - Accepted implementation revision:
-  `d2de2d4c5a40c188eb6b5d5d938f13d2602c401d`
+  `728ceb204ec3a736d0bd9269db1582299c61dd28`
 - Implementation acceptance commit:
-  `e90d01900b975d43d50d3e9f2ef5b62755c8ac36`
+  `ec34b05d3d5c04bca8f47ea1798b0df1c54911ae`
 - Deployment contract commit:
   `694a83d9b484642e34e8185f0e48ea51868d968b`
 - RC deployment contract commit:
@@ -30,11 +30,12 @@ contract，也不代表未执行动作已经完成。
 
 先前 README hold 已由 primary commit
 `fb1ce53` 的双语文案更新和后续 RC candidate 取代。2026-09-30，用户要求优先发布
-RC，并明确选择 `silvermoon@0.3.0-rc.1`；该授权只覆盖 RC，不覆盖稳定 `0.3.0`。
+RC；rc.1 publish 成功但 hosted verifier 假阴性后，用户明确选择修复根因并发布
+`silvermoon@0.3.0-rc.2`。该 recovery 选择只覆盖 rc.2，不覆盖稳定 `0.3.0`。
 
-因此 RC implementation acceptance 后允许按本 Deployment contract 执行：
+因此 rc.2 implementation acceptance 后允许按本 Deployment contract 执行：
 
-- 创建并普通推送 `npm/silvermoon/v0.3.0-rc.1`；
+- 创建并普通推送 `npm/silvermoon/v0.3.0-rc.2`；
 - 只通过 npm trusted-publishing workflow 发布到 `rc` dist-tag；
 - verifier 成功后创建 GitHub prerelease。
 
@@ -53,14 +54,14 @@ RC 成功后仍需用户评估，再通过新的 stable implementation candidate
 
 | Stable ID | 外部结果 | 证明 | 状态 |
 | --- | --- | --- | --- |
-| `D-AC01` | RC-first 外层契约同步且 revision 稳定 | primary commit、Silvermoon worktree/staged checks、`whats-next` | 通过 |
+| `D-AC01` | RC2 recovery 外层契约同步且 revision 稳定 | primary commit、Silvermoon worktree/staged checks、`whats-next` | 待同步 |
 | `D-AC02` | Private reporting、vulnerability alerts 与 security updates enabled | GitHub API、advisory route、config blob | 通过 |
 | `D-AC03` | CodeQL configured 且两类 analysis 成功 | default-setup API、analysis IDs、run `36677849388` | 通过 |
 | `D-AC04` | main/tag rulesets active 且普通同步可用 | ruleset API、rule suite、push/ancestry、hosted CI | 通过 |
 | `D-AC05` | Community Profile 100%，Issue Forms 与 security/support routes 存在 | Community Profile/contents API、公开 URL 与预期 sign-in redirect | 通过 |
-| `D-AC06` | RC 授权、accepted candidate 与 fresh preflight 精确绑定 | user intent、absence、planner、ancestry | 通过 |
-| `D-AC07` | `0.3.0-rc.1` tag、npm 与 provenance 一致，但 hosted verifier 假阴性且无 GitHub prerelease | failed workflow、registry、attestations、absence | 未通过 |
-| `D-AC08` | npm `rc` 生效且 `latest` 不变，但 GitHub prerelease 缺失 | dist-tags、release absence | 未通过 |
+| `D-AC06` | RC2 recovery、accepted candidate 与 fresh preflight 精确绑定 | user choice、absence、planner、ancestry | 待预检 |
+| `D-AC07` | `0.3.0-rc.2` 不可变发布身份一致 | workflow、registry、release、provenance | 待发布 |
+| `D-AC08` | npm `rc` 更新到 rc.2 且 `latest`/stable surfaces 不变 | dist-tags、prerelease 与 absence observations | 待发布 |
 | `D-AC09` | 稳定 `0.3.0` 仍需新候选与授权 | lifecycle、status、absence observations | hold 生效 |
 | `D-AC10` | 最终稳定公共开源契约完整 | 本文件、ledger、final diff/checks | 等待前置项 |
 

@@ -28,26 +28,26 @@
 
 ### Deployment steps
 
-- [x] **D-S01:** 发布外层契约并建立部署证据
+- [ ] **D-S01:** 发布外层契约并建立部署证据
 - [x] **D-S02:** 启用私密报告与依赖安全更新
 - [x] **D-S03:** 启用并验证 CodeQL default setup
 - [x] **D-S04:** 应用并验证 main ruleset
 - [x] **D-S05:** 核验 GitHub 公共开源表面
-- [x] **D-S06:** 刷新并预检 0.3.0-rc.1 候选
-- [ ] **D-S07:** 通过可信链路发布 0.3.0-rc.1
+- [ ] **D-S06:** 刷新并预检 0.3.0-rc.2 候选
+- [ ] **D-S07:** 通过可信链路发布 0.3.0-rc.2
 - [ ] **D-S08:** 验证 RC 身份与 channel 隔离
 - [ ] **D-S09:** 保持稳定 0.3.0 门禁并返回候选实施
 - [ ] **D-S10:** 发布稳定 0.3.0 并封存最终证据
 
 ### Deployment acceptance criteria
 
-- [x] **D-AC01:** 外层契约稳定且证据可追溯
+- [ ] **D-AC01:** 外层契约稳定且证据可追溯
 - [x] **D-AC02:** 安全报告与 Dependabot 已实际启用
 - [x] **D-AC03:** CodeQL default setup 产生成功分析
 - [x] **D-AC04:** main 与 release tag 保护同时成立
 - [x] **D-AC05:** GitHub Community Profile 与入口一致
-- [x] **D-AC06:** RC 授权与 preflight 精确绑定
-- [ ] **D-AC07:** 0.3.0-rc.1 发布身份不可变且一致
+- [ ] **D-AC06:** RC 授权与 preflight 精确绑定
+- [ ] **D-AC07:** 0.3.0-rc.2 发布身份不可变且一致
 - [ ] **D-AC08:** RC channel 不改变稳定消费者
 - [ ] **D-AC09:** 稳定 0.3.0 门禁没有被 RC 绕过
 - [ ] **D-AC10:** 公共开源契约完整可用
