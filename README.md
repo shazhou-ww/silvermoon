@@ -27,64 +27,55 @@
 
 ## Quick Start
 
+### Setup
+
 Silvermoon needs Node.js 22 or newer and Git access to the repository's primary
 branch.
 
-Copy the prompt below and send it to your coding agent from the project:
+Send this prompt to your coding agent from the project:
 
 ```text
-Run `npx silvermoon whats-next`, follow the report's highest-priority instruction, preserve existing work, and rerun it after each observable change until the default output reports `navigation-ready`.
+In this project, run `npx silvermoon whats-next --audience agent`. Follow its highest-priority instruction, preserve existing work, and repeat after each observable change until it reports `navigation-ready`.
 ```
 
-Setup is complete only when the default output explicitly reports
-`Current state: navigation-ready`; a blocked report or any other state is not
-ready. The report, rather than a fixed command list in this README, is the
-authority for repository-specific setup.
+### Talk to Silvermoon
 
-Once navigation is ready, continue through the Agent:
+Use the Silvermoon skill in your coding agent:
+
+```text
+/silvermoon
+What should I work on next in this project?
+```
+
+Or continue an idea directly:
+
+```text
+/silvermoon
+Continue working on `<idea-alias>` in this project. Follow the `whats-next` guidance and keep going until you need a decision from me.
+```
+
+Or start a new idea:
+
+```text
+/silvermoon
+I have an idea: add an optional cultivation-style copy mode, independent of the selected language.
+```
+
+Or use Silvermoon directly in a terminal:
 
 ```sh
+npx silvermoon whats-next
+npx silvermoon whats-next <ULID-or-alias>
 npx silvermoon create-idea
-npx silvermoon whats-next <idea>
+npx silvermoon list-ideas
 ```
 
-Describe the desired world in the generated `Idea.md`, review it, and approve
-that exact revision. From then on, Silvermoon keeps the goal, implementation,
-repository state, and real-world result connected. See
-[Getting Started](./docs/getting-started.md) for the complete workflow and
-[Technical Reference](./docs/reference.md) for command, validation, JSON,
-language, guidance, audience, and trace details.
-Every command processes one ordered, versioned domain-message stream. The
-default `human` audience renders the response with Silvermoon's bundled
-`tui-md` view when stdin and stdout are both TTYs; use `q`, `Esc`, or `Ctrl+C`
-to exit. Redirected or piped human output remains raw Markdown. Use
-`--audience agent` for stable raw response Markdown regardless of TTY state, or
-`--json` for the four deterministic projections: `intention`, `observation`,
-`actions`, and `response`. An explicitly supplied `--audience` conflicts with
-`--json`. Actions are side effects already attempted; future work belongs only
-to `response.nextSteps`. For pre-commit validation, run
-`silvermoon check --staged`: unlike the default `check` (committed `HEAD`), it
-checks the index and exits `0` only when the project snapshot is valid. See the
-[Technical Reference](./docs/reference.md) for validation targets and exit
-codes.
+> **Note:** We recommend `npx silvermoon` over a global install. It avoids
+> maintaining a separate global version; in Node.js projects, the lockfile keeps
+> the project-installed version consistent.
 
-Add `--trace <file.trace.jsonl>` to any command to write one schema-versioned
-JSONL timeline. Its `domain` channel contains allowlisted message summaries,
-and its `telemetry` channel contains paired performance spans; both share one
-trace ID and global sequence. Trace output never includes guidance or file
-content, Git arguments/output, environment data, or credentials. If the
-argument does not end with the exact lowercase `.trace.jsonl` suffix,
-Silvermoon appends it. Repository-local `*.trace.jsonl` files are ignored.
-Trace files are buffered, created only after command work completes, and never
-overwrite an existing file.
-
-Projects may optionally add `.silvermoon/guidance/preparing.md`,
-`implementing.md`, and `deploying.md`. Silvermoon returns only the current
-actionable phase's snapshot-bound, repository-owned Markdown in
-`response.guidance`; `observation.guidance` carries its provenance without
-content. `create-idea` can return preparing guidance. This guidance is
-additive, never a fourth contract or decision fact, and `check` validates the
-complete fixed directory. See [Core Concepts](./docs/core-concepts.md).
+See [Operating Silvermoon](./docs/operations.md) for workflows and the
+[Technical Reference](./docs/reference.md) for command details.
 
 ## Why Silvermoon
 
