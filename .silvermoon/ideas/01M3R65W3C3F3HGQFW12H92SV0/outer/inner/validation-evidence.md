@@ -170,3 +170,68 @@ contract、integration、risk、package contents/installed CLI。package job
 2 原有 skip；CHECK_TOTAL 133,239 ms，lint/quick/integration/pack/E2E/skills
 依次为 3,300/28,684/112,592/10,017/133,181/15,990 ms。
 无新增依赖，无 npm 发布、tag 创建或真实发布后动作。
+
+## 部署回归后的实施修复
+
+部署候选 `1505e2918321f4b46a0bdb18f0a62ff50efa436d` 的独立 clone 中，
+`pnpm check:sanity` 实际退出 1（94 tests、93 pass、1 fail、0 skip）。
+后续主线新增的 unit/repository 对照测试执行真实 Git，被
+`SANITY_IO_FORBIDDEN: child_process.spawnSync` 拒绝。该候选的普通/full CI
+却都成功，因为原矩阵只跑不带 guard 的完整 unit。原始部署失败证据保留于 ledger。
+
+用户明确同意修订实现，契约修订先发布于
+`65d533ab86315ddf3ebc8d2451327957787f965c`，重新观察 implementing 后才修改
+测试和 CI。旧 implementationAcceptedRevision
+`66f8f63c4574ac59655ab65836836a13b1f80963` 保留，不复写历史决定。
+
+### 修复内容与覆盖证明
+
+修复 commit `7b1bf4b97437578a8a6b30b9f3405bb995ce5c00`：
+
+- `test/runtime/repository.test.js` 接收真实 Git 对照测试，保留完整语料和
+  原测试 body；`test/unit/repository.test.js` 保留纯输入拒绝测试。
+  将迁移后两段内容与修复前 HEAD 对比，输出
+  `MIGRATION_ASSERTIONS_AND_CORPUS_IDENTICAL`。不删断言、不增加 skip。
+- 原六个平台/Node 矩阵将语法步骤替换为真正的 `pnpm check:sanity`
+  （自身含语法检查），成功后才运行完整 `pnpm test:unit`。
+  不新增并发或 path 条件，runtime 的原平台覆盖仍在。
+- workflow 契约增加负向回归：移除 sanity、改为仅语法、改为 unit、
+  增加条件跳过、设置 continue-on-error、挪到完整 unit 之后，六种变体均被拒绝。
+- 维护文档明确真实 Git 对照测试属于 runtime、unit 成功不等同 sanity 通过。
+
+### 当前候选验证
+
+Windows / Node.js v24.11.1 / pnpm 11.22.0：
+
+| 检查 | 结果 |
+| --- | --- |
+| repository unit/runtime + CI contract 窄测 | 5/5 pass，包含六个负向 workflow 变体 |
+| `pnpm check:sanity` | exit 0，93 tests、93 pass、0 skip |
+| `pnpm check:commit` | exit 0，scope 警告可见，全部七门禁成功 |
+| `pnpm check` | exit 0，260 tests、258 pass、2 原有 Windows skip |
+| 包与安装行为 | `PACK_OK` silvermoon@0.2.2、51 文件，`PACK_SMOKE_OK` |
+| 技能与文档 | 本地 `SKILLS_CHECK_OK files=2`、外部 discovery、Markdown/link 全部成功 |
+| worktree/staged 与 diff | Silvermoon 两种候选检查和 `git diff --check` 成功 |
+
+完整测试分布为 103 unit/runtime、26 contract、130 integration、1 E2E。
+相较这次修复前候选，仅新增 1 个 CI 负向 contract 测试；其余相较初次实现的
+数量变化来自已保留的并发主线工作。guard 未关闭，原始两个 branch 测试仍执行。
+本次不是比较性能实验，没有新基线或五次采样；上文历史性能数据仍只证明
+其原先固定候选，不能推断成当前 checkout 的新性能结论。
+
+[修复 CI 36672310740](https://github.com/shazhou-ww/silvermoon/actions/runs/36672310740)
+head SHA 精确为 `7b1bf4b97437578a8a6b30b9f3405bb995ce5c00`，
+completed/success，10/10 jobs 成功：
+
+| 矩阵 | `Run sanity checks` | 完整 unit/runtime job |
+| --- | --- | --- |
+| Ubuntu / Node 22 | success | success |
+| Ubuntu / Node 24 | success | success |
+| Windows / Node 22 | success | success |
+| Windows / Node 24 | success | success |
+| macOS / Node 22 | success | success |
+| macOS / Node 24 | success | success |
+
+contract、integration、risk、package contents/installed CLI 均 success，
+package 未跳过。本次修复已验证，不代表部署全部完成；需用户重新验收新的
+implementationRevision 后，才恢复独立 checkout 的完整部署验证。
