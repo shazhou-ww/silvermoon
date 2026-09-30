@@ -33,7 +33,7 @@ pnpm check:skills      # local consistency and external skill discovery
 | --- | --- |
 | Edit / Agent iteration | `check:sanity`: CLI syntax, pure unit tests, schema and API contracts; add change-specific tests |
 | Before commit | `check:commit`: sanity, local contracts and Markdown, skill consistency, Git/CLI smoke, whitespace, staged Silvermoon metadata |
-| Ordinary CI | Unconditional unit/runtime on Ubuntu/Windows/macOS, Node 22/24; complete contracts and integration, static checks and skill discovery |
+| Ordinary CI | Unconditional sanity then complete unit/runtime on Ubuntu/Windows/macOS, Node 22/24; complete contracts and integration, static checks and skill discovery |
 | Before delivery / release | `check` or `check:release`: every release-grade gate including package contents, installed-package E2E and external discovery |
 | After publication | The existing release workflow's `verify-npm-release.mjs`: registry identity, integrity, provenance, README and CDN |
 
@@ -44,6 +44,13 @@ sanity alias. No assertions are duplicated into a second suite. The sanity
 worker guard rejects real child processes and network I/O; it does not block
 the Node test runner from creating workers. Terminal integration stays in
 runtime, outside sanity.
+
+Each CI matrix job runs the actual `pnpm check:sanity` entrypoint before the
+complete unit/runtime suite. Passing `test:unit` alone does not prove the
+sanity I/O boundary: it intentionally permits runtime tests. Tests that call
+real Git, even only to compare pure logic with Git's behavior, belong in
+`test/runtime`, not `test/unit`. Keep their assertions and platform coverage
+when splitting mixed-cost files; never disable the sanity guard to admit them.
 
 `check:commit` always prints its scope: tests validate the **worktree**, while
 `silvermoon check --staged` validates **staged Silvermoon metadata only**.
