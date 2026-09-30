@@ -36,6 +36,17 @@ test 更新。RC implementation 因此必须针对 `3fba961d8b63419c92f18e7b36ca
 重新验证，不能复用旧 release-grade 结果。初步只读 observation 显示远端不存在
 `npm/silvermoon/v0.3.0*` tag，npm 已发布版本止于 `0.2.2`。
 
+## RC2 recovery authorization
+
+`0.3.0-rc.1` 已由 trusted publisher 写入 npm，并带 publish 与 SLSA provenance
+attestations，但 hosted run `36686662834` 的 verifier 错误要求当前 README 引用已移除的
+avatar artwork，最终失败且未创建 GitHub prerelease。tag、npm version 与 provenance
+保持不可变，完整外部事实记录在 `deployment-evidence.md`。
+
+用户明确选择“修复 verifier 并发布 `0.3.0-rc.2`”。本 implementation revision
+不得修改 rc.1 tag 或覆盖 registry bytes；它只修复 verifier 根因、增加 regression
+coverage、准备新的 rc.2 manifest/changelog/notes，并重新通过完整 validation。
+
 ## Current stable-ID evidence
 
 | Stable ID | Repository evidence | Verification | 状态 |
@@ -44,9 +55,10 @@ test 更新。RC implementation 因此必须针对 `3fba961d8b63419c92f18e7b36ca
 | `I-AC02` | `.github/dependabot.yml` 与三项外部 settings 应用协议 | readiness contract tests | 通过 |
 | `I-AC03` | `.github/rulesets/main.json` 与 CI `Required checks` | workflow/ruleset contract tests；GitHub Actions app ID `15368` 读回 | 通过 |
 | `I-AC04` | 当前两个 workflow 的全部 `uses` SHA pin 与 Actions update entry | 全 workflow scan；exact version comments | 通过 |
-| `I-AC05` | `package.json`、reference、release planner 与 registry verifier | manifest/doc/release-plan tests、pack check、installed-package E2E | 通过 |
-| `I-AC06` | `CHANGELOG.md` 与 `0.3.0-rc.1` GitHub prerelease notes | release artifact tests；tag/release/registry absence observation | 通过 |
-| `I-AC07` | 定向、sanity、release-grade 与 Silvermoon validations | 下方 RC 命令证据 | 通过 |
+| `I-AC05` | rc.2 `package.json`、reference、release planner 与 registry verifier | manifest/doc/release-plan tests、pack check、installed-package E2E | 待实施 |
+| `I-AC06` | rc.1 历史、`CHANGELOG.md` 与 `0.3.0-rc.2` GitHub prerelease notes | release artifact tests；tag/release/registry absence observation | 待实施 |
+| `I-AC07` | 定向、sanity、release-grade 与 Silvermoon validations | RC2 命令证据 | 待验证 |
+| `I-AC08` | verifier 接受实际 immutable asset references 且不要求未引用 artwork | integration regression、真实 README fixture | 待实施 |
 
 ## RC implementation results
 

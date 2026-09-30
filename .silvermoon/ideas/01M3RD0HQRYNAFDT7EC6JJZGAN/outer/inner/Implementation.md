@@ -32,17 +32,19 @@ gate，只有核心测试成功且按风险需要的 package job 成功或明确
 
 ### I-S05: 明确 npm metadata 与 experimental JavaScript API
 
-将首个可部署候选版本设为 `0.3.0-rc.1`，并在 `package.json` 显式声明项目主页、
+将恢复候选版本设为 `0.3.0-rc.2`，并在 `package.json` 显式声明项目主页、
 问题入口、作者、贡献者和维护者身份。`docs/reference.md` 作为根 package export
 在 `1.0.0` 前属于 experimental 的权威 reader documentation：minor release 可以
 发生 breaking change，使用者应固定精确版本；CLI、schema 与文件格式的独立契约
 不由该声明降级。RC 必须发布到 npm `rc` dist-tag，不能改写 `latest`。
 
-### I-S06: 准备 0.3.0-rc.1 changelog 与 GitHub Release
+### I-S06: 准备 0.3.0-rc.2 changelog 与 GitHub Release
 
-根据 `npm/silvermoon/v0.2.2..0.3.0-rc.1` 的实际 repository changes 完成
-`CHANGELOG.md` 和 `.github/release-notes/0.3.0-rc.1.md`，保持版本、MIT 许可、
-兼容性说明、npm `rc` dist-tag 和 trusted-publishing 路径一致。保留
+保留已经发布的 `0.3.0-rc.1` changelog 与 notes，按
+`npm/silvermoon/v0.3.0-rc.1..0.3.0-rc.2` 的实际 recovery changes 增加
+`CHANGELOG.md` entry 和 `.github/release-notes/0.3.0-rc.2.md`，明确 rc.1 的
+hosted verifier 假阴性、rc.2 的修复范围、MIT 许可、npm `rc` dist-tag 和
+trusted-publishing 路径。保留
 `.github/release-notes/0.3.0.md` 作为后续稳定版草案，不用 RC tag 消耗稳定版本。
 GitHub prerelease 只准备 notes；release tag、workflow publication 与 GitHub
 prerelease 创建都留到新 implementation revision 明确验收后的 Deployment。
@@ -54,6 +56,14 @@ prerelease 创建都留到新 implementation revision 明确验收后的 Deploym
 API 文档、RC dist-tag 和 release artifacts 的 contract tests。运行定向测试、
 `pnpm check:sanity`、release-grade `pnpm check` 及 Silvermoon worktree/staged
 snapshot validation，把命令、结果和候选身份记录到 `implementation-evidence.md`。
+
+### I-S08: 修复 README immutable asset verifier
+
+修复 post-publication verifier 将 repository artwork allowlist 误当成“每份 README
+必须引用全部 artwork”的逻辑。verifier 必须接受当前 README 实际引用的 logo 与
+mascot，继续拒绝 mutable/relative release references，并继续验证所有 repository
+artwork 的 commit-pinned URL 与正确 MIME；增加“allowlisted 但未被 README 引用的
+avatar 不阻塞发布”回归测试，不降低 tarball、README、integrity 或 provenance 检查。
 
 ## Acceptance criteria
 
@@ -87,17 +97,17 @@ contract test 证明，不以抽样代替。
 
 ### I-AC05: npm metadata 与 pre-1.0 API 边界显式
 
-`package.json` 的 `version` 为 `0.3.0-rc.1`，显式 metadata 指向本 repository、
+`package.json` 的 `version` 为 `0.3.0-rc.2`，显式 metadata 指向本 repository、
 issues 与 maintainer；`docs/reference.md` 说明 experimental 根 export、允许的
 pre-1.0 breaking-change 边界及精确版本固定建议。发布规划器将该版本映射为 npm
 `rc` dist-tag 而不是 `latest`；通过 manifest/doc/release-plan contract tests 和
 `npm pack --dry-run` 证明。
 
-### I-AC06: 0.3.0-rc.1 发布材料完整但未部署
+### I-AC06: 0.3.0-rc.2 发布材料完整但未部署
 
-`CHANGELOG.md` 与 RC GitHub Release notes 基于 `0.2.2` 之后的实际变化，互相一致地
-说明主要功能、兼容性、MIT 许可和 prerelease 状态；候选中不存在新建的
-`npm/silvermoon/v0.3.0-rc.1` 或 `npm/silvermoon/v0.3.0` tag、GitHub Release 或
+`CHANGELOG.md` 与 rc.2 GitHub Release notes 保留 rc.1 历史并准确说明 recovery
+差异、兼容性、MIT 许可和 prerelease 状态；候选中不存在新建的
+`npm/silvermoon/v0.3.0-rc.2` 或 `npm/silvermoon/v0.3.0` tag、GitHub Release 或
 本地 publish 行为。通过 Git diff、release contract tests 和 tag/registry
 observation 证明。
 
@@ -107,3 +117,11 @@ observation 证明。
 `silvermoon check --worktree` 与 `silvermoon check --staged` 成功，验证输出与候选
 commit 身份记录在 `implementation-evidence.md`，可供精确 implementation revision
 验收复核。
+
+### I-AC08: Verifier 反映实际 README asset contract
+
+post-publication verifier 对 generated README 的实际 immutable references
+fail-closed，但不要求 README 引用未使用的 allowlisted artwork；当前双语 README
+缺少 avatar 引用时验证成功，任一实际引用仍为 relative/mutable、asset MIME 错误、
+tarball/registry README 不一致或 provenance 不一致时仍失败。通过 integration
+regression tests 和真实 rc.1 failure fixture 证明。
