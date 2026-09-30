@@ -2,3 +2,4 @@ version: 1
 id: 01M3PW06ZTSWFN6CBRMX4JJABV
 alias: pnpm-check-regression
 approvedRevision: 52ca8edf9852fda63aacb306e315ba48a7697ca0
+implementationAcceptedRevision: 986e6a54fe4bf853b1431fbadd06a0a3ddebc03f
