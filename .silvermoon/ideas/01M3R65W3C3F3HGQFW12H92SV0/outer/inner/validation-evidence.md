@@ -71,16 +71,19 @@ scripts/tests/workflows/docs。相同机器、worktree、Node.js/pnpm 和外层�
 | 初次实现 | commit | 9,939 | 9,946; 10,096; 13,291; 12,455; 12,119 | 12,119 |
 | 补齐直接构造 socket/ChildProcess、DNS resolver guard 后 | sanity | 3,139 | 3,148; 3,117; 3,280; 3,861; 3,555 | 3,280 |
 | 补齐 guard 后 | commit | 12,106 | 10,849; 10,769; 10,103; 9,534; 9,688 | 10,103 |
+| POSIX npm 修复后的最终候选 | sanity | 3,677 | 3,295; 3,394; 3,359; 3,360; 3,443 | 3,360 |
+| POSIX npm 修复后的最终候选 | commit | 10,901 | 10,362; 9,800; 9,211; 9,882; 9,380 | 9,800 |
 
-最终 sanity 比原 quick 中位数降低 **84.10%**，commit 比原 full 降低
-**92.27%**，分别小于预先固定的 10,315.5/65,382.5 ms。全部样本（包括
+最终 sanity 比原 quick 中位数降低 **83.71%**，commit 比原 full 降低
+**92.51%**，分别小于预先固定的 10,315.5/65,382.5 ms。全部样本（包括
 补齐 guard 前后的慢样本）均保留。full 的缓存/网络收益不计入策略证明；
 这里衡量的是对应场景集合变小后的反馈，不声称完整发布级检查同比加速。
 
-sanity 每次运行 88 项、零 skip（80 纯 unit + 8 schema/API contract）；
-commit 每次运行 88 + 25 + 10 项、零 skip，其中 8 项 schema/API 与完整
+最终 sanity 每次运行 89 项、零 skip（81 纯 unit + 8 schema/API contract）；
+commit 每次运行 89 + 25 + 10 项、零 skip，其中 8 项 schema/API 与完整
 contract 重叠，复用同一测试文件而非复制断言。每次完整输出均有
-`COMMIT_SCOPE`，没有 package/E2E 或外部 discovery 门禁。
+`COMMIT_SCOPE`，没有 package/E2E 或外部 discovery 门禁。POSIX 修复前
+sanity 为 88 项，新增的平台 dispatch 纯测试在最后一组样本中计入。
 
 ### 覆盖迁移与守恒
 
@@ -96,9 +99,10 @@ contract 重叠，复用同一测试文件而非复制断言。每次完整输�
 定向迁移组合 35/35 通过。unit 的 17 个 runtime 测试仍通过 `test:unit` 进入
 原有 Ubuntu/Windows/macOS × Node 22/24 矩阵，没有借迁移减少平台保障。
 
-完整套件现为 97 unit/runtime + 25 contract + 124 integration + 1 E2E =
-**247 项**；相对原 237 项净增 10 项：runner 场景 1、风险选择 4、guard 1、
-测试归属 contract 1、真实 guard/暂存/风险 integration 3。Windows 仅保留
+完整套件现为 98 unit/runtime + 25 contract + 124 integration + 1 E2E =
+**248 项**；相对原 237 项净增 11 项：runner 场景 1、风险选择 4、guard 1、
+测试归属 contract 1、真实 guard/暂存/风险 integration 3、npm 平台 dispatch 1。
+Windows 仅保留
 原有 2 项符号链接 skip。core 与 E2E 的归属回归枚举所有测试文件，未知目录失败。
 
 ### 确定性验证
@@ -140,5 +144,29 @@ contract 重叠，复用同一测试文件而非复制断言。每次完整输�
 `PACK_OK` 为 silvermoon@0.2.2、49 个文件；installed-package 输出
 `PACK_SMOKE_OK`，本地技能输出 `SKILLS_CHECK_OK files=2`，外部 discovery 成功。
 Markdown lint 零问题，Markdown 链接由完整 contract 检查。
-补齐 guard 后的最终候选全量结果、快照校验及非强制发布的精确 commit
+补齐 guard 后的全量结果、快照校验及非强制发布的精确 commit
 记录在 idea-root ledger，避免证据自引用改变其自身 revision。
+
+### 托管 CI 暴露的问题及最终验证
+
+实现 commit `9e41052f05a9dbe8fb1ce16f61545ec9a74dffe0` 的
+[CI 36668763265](https://github.com/shazhou-ww/silvermoon/actions/runs/36668763265)
+中六个矩阵 unit/runtime、contract、integration 和 risk 成功；新增的 package
+job 真实执行 E2E 后失败。原 E2E 在 pnpm 环境下把 POSIX Node 安装错误地当成
+Windows，查找 `bin/node_modules/npm/bin/npm-cli.js`。没有跳过测试、改用 npm
+启动 workflow 来掩盖，或重跑旧候选声称通过。
+
+修复 commit `50c3d698b566b4bc16f08f575370531b6e53a77e` 将既有 build/pack
+的跨平台调用方式抽为 `scripts/npm-command.mjs` 并复用于 E2E。POSIX 使用
+PATH npm，Windows 保留 shell-free Node + npm-cli，错误仍明确失败。
+新增纯测试同时证明 Linux/macOS、Windows fallback/configured path 及参数
+含空格的原样传递。窄测试 6/6 通过。
+
+该 commit 的
+[CI 36669180127](https://github.com/shazhou-ww/silvermoon/actions/runs/36669180127)
+**10/10 jobs 成功**：六个 Ubuntu/Windows/macOS × Node 22/24 unit/runtime、
+contract、integration、risk、package contents/installed CLI。package job
+实际执行而非跳过。最终本地 `pnpm check` 同样退出 0：248 项、246 pass、
+2 原有 skip；CHECK_TOTAL 133,239 ms，lint/quick/integration/pack/E2E/skills
+依次为 3,300/28,684/112,592/10,017/133,181/15,990 ms。
+无新增依赖，无 npm 发布、tag 创建或真实发布后动作。
