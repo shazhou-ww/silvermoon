@@ -26,10 +26,10 @@ repository or external actions with ordinary tools and Git.
   the default human audience would open an interactive TUI.
 - Use `--json` only when a programmatic consumer needs all four report
   projections. Do not combine `--json` with `--audience agent`.
-- Use `--language en-US|zh-CN` with `whats-next` or `check` only when the user
-  explicitly requests a temporary output locale. Preserve the same canonical
-  option in every hygiene retry. It changes Silvermoon-owned rendering for
-  that invocation only, never project or idea content language.
+- Use `--language en|en-US|zh|zh-CN` with `list-ideas`, `whats-next`, or `check` only
+  when the user explicitly requests a temporary output locale. Preserve the
+  same canonical option in every hygiene retry. It changes Silvermoon-owned
+  rendering for that invocation only, never project or idea content language.
 - Treat each command's `intention`, `observation`, `actions`, and `response`
   as one report. Read every problem and all ordered `response.nextSteps`; never
   combine reports. `actions` contains only side effects already attempted.
@@ -44,8 +44,9 @@ the current worktree snapshot without checking conflicts, cleanliness, branch,
 upstream, network, or primary ancestry. It never fetches. Use its repeatable
 `--state`, `--all`, literal `--query`, RFC 3339 creation bounds,
 `--sort newest|oldest`, and positive `--limit` options only when the user asks
-for those filters; the default is all active ideas. It has no `--language`
-override.
+for those filters; the default is all active ideas. Its `--language
+en|en-US|zh|zh-CN` option is a temporary output override and never changes idea
+content language.
 
 `whats-next` may fetch and inspect but never changes files, branches, index, or
 refs. `create-idea` requires the configured primary branch and upstream plus a

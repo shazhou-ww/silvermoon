@@ -161,8 +161,8 @@ fetches or contacts the configured primary. Staged, unstaged, and untracked
 idea changes are therefore visible when they form a valid snapshot. Invalid
 query arguments fail with exit `2` before repository or trace access; an
 untrusted project or layout exits `1` instead of returning a partial list.
-The command has no temporary `--language` option and uses the project's
-resolved output language.
+Use `--language en|en-US|zh|zh-CN` to override only the output language for
+this invocation; without it, the project's resolved output language is used.
 
 ## Create The First Idea
 

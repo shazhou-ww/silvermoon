@@ -336,6 +336,27 @@ try {
   assert.deepEqual(inventory.response.items, inventory.observation.ideas);
   assert.equal(inventory.observation.ideas[0].alias, "installed-smoke");
   assert.equal(inventory.observation.ideas[0].title, "Installed package smoke");
+  const localizedInventory = JSON.parse(
+    npm(
+      [
+        "exec",
+        "--",
+        "silvermoon",
+        "list-ideas",
+        "--language",
+        "ZH",
+        "--json",
+      ],
+      consumer,
+    ),
+  );
+  assert.equal(localizedInventory.intention.args.language, "zh-CN");
+  assert.equal(localizedInventory.observation.outputLanguage, "zh-CN");
+  assert.equal(localizedInventory.response.language, "zh-CN");
+  assert.equal(
+    localizedInventory.observation.configuration.preferredLanguage,
+    "en-US",
+  );
   const inventoryText = npm(
     [
       "exec",
@@ -352,6 +373,20 @@ try {
   assert.match(inventoryText, /^## Ideas/);
   assert.match(inventoryText, /installed-smoke/);
   assert.doesNotMatch(inventoryText, /Next steps/);
+  const localizedInventoryText = npm(
+    [
+      "exec",
+      "--",
+      "silvermoon",
+      "list-ideas",
+      "--language",
+      "zh-CN",
+      "--audience",
+      "agent",
+    ],
+    consumer,
+  );
+  assert.match(localizedInventoryText, /匹配 \d+ 个 idea，返回 \d+ 个。/);
   const localizedCheck = JSON.parse(
     npm(
       ["exec", "--", "silvermoon", "check", "--language", "ZH-cn", "--json"],

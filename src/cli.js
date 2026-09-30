@@ -138,6 +138,7 @@ export function createProgram(io = console, runtime = {}) {
     .addHelpText("after", `
 Examples:
   $ silvermoon list-ideas
+  $ silvermoon list-ideas --language zh-CN
   $ silvermoon list-ideas --state completed --sort oldest --limit 10
   $ silvermoon whats-next
   $ silvermoon whats-next <idea>
@@ -157,6 +158,11 @@ Examples:
     program
       .command("list-ideas")
       .description("query the current local idea inventory")
+      .option(
+        "--language <tag>",
+        "use a built-in output language (en, en-US, zh, or zh-CN) for this invocation",
+        outputLanguageArgument,
+      )
       .option(
         "--state <state>",
         "include a lifecycle state or active (repeatable)",
@@ -190,10 +196,12 @@ Examples:
       {
         command: "list-ideas",
         hasQuery: query.query !== null,
+        outputLanguage: options.language ?? null,
         stateCount: query.states.length,
       },
       () => listIdeas({
         ...query,
+        language: options.language,
         root: options.root,
       }),
     );
@@ -210,7 +218,7 @@ Examples:
       .description("observe project, repository, and idea readiness")
       .option(
         "--language <tag>",
-        "use a built-in output language (en-US or zh-CN) for this invocation",
+        "use a built-in output language (en, en-US, zh, or zh-CN) for this invocation",
         outputLanguageArgument,
       ),
   ).action(async (idea, options) => {
@@ -263,7 +271,7 @@ Examples:
       .description("validate Silvermoon configuration and idea state")
       .option(
         "--language <tag>",
-        "use a built-in output language (en-US or zh-CN) for this invocation",
+        "use a built-in output language (en, en-US, zh, or zh-CN) for this invocation",
         outputLanguageArgument,
       )
       .addOption(new Option("--remote", "fetch and validate the configured primary tip").conflicts(["commit", "staged", "worktree"]))

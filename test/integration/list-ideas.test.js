@@ -143,6 +143,7 @@ test("[inventory-default] lists active ideas from the local snapshot with four p
       createdBefore: null,
       sort: "newest",
       limit: null,
+      language: null,
     },
   });
   assert.equal(report.observation.state, "ideas-listed");
@@ -193,6 +194,21 @@ test("[inventory-empty] returns a successful complete shape for an empty invento
     ideas: [],
     prefix: "silvermoon-list-empty-",
     withRemote: false,
+  });
+
+  test("[inventory-language] overrides only this inventory report's output language", async () => {
+    const repository = await fixture();
+    const report = await listIdeas({
+      language: "zh-CN",
+      root: repository.root,
+      userHome: repository.base,
+    });
+
+    assert.equal(report.intention.args.language, "zh-CN");
+    assert.equal(report.observation.outputLanguage, "zh-CN");
+    assert.equal(report.response.language, "zh-CN");
+    assert.deepEqual(report.response.query, report.intention.args);
+    assert.equal(report.response.summary, "匹配 3 个 idea，返回 3 个。");
   });
   temporaryDirectories.push(repository.base);
 

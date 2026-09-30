@@ -25,13 +25,17 @@ test("rejects invalid or non-string language tags", () => {
   }
 });
 
-test("normalizes only the built-in output languages", () => {
+test("normalizes the short and full built-in output language names", () => {
   assert.deepEqual(OUTPUT_LANGUAGES, ["en-US", "zh-CN"]);
   assert.equal(Object.isFrozen(OUTPUT_LANGUAGES), true);
   assert.equal(canonicalizeOutputLanguage("EN-us"), "en-US");
   assert.equal(canonicalizeOutputLanguage("zh-cn"), "zh-CN");
+  assert.equal(canonicalizeOutputLanguage("en"), "en-US");
+  assert.equal(canonicalizeOutputLanguage("EN"), "en-US");
+  assert.equal(canonicalizeOutputLanguage("zh"), "zh-CN");
+  assert.equal(canonicalizeOutputLanguage("ZH"), "zh-CN");
 
-  for (const value of ["", "en_US", "en", "zh", "fr-FR"]) {
+  for (const value of ["", "en_US", "fr-FR"]) {
     assert.throws(
       () => canonicalizeOutputLanguage(value),
       (error) => error.exitCode === 2,

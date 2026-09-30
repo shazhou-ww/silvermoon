@@ -40,6 +40,10 @@ export function canonicalizeOutputLanguage(value) {
     caught.exitCode = 2;
     throw caught;
   }
+  canonical = {
+    en: "en-US",
+    zh: "zh-CN",
+  }[canonical.toLowerCase()] ?? canonical;
   if (!OUTPUT_LANGUAGE_SET.has(canonical)) {
     const error = new Error(
       `unsupported output language: ${canonical}; expected ${OUTPUT_LANGUAGES.join(" or ")}`,
