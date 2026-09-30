@@ -63,7 +63,7 @@ RC 成功后仍需用户评估，再通过新的 stable implementation candidate
 | `D-AC03` | CodeQL configured 且两类 analysis 成功 | default-setup API、analysis IDs、run `36677849388` | 通过 |
 | `D-AC04` | main/tag rulesets active 且普通同步可用 | ruleset API、rule suite、push/ancestry、hosted CI | 通过 |
 | `D-AC05` | Community Profile 100%，Issue Forms 与 security/support routes 存在 | Community Profile/contents API、公开 URL 与预期 sign-in redirect | 通过 |
-| `D-AC06` | RC2 recovery、accepted candidate 与 fresh preflight 精确绑定 | user choice、absence、planner、ancestry | 阻塞：hosted cleanup race |
+| `D-AC06` | RC2 recovery、accepted candidate 与 fresh preflight 精确绑定 | user choice、absence、planner、ancestry | 通过；cleanup race 单独跟踪 |
 | `D-AC07` | `0.3.0-rc.2` 不可变发布身份一致 | workflow、registry、release、provenance | 待发布 |
 | `D-AC08` | npm `rc` 更新到 rc.2 且 `latest`/stable surfaces 不变 | dist-tags、prerelease 与 absence observations | 待发布 |
 | `D-AC09` | 稳定 `0.3.0` 仍需新候选与授权 | lifecycle、status、absence observations | hold 生效 |
@@ -258,6 +258,15 @@ job `109806512279` 在 129 个测试中唯一失败：
 rc.2 tag、npm version 或 GitHub prerelease。恢复前必须修复共享 cleanup 根因并在
 新的 exact primary commit 上完整重做 preflight。
 
+2026-09-30T08:44:21Z，用户明确确认上述 fixture cleanup race 不是 rc.2 发布的
+blocking issue。该决定不把失败 run 改写为成功：两个 `ENOTEMPTY` 事实继续保留，
+并由独立 reliability work 调查。发布判定依赖已经通过的本地完整 release-grade
+checks、exact-commit push CI、workflow-dispatch package job、release planner 与
+外部 absence observations；cleanup failures 均发生在临时 Git fixture teardown，
+没有改变 package、verifier 或 release identity。D-S06/D-AC06 因此完成。后续若
+trusted-publishing run 在发布前遇到同一 race，只允许对同一不可变 tag 重跑失败
+workflow，不移动或重建 tag。
+
 ## Failures and recovery
 
 权限不足、API schema 变化、重复同名 ruleset、CodeQL analysis 失败、public surface
@@ -270,6 +279,7 @@ Dependabot security updates 首次 PUT 的 HTTP 422 已恢复；根因、前置�
 
 rc.1 hosted verifier 对已移除 README avatar 引用的过度要求已在 accepted rc.2
 implementation 中修复；npm version 与 tag 仍保持不可变，不修改或重发 rc.1。
-当前未恢复失败是 Linux integration fixture 的共享 cleanup race，已由两个 hosted
-run 在不同临时 Git directory 中重复证明。修复与新的 exact-commit preflight
-完成前，D-S06 至 D-S08 与 D-AC06 至 D-AC08 保持未完成。
+Linux integration fixture 的共享 cleanup race 已由两个 hosted run 在不同临时 Git
+directory 中重复证明，仍是待修复的 reliability defect；用户明确判定它不阻塞本次
+rc.2 publication。D-S07、D-S08、D-AC07 与 D-AC08 继续等待实际 trusted
+publication、hosted verifier、GitHub prerelease 与发布后 identity observations。
