@@ -31,10 +31,10 @@
 
 ### Setup
 
-Silvermoon needs Node.js 22 or newer and Git access to the repository's primary
-branch.
+Silvermoon requires Node.js 22 or later, along with Git access to the
+repository's primary branch.
 
-Send this prompt to your coding agent from the project:
+From the project directory, send this prompt to your coding agent:
 
 ```text
 In this project, run:
@@ -71,7 +71,7 @@ Add an optional cultivation-style copy mode,
 independent of the selected language.
 ```
 
-Or use Silvermoon directly in a terminal:
+Or run Silvermoon straight from a terminal:
 
 ```sh
 npx silvermoon whats-next
@@ -84,40 +84,27 @@ npx silvermoon list-ideas
 > maintaining a separate global version; in Node.js projects, the lockfile keeps
 > the project-installed version consistent.
 
-See [Operating Silvermoon](./docs/operations.md) for workflows and the
-[Technical Reference](./docs/reference.md) for command details.
-
-## Experimental JavaScript API
-
-The package root export (`import * as silvermoon from "silvermoon"`) is an
-experimental programmatic API until Silvermoon reaches `1.0.0`. A `0.x` minor
-release may add, remove, or change JavaScript exports without a deprecation
-period; patch releases are intended for compatible fixes. Pin an exact package
-version if your code imports this API.
-
-This experimental boundary does not weaken the separately documented CLI,
-versioned schemas, or repository file contracts. Stable JavaScript types and a
-`1.0.0` API require a separate explicit design. See
-[Experimental JavaScript Package API](./docs/reference.md#experimental-javascript-package-api).
+For workflows, see [Operating Silvermoon](./docs/operations.md); for command
+details, see the [Technical Reference](./docs/reference.md).
 
 ## Why Silvermoon
 
-Long-running Agent work usually asks people to carry too much invisible state.
-Someone must remember what was intended, whether the code still matches the
-task, and which conversation or machine knows the latest truth. Silvermoon
-makes those concerns part of the project instead.
+Long-running Agent work tends to make people carry too much invisible state.
+Someone has to remember what was originally intended, whether the code still
+matches the task, and which conversation or machine holds the latest truth.
+Silvermoon moves those concerns into the project itself.
 
-It lets people step back from continuous supervision and return at the
-decisions that belong to them: approving the intended outcome, accepting the
-implementation, and accepting that the result is true in the outside world.
-Between those boundaries, an Agent can inspect repository facts and continue
-the highest-priority safe action.
+It lets people step away from continuous supervision and return only for the
+decisions that are theirs: approving the intended outcome, accepting the
+implementation, and accepting that the result holds in the outside world.
+Between those boundaries, an Agent can inspect repository facts and carry on
+with the highest-priority safe action.
 
-It also refuses to let a detached task card declare success. Current artifacts
-and explicit decisions jointly determine state, so a changed goal or
-implementation naturally invalidates conclusions that depended on the older
-revision. Because those facts live in Git, work can continue across devices,
-sessions, Agents, and hosting platforms.
+It also refuses to let a detached task card declare success. State is derived
+jointly from current artifacts and explicit decisions, so once a goal or an
+implementation changes, conclusions that rested on the older revision are
+invalidated as a matter of course. And because those facts live in Git, work
+continues across devices, sessions, Agents, and hosting platforms.
 
 ## The Project's Artifact Spirit
 
@@ -130,15 +117,16 @@ sessions, Agents, and hosting platforms.
     <td valign="top">
       Silvermoon is named after a character in <em>A Record of a Mortal's
       Journey to Immortality</em>. She comes from the Silvermoon Wolf Clan in
-      the Spirit Realm and is one of the split souls of Ling Long. After losing
-      part of her memory in the human realm, she lives as an artifact spirit
-      first in a wolf-headed jade scepter and later in Han Li's Bamboo
-      Cloudswarm Swords.
+      the Spirit Realm, and is one of the two souls split from Ling Long.
+      Adrift in the human realm, she became the artifact spirit of a
+      wolf-headed jade scepter — and in that long service lost part of her
+      memory, taking the name Silvermoon. She later became the artifact spirit
+      of Han Li's Bamboo Cloudswarm Swords.
       <br><br>
-      That image fits this project: Silvermoon does not belong to one operator
-      or one chat. It lives with the project's artifacts, understands their
-      state, and helps each companion find what comes next. The biography is
-      inspiration, not a prerequisite for using the tool.
+      That image suits this project: Silvermoon belongs to no single operator
+      and no single chat. It lives alongside the project's artifacts,
+      understands their state, and helps every companion see what comes next.
+      The backstory is inspiration, not a prerequisite for using the tool.
     </td>
   </tr>
 </table>
@@ -150,26 +138,26 @@ Watch *A Record of a Mortal's Journey to Immortality*:
 <!-- markdownlint-disable-next-line MD013 -->
 - Bilibili: [Episode 150: Overseas Turmoil 26](https://www.bilibili.com/bangumi/play/ep1231558 "A Record of a Mortal's Journey to Immortality — Episode 150: Overseas Turmoil 26")
 
-## From Ideal To Real
+## From Ideal to Real
 
 A project is more than a task list or a transcript. It is an ideal becoming
-real through three nested worlds.
+real across three nested worlds.
 
 **Ideal World (道心)** names the outcome worth pursuing. **Inner World (内景)**
 gives that intent shape in repository artifacts. **Outer World (现世)** asks
-whether the shaped work is true where it must actually operate.
+whether the shaped work holds true where it must actually run.
 
 > 道心立志，内景化形，现世求真。
 
-The worlds nest from the inside out. Implementation contains the ideal it
+The worlds nest from the inside out: implementation contains the ideal it
 serves, and deployment contains both. This is an engineering relationship, not
-just a metaphor: when an inner world changes, conclusions from an outer world
-no longer have the same foundation and must be proven again.
+merely a metaphor — when an inner world changes, the conclusions of an outer
+world lose their foundation and must be proven again.
 
 Humans own approval and acceptance. Agents own continuation: they read the
-contracts, the ledger, and Git facts; preserve concurrent work; execute one
-safe action; and reobserve only after something changes. The context belongs to
-the project, not to a fleeting conversation.
+contracts, the ledger, and the facts in Git; preserve concurrent work; carry
+out one safe action; and re-observe only once something has changed. Context
+belongs to the project, not to a fleeting conversation.
 
 ## Further Reading
 
@@ -195,10 +183,9 @@ the project, not to a fleeting conversation.
 
 ## Image Copyright Disclaimer
 
-The Silvermoon character images used in this project are AI-generated
-derivative images based on the animated adaptation of *A Record of a Mortal's
-Journey to Immortality*. Rights in the original character and animation belong
-to their respective rights holders, and these images are not covered by this
-project's [MIT License](./LICENSE). If a rights holder believes that the use of
-any image infringes their rights, please contact the author; the affected image
-will be replaced.
+The Silvermoon character images in this project are AI-generated derivative
+works based on the animated adaptation of *A Record of a Mortal's Journey to
+Immortality*. Rights in the original character and animation belong to their
+respective holders, and these images fall outside this project's
+[MIT License](./LICENSE). If any rights holder believes an image infringes
+their rights, please contact the author and the image will be replaced.

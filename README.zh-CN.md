@@ -17,8 +17,9 @@
 
 ### Setup
 
-Silvermoon 需要 Node.js 22 或更高版本，并且能够通过 Git 访问仓库的 primary branch。
-将下面的提示词发送给项目中的 coding agent：
+Silvermoon 需要 Node.js 22 或更高版本，并且能通过 Git 访问仓库的 primary branch。
+
+在项目目录下，把这段提示词发给你的 coding agent：
 
 ```text
 请在本项目中运行：
@@ -55,7 +56,7 @@ Silvermoon 需要 Node.js 22 或更高版本，并且能够通过 Git 访问仓�
 增加一个独立于语言选择的修仙风格文案开关。
 ```
 
-也可以在终端直接运行 Silvermoon：
+也可以直接在终端运行 Silvermoon：
 
 ```sh
 npx silvermoon whats-next
@@ -70,30 +71,18 @@ npx silvermoon list-ideas
 工作流见 [Operating Silvermoon](./docs/operations.md)，命令详情见
 [Technical Reference](./docs/reference.md)。
 
-## Experimental JavaScript API
-
-在 Silvermoon 到达 `1.0.0` 之前，根 package export
-（`import * as silvermoon from "silvermoon"`）属于 experimental programmatic
-API。`0.x` minor release 可以不经过 deprecation period 就新增、删除或修改
-JavaScript export；patch release 只用于预期兼容的修复。代码若直接导入该 API，应固定
-精确 package version。
-
-这一 experimental 边界不会降低另行记录的 CLI、versioned schema 或 repository file
-contract。稳定 JavaScript types 与 `1.0.0` API 需要后续独立设计。详见
-[Experimental JavaScript Package API](./docs/reference.md#experimental-javascript-package-api)。
-
 ## 为什么需要 Silvermoon
 
-长期运行的 Agent 工作往往让人背负太多不可见状态：有人必须记住原本想做什么、代码是否
-仍与任务一致，以及最新事实究竟留在哪次对话或哪台机器上。Silvermoon 把这些问题变成
+长期运行的 Agent 工作，往往让人背负太多看不见的状态：总得有人记住最初想做什么、代码
+是否仍与任务一致，以及最新的事实究竟留在哪次对话、哪台机器上。Silvermoon 把这些变成
 项目自身的一部分。
 
-它让人不必持续看守，只在真正属于人的决策点回来：批准目标、验收实现，以及确认结果在
-现世成立。在这些边界之间，Agent 可以检查仓库事实，并继续最高优先级的安全行动。
+它让人不必时刻盯守，只在真正属于人的决策点回来：批准目标、验收实现，以及确认结果在
+现世成立。在这些边界之间，Agent 可以查阅仓库事实，推进优先级最高的安全行动。
 
-它也不允许一张脱离代码的任务卡自行宣告成功。当前产物与明确决定共同派生状态，因此目标
-或实现一旦改变，依赖旧 revision 的结论自然失效。事实保存在 Git 中，工作便能跨设备、
-跨 session、跨 Agent、跨托管平台延续。
+它也不允许一张脱离代码的任务卡自行宣告成功。状态由当前产物与明确决定共同派生，因此
+目标或实现一旦改变，依赖旧 revision 的结论自然失效。这些事实存在 Git 里，工作便能跨
+设备、跨 session、跨 Agent、跨托管平台延续下去。
 
 ## 项目的器灵
 
@@ -104,13 +93,13 @@ contract。稳定 JavaScript types 与 `1.0.0` API 需要后续独立设计。�
       <img src="./assets/silvermoon-mascot.png" width="160" alt="项目器灵银月的全身立绘">
     </td>
     <td valign="top">
-      Silvermoon 得名于《凡人修仙传》中的银月。她来自灵界的银月狼族，是玲珑公主分裂出的
-      两道元神之一。她在人界失去部分记忆后成为器灵，先后寄居于狼首玉如意和韩立的
-      青竹蜂云剑。
+      Silvermoon 得名于《凡人修仙传》中的银月。她是灵界银月狼族玲珑公主分裂出的两道
+      元神之一；流落人界后成为狼首玉如意的器灵，又在漫长的岁月里失去部分记忆，从此
+      自称银月，后来才成为韩立青竹蜂云剑的器灵。
       <br><br>
-      这个意象与项目相合：Silvermoon 不属于某位操作者或某次对话。它与项目产物共存，
-      理解它们的状态，并帮助每位同行者判断下一步。人物小传只是灵感来源，不是使用工具的
-      知识门槛。
+      这个意象与本项目相合：Silvermoon 不属于某位操作者，也不属于某次对话。它与项目
+      产物共存，理解它们的状态，并帮每位同行者看清下一步。人物小传只是灵感来源，不是
+      使用这道工具的门槛。
     </td>
   </tr>
 </table>
@@ -124,20 +113,20 @@ contract。稳定 JavaScript types 与 `1.0.0` API 需要后续独立设计。�
 
 ## 从理想到现实
 
-项目不只是一张任务列表，也不是一份对话记录。它是理想经过三个嵌套世界逐渐进入现实的
-过程。
+项目不只是一张任务列表，也不是一份对话记录。它是理想穿过三个嵌套世界、逐渐落进现实
+的过程。
 
-**Ideal World（道心）**确定值得追求的结果，**Inner World（内景）**让意图在仓库产物中
-成形，**Outer World（现世）**则验证这些产物在真正需要运行的地方是否成立。
+**Ideal World（道心）** 指明值得追求的结果，**Inner World（内景）** 让意图在仓库产物中
+成形，**Outer World（现世）** 则检验这些产物在真正要运行的地方是否成立。
 
 > 道心立志，内景化形，现世求真。
 
 三个世界由内向外层层包含：实现包含它所服务的理想，部署又包含二者。这不只是比喻，也是
-工程关系。内层变化时，外层旧结论便失去原有依据，必须重新证明。
+一层工程关系——内层一旦变化，外层的旧结论便失去依据，必须重新证明。
 
 人负责 approval 与 acceptance，Agent 负责 continuation：读取 contract、ledger 与 Git
-事实，保留并发工作，执行一个安全行动，并只在发生变化后重新观察。上下文属于项目，而不
-属于转瞬即逝的某次对话。
+事实，保留并发工作，执行一个安全行动，并且只在发生变化之后重新观察。上下文属于项目，
+而不属于某次转瞬即逝的对话。
 
 ## 延伸阅读
 
@@ -158,7 +147,6 @@ contract。稳定 JavaScript types 与 `1.0.0` API 需要后续独立设计。�
 
 ## 图片版权声明
 
-本项目中使用的银月（Silvermoon）形象均为基于《凡人修仙传》动画进行 AI
-二次生成的图片。原角色及动画相关权利归相应版权方所有，这些图片不在本项目
-[MIT License](./LICENSE) 的授权范围内。如相关版权方认为本项目中的图片构成
-侵权，请联系作者，作者将替换相关图片。
+本项目使用的银月（Silvermoon）形象，均为基于《凡人修仙传》动画二次生成的 AI 图片。
+原角色与动画的相关权利归各自版权方所有，这些图片不在本项目 [MIT License](./LICENSE)
+的授权范围内。若版权方认为其中任何图片构成侵权，请联系作者，作者会替换相关图片。

@@ -137,15 +137,15 @@ test("uses a protected, least-privilege trusted-publishing workflow", async () =
   assert.equal(checkout.with["fetch-depth"], 0);
   assert.equal(
     checkout.uses,
-    "actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803",
+    "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
   );
   assert.equal(
     setupPnpm.uses,
-    "pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1",
+    "pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413",
   );
   assert.equal(
     setupNode.uses,
-    "actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38",
+    "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
   );
   assert.equal(setupNode.with["node-version"], 24);
   assert.equal(setupNode.with["registry-url"], "https://registry.npmjs.org");
