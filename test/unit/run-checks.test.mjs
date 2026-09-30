@@ -4,11 +4,34 @@ import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 
 import {
+  CHECK_SCRIPTS,
+  CHECK_TIERS,
+  COMMIT_SCOPE,
   isMain,
   packageManagerCommand,
   runChecks,
   runCheckScript,
+  selectChecks,
 } from "../../scripts/run-checks.mjs";
+
+test("selects exact scenario sets without changing release compatibility", async () => {
+  assert.equal(selectChecks([]), CHECK_SCRIPTS);
+  assert.equal(selectChecks(["--tier", "release"]), CHECK_SCRIPTS);
+  assert.deepEqual(selectChecks(["--tier", "sanity"]), ["check:syntax", "test:sanity"]);
+  assert.deepEqual(selectChecks(["--tier", "commit"]), [
+    "check:sanity", "test:contract", "lint:markdown", "check:skills:local",
+    "test:smoke", "check:staged", "check:diff",
+  ]);
+  assert.equal(CHECK_TIERS.release, CHECK_SCRIPTS);
+  assert.match(COMMIT_SCOPE, /WORKTREE, not staged code/);
+  assert.match(COMMIT_SCOPE, /Partial staging is NOT exact-candidate test evidence/);
+  for (const args of [["--full"], ["--tier"], ["--tier", "typo"], ["--tier", "sanity", "extra"], ["--tier", "toString"]]) {
+    assert.throws(() => selectChecks(args), /Usage:/);
+  }
+  for (const scripts of [[], null, [""], [undefined]]) {
+    await assert.rejects(runChecks({ scripts }), /non-empty list/);
+  }
+});
 
 test("uses the invoking package manager when available", () => {
   assert.deepEqual(

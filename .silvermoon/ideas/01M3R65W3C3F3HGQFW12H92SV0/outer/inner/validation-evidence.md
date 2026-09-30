@@ -59,4 +59,86 @@ sanity 五次中位数 <= 10,315.5 ms；commit <= 65,382.5 ms，分别比对应�
 
 ## 实施后证据
 
-尚未实施或验收。
+### 目标复测
+
+在契约发布 commit `547f7dff32dde01f59e9dc4898184dfe5e300e6f` 之后才修改
+scripts/tests/workflows/docs。相同机器、worktree、Node.js/pnpm 和外层墙钟
+方法，依次执行每个入口的一次预热及五次样本，所有退出码均为 0。
+
+| 候选 | 入口 | 预热 ms | 五次样本 ms | 中位数 ms |
+| --- | --- | --- | --- | --- |
+| 初次实现 | sanity | 3,149 | 3,189; 3,199; 3,137; 3,217; 3,170 | 3,189 |
+| 初次实现 | commit | 9,939 | 9,946; 10,096; 13,291; 12,455; 12,119 | 12,119 |
+| 补齐直接构造 socket/ChildProcess、DNS resolver guard 后 | sanity | 3,139 | 3,148; 3,117; 3,280; 3,861; 3,555 | 3,280 |
+| 补齐 guard 后 | commit | 12,106 | 10,849; 10,769; 10,103; 9,534; 9,688 | 10,103 |
+
+最终 sanity 比原 quick 中位数降低 **84.10%**，commit 比原 full 降低
+**92.27%**，分别小于预先固定的 10,315.5/65,382.5 ms。全部样本（包括
+补齐 guard 前后的慢样本）均保留。full 的缓存/网络收益不计入策略证明；
+这里衡量的是对应场景集合变小后的反馈，不声称完整发布级检查同比加速。
+
+sanity 每次运行 88 项、零 skip（80 纯 unit + 8 schema/API contract）；
+commit 每次运行 88 + 25 + 10 项、零 skip，其中 8 项 schema/API 与完整
+contract 重叠，复用同一测试文件而非复制断言。每次完整输出均有
+`COMMIT_SCOPE`，没有 package/E2E 或外部 discovery 门禁。
+
+### 覆盖迁移与守恒
+
+| 原文件 | 原数量 | 纯集合保留 | 移出但仍执行 |
+| --- | --- | --- | --- |
+| unit/adoption | 11 | 2 | runtime/adoption 9 |
+| unit/cli-v1 | 9 | 8 | runtime/cli-v1 1 |
+| unit/trace | 3 | 0 | runtime/trace 3 |
+| unit/tui | 9 | 5 | runtime/tui 4 |
+| contract/dialogue-output | 3 | 2 | integration/dialogue-output 1 |
+
+迁移的 35 个原始测试 body 对照 HEAD 保持一致；原 timeout、skip 与清理保留。
+定向迁移组合 35/35 通过。unit 的 17 个 runtime 测试仍通过 `test:unit` 进入
+原有 Ubuntu/Windows/macOS × Node 22/24 矩阵，没有借迁移减少平台保障。
+
+完整套件现为 97 unit/runtime + 25 contract + 124 integration + 1 E2E =
+**247 项**；相对原 237 项净增 10 项：runner 场景 1、风险选择 4、guard 1、
+测试归属 contract 1、真实 guard/暂存/风险 integration 3。Windows 仅保留
+原有 2 项符号链接 skip。core 与 E2E 的归属回归枚举所有测试文件，未知目录失败。
+
+### 确定性验证
+
+- 第一组定向 runner/risk/guard/workflow/暂存回归 20/20 通过，随后真实
+  guard preload 和补齐的边界定向组合 4/4 通过。
+- sanity 在测试 worker 中替换 child_process、socket、DNS、HTTP(S)、
+  HTTP2、TLS、datagram 和 fetch 的真实 I/O 入口；Node runner 创建 worker
+  不受影响。真实子进程测试证明 preload 进入 worker，误用 Git/fetch 会被拒绝。
+  原生终端测试只在 runtime 运行，sanity 不做包安装。
+- 风险单元测试覆盖包代码/资源/文档、所有常见锁文件、技能、测试、脚本、
+  workflow、未知/非法路径、缺失/无效/错误/空 baseline、显式 full；
+  真实 Git fixture 验证 metadata-only、删除/重命名及不可用历史。
+- 暂存 fixture 使用真实 Git 和真实 `silvermoon check --staged`：
+  index 保留 staged candidate，worktree 探针读取另一个 candidate；
+  index/worktree 全程不被入口改写。将无效 status 暂存后在 worktree 修好，
+  commit 仍因 staged 门禁退出 1。其他场景门禁用 fixture package manager
+  替身，避免把该边界测试误称为全套工作区测试。
+- runner 拒绝错误参数、空集合，测试 startup/nonzero 失败并等待全部门禁、
+  汇总失败与单调耗时。release/default 精确包含原六门禁，未加入发布动作。
+- workflow contract 验证核心 job 无条件、三平台双 Node 矩阵、完整 diff、
+  显式 full、package/E2E 条件，及发布权限/环境/tag/commit/实际 tarball
+  和发布后验证。没有执行 npm 发布或真实 post-release 验证。
+
+### 发布级检查
+
+首次 `pnpm check` 退出 0，完整 247 项（245 pass、2 原有 skip）、六门禁通过：
+
+| 门禁 | 耗时 ms |
+| --- | --- |
+| lint:markdown | 3,711 |
+| check:quick | 28,260 |
+| test:integration | 110,293 |
+| pack:check | 13,103 |
+| test:e2e | 140,504 |
+| check:skills | 22,246 |
+| CHECK_TOTAL | 140,564 |
+
+`PACK_OK` 为 silvermoon@0.2.2、49 个文件；installed-package 输出
+`PACK_SMOKE_OK`，本地技能输出 `SKILLS_CHECK_OK files=2`，外部 discovery 成功。
+Markdown lint 零问题，Markdown 链接由完整 contract 检查。
+补齐 guard 后的最终候选全量结果、快照校验及非强制发布的精确 commit
+记录在 idea-root ledger，避免证据自引用改变其自身 revision。

@@ -12,6 +12,34 @@ export const CHECK_SCRIPTS = Object.freeze([
   "check:skills",
 ]);
 
+export const CHECK_TIERS = Object.freeze({
+  sanity: Object.freeze(["check:syntax", "test:sanity"]),
+  commit: Object.freeze([
+    "check:sanity",
+    "test:contract",
+    "lint:markdown",
+    "check:skills:local",
+    "test:smoke",
+    "check:staged",
+    "check:diff",
+  ]),
+  release: CHECK_SCRIPTS,
+});
+
+export function selectChecks(args) {
+  if (args.length === 0) return CHECK_TIERS.release;
+  if (args.length !== 2 || args[0] !== "--tier" || !Object.hasOwn(CHECK_TIERS, args[1])) {
+    throw new Error("Usage: node scripts/run-checks.mjs [--tier sanity|commit|release]");
+  }
+  return CHECK_TIERS[args[1]];
+}
+
+export const COMMIT_SCOPE =
+  "COMMIT_SCOPE: Tests validate the WORKTREE, not staged code. " +
+  "silvermoon check --staged validates only staged Silvermoon metadata. " +
+  "Partial staging is NOT exact-candidate test evidence; align index and worktree " +
+  "and rerun checks before claiming the staged code passed. No files are staged or changed.\n";
+
 const repositoryRoot = fileURLToPath(new URL("..", import.meta.url));
 
 export function packageManagerCommand(
@@ -81,6 +109,10 @@ export async function runChecks({
   now = () => performance.now(),
   writeOutput = (message) => process.stdout.write(message),
 } = {}) {
+  if (!Array.isArray(scripts) || scripts.length === 0
+    || scripts.some((script) => typeof script !== "string" || !script.trim())) {
+    throw new Error("Checks require a non-empty list of script names");
+  }
   const totalStartedAt = now();
   const results = await Promise.allSettled(
     scripts.map(async (script) => {
@@ -101,7 +133,7 @@ export async function runChecks({
       : [],
   );
   if (failures.length > 0) {
-    throw new Error(`Release-grade checks failed:\n- ${failures.join("\n- ")}`);
+    throw new Error(`Checks failed:\n- ${failures.join("\n- ")}`);
   }
 }
 
@@ -113,7 +145,10 @@ export function isMain(importMetaUrl, argv = process.argv) {
 
 if (isMain(import.meta.url)) {
   try {
-    await runChecks();
+    const args = process.argv.slice(2);
+    const scripts = selectChecks(args);
+    if (args[1] === "commit") process.stdout.write(COMMIT_SCOPE);
+    await runChecks({ scripts });
   } catch (error) {
     process.stderr.write(`${error.message}\n`);
     process.exitCode = 1;
