@@ -73,14 +73,47 @@
 
 ### Deployment steps
 
-- [ ] **D-S01:** 发布契约并固定主线候选
+- [x] **D-S01:** 发布契约并固定主线候选
+  - 2026-09-30，刷新并 fast-forward 到 `27867cfe132017fe5b14e6846f649e37cd1b688f`，
+    保留并发历史；实施验收仍为 `66f8f63c4574ac59655ab65836836a13b1f80963`。
+  - 部署契约先同步于 `1505e2918321f4b46a0bdb18f0a62ff50efa436d`，
+    刷新确认 primary 可达，再观察 deploymentRevision
+    `59645981ed071aff98900b354c8caafae4803cbd`。以下验证固定在此候选。
 - [ ] **D-S02:** 在全新 checkout 验证使用路径
+  - **阻塞**：从远端新建会话所属 clone，detached checkout 精确候选，
+    Windows / Node.js v24.11.1 / pnpm 11.22.0。运行前后 Git status 为空。
+    pnpm 初次执行自动按现有锁文件恢复 218 个依赖，随后实际运行 sanity；
+    没有修改 manifest/lockfile，也没有把自动安装时间作为性能样本。
+  - `pnpm check:sanity` 退出 1：94 tests、93 pass、1 fail、0 skip；
+    `check:syntax` 成功，`test:sanity` 失败。完整 stdout/stderr 保留在会话
+    `deployment-sanity-initial.log`，UTF-8 转码副本为 `deployment-sanity.log`。
+  - 失败测试：`test/unit/repository.test.js:55` 的
+    `branch validation preserves Git check-ref-format semantics`；
+    第 57 行调用真实 `spawnSync("git", ["check-ref-format", "--branch", value])`，
+    被 guard 拒绝：`Error: SANITY_IO_FORBIDDEN: child_process.spawnSync`。
+    文件由并发主线 commit `e3438d2946ae8af2aa07d13e0936512121d97e25`
+    （Optimize Silvermoon CLI command performance）加入，不在本 idea 最初
+    验收的实施测试集合中。
+  - 按部署契约停止本地后续 commit/release 检查，不关闭 guard、不删断言、
+    不扩大 skip、不在部署阶段移动测试。恢复条件：实现侧保留真实 Git 断言并
+    修正其 runtime 归属，重新发布并确认适用候选后重跑 D-S02。
 - [ ] **D-S03:** 验证实际托管 CI 与使用说明
+  - 普通 push run
+    [36671536066](https://github.com/shazhou-ww/silvermoon/actions/runs/36671536066)
+    和唯一一次手动 full run
+    [36671553805](https://github.com/shazhou-ww/silvermoon/actions/runs/36671553805)
+    均指向 `1505e2918321f4b46a0bdb18f0a62ff50efa436d`；未触发 publish-npm。
+  - 最近观察普通 push 的 package job 按 metadata-only 规则 skipped；
+    手动 full 的 package job 已实际启动。两者均尚有 job 运行，未记录整体成功。
+    CI 的完整 unit 路径不带 sanity guard，不能用其绿色结果替代 D-S02。
 - [ ] **D-S04:** 同步证据并请求精确部署验收
+  - 先同步本次失败和未执行事项；部署未完成，不请求部署验收。
+    只改本 idea 的 Deployment/ledger，不改变内层世界、status 或其他 idea。
 
 ### Deployment acceptance criteria
 
-- [ ] **D-AC01:** 发布候选与验收身份准确
+- [x] **D-AC01:** 发布候选与验收身份准确
+  - 契约先发布、精确候选和 deploymentRevision 已记录于 D-S01。
 - [ ] **D-AC02:** 全新环境的分层入口可用
 - [ ] **D-AC03:** 托管路由符合风险契约
 - [ ] **D-AC04:** 指令与发布边界没有漂移
