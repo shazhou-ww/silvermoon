@@ -8,7 +8,7 @@ import {
   normalizeIdeaQuery,
   queryIdeaInventory,
 } from "./idea-query.js";
-import { localize } from "./language.js";
+import { canonicalizeOutputLanguage, localize } from "./language.js";
 import { observeSnapshot } from "./observation.js";
 import { traceAsync } from "./trace.js";
 
@@ -59,6 +59,7 @@ export async function listIdeas({
   all,
   createdBefore,
   createdSince,
+  language,
   limit,
   query,
   root = process.cwd(),
@@ -66,6 +67,9 @@ export async function listIdeas({
   states,
   userHome,
 } = {}) {
+  const canonicalLanguage = language === undefined
+    ? undefined
+    : canonicalizeOutputLanguage(language);
   const normalizedQuery = normalizeIdeaQuery({
     all,
     createdBefore,
@@ -77,11 +81,15 @@ export async function listIdeas({
   });
   const intention = {
     command: "list-ideas",
-    args: normalizedQuery,
+    args: {
+      ...normalizedQuery,
+      language: canonicalLanguage ?? null,
+    },
   };
   const runtime = createCommandRun(intention);
   const observed = await observeSnapshot({
     root,
+    outputLanguage: canonicalLanguage,
     userHome,
     version: { type: "worktree" },
   });

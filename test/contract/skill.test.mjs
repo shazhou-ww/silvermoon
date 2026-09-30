@@ -73,7 +73,7 @@ test("exposes one consolidated silvermoon skill", async () => {
     "silvermoon whats-next [idea]",
     "silvermoon create-idea",
     "silvermoon list-ideas",
-    "--language en-US|zh-CN",
+    "--language en|en-US|zh|zh-CN",
     "temporary output locale",
     "create-idea --language <tag>",
     "effective content language",

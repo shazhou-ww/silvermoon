@@ -93,6 +93,7 @@ test("registers only the approved command surface", () => {
     "--created-before",
     "--created-since",
     "--limit",
+    "--language",
     "--query",
     "--sort",
     "--state",
@@ -101,7 +102,7 @@ test("registers only the approved command surface", () => {
   ]) {
     assert.ok(list.options.some(({ long }) => long === option), option);
   }
-  assert.equal(list.options.some(({ long }) => long === "--language"), false);
+  assert.ok(list.options.some(({ long }) => long === "--language"));
 });
 
 test("normalizes trace paths to the exact lowercase suffix", () => {
@@ -299,6 +300,7 @@ test("rejects conflicting targets, output modes, and invalid values as usage err
   for (const args of [
     ["check", "--remote", "--staged"],
     ["check", "--language", "fr-FR"],
+    ["list-ideas", "--language", "fr-FR"],
     ["whats-next", "--language", "fr-FR"],
     ["whats-next", "--audience", "reader"],
     ["whats-next", "--json", "--audience", "agent"],

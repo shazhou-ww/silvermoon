@@ -41,12 +41,12 @@ explicit creation, perform only that blocking action and then retry
 `create-idea` so active-idea selection cannot replace the pending create
 intent.
 
-Use `--language en-US|zh-CN` with `whats-next` or `check` only when the user
-explicitly requests a temporary output locale. Preserve the canonical option
-on every hygiene retry. It never changes the content language recorded in
-project, user, or idea configuration. `create-idea --language <tag>` remains a
-separate persistent content-language choice and accepts any canonical BCP 47
-tag.
+Use `--language en|en-US|zh|zh-CN` with `list-ideas`, `whats-next`, or `check` only
+when the user explicitly requests a temporary output locale. Preserve the
+canonical option on every hygiene retry. It never changes the content language
+recorded in project, user, or idea configuration. `create-idea --language
+<tag>` remains a separate persistent content-language choice and accepts any
+canonical BCP 47 tag.
 
 ## Decisions And Publication
 

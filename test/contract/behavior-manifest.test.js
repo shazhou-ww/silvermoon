@@ -18,6 +18,7 @@ const expected = [
   "inventory-default",
   "inventory-empty",
   "inventory-filters",
+  "inventory-language",
   "inventory-layout",
   "inventory-readiness",
   "inventory-usage",

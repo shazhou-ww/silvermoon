@@ -22,7 +22,7 @@ The shared observation exposes the resolved content preference as
 `configuration.preferredLanguage` and the built-in rendering locale as
 `outputLanguage`. Response next steps use the content preference for world
 entries, same-world supporting artifacts, and the ledger. A caller may use
-`--language en-US|zh-CN` to override only Silvermoon-owned output for one
+`--language en|en-US|zh|zh-CN` to override only Silvermoon-owned output for one
 `whats-next` invocation. Commands, identifiers, schema fields, protocol
 markers, and verbatim tool output retain their original form.
 
@@ -103,8 +103,8 @@ For `create-idea`, `--language` normalizes any valid BCP 47 tag and writes it
 to the new idea's `status.yaml` as a persistent content-language preference.
 Without the option, creation writes no language field and the idea dynamically
 inherits project, user, or `en-US` defaults. This is distinct from the
-non-persistent `en-US|zh-CN` output override accepted by `whats-next` and
-`check`.
+non-persistent `en|en-US|zh|zh-CN` output override accepted by `list-ideas`,
+`whats-next`, and `check`.
 
 The generated files remain untracked for review. Complete `Idea.md`, optionally
 add a concise unique alias, inspect every path, and publish the initial idea
@@ -199,7 +199,7 @@ returned. Exit status `0` means the chosen project snapshot is valid; `1`
 means invalid or unavailable and must block the commit; `2` means invalid CLI
 usage. Do not treat the existence of a report as permission to commit.
 
-`check --language en-US|zh-CN` changes only Silvermoon-owned report framing.
+`check --language en|en-US|zh|zh-CN` changes only Silvermoon-owned report framing.
 It is orthogonal to every check target and never changes the selected snapshot,
 validation conclusion, problems, or exit status.
 

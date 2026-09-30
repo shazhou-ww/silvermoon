@@ -112,13 +112,14 @@ inherited and is never written back. Dialogue project status presents this
 effective value as `content language` (`内容语言`).
 
 Every command observation also exposes an independent `outputLanguage`.
-Silvermoon's built-in output locales are exactly `en-US` and `zh-CN`.
-`whats-next --language <tag>` and `check --language <tag>` normalize casing
-before enforcing that allowlist, apply only to the current invocation, and
-take display precedence over content language. Without an explicit output
-override, content tags beginning with `zh` select `zh-CN`; every other content
-tag selects `en-US`. Output selection never writes configuration or idea
-status.
+Silvermoon's built-in output locales are `en-US` and `zh-CN`; short aliases
+`en` and `zh` are accepted and normalize to those locales.
+`list-ideas`, `whats-next`, and `check` accept `--language
+<en|en-US|zh|zh-CN>`, normalize casing, and apply the override only to the
+current invocation. It takes display precedence over content language. Without
+an explicit output override, content tags beginning with `zh` select `zh-CN`;
+every other content tag selects `en-US`. Output selection never writes
+configuration or idea status.
 
 The effective content language governs natural-language prose, comments,
 short titles, and placeholders in all three world contracts, their same-world
@@ -143,10 +144,10 @@ State is derived in order:
 ## Public Commands
 
 ```sh
-silvermoon list-ideas [--state <state>] [--all] [--query <text>] [--created-since <RFC3339>] [--created-before <RFC3339>] [--sort <newest|oldest>] [--limit <positive-integer>] [--audience <human|agent>] [--trace <file.trace.jsonl>]
-silvermoon whats-next [idea] [--language <en-US|zh-CN>] [--audience <human|agent>] [--trace <file.trace.jsonl>]
+silvermoon list-ideas [--state <state>] [--all] [--query <text>] [--created-since <RFC3339>] [--created-before <RFC3339>] [--sort <newest|oldest>] [--limit <positive-integer>] [--language <en|en-US|zh|zh-CN>] [--audience <human|agent>] [--trace <file.trace.jsonl>]
+silvermoon whats-next [idea] [--language <en|en-US|zh|zh-CN>] [--audience <human|agent>] [--trace <file.trace.jsonl>]
 silvermoon create-idea [--language <tag>] [--audience <human|agent>] [--trace <file.trace.jsonl>]
-silvermoon check [--remote | --commit <revision> | --staged | --worktree] [--language <en-US|zh-CN>] [--audience <human|agent>] [--trace <file.trace.jsonl>]
+silvermoon check [--remote | --commit <revision> | --staged | --worktree] [--language <en|en-US|zh|zh-CN>] [--audience <human|agent>] [--trace <file.trace.jsonl>]
 ```
 
 Every valid invocation starts one ordered domain-message stream with
@@ -356,7 +357,9 @@ The query validates Git presence, configuration, canonical skill, and the
 complete idea layout before filtering. It reads staged, unstaged, and
 untracked idea changes from the current worktree snapshot but never checks
 worktree hygiene, branch, upstream, or primary ancestry, and never fetches or
-accesses the network. It has no temporary `--language` option.
+accesses the network. `list-ideas --language <en|en-US|zh|zh-CN>` overrides only
+Silvermoon-owned output for that invocation; without it, the project's
+resolved output language is used.
 
 ## Validation Targets
 
@@ -439,7 +442,7 @@ Like every public command, `check --json` contains all four projections:
 reports `commit: null` and a problem. Staged and worktree versions only
 contain `type`.
 
-`--language en-US|zh-CN` is orthogonal to every target. It changes only
+`--language en|en-US|zh|zh-CN` is orthogonal to every target. It changes only
 Silvermoon-owned natural-language framing and leaves the target, snapshot,
 validation state, problems, and exit status unchanged.
 
