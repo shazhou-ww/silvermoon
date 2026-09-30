@@ -106,6 +106,7 @@ test("uses a protected, least-privilege trusted-publishing workflow", async () =
   }
 
   const checkout = publish.steps.find(({ name }) => name === "Check out full history");
+  const setupPnpm = publish.steps.find(({ name }) => name === "Install pnpm");
   const setupNode = publish.steps.find(({ name }) => name === "Set up Node.js");
   const setupNpm = publish.steps.find(
     ({ name }) => name === "Install trusted-publishing npm",
@@ -134,8 +135,18 @@ test("uses a protected, least-privilege trusted-publishing workflow", async () =
   );
 
   assert.equal(checkout.with["fetch-depth"], 0);
-  assert.equal(checkout.uses, "actions/checkout@v6");
-  assert.equal(setupNode.uses, "actions/setup-node@v6");
+  assert.equal(
+    checkout.uses,
+    "actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803",
+  );
+  assert.equal(
+    setupPnpm.uses,
+    "pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1",
+  );
+  assert.equal(
+    setupNode.uses,
+    "actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38",
+  );
   assert.equal(setupNode.with["node-version"], 24);
   assert.equal(setupNode.with["registry-url"], "https://registry.npmjs.org");
   assert.equal(setupNode.with["package-manager-cache"], false);
@@ -265,6 +276,9 @@ test("uses a protected, least-privilege trusted-publishing workflow", async () =
     "Candidate tarball gitHead mismatch",
     "Candidate tarball package README metadata",
     "npm dist identity",
+    "assertPublicMetadata(candidate.manifest",
+    "publicMetadata.license",
+    "npm version metadata",
     "readmeFilename",
     "attestations",
     "jsDelivr asset",
@@ -300,6 +314,11 @@ test("documents trusted-publisher setup and the protected release procedure", as
     "jsDelivr",
     "canonical `./assets/...` image paths",
     "release-commit-pinned jsDelivr URLs",
+    "MIT license",
+    "homepage",
+    "bugs",
+    "gh release create npm/silvermoon/v0.3.0",
+    "--verify-tag",
   ]) {
     assert.ok(guide.includes(required), `Release guide is missing: ${required}`);
   }

@@ -70,6 +70,18 @@ npx silvermoon list-ideas
 工作流见 [Operating Silvermoon](./docs/operations.md)，命令详情见
 [Technical Reference](./docs/reference.md)。
 
+## Experimental JavaScript API
+
+在 Silvermoon 到达 `1.0.0` 之前，根 package export
+（`import * as silvermoon from "silvermoon"`）属于 experimental programmatic
+API。`0.x` minor release 可以不经过 deprecation period 就新增、删除或修改
+JavaScript export；patch release 只用于预期兼容的修复。代码若直接导入该 API，应固定
+精确 package version。
+
+这一 experimental 边界不会降低另行记录的 CLI、versioned schema 或 repository file
+contract。稳定 JavaScript types 与 `1.0.0` API 需要后续独立设计。详见
+[Experimental JavaScript Package API](./docs/reference.md#experimental-javascript-package-api)。
+
 ## 为什么需要 Silvermoon
 
 长期运行的 Agent 工作往往让人背负太多不可见状态：有人必须记住原本想做什么、代码是否

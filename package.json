@@ -1,6 +1,6 @@
 {
   "name": "silvermoon",
-  "version": "0.2.2",
+  "version": "0.3.0",
   "description": "The project spirit that checks repository state and answers what's next.",
   "packageManager": "pnpm@11.22.0",
   "type": "module",
@@ -64,6 +64,26 @@
     "type": "git",
     "url": "git+https://github.com/shazhou-ww/silvermoon.git"
   },
+  "homepage": "https://github.com/shazhou-ww/silvermoon#readme",
+  "bugs": {
+    "url": "https://github.com/shazhou-ww/silvermoon/issues"
+  },
+  "author": {
+    "name": "shazhou-ww",
+    "url": "https://github.com/shazhou-ww"
+  },
+  "contributors": [
+    {
+      "name": "shazhou-ww",
+      "url": "https://github.com/shazhou-ww"
+    }
+  ],
+  "maintainers": [
+    {
+      "name": "shazhou-ww",
+      "url": "https://github.com/shazhou-ww"
+    }
+  ],
   "devDependencies": {
     "ajv": "^8.20.0",
     "markdownlint-cli2": "^0.23.3",

@@ -54,9 +54,16 @@ test("runs fast layered validation in ordinary CI", async () => {
   ]);
 
   const workflow = document.toJS();
-  assert.deepEqual(Object.keys(workflow.jobs).sort(), ["contract", "integration", "package", "package-risk", "unit"]);
+  assert.deepEqual(Object.keys(workflow.jobs).sort(), [
+    "contract",
+    "integration",
+    "package",
+    "package-risk",
+    "required",
+    "unit",
+  ]);
 
-  const { unit, contract, integration } = workflow.jobs;
+  const { unit, contract, integration, required } = workflow.jobs;
   assert.deepEqual(unit.strategy.matrix, {
     os: ["ubuntu-latest", "windows-latest", "macos-latest"],
     node: [22, 24],
@@ -96,6 +103,29 @@ test("runs fast layered validation in ordinary CI", async () => {
   assert.equal(packaged.if, "needs.package-risk.outputs.required == 'true'");
   assert.equal(step(packaged, "Verify package contents").run, "pnpm pack:check");
   assert.equal(step(packaged, "Test installed package").run, "pnpm test:e2e");
+  assert.equal(required.name, "Required checks");
+  assert.equal(required.if, "${{ always() }}");
+  assert.deepEqual(required.needs, [
+    "package-risk",
+    "unit",
+    "contract",
+    "integration",
+    "package",
+  ]);
+  assert.equal(required["runs-on"], "ubuntu-latest");
+  assert.equal(required["timeout-minutes"], 5);
+  const requiredGate = step(required, "Verify required jobs");
+  assert.deepEqual(requiredGate.env, {
+    PACKAGE_REQUIRED: "${{ needs.package-risk.outputs.required }}",
+    PACKAGE_RISK_RESULT: "${{ needs.package-risk.result }}",
+    UNIT_RESULT: "${{ needs.unit.result }}",
+    CONTRACT_RESULT: "${{ needs.contract.result }}",
+    INTEGRATION_RESULT: "${{ needs.integration.result }}",
+    PACKAGE_RESULT: "${{ needs.package.result }}",
+  });
+  assert.match(requiredGate.run, /true:success\|false:skipped/);
+  assert.match(requiredGate.run, /Required CI job result was \$result/);
+  assert.equal(requiredGate["continue-on-error"], undefined);
   assert.deepEqual(workflow.permissions, { contents: "read" });
 });
 

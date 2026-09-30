@@ -94,6 +94,24 @@ try {
   );
   assert.equal(installedManifest.name, "silvermoon");
   assert.equal(installedManifest.license, "MIT");
+  assert.equal(
+    installedManifest.homepage,
+    "https://github.com/shazhou-ww/silvermoon#readme",
+  );
+  assert.deepEqual(installedManifest.bugs, {
+    url: "https://github.com/shazhou-ww/silvermoon/issues",
+  });
+  assert.deepEqual(installedManifest.repository, {
+    type: "git",
+    url: "git+https://github.com/shazhou-ww/silvermoon.git",
+  });
+  const expectedMaintainer = {
+    name: "shazhou-ww",
+    url: "https://github.com/shazhou-ww",
+  };
+  assert.deepEqual(installedManifest.author, expectedMaintainer);
+  assert.deepEqual(installedManifest.contributors, [expectedMaintainer]);
+  assert.deepEqual(installedManifest.maintainers, [expectedMaintainer]);
   assert.match(
     await readFile(join(bootstrap, "node_modules", "silvermoon", "LICENSE"), "utf8"),
     /^MIT License\r?\n\r?\nCopyright \(c\) 2026 Silvermoon contributors\r?\n/,

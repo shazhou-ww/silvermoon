@@ -102,6 +102,21 @@ or skill changes, not after every edit.
 Documentation work must also preserve Markdown links, package contents,
 installed-package rendering surfaces, and `git diff --check`.
 
+## GitHub Actions Dependencies
+
+Every external action under `.github/workflows` is pinned to a full commit SHA
+with its exact semantic version in an inline comment. Never replace a pin with
+a movable major tag. Dependabot checks the `github-actions` ecosystem weekly
+and proposes reviewable SHA/version updates; do not auto-merge those PRs.
+Review the upstream release and action ownership, then require the complete CI
+gate before merging.
+
+The branch ruleset depends only on the stable `Required checks` job name. That
+aggregate job fails unless package-risk selection, unit, contract, and
+integration jobs succeed, and it requires package validation to succeed when
+risk selection enables it. Keep this name and fail-closed behavior synchronized
+with `.github/rulesets/main.json`.
+
 ## Documentation Ownership
 
 - [Getting Started](./getting-started.md) owns installation, configuration,

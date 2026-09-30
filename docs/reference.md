@@ -141,6 +141,20 @@ State is derived in order:
    `deploymentRevision`.
 5. `completed` when all three revisions match.
 
+## Experimental JavaScript Package API
+
+The package root export is available for programmatic reuse, but remains
+experimental for every Silvermoon `0.x` release. A minor release before
+`1.0.0` may add, remove, rename, or change exported JavaScript functions and
+classes without a deprecation period. Patch releases are intended for
+compatible fixes. Consumers that import from `silvermoon` should pin the exact
+package version and review the changelog before upgrading.
+
+This boundary applies only to the root JavaScript export. The CLI, versioned
+JSON Schemas, trace versions, and repository file contracts keep their own
+documented compatibility rules. The package does not yet promise stable
+TypeScript declarations or a stable `1.0.0` JavaScript API.
+
 ## Public Commands
 
 ```sh

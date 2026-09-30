@@ -1,0 +1,176 @@
+import assert from "node:assert/strict";
+import { readFile, readdir } from "node:fs/promises";
+import test from "node:test";
+
+import { parseDocument } from "yaml";
+
+const repositoryRoot = new URL("../../", import.meta.url);
+const workflowsUrl = new URL(".github/workflows/", repositoryRoot);
+
+async function read(path) {
+  return readFile(new URL(path, repositoryRoot), "utf8");
+}
+
+test("configures reviewable dependency updates for npm and GitHub Actions", async () => {
+  const document = parseDocument(await read(".github/dependabot.yml"));
+  assert.deepEqual(document.errors, []);
+  const config = document.toJS();
+  assert.equal(config.version, 2);
+  assert.deepEqual(
+    config.updates.map((update) => update["package-ecosystem"]).sort(),
+    ["github-actions", "npm"],
+  );
+
+  for (const update of config.updates) {
+    assert.equal(update.directory, "/");
+    assert.deepEqual(update.schedule, {
+      interval: "weekly",
+      day: "monday",
+      time: "09:00",
+      timezone: "Etc/UTC",
+    });
+    assert.equal(update["open-pull-requests-limit"], 5);
+  }
+
+  const npm = config.updates.find(
+    (update) => update["package-ecosystem"] === "npm",
+  );
+  assert.equal(npm["versioning-strategy"], "increase-if-necessary");
+  assert.deepEqual(npm.groups, {
+    "production-dependencies": { "dependency-type": "production" },
+    "development-dependencies": { "dependency-type": "development" },
+  });
+});
+
+test("defines the exact active main ruleset contract", async () => {
+  const ruleset = JSON.parse(await read(".github/rulesets/main.json"));
+  assert.deepEqual(ruleset, {
+    name: "Protect main",
+    target: "branch",
+    enforcement: "active",
+    bypass_actors: [{
+      actor_id: 242885595,
+      actor_type: "User",
+      bypass_mode: "always",
+    }],
+    conditions: {
+      ref_name: {
+        include: ["refs/heads/main"],
+        exclude: [],
+      },
+    },
+    rules: [
+      { type: "deletion" },
+      { type: "non_fast_forward" },
+      {
+        type: "required_status_checks",
+        parameters: {
+          do_not_enforce_on_create: false,
+          required_status_checks: [{
+            context: "Required checks",
+            integration_id: 15368,
+          }],
+          strict_required_status_checks_policy: true,
+        },
+      },
+    ],
+  });
+});
+
+test("pins every external workflow action to an immutable reviewed version", async () => {
+  const workflowNames = (await readdir(workflowsUrl))
+    .filter((name) => /\.ya?ml$/.test(name))
+    .sort();
+  assert.deepEqual(workflowNames, ["ci.yml", "publish-npm.yml"]);
+
+  const references = [];
+  for (const name of workflowNames) {
+    const source = await readFile(new URL(name, workflowsUrl), "utf8");
+    const usesLines = source.match(/^\s*uses:\s*.+$/gm) ?? [];
+    assert.ok(usesLines.length > 0, `${name} has no action references`);
+    for (const line of usesLines) {
+      const match =
+        /^\s*uses:\s*([^@\s]+)@([0-9a-f]{40})\s+#\s+(v\d+\.\d+\.\d+)\s*$/
+          .exec(line);
+      assert.ok(match, `${name} has a movable or unversioned action: ${line}`);
+      references.push(`${match[1]}@${match[2]} # ${match[3]}`);
+    }
+  }
+
+  assert.deepEqual(new Set(references), new Set([
+    "actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0",
+    "actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0",
+    "actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0",
+    "actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0",
+    "pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0",
+  ]));
+});
+
+test("publishes explicit metadata and a pre-1.0 experimental API contract", async () => {
+  const [manifestSource, english, chinese, reference] = await Promise.all([
+    read("package.json"),
+    read("README.md"),
+    read("README.zh-CN.md"),
+    read("docs/reference.md"),
+  ]);
+  const manifest = JSON.parse(manifestSource);
+  const maintainer = {
+    name: "shazhou-ww",
+    url: "https://github.com/shazhou-ww",
+  };
+
+  assert.equal(manifest.version, "0.3.0");
+  assert.equal(manifest.license, "MIT");
+  assert.equal(
+    manifest.homepage,
+    "https://github.com/shazhou-ww/silvermoon#readme",
+  );
+  assert.deepEqual(manifest.bugs, {
+    url: "https://github.com/shazhou-ww/silvermoon/issues",
+  });
+  assert.deepEqual(manifest.author, maintainer);
+  assert.deepEqual(manifest.contributors, [maintainer]);
+  assert.deepEqual(manifest.maintainers, [maintainer]);
+
+  assert.match(english, /experimental programmatic API until Silvermoon reaches `1\.0\.0`/);
+  assert.match(english, /minor\s+release may add, remove, or change JavaScript exports/);
+  assert.match(english, /Pin an exact package\s+version/);
+  assert.match(chinese, /属于 experimental programmatic\s+API/);
+  assert.match(chinese, /应固定\s*精确 package version/);
+  assert.match(reference, /## Experimental JavaScript Package API/);
+  assert.match(reference, /does not yet promise stable\s+TypeScript declarations/);
+});
+
+test("prepares complete 0.3.0 changelog and GitHub Release materials", async () => {
+  const [changelog, releaseNotes] = await Promise.all([
+    read("CHANGELOG.md"),
+    read(".github/release-notes/0.3.0.md"),
+  ]);
+
+  assert.match(changelog, /## \[0\.3\.0\]/);
+  assert.doesNotMatch(changelog, /## Unreleased/);
+  for (const required of [
+    "Audience-aware CLI output",
+    "MIT licensing",
+    "Dependabot",
+    "experimental before",
+    "Required checks",
+    "provenance",
+  ]) {
+    assert.ok(changelog.includes(required), `Changelog is missing: ${required}`);
+  }
+  for (const required of [
+    "Silvermoon 0.3.0",
+    "npm/silvermoon/v0.3.0",
+    "npm/silvermoon/v0.2.2...npm/silvermoon/v0.3.0",
+    "License: MIT",
+    "Node.js 22",
+    "experimental before `1.0.0`",
+    "provenance",
+  ]) {
+    assert.ok(
+      releaseNotes.includes(required),
+      `Release notes are missing: ${required}`,
+    );
+  }
+});

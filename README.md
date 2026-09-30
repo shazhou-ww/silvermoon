@@ -87,6 +87,19 @@ npx silvermoon list-ideas
 See [Operating Silvermoon](./docs/operations.md) for workflows and the
 [Technical Reference](./docs/reference.md) for command details.
 
+## Experimental JavaScript API
+
+The package root export (`import * as silvermoon from "silvermoon"`) is an
+experimental programmatic API until Silvermoon reaches `1.0.0`. A `0.x` minor
+release may add, remove, or change JavaScript exports without a deprecation
+period; patch releases are intended for compatible fixes. Pin an exact package
+version if your code imports this API.
+
+This experimental boundary does not weaken the separately documented CLI,
+versioned schemas, or repository file contracts. Stable JavaScript types and a
+`1.0.0` API require a separate explicit design. See
+[Experimental JavaScript Package API](./docs/reference.md#experimental-javascript-package-api).
+
 ## Why Silvermoon
 
 Long-running Agent work usually asks people to carry too much invisible state.

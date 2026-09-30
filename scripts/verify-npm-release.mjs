@@ -13,14 +13,26 @@ const npmRegistry = "https://registry.npmjs.org";
 const repository = "shazhou-ww/silvermoon";
 const repositoryRoot = new URL("../", import.meta.url);
 const workflowPath = ".github/workflows/publish-npm.yml";
+const publicMetadata = {
+  license: "MIT",
+  homepage: "https://github.com/shazhou-ww/silvermoon#readme",
+  bugsUrl: "https://github.com/shazhou-ww/silvermoon/issues",
+  repositoryType: "git",
+  repositoryUrl: "git+https://github.com/shazhou-ww/silvermoon.git",
+};
+const publicMaintainer = {
+  name: "shazhou-ww",
+  url: "https://github.com/shazhou-ww",
+};
 const provenanceType = "https://slsa.dev/provenance/v1";
 const npmPublishType =
   "https://github.com/npm/attestation/tree/main/specs/publish/v0.1";
-const assetPaths = [
-  "assets/silvermoon.svg",
-  "assets/silvermoon-avatar.svg",
-  "assets/silvermoon-mascot.png",
-];
+const assetContentTypes = new Map([
+  ["assets/silvermoon.svg", "image/svg+xml"],
+  ["assets/silvermoon-avatar.svg", "image/svg+xml"],
+  ["assets/silvermoon-mascot.png", "image/png"],
+]);
+const assetPaths = [...assetContentTypes.keys()];
 
 async function fetchResponse(url, description, fetchImpl, headers = {}) {
   let response;
@@ -83,6 +95,44 @@ function assertImmutableReadme(readme, filename, commit) {
     if (!readme.includes(expected)) {
       throw new Error(`${filename} is missing immutable asset URL ${expected}.`);
     }
+  }
+}
+
+function assertPerson(value, description) {
+  if (
+    value?.name !== publicMaintainer.name ||
+    value?.url !== publicMaintainer.url
+  ) {
+    throw new Error(
+      `${description} must identify ${publicMaintainer.name} at ${publicMaintainer.url}.`,
+    );
+  }
+}
+
+function assertPublicMetadata(manifest, description, { people = false } = {}) {
+  if (manifest?.license !== publicMetadata.license) {
+    throw new Error(`${description} license must be ${publicMetadata.license}.`);
+  }
+  if (manifest.homepage !== publicMetadata.homepage) {
+    throw new Error(`${description} homepage does not match the project homepage.`);
+  }
+  if (manifest.bugs?.url !== publicMetadata.bugsUrl) {
+    throw new Error(`${description} bugs URL does not match the issue tracker.`);
+  }
+  if (
+    manifest.repository?.type !== publicMetadata.repositoryType ||
+    manifest.repository?.url !== publicMetadata.repositoryUrl
+  ) {
+    throw new Error(`${description} repository metadata does not match the source repository.`);
+  }
+  if (!people) return;
+
+  assertPerson(manifest.author, `${description} author`);
+  for (const field of ["contributors", "maintainers"]) {
+    if (!Array.isArray(manifest[field]) || manifest[field].length !== 1) {
+      throw new Error(`${description} ${field} must contain one explicit maintainer.`);
+    }
+    assertPerson(manifest[field][0], `${description} ${field}[0]`);
   }
 }
 
@@ -212,6 +262,9 @@ export async function verifyNpmRelease(
       `Candidate tarball gitHead mismatch: expected ${commit}, found ${candidate.manifest.gitHead ?? "missing"}.`,
     );
   }
+  assertPublicMetadata(candidate.manifest, "Candidate tarball", {
+    people: true,
+  });
   const readmes = new Map();
   for (const filename of ["README.md", "README.zh-CN.md"]) {
     const readme = requiredEntry(candidate.entries, filename).toString("utf8");
@@ -255,6 +308,7 @@ export async function verifyNpmRelease(
       `npm gitHead mismatch: expected ${commit}, found ${versionMetadata.gitHead ?? "missing"}.`,
     );
   }
+  assertPublicMetadata(versionMetadata, "npm version metadata");
   const dist = versionMetadata.dist;
   if (
     dist?.integrity !== candidate.integrity ||
@@ -264,6 +318,7 @@ export async function verifyNpmRelease(
     throw new Error("npm dist identity does not match the verified candidate tarball.");
   }
   const registryVersion = packageMetadata.versions[version];
+  assertPublicMetadata(registryVersion, "npm package version metadata");
   if (
     registryVersion?.dist?.integrity !== candidate.integrity ||
     registryVersion?.dist?.shasum !== candidate.shasum
@@ -325,8 +380,11 @@ export async function verifyNpmRelease(
     const path = assetPaths[index];
     const response = assetResponses[index];
     const contentType = response.headers.get("content-type") ?? "";
-    if (!contentType.toLowerCase().includes("image/svg+xml")) {
-      throw new Error(`jsDelivr asset ${path} did not return SVG content.`);
+    const expectedContentType = assetContentTypes.get(path);
+    if (!contentType.toLowerCase().includes(expectedContentType)) {
+      throw new Error(
+        `jsDelivr asset ${path} did not return ${expectedContentType} content.`,
+      );
     }
     const publishedAsset = Buffer.from(await response.arrayBuffer());
     if (!publishedAsset.equals(sourceAssets[index])) {
@@ -351,6 +409,9 @@ export async function verifyNpmRelease(
     sha256: candidate.sha256,
     integrity: candidate.integrity,
     fileCount: candidate.fileCount,
+    license: publicMetadata.license,
+    homepage: publicMetadata.homepage,
+    bugsUrl: publicMetadata.bugsUrl,
     readmeFilename: candidateReadmeFilename,
     provenanceInvocation: invocationId,
     assets: assetPaths.map(

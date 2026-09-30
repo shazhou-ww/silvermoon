@@ -85,7 +85,8 @@ ruleset 或读回不一致都必须停止。
   `bypass_mode: always`；
 - rules 只有 `deletion`、`non_fast_forward` 与
   `required_status_checks`；
-- required context 只有 `Required checks`，strict policy 为 true。
+- required context 只有 `Required checks`，来源限定为 GitHub Actions app
+  integration ID `15368`，strict policy 为 true。
 
 不增加 `pull_request` 或 `update` rule。普通参与者仍受 required check 与
 non-fast-forward 限制；maintainer bypass 保留故障恢复和 Silvermoon ordinary

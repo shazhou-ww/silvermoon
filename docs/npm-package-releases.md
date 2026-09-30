@@ -122,8 +122,9 @@ The [`publish-npm.yml`](../.github/workflows/publish-npm.yml) workflow then:
 
 The post-publication verifier requires the exact version and dist-tag, matching
 tarball and registry `gitHead`, registry integrity and tarball bytes, both
-tarball READMEs, npm publish and SLSA provenance attestations, tagged Git
-commit, and commit-pinned jsDelivr SVG responses to match the candidate.
+tarball READMEs, MIT license, homepage, bugs and repository metadata, npm
+publish and SLSA provenance attestations, tagged Git commit, and commit-pinned
+jsDelivr SVG responses to match the candidate.
 README generation rejects traversal, non-canonical paths, and relative resources
 outside the approved `./assets/...` image namespace rather than guessing a
 published destination.
@@ -136,6 +137,23 @@ Release runs are serialized within this repository. The registry preflight and
 `npm publish` cannot form one cross-system transaction, so an external
 publisher could still win that interval; npm then atomically rejects the
 duplicate publication without replacing the existing version.
+
+### GitHub Release
+
+Prepare release notes in the repository before creating the immutable tag.
+After the trusted-publishing workflow succeeds and its verifier proves the npm
+result, create the GitHub Release from the already-existing tag. For `0.3.0`:
+
+```sh
+gh release create npm/silvermoon/v0.3.0 \
+  --verify-tag \
+  --title "Silvermoon 0.3.0" \
+  --notes-file .github/release-notes/0.3.0.md
+```
+
+Do not let a release command create, move, or replace the tag. The GitHub
+Release, npm version, provenance, changelog, and release notes must resolve to
+the same commit before deployment acceptance.
 
 ## Failure behavior
 

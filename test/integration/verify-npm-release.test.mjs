@@ -26,6 +26,19 @@ const commit = "a".repeat(40);
 const tag = `npm/silvermoon/v${version}`;
 const repository = "shazhou-ww/silvermoon";
 const registry = "https://registry.npmjs.org";
+const publicMetadata = {
+  license: "MIT",
+  homepage: `https://github.com/${repository}#readme`,
+  bugs: { url: `https://github.com/${repository}/issues` },
+  repository: {
+    type: "git",
+    url: `git+https://github.com/${repository}.git`,
+  },
+};
+const publicMaintainer = {
+  name: "shazhou-ww",
+  url: "https://github.com/shazhou-ww",
+};
 const tarballUrl = `${registry}/silvermoon/-/silvermoon-${version}.tgz`;
 const attestationUrl =
   `${registry}/-/npm/v1/attestations/silvermoon@${version}`;
@@ -100,6 +113,10 @@ test("verifies registry identity, READMEs, provenance, and jsDelivr assets", asy
         name: packageName,
         version,
         files: ["README.md", "README.zh-CN.md"],
+        ...publicMetadata,
+        author: publicMaintainer,
+        contributors: [publicMaintainer],
+        maintainers: [publicMaintainer],
       }, null, 2)}\n`,
     ),
     writeFile(join(packageDirectory, "README.md"), englishReadme),
@@ -134,12 +151,13 @@ test("verifies registry identity, READMEs, provenance, and jsDelivr assets", asy
     "dist-tags": { [distTag]: version },
     readme: englishReadme,
     readmeFilename: "README.md",
-    versions: { [version]: { dist } },
+    versions: { [version]: { ...publicMetadata, dist } },
   };
   const versionMetadata = {
     name: packageName,
     version,
     gitHead: commit,
+    ...publicMetadata,
     dist,
   };
   const attestations = {
@@ -208,9 +226,16 @@ test("verifies registry identity, READMEs, provenance, and jsDelivr assets", asy
           value === `https://cdn.jsdelivr.net/gh/${repository}@${commit}/${path}`,
       );
       if (assetIndex !== -1) {
+        const contentType = assets[assetIndex].endsWith(".png")
+          ? "image/png"
+          : "image/svg+xml";
         return new Response(
           overrides.asset ?? assetContents.get(assets[assetIndex]),
-          { headers: { "content-type": "image/svg+xml" } },
+          {
+            headers: {
+              "content-type": overrides.assetContentType ?? contentType,
+            },
+          },
         );
       }
       return new Response("missing", { status: 404 });
@@ -230,6 +255,9 @@ test("verifies registry identity, READMEs, provenance, and jsDelivr assets", asy
   });
   assert.equal(verified.integrity, candidate.integrity);
   assert.equal(verified.fileCount, candidate.files.length);
+  assert.equal(verified.license, "MIT");
+  assert.equal(verified.homepage, publicMetadata.homepage);
+  assert.equal(verified.bugsUrl, publicMetadata.bugs.url);
   assert.equal(
     verified.provenanceInvocation,
     `https://github.com/${repository}/actions/runs/123/attempts/1`,
@@ -287,9 +315,42 @@ test("verifies registry identity, READMEs, provenance, and jsDelivr assets", asy
   await assert.rejects(
     () =>
       verifyNpmRelease(release, {
+        fetchImpl: fetchFor({
+          versionMetadata: { license: "UNLICENSED" },
+        }),
+      }),
+    /npm version metadata license must be MIT/,
+  );
+  await assert.rejects(
+    () =>
+      verifyNpmRelease(release, {
+        fetchImpl: fetchFor({
+          packageMetadata: {
+            versions: {
+              [version]: {
+                ...publicMetadata,
+                homepage: "https://example.test",
+                dist,
+              },
+            },
+          },
+        }),
+      }),
+    /npm package version metadata homepage/,
+  );
+  await assert.rejects(
+    () =>
+      verifyNpmRelease(release, {
         fetchImpl: fetchFor({ asset: Buffer.from("<svg>different</svg>") }),
       }),
     /jsDelivr asset .* does not match/,
+  );
+  await assert.rejects(
+    () =>
+      verifyNpmRelease(release, {
+        fetchImpl: fetchFor({ assetContentType: "text/plain" }),
+      }),
+    /jsDelivr asset .* did not return image\/(svg\+xml|png) content/,
   );
   await assert.rejects(
     () =>
