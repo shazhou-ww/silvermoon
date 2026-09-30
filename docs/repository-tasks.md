@@ -63,7 +63,11 @@ Keep the review message short: use that language to state the review focus and
 exact decision question, and provide local plus commit-pinned remote links to
 the canonical contract, same-world supporting files, ledger, evidence, and key
 deliverables. Durable detail belongs in those repository files, not in the
-chat message.
+chat message. Render this index as ordinary assistant Markdown. When using an
+interactive decision tool, put only the exact question and choices in that
+tool; local workspace links in tool-owned surfaces may fail even when the
+files exist. In VS Code on Windows, ordinary-message local links use absolute
+drive paths with forward slashes and never `file://` URIs.
 
 After an explicit decision, change only the corresponding status fact,
 validate it, prefer a status-only commit when practical, synchronize it to

@@ -37,7 +37,10 @@ test("configures reviewable dependency updates for npm and GitHub Actions", asyn
   );
   assert.equal(npm["versioning-strategy"], "increase-if-necessary");
   assert.deepEqual(npm.groups, {
-    "production-dependencies": { "dependency-type": "production" },
+    "production-dependencies": {
+      "dependency-type": "production",
+      "update-types": ["minor", "patch"],
+    },
     "development-dependencies": { "dependency-type": "development" },
   });
 });

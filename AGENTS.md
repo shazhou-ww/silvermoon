@@ -19,8 +19,10 @@
 - Record approval, acceptance, and abandonment only as explicit status facts,
   validate the exact candidate, and synchronize through ordinary non-force Git.
 - Before a human gate, synchronize the candidate to primary, reobserve its
-  exact revision and content language, then provide a short review index with
-  local and commit-pinned remote links to durable repository artifacts.
+  exact revision and content language, then provide a short review index in
+  ordinary assistant Markdown with local and commit-pinned remote links to
+  durable repository artifacts. Use an interactive decision tool only for the
+  exact question and choices; do not put local file links in its prompt.
 - Requery only after an observable change. Yield on human or external waits;
   stop on actionable errors or lack of progress.
 

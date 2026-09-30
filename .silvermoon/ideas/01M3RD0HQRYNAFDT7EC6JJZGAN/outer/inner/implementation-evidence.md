@@ -13,7 +13,8 @@ GitHub settings 与 npm/GitHub Release 结果属于 Deployment evidence，不在
 - Community baseline commit: `177c89ba0bab7f2d18e94e936208703cc34d4fb8`
 - Inner-contract baseline commit:
   `b36ad1b28e13b7c44ff75b871e81d99f166d2e54`
-- Repository deliverables commit: 待提交后记录
+- Repository deliverables commit:
+  `e7e453e039498a6636c5c4df8881a7b33bb17e61`
 - Implementation revision: 由最终同步后的 `whats-next` report 提供；world tree
   不记录自己的 revision，避免内容寻址自引用
 
@@ -65,6 +66,17 @@ source。实现本身的 metadata 行为与 integration test 已通过；修正 
 发布准备还修复了与本 candidate 紧密耦合的既有 verifier 缺陷：PNG mascot 曾被错误
 要求返回 SVG MIME。当前实现按每个 asset 的 `image/svg+xml` 或 `image/png` 契约验证，
 并有错误 MIME 回归测试。
+
+## Hosted CI evidence
+
+Repository deliverables commit
+`e7e453e039498a6636c5c4df8881a7b33bb17e61` 同步到 `main` 后触发 hosted
+[CI run 36675930102](https://github.com/shazhou-ww/silvermoon/actions/runs/36675930102)。
+run conclusion 为 `success`，全部 11 个 jobs 成功，包括跨平台 Node 22/24 unit matrix、
+repository contracts、Git integration、package contents/installed CLI，以及新的
+[Required checks](https://github.com/shazhou-ww/silvermoon/actions/runs/36675930102/job/109761011062)
+聚合 gate。该 context 由 GitHub Actions app integration ID `15368` 产生，与
+`.github/rulesets/main.json` 一致。
 
 ## Release absence observation
 
