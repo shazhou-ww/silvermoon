@@ -17,6 +17,10 @@ contract，也不代表未执行动作已经完成。
   `fa65a8fbc6344f660e6482955332d18693fc495c`
 - RC2 deployment contract commit:
   `21fac7462c663e7155ab3498717417f44159d4c4`
+- RC2 release commit:
+  `84860fea52d1af6cdf4968b403f337844779cb21`
+- RC2 source tag:
+  `npm/silvermoon/v0.3.0-rc.2`
 - GitHub settings evidence commit:
   `82a2280cca86d3bd5acc0f5ba7ce9a044cfeb8d3`
 - Deployment revision: 由同步后的 `whats-next` report 提供；world tree 不记录自己
@@ -64,8 +68,8 @@ RC 成功后仍需用户评估，再通过新的 stable implementation candidate
 | `D-AC04` | main/tag rulesets active 且普通同步可用 | ruleset API、rule suite、push/ancestry、hosted CI | 通过 |
 | `D-AC05` | Community Profile 100%，Issue Forms 与 security/support routes 存在 | Community Profile/contents API、公开 URL 与预期 sign-in redirect | 通过 |
 | `D-AC06` | RC2 recovery、accepted candidate 与 fresh preflight 精确绑定 | user choice、absence、planner、ancestry | 通过；cleanup race 单独跟踪 |
-| `D-AC07` | `0.3.0-rc.2` 不可变发布身份一致 | workflow、registry、release、provenance | 待发布 |
-| `D-AC08` | npm `rc` 更新到 rc.2 且 `latest`/stable surfaces 不变 | dist-tags、prerelease 与 absence observations | 待发布 |
+| `D-AC07` | `0.3.0-rc.2` 不可变发布身份一致 | workflow、registry、release、provenance | 通过 |
+| `D-AC08` | npm `rc` 更新到 rc.2 且 `latest`/stable surfaces 不变 | dist-tags、prerelease 与 absence observations | 通过 |
 | `D-AC09` | 稳定 `0.3.0` 仍需新候选与授权 | lifecycle、status、absence observations | hold 生效 |
 | `D-AC10` | 最终稳定公共开源契约完整 | 本文件、ledger、final diff/checks | 等待前置项 |
 
@@ -267,6 +271,65 @@ checks、exact-commit push CI、workflow-dispatch package job、release planner 
 trusted-publishing run 在发布前遇到同一 race，只允许对同一不可变 tag 重跑失败
 workflow，不移动或重建 tag。
 
+2026-09-30T08:45:41Z 对新的 exact primary
+`84860fea52d1af6cdf4968b403f337844779cb21` 重做完整 preflight：
+
+- `pnpm check` exit 0；
+- tag、GitHub Release 与 official npm exact version 仍不存在；
+- official registry 为 `rc=0.3.0-rc.1`、`latest=0.2.2`；
+- planner 返回 `version=0.3.0-rc.2`、`distTag=rc`、
+  `publicationState=absent`；
+- [CI run 36691701065](https://github.com/shazhou-ww/silvermoon/actions/runs/36691701065)
+  对该 commit 成功，integration job `109810163460` 与
+  `Required checks` job `109810521242` 均为 success。
+
+随后创建并普通推送 lightweight tag `npm/silvermoon/v0.3.0-rc.2`；本地与远端 ref
+均解析到该 release commit。GitHub 返回 active tag ruleset 的 configured maintainer
+bypass，没有 force、移动或重建 tag。
+
+Trusted-publishing
+[run 36692081432](https://github.com/shazhou-ww/silvermoon/actions/runs/36692081432)
+保留三个 attempt 的完整历史：
+
+1. attempt 1 在 publish 前的 integration step 遇到同类 `ENOTEMPTY` cleanup race，
+   后续 build、publish 与 verifier steps 均 skipped；
+2. [attempt 2](https://github.com/shazhou-ww/silvermoon/actions/runs/36692081432/attempts/2)
+   通过 integration、pack 与 installed-package checks，并通过 OIDC trusted
+   publishing 输出 `+ silvermoon@0.3.0-rc.2`；Sigstore transparency log index 为
+   `3015335452`。随后 verifier 因 npm exact metadata 在 12 次 retry 中仍返回 404
+   而失败，这是 registry propagation delay，不是 identity mismatch；
+3. [attempt 3](https://github.com/shazhou-ww/silvermoon/actions/runs/36692081432/attempts/3)
+   识别已经存在的 immutable version，`Publish selected package` 正常 skipped，
+   `Verify published package` 成功并输出 `VERIFY_NPM_RELEASE_OK`。
+
+成功 verifier 记录：
+
+- package/version/dist-tag 为 `silvermoon@0.3.0-rc.2` / `rc`；
+- commit 为 `84860fea52d1af6cdf4968b403f337844779cb21`；
+- tarball SHA-256 为
+  `f9ebc788278b7e817eabfc4346faff06ecd039029a85ba597bca286aff79f20f`；
+- integrity 为
+  `sha512-W+b3e9ZWUfSRvG4yVPoksdG5ICNklc/OQcHaoQg9tuatV64eUGftC1njyu+or2S3iTfTGN0X5dk/6yTriC63hw==`；
+- provenance invocation 为 attempt 2，三张 commit-pinned jsDelivr artwork 均通过
+  bytes 与 media-type 验证。
+
+发布后 independent readback 与 hosted verifier 一致：
+
+- official npm exact metadata 的 `gitHead` 为 release commit，shasum 为
+  `5c97cb64a24a1e23592e31ee3cc92637f8159ab6`，file count 为 49，MIT、homepage、
+  bugs、repository、maintainer 与 `README.md` metadata 正确；
+- 从 official registry 重新下载的 104916-byte tarball SHA-256 与 verifier 完全一致；
+- npm attestation endpoint 返回两项 Sigstore bundle，各含 transparency-log entry，
+  predicate 分别为 npm publish v0.1 与 SLSA provenance v1；
+- npm dist-tags 为 `rc=0.3.0-rc.2`、`latest=0.2.2`；
+- [GitHub prerelease](https://github.com/shazhou-ww/silvermoon/releases/tag/npm/silvermoon/v0.3.0-rc.2)
+  于 2026-09-30T08:56:09Z 从既有 verified tag 和 repository-owned notes 创建，
+  `isPrerelease: true`、`isDraft: false`；
+- stable tag、GitHub Release 与 npm exact `0.3.0` 均不存在。
+
+D-S07、D-S08、D-AC07 与 D-AC08 因此完成。D-S09/D-AC09 的 stable hold 继续
+生效；rc.2 成功不构成稳定 `0.3.0` 授权。
+
 ## Failures and recovery
 
 权限不足、API schema 变化、重复同名 ruleset、CodeQL analysis 失败、public surface
@@ -281,5 +344,8 @@ rc.1 hosted verifier 对已移除 README avatar 引用的过度要求已在 acce
 implementation 中修复；npm version 与 tag 仍保持不可变，不修改或重发 rc.1。
 Linux integration fixture 的共享 cleanup race 已由两个 hosted run 在不同临时 Git
 directory 中重复证明，仍是待修复的 reliability defect；用户明确判定它不阻塞本次
-rc.2 publication。D-S07、D-S08、D-AC07 与 D-AC08 继续等待实际 trusted
-publication、hosted verifier、GitHub prerelease 与发布后 identity observations。
+rc.2 publication。trusted-publishing attempt 1 再次复现该 race，attempt 2
+成功越过 integration 并完成 publish；attempt 2 的 registry propagation 404 通过
+同一 immutable version 的 attempt 3 verifier 恢复。所有失败 attempt 均保留，
+最终 D-S07、D-S08、D-AC07 与 D-AC08 已由 successful verifier、GitHub prerelease
+和发布后 identity observations 闭合。
