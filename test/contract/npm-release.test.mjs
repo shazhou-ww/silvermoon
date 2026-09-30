@@ -61,6 +61,7 @@ test("uses a protected, least-privilege trusted-publishing workflow", async () =
     "Run contract tests",
     "Run integration tests",
     "Discover agent skills",
+    "Validate local static checks",
     "Stage selected package",
     "Generate immutable npm README",
     "Build selected package tarball",
@@ -148,6 +149,11 @@ test("uses a protected, least-privilege trusted-publishing workflow", async () =
   assert.equal(contract.run, "pnpm test:contract");
   assert.equal(integration.run, "pnpm test:integration");
   assert.equal(skills.run, "pnpm check:skills");
+  const staticChecks = publish.steps.find(({ name }) => name === "Validate local static checks");
+  assert.equal(staticChecks.run, "pnpm lint:markdown\npnpm check:diff\nnode bin/silvermoon.js check --commit HEAD --audience agent\n");
+  for (const name of requiredChecks) {
+    assert.equal(publish.steps.find((candidate) => candidate.name === name).if, undefined, name);
+  }
   assert.equal(stage.id, "stage");
   assert.equal(
     stage.env.PACKAGE_DIRECTORY,

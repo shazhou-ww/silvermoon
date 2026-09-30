@@ -82,12 +82,18 @@ branches.
 
 ## Repository Checks
 
-- Run `pnpm test` for the fast unit-and-contract developer suite.
+- Iterate with `pnpm check:sanity` and change-specific tests. Run
+  `pnpm check:commit` before committing; see the
+  [validation tiers](./maintaining.md#validation-tiers).
+- `pnpm test` and `pnpm check:quick` retain the complete unit/runtime and
+  contract suites, including real runtime behavior; they are not sanity aliases.
 - Run `pnpm test:integration` for real filesystem and Git behavior, and
   `pnpm test:e2e` for the installed package.
-- Run `pnpm check` after CLI, schema, repository model, release, or skill
-  changes; it remains the complete release-grade validation entrypoint.
-- Run `pnpm check:skills` after skill changes.
+- Run `pnpm check` (or `pnpm check:release`) before delivery of CLI, schema,
+  repository model, release, or skill changes. It remains the complete
+  release-grade validation entrypoint, not the per-edit default.
+- Run `pnpm check:skills:local` while editing skills and `pnpm check:skills`
+  before delivery; external discovery failures remain failures.
 - Validate package contents, installed-package smoke behavior, Markdown links,
   and `git diff --check` before delivery review.
 - Use `silvermoon check --commit HEAD` for checked-out CI and
@@ -98,3 +104,7 @@ branches.
   Only exit code `0` permits the commit; `1` means invalid or unavailable and
   `2` means invalid usage. Its JSON uses all four projections; only
   `check --remote` normally records an action.
+- `check:commit` does not install a hook or stage files. Its tests inspect the
+  worktree while `check --staged` inspects Silvermoon metadata in the index.
+  Partial staging is not exact-candidate test evidence; align worktree and
+  index and rerun before claiming staged code passed.

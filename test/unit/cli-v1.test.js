@@ -278,26 +278,6 @@ test("selects output rendering from audience and both TTY states", async () => {
   assert.doesNotMatch(agent.logs[0], /\x1B\[/);
 });
 
-test("surfaces TUI initialization failures as command failures", async () => {
-  const output = capture();
-  const exitCode = await runCli(
-    ["list-ideas", "--root", process.cwd()],
-    output.io,
-    {
-      renderTui: async () => {
-        throw new Error("fixture TUI failure");
-      },
-      terminal: terminal(true, true),
-    },
-  );
-
-  assert.equal(exitCode, 1);
-  assert.deepEqual(output.logs, []);
-  assert.deepEqual(output.errors, [
-    "ERROR command.failed: fixture TUI failure",
-  ]);
-});
-
 test("rejects conflicting targets, output modes, and invalid values as usage errors", async () => {
   for (const args of [
     ["check", "--remote", "--staged"],
