@@ -358,6 +358,8 @@ test("treats hostile Markdown as inert data and omits it from traces", async () 
     [...new Set(commands.map(([name]) => name))].sort(),
     ["cat-file", "ls-tree"],
   );
+  assert.equal(commands.filter(([name]) => name === "ls-tree").length, 1);
+  assert.equal(commands.filter(([name]) => name === "cat-file").length, 1);
   const trace = await readFile(tracePath, "utf8");
   assert.doesNotMatch(trace, /example\.invalid|SECRET|should-not-run/);
 });

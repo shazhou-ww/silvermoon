@@ -1,20 +1,20 @@
 import { resolve } from "node:path";
 
+import { REPOSITORY_SKILL_PATH } from "./adoption.js";
 import {
   diagnosticProblem,
 } from "./dialogue.js";
-import { loadConfig } from "./config.js";
+import { loadConfigSnapshot } from "./config.js";
 import { createCommandRun } from "./domain.js";
 import {
   fetchPrimary,
   indexSnapshot,
-  resolveCommit,
+  resolveSnapshot,
   runGit,
   sanitizeGitMessage,
   worktreeSnapshot,
-  withTemporaryTree,
-  withTemporaryWorktree,
 } from "./git.js";
+import { createGitSnapshotFileSystem } from "./git-snapshot.js";
 import {
   canonicalizeOutputLanguage,
   DEFAULT_LANGUAGE,
@@ -23,6 +23,24 @@ import {
   observeSnapshot,
   unavailableObservation,
 } from "./observation.js";
+import {
+  CONFIG_PATH,
+  GUIDANCE_ROOT,
+  IDEAS_ROOT,
+} from "./layout.js";
+
+function preloadCheckBlob({ name }) {
+  return (
+    name === CONFIG_PATH
+    || name === "package.json"
+    || name.startsWith(`${REPOSITORY_SKILL_PATH}/`)
+    || name.startsWith(`${GUIDANCE_ROOT}/`)
+    || (
+      name.startsWith(`${IDEAS_ROOT}/`)
+      && name.endsWith("/status.yaml")
+    )
+  );
+}
 
 function targetArgument({ commit, remote, staged, worktree }) {
   if (remote) return { type: "remote" };
@@ -59,18 +77,23 @@ async function inspectTree({
   userHome,
   version,
 }) {
-  return withTemporaryTree(gitRoot, tree, (contentRoot) =>
-    observeSnapshot({
-      contentRoot,
-      gitRoot,
-      outputLanguage,
-      root,
-      projectOnly: true,
-      snapshotTree: tree,
-      userHome,
-      version,
-    })
-  );
+  const filesystem = createGitSnapshotFileSystem({
+    gitRoot,
+    preload: preloadCheckBlob,
+    root,
+    tree,
+  });
+  return observeSnapshot({
+    contentRoot: root,
+    filesystem,
+    gitRoot,
+    outputLanguage,
+    root,
+    projectOnly: true,
+    snapshotTree: tree,
+    userHome,
+    version,
+  });
 }
 
 function finishCheck(runtime, observed) {
@@ -133,7 +156,7 @@ export async function checkRepository({
   if (remote) {
     let head;
     try {
-      head = resolveCommit(repositoryRoot, "HEAD");
+      head = resolveSnapshot(repositoryRoot, "HEAD");
     } catch (caught) {
       return failureReport({
         runtime,
@@ -148,11 +171,10 @@ export async function checkRepository({
     }
     let bootstrap;
     try {
-      bootstrap = await withTemporaryWorktree(
-        repositoryRoot,
-        head,
-        (contentRoot) => loadConfig({ root: contentRoot }),
-      );
+      bootstrap = await loadConfigSnapshot({
+        gitRoot: repositoryRoot,
+        tree: head.tree,
+      });
     } catch (caught) {
       return failureReport({
         runtime,
@@ -205,20 +227,15 @@ export async function checkRepository({
     }
     const primary = fetched.result.commit;
     try {
-      const observed = await withTemporaryWorktree(
-        repositoryRoot,
-        primary,
-        (contentRoot, tree) => observeSnapshot({
-          contentRoot,
-          gitRoot: repositoryRoot,
-          outputLanguage: canonicalLanguage,
-          root: repositoryRoot,
-          projectOnly: true,
-          snapshotTree: tree,
-          userHome,
-          version: { type: "remote", commit: primary },
-        }),
-      );
+      const snapshot = resolveSnapshot(repositoryRoot, primary);
+      const observed = await inspectTree({
+        gitRoot: repositoryRoot,
+        outputLanguage: canonicalLanguage,
+        root: repositoryRoot,
+        tree: snapshot.tree,
+        userHome,
+        version: { type: "remote", commit: primary },
+      });
       return finishCheck(runtime, observed);
     } catch (caught) {
       return failureReport({
@@ -236,9 +253,9 @@ export async function checkRepository({
 
   if (commit !== undefined || (!staged && !worktree)) {
     const revision = commit ?? "HEAD";
-    let resolvedCommit;
+    let snapshot;
     try {
-      resolvedCommit = resolveCommit(repositoryRoot, revision);
+      snapshot = resolveSnapshot(repositoryRoot, revision);
     } catch (caught) {
       return failureReport({
         runtime,
@@ -252,20 +269,14 @@ export async function checkRepository({
       });
     }
     try {
-      const observed = await withTemporaryWorktree(
-        repositoryRoot,
-        resolvedCommit,
-        (contentRoot, tree) => observeSnapshot({
-          contentRoot,
-          gitRoot: repositoryRoot,
-          outputLanguage: canonicalLanguage,
-          root: repositoryRoot,
-          projectOnly: true,
-          snapshotTree: tree,
-          userHome,
-          version: { type: "commit", commit: resolvedCommit },
-        }),
-      );
+      const observed = await inspectTree({
+        gitRoot: repositoryRoot,
+        outputLanguage: canonicalLanguage,
+        root: repositoryRoot,
+        tree: snapshot.tree,
+        userHome,
+        version: { type: "commit", commit: snapshot.commit },
+      });
       return finishCheck(runtime, observed);
     } catch (caught) {
       return failureReport({
@@ -276,7 +287,7 @@ export async function checkRepository({
           summary: sanitizeGitMessage(caught.message),
         },
         root: repositoryRoot,
-        version: { type: "commit", commit: resolvedCommit },
+        version: { type: "commit", commit: snapshot.commit },
       });
     }
   }

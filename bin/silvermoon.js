@@ -1,5 +1,10 @@
 #!/usr/bin/env node
 
-import { runCli } from "../src/cli.js";
+const bootstrapStartedAt = process.hrtime.bigint();
+const { runCli } = await import("../src/cli.js");
 
-process.exitCode = await runCli(process.argv.slice(2));
+process.exitCode = await runCli(
+  process.argv.slice(2),
+  console,
+  { bootstrapStartedAt },
+);

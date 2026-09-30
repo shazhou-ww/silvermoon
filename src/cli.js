@@ -15,7 +15,7 @@ import { listIdeas } from "./list-ideas.js";
 import { checkRepository } from "./index.js";
 import { createIdea } from "./create-idea.js";
 import { renderResponse } from "./response.js";
-import { withTraceFile } from "./trace.js";
+import { traceAsync, withTraceFile } from "./trace.js";
 import { whatsNext } from "./whatsnext.js";
 
 const { version: VERSION } = JSON.parse(
@@ -97,6 +97,65 @@ export async function render(
     return;
   }
   io.log(markdown);
+}
+
+function outputRenderer(options, runtime) {
+  const terminal = runtime.terminal ?? {
+    stdin: process.stdin,
+    stdout: process.stdout,
+  };
+  return selectOutputRenderer({
+    audience: options.audience,
+    json: options.json,
+    stdinIsTTY: terminal.stdin.isTTY === true,
+    stdoutIsTTY: terminal.stdout.isTTY === true,
+  });
+}
+
+function bootstrapDuration(runtime) {
+  if (typeof runtime.bootstrapStartedAt !== "bigint") return {};
+  const elapsed = process.hrtime.bigint() - runtime.bootstrapStartedAt;
+  return {
+    bootstrapDurationMs: Math.round(Number(elapsed) / 1_000) / 1_000,
+  };
+}
+
+async function runCommand({
+  attributes,
+  execute,
+  name,
+  options,
+}, io, runtime) {
+  const renderer = outputRenderer(options, runtime);
+  const traceAttributes = {
+    ...attributes,
+    outputRenderer: renderer,
+    ...bootstrapDuration(runtime),
+  };
+  if (renderer === "tui") {
+    const report = await withTraceFile(
+      options.trace,
+      name,
+      traceAttributes,
+      execute,
+    );
+    await render(report, options, io, runtime);
+    return report;
+  }
+  return withTraceFile(
+    options.trace,
+    name,
+    traceAttributes,
+    async () => {
+      const report = await execute();
+      await traceAsync(
+        "output.render",
+        { renderer },
+        () => render(report, options, io, runtime),
+      );
+      return report;
+    },
+  );
 }
 
 function contentLanguageArgument(value) {
@@ -190,22 +249,21 @@ Examples:
       sort: options.sort,
       states: options.state,
     });
-    const report = await withTraceFile(
-      options.trace,
-      "command.list-ideas",
-      {
+    const report = await runCommand({
+      name: "command.list-ideas",
+      options,
+      attributes: {
         command: "list-ideas",
         hasQuery: query.query !== null,
         outputLanguage: options.language ?? null,
         stateCount: query.states.length,
       },
-      () => listIdeas({
+      execute: () => listIdeas({
         ...query,
         language: options.language,
         root: options.root,
       }),
-    );
-    await render(report, options, io, runtime);
+    }, io, runtime);
     program.setOptionValue(
       "resultCode",
       report.observation.state === "ideas-listed" ? 0 : 1,
@@ -222,20 +280,19 @@ Examples:
         outputLanguageArgument,
       ),
   ).action(async (idea, options) => {
-    const report = await withTraceFile(
-      options.trace,
-      "command.whats-next",
-      {
+    const report = await runCommand({
+      name: "command.whats-next",
+      options,
+      attributes: {
         command: "whats-next",
         outputLanguage: options.language ?? null,
       },
-      () => whatsNext({
+      execute: () => whatsNext({
         idea,
         language: options.language,
         root: options.root,
       }),
-    );
-    await render(report, options, io, runtime);
+    }, io, runtime);
     program.setOptionValue("resultCode", 0);
   });
 
@@ -249,19 +306,18 @@ Examples:
         contentLanguageArgument,
       ),
   ).action(async (options) => {
-    const report = await withTraceFile(
-      options.trace,
-      "command.create-idea",
-      {
+    const report = await runCommand({
+      name: "command.create-idea",
+      options,
+      attributes: {
         command: "create-idea",
         contentLanguage: options.language ?? null,
       },
-      () => createIdea({
+      execute: () => createIdea({
         language: options.language,
         root: options.root,
       }),
-    );
-    await render(report, options, io, runtime);
+    }, io, runtime);
     program.setOptionValue("resultCode", 0);
   });
 
@@ -279,14 +335,14 @@ Examples:
       .addOption(new Option("--staged", "validate the index snapshot").conflicts(["remote", "commit", "worktree"]))
       .addOption(new Option("--worktree", "validate HEAD plus staged, unstaged, and untracked changes").conflicts(["remote", "commit", "staged"])),
   ).action(async (options) => {
-    const report = await withTraceFile(
-      options.trace,
-      "command.check",
-      {
+    const report = await runCommand({
+      name: "command.check",
+      options,
+      attributes: {
         command: "check",
         outputLanguage: options.language ?? null,
       },
-      () => checkRepository({
+      execute: () => checkRepository({
         commit: options.commit,
         language: options.language,
         remote: options.remote,
@@ -294,8 +350,7 @@ Examples:
         staged: options.staged,
         worktree: options.worktree,
       }),
-    );
-    await render(report, options, io, runtime);
+    }, io, runtime);
     program.setOptionValue(
       "resultCode",
       report.observation.state === "project-ready" ? 0 : 1,

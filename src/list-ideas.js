@@ -1,5 +1,6 @@
 import { createCommandRun } from "./domain.js";
 import {
+  ideaInventoryItem,
   normalizeIdeaQuery,
   queryIdeaInventory,
 } from "./idea-query.js";
@@ -11,12 +12,109 @@ import { canonicalizeOutputLanguage } from "./language.js";
 import { observeSnapshot } from "./observation.js";
 import { traceAsync } from "./trace.js";
 
+function withoutTitleQuery(query, { limit = query.limit } = {}) {
+  return { ...query, limit, query: null };
+}
+
+function matchesIdentity(item, needle) {
+  return [item.id, item.alias]
+    .filter((value) => value !== undefined)
+    .some((value) => value.toLowerCase().includes(needle));
+}
+
+async function queryObservedInventory({
+  ideas,
+  metadataReader,
+  normalizedQuery,
+  root,
+}) {
+  const ideasById = new Map(ideas.map((idea) => [idea.id, idea]));
+  const baseItems = ideas.map((idea) => ideaInventoryItem(idea));
+  const candidates = queryIdeaInventory(
+    baseItems,
+    withoutTitleQuery(normalizedQuery, { limit: null }),
+  ).ideas;
+
+  return traceAsync(
+    "ideas.inventory-metadata",
+    {
+      candidateCount: candidates.length,
+      ideaCount: ideas.length,
+    },
+    async () => {
+      const loadedItems = new Map();
+      let queryCandidateCount = 0;
+      let titleReadCount = 0;
+
+      const readItems = async (items) => {
+        const unread = items.filter(({ id }) => !loadedItems.has(id));
+        titleReadCount += unread.length;
+        const loaded = await Promise.all(unread.map(({ id }) => {
+          const idea = ideasById.get(id);
+          if (idea === undefined) {
+            throw new Error(`Missing observed idea metadata for ${id}`);
+          }
+          return metadataReader(root, idea);
+        }));
+        for (const item of loaded) loadedItems.set(item.id, item);
+      };
+
+      let matchingItems = candidates;
+      if (normalizedQuery.query !== null) {
+        const needle = normalizedQuery.query.toLowerCase();
+        const directMatchIds = new Set(
+          candidates
+            .filter((item) => matchesIdentity(item, needle))
+            .map(({ id }) => id),
+        );
+        const titleCandidates = candidates.filter(
+          ({ id }) => !directMatchIds.has(id),
+        );
+        queryCandidateCount = titleCandidates.length;
+        await readItems(titleCandidates);
+        matchingItems = candidates
+          .filter(({ id }) =>
+            directMatchIds.has(id)
+            || loadedItems.get(id)?.title?.toLowerCase().includes(needle)
+          )
+          .map((item) => loadedItems.get(item.id) ?? item);
+      }
+
+      const selected = queryIdeaInventory(
+        matchingItems,
+        withoutTitleQuery(normalizedQuery),
+      );
+      await readItems(selected.ideas);
+      const inventory = {
+        summary: selected.summary,
+        ideas: selected.ideas.map(({ id }) => {
+          const item = loadedItems.get(id);
+          if (item === undefined) {
+            throw new Error(`Missing selected idea metadata for ${id}`);
+          }
+          return item;
+        }),
+      };
+      return { inventory, queryCandidateCount, titleReadCount };
+    },
+    ({ inventory, queryCandidateCount, titleReadCount }) => ({
+      attributes: {
+        matchedCount: inventory.summary.matched,
+        queryCandidateCount,
+        returnedCount: inventory.summary.returned,
+        titleReadCount,
+      },
+    }),
+  );
+}
+
 export async function listIdeas({
   all,
   createdBefore,
   createdSince,
   language,
   limit,
+  metadataReader = readIdeaInventoryItem,
   query,
   root = process.cwd(),
   sort,
@@ -57,17 +155,14 @@ export async function listIdeas({
     );
   }
 
-  let items;
+  let queried;
   try {
-    items = await traceAsync(
-      "ideas.inventory-metadata",
-      { ideaCount: observed.layout.ideas.length },
-      () => Promise.all(
-        observed.layout.ideas.map((idea) =>
-          readIdeaInventoryItem(observed.observation.root, idea)
-        ),
-      ),
-    );
+    queried = await queryObservedInventory({
+      ideas: observed.layout.ideas,
+      metadataReader,
+      normalizedQuery,
+      root: observed.observation.root,
+    });
   } catch (caught) {
     const failure = metadataFailureObservation(
       observed,
@@ -81,7 +176,7 @@ export async function listIdeas({
     );
   }
 
-  const inventory = queryIdeaInventory(items, normalizedQuery);
+  const { inventory } = queried;
   const {
     configuration,
     outputLanguage,

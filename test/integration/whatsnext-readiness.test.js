@@ -184,14 +184,30 @@ test("[branch-mismatch] accepts any local branch with the configured primary ups
   git(repository.root, "checkout", "-b", "feature");
   git(repository.root, "branch", "--set-upstream-to=origin/main", "feature");
 
-  const report = await whatsNext({
-    idea: FIRST_ID,
-    root: repository.root,
-    userHome: repository.base,
-  });
+  const alignedCommands = [];
+  const report = await observeGitCommands(
+    (args) => alignedCommands.push(args),
+    () => whatsNext({
+      idea: FIRST_ID,
+      root: repository.root,
+      userHome: repository.base,
+    }),
+  );
 
   assert.equal(report.observation.state, "idea-selected");
   assert.match(responseText(report), /approvedRevision/);
+  const readinessCommands = alignedCommands.filter((args) =>
+    ["config", "status", "symbolic-ref"].includes(args[0])
+    || (args[0] === "rev-parse" && args[1] === "--verify")
+  );
+  assert.deepEqual(
+    readinessCommands.map(([name]) => name),
+    ["status", "config"],
+  );
+  assert.equal(
+    alignedCommands.filter(([name]) => name === "fetch").length,
+    1,
+  );
 
   git(repository.root, "branch", "--unset-upstream");
   const commands = [];

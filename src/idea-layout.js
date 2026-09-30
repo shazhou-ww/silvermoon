@@ -5,6 +5,8 @@ import { deriveIdeaState, isValidUlid, parseIdeaStatus } from "./ideas.js";
 import { inspectTreePaths, worktreeSnapshot } from "./git.js";
 import { IDEAS_ROOT, ideaPaths } from "./layout.js";
 
+const DEFAULT_FILESYSTEM = { lstat, readFile, readdir };
+
 function displayPath(root, path) {
   return relative(root, path).replaceAll("\\", "/");
 }
@@ -13,18 +15,18 @@ function error(code, path, message, remediation) {
   return { code, level: "error", path, message, remediation };
 }
 
-async function metadata(path) {
+async function metadata(path, filesystem) {
   try {
-    return await lstat(path);
+    return await filesystem.lstat(path);
   } catch (caught) {
     if (caught.code === "ENOENT") return null;
     throw caught;
   }
 }
 
-async function requireDirectory(root, path, diagnostics) {
+async function requireDirectory(root, path, diagnostics, filesystem) {
   const absolute = resolve(root, path);
-  const value = await metadata(absolute);
+  const value = await metadata(absolute, filesystem);
   if (!value || !value.isDirectory() || value.isSymbolicLink()) {
     diagnostics.push(error(
       "idea.world.invalid-directory",
@@ -37,9 +39,9 @@ async function requireDirectory(root, path, diagnostics) {
   return true;
 }
 
-async function requireDocument(root, path, diagnostics) {
+async function requireDocument(root, path, diagnostics, filesystem) {
   const absolute = resolve(root, path);
-  const value = await metadata(absolute);
+  const value = await metadata(absolute, filesystem);
   if (!value || !value.isFile() || value.isSymbolicLink()) {
     diagnostics.push(error(
       "idea.world.missing-document",
@@ -52,8 +54,8 @@ async function requireDocument(root, path, diagnostics) {
   return true;
 }
 
-async function requireLedger(root, path, diagnostics) {
-  const value = await metadata(resolve(root, path));
+async function requireLedger(root, path, diagnostics, filesystem) {
+  const value = await metadata(resolve(root, path), filesystem);
   if (!value) {
     diagnostics.push(error(
       "idea.ledger.missing-file",
@@ -75,11 +77,13 @@ async function requireLedger(root, path, diagnostics) {
   return true;
 }
 
-async function rejectSymlinks(root, path, diagnostics) {
+async function rejectSymlinks(root, path, diagnostics, filesystem) {
   const absolute = resolve(root, path);
-  for (const entry of await readdir(absolute, { withFileTypes: true })) {
+  for (
+    const entry of await filesystem.readdir(absolute, { withFileTypes: true })
+  ) {
     const entryPath = `${path}/${entry.name}`;
-    const value = await lstat(resolve(root, entryPath));
+    const value = await filesystem.lstat(resolve(root, entryPath));
     if (value.isSymbolicLink()) {
       diagnostics.push(error(
         "idea.world.symlink",
@@ -89,7 +93,9 @@ async function rejectSymlinks(root, path, diagnostics) {
       ));
       continue;
     }
-    if (value.isDirectory()) await rejectSymlinks(root, entryPath, diagnostics);
+    if (value.isDirectory()) {
+      await rejectSymlinks(root, entryPath, diagnostics, filesystem);
+    }
   }
 }
 
@@ -109,13 +115,14 @@ function requiredTree(objects, path) {
 
 export async function inspectIdeaLayout({
   config: _config,
+  filesystem = DEFAULT_FILESYSTEM,
   root,
   gitRoot = root,
   snapshotTree,
 }) {
   const diagnostics = [];
   const ideasRoot = resolve(root, IDEAS_ROOT);
-  const ideasRootMetadata = await metadata(ideasRoot);
+  const ideasRootMetadata = await metadata(ideasRoot, filesystem);
   if (!ideasRootMetadata) {
     return {
       diagnostics: [error(
@@ -160,7 +167,9 @@ export async function inspectIdeaLayout({
   const aliases = new Map();
   const ideas = [];
   const caseNames = new Map();
-  const entries = (await readdir(ideasRoot, { withFileTypes: true }))
+  const entries = (
+    await filesystem.readdir(ideasRoot, { withFileTypes: true })
+  )
     .sort((left, right) => left.name.localeCompare(right.name));
   const ideaIds = new Set(
     entries.filter((entry) => isValidUlid(entry.name)).map((entry) => entry.name),
@@ -171,7 +180,18 @@ export async function inspectIdeaLayout({
   });
   let worldObjects;
   try {
-    worldObjects = inspectTreePaths(gitRoot, resolvedSnapshotTree, worldPaths);
+    worldObjects = typeof filesystem.snapshotEntry === "function"
+      ? new Map(worldPaths.map((path) => {
+          const entry = filesystem.snapshotEntry(path);
+          return [
+            path,
+            {
+              object: entry?.object ?? null,
+              type: entry?.type ?? "missing",
+            },
+          ];
+        }))
+      : inspectTreePaths(gitRoot, resolvedSnapshotTree, worldPaths);
   } catch (caught) {
     return {
       diagnostics: [error(
@@ -185,7 +205,7 @@ export async function inspectIdeaLayout({
   }
   for (const entry of entries) {
     const folderPath = resolve(ideasRoot, entry.name);
-    const folderMetadata = await lstat(folderPath);
+    const folderMetadata = await filesystem.lstat(folderPath);
     const relativePath = displayPath(root, folderPath);
     const folded = entry.name.toUpperCase();
     const existingCase = caseNames.get(folded);
@@ -219,7 +239,9 @@ export async function inspectIdeaLayout({
     }
 
     const paths = ideaPaths(entry.name);
-    const children = (await readdir(folderPath, { withFileTypes: true }))
+    const children = (
+      await filesystem.readdir(folderPath, { withFileTypes: true })
+    )
       .sort((left, right) => left.name.localeCompare(right.name));
     for (const child of children) {
       if (
@@ -236,7 +258,7 @@ export async function inspectIdeaLayout({
         "Keep only status.yaml, ledger.md, and outer/ at the idea root; put supporting files in their world.",
       ));
     }
-    await requireLedger(root, paths.ledgerPath, diagnostics);
+    await requireLedger(root, paths.ledgerPath, diagnostics, filesystem);
     const requiredDirectories = [
       paths.outerPath,
       paths.innerPath,
@@ -248,14 +270,28 @@ export async function inspectIdeaLayout({
       paths.ideaDocumentPath,
     ];
     const validDirectories = (await Promise.all(
-      requiredDirectories.map((path) => requireDirectory(root, path, diagnostics)),
+      requiredDirectories.map((path) =>
+        requireDirectory(root, path, diagnostics, filesystem)
+      ),
     )).every(Boolean);
     const validDocuments = (await Promise.all(
-      requiredDocuments.map((path) => requireDocument(root, path, diagnostics)),
+      requiredDocuments.map((path) =>
+        requireDocument(root, path, diagnostics, filesystem)
+      ),
     )).every(Boolean);
-    if (validDirectories) await rejectSymlinks(root, paths.outerPath, diagnostics);
+    if (validDirectories) {
+      await rejectSymlinks(
+        root,
+        paths.outerPath,
+        diagnostics,
+        filesystem,
+      );
+    }
 
-    const statusMetadata = await metadata(resolve(root, paths.statusPath));
+    const statusMetadata = await metadata(
+      resolve(root, paths.statusPath),
+      filesystem,
+    );
     if (!statusMetadata || !statusMetadata.isFile() || statusMetadata.isSymbolicLink()) {
       diagnostics.push(error(
         "idea.status.invalid-file",
@@ -269,7 +305,7 @@ export async function inspectIdeaLayout({
     let status;
     try {
       status = parseIdeaStatus(
-        await readFile(resolve(root, paths.statusPath), "utf8"),
+        await filesystem.readFile(resolve(root, paths.statusPath), "utf8"),
         { objectIdLength: repositoryObjectIdLength },
       );
     } catch (caught) {

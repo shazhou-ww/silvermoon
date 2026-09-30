@@ -52,6 +52,7 @@ export async function writeIdea(root, id, status = {}) {
 
 export async function createRepository({
   ideas = defaultIdeas,
+  objectFormat,
   preferredLanguage,
   prefix = "silvermoon-fixture-",
   withRemote = true,
@@ -60,7 +61,11 @@ export async function createRepository({
   const base = await mkdtemp(join(tmpdir(), prefix));
   const root = join(base, "work");
 
-  if (ideas === defaultIdeas && preferredLanguage === undefined) {
+  if (
+    ideas === defaultIdeas
+    && objectFormat === undefined
+    && preferredLanguage === undefined
+  ) {
     const template = await getTemplate();
     if (withRemote) {
       const remote = join(base, "primary.git");
@@ -90,7 +95,12 @@ export async function createRepository({
 
   const remote = withRemote ? join(base, "primary.git") : null;
   await mkdir(root);
-  git(root, "init", "--initial-branch=main");
+  git(
+    root,
+    "init",
+    "--initial-branch=main",
+    ...(objectFormat ? [`--object-format=${objectFormat}`] : []),
+  );
   git(root, "config", "user.name", "silvermoon test");
   git(root, "config", "user.email", "silvermoon@example.invalid");
   git(root, "config", "core.autocrlf", "false");
@@ -116,7 +126,14 @@ export async function createRepository({
   git(root, "add", ".");
   git(root, "commit", "-m", "Create Silvermoon fixture");
   if (remote) {
-    git(root, "init", "--bare", "--initial-branch=main", remote);
+    git(
+      root,
+      "init",
+      "--bare",
+      "--initial-branch=main",
+      ...(objectFormat ? [`--object-format=${objectFormat}`] : []),
+      remote,
+    );
     const repository = pathToFileURL(remote).href;
     git(root, "config", `url.${repository}.insteadOf`, PRIMARY_REPOSITORY);
     git(root, "remote", "add", "origin", PRIMARY_REPOSITORY);

@@ -1,10 +1,8 @@
 import { TextDecoder } from "node:util";
 
 import {
-  gitObjectSize,
-  inspectTreeEntry,
-  listTreeEntries,
-  readGitBlob,
+  inspectTree,
+  readGitBlobs,
 } from "./git.js";
 import {
   GUIDANCE_PHASES,
@@ -50,22 +48,20 @@ function unexpectedEntry(name) {
   );
 }
 
-function inspectContent(gitRoot, entry, phase) {
+function contentSizeDiagnostic(entry, phase) {
   const path = phaseGuidancePath(phase);
-  const size = gitObjectSize(gitRoot, entry.object);
-  if (size > MAX_PHASE_GUIDANCE_BYTES) {
-    return {
-      diagnostic: error(
-        "guidance.file.too-large",
-        path,
-        `Phase guidance exceeds the ${MAX_PHASE_GUIDANCE_BYTES}-byte limit: ${path}`,
-        `Reduce ${path} to at most ${MAX_PHASE_GUIDANCE_BYTES} UTF-8 bytes.`,
-      ),
-    };
-  }
+  if (entry.size <= MAX_PHASE_GUIDANCE_BYTES) return null;
+  return error(
+    "guidance.file.too-large",
+    path,
+    `Phase guidance exceeds the ${MAX_PHASE_GUIDANCE_BYTES}-byte limit: ${path}`,
+    `Reduce ${path} to at most ${MAX_PHASE_GUIDANCE_BYTES} UTF-8 bytes.`,
+  );
+}
 
-  const bytes = readGitBlob(gitRoot, entry.object);
-  if (bytes.length !== size) {
+function inspectContent(bytes, entry, phase) {
+  const path = phaseGuidancePath(phase);
+  if (bytes.length !== entry.size) {
     throw new Error(
       `Git blob ${entry.object} changed size while reading ${path}`,
     );
@@ -121,11 +117,20 @@ function inspectContent(gitRoot, entry, phase) {
 }
 
 async function inspectGuidanceInternal({
+  filesystem,
   gitRoot,
   phase,
   snapshotTree,
 }) {
-  const rootEntry = inspectTreeEntry(gitRoot, snapshotTree, GUIDANCE_ROOT);
+  const treeEntries = filesystem === undefined
+    ? inspectTree(gitRoot, snapshotTree, GUIDANCE_ROOT)
+    : null;
+  const rootEntry = treeEntries === null
+    ? filesystem.snapshotEntry(GUIDANCE_ROOT)
+    : treeEntries.find(({ name }) => name === GUIDANCE_ROOT);
+  if (rootEntry === undefined) {
+    return { state: "absent", diagnostics: [] };
+  }
   if (rootEntry === null) {
     return { state: "absent", diagnostics: [] };
   }
@@ -133,7 +138,15 @@ async function inspectGuidanceInternal({
     return { state: "invalid", diagnostics: [invalidDirectory()] };
   }
 
-  const entries = listTreeEntries(gitRoot, rootEntry.object, GUIDANCE_ROOT);
+  const prefix = `${GUIDANCE_ROOT}/`;
+  const entries = (
+    treeEntries === null
+      ? filesystem.snapshotEntries(GUIDANCE_ROOT)
+      : treeEntries.filter(({ name }) =>
+        name.startsWith(prefix) && !name.slice(prefix.length).includes("/")
+      )
+  )
+    .map((entry) => ({ ...entry, name: entry.name.slice(prefix.length) }));
   const entriesByName = new Map(entries.map((entry) => [entry.name, entry]));
   const phases = phase === undefined ? GUIDANCE_PHASES : [phase];
   const diagnostics = [];
@@ -153,6 +166,7 @@ async function inspectGuidanceInternal({
 
   let selectedGuidance;
   let selectedPresent = false;
+  const contentEntries = [];
   for (const candidate of phases) {
     const path = phaseGuidancePath(candidate);
     const name = path.slice(`${GUIDANCE_ROOT}/`.length);
@@ -163,8 +177,29 @@ async function inspectGuidanceInternal({
       diagnostics.push(invalidFile(path));
       continue;
     }
-    const inspected = inspectContent(gitRoot, entry, candidate);
-    if (inspected.diagnostic) diagnostics.push(inspected.diagnostic);
+    const sizeDiagnostic = contentSizeDiagnostic(entry, candidate);
+    if (sizeDiagnostic) {
+      diagnostics.push(sizeDiagnostic);
+      continue;
+    }
+    contentEntries.push({ candidate, entry });
+  }
+
+  const blobs = filesystem === undefined
+    ? readGitBlobs(
+        gitRoot,
+        contentEntries.map(({ entry }) => entry.object),
+      )
+    : new Map(await Promise.all(contentEntries.map(async ({ candidate, entry }) => [
+        entry.object,
+        await filesystem.snapshotFile(phaseGuidancePath(candidate)),
+      ])));
+  for (const { candidate, entry } of contentEntries) {
+    const bytes = blobs.get(entry.object);
+    if (bytes === undefined) {
+      throw new Error(`Missing Git blob content for ${entry.object}`);
+    }
+    const inspected = inspectContent(bytes, entry, candidate);
     if (inspected.diagnostics) diagnostics.push(...inspected.diagnostics);
     if (phase !== undefined && inspected.guidance) {
       selectedGuidance = inspected.guidance;
@@ -183,6 +218,7 @@ async function inspectGuidanceInternal({
 }
 
 export async function inspectPhaseGuidance({
+  filesystem,
   gitRoot,
   phase,
   snapshotTree,
@@ -194,6 +230,7 @@ export async function inspectPhaseGuidance({
     async () => {
       try {
         return await inspectGuidanceInternal({
+          filesystem,
           gitRoot,
           phase,
           snapshotTree,
@@ -214,6 +251,7 @@ export async function inspectPhaseGuidance({
 }
 
 export async function inspectAllGuidance({
+  filesystem,
   gitRoot,
   snapshotTree,
 }) {
@@ -222,7 +260,11 @@ export async function inspectAllGuidance({
     { scope: "all" },
     async () => {
       try {
-        return await inspectGuidanceInternal({ gitRoot, snapshotTree });
+        return await inspectGuidanceInternal({
+          filesystem,
+          gitRoot,
+          snapshotTree,
+        });
       } catch (caught) {
         return {
           state: "invalid",

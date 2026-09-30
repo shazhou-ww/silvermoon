@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import {
+  mkdir,
+  mkdtemp,
+  readFile,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -11,10 +17,12 @@ import {
   indexSnapshot,
   observeGitCommands,
   resolveCommit,
+  resolveSnapshot,
   worktreeSnapshot,
   withTemporaryTree,
   withTemporaryWorktree,
 } from "../../src/git.js";
+import { createGitSnapshotFileSystem } from "../../src/git-snapshot.js";
 
 const temporaryDirectories = [];
 const repository = "https://example.test/owner/repository.git";
@@ -90,9 +98,19 @@ test("fetches primary by URL without a named Git remote", async () => {
 test("resolves commits", async () => {
   const { root } = await createRepository();
   const commit = resolveCommit(root, "HEAD");
+  const snapshot = resolveSnapshot(root, "HEAD");
 
   assert.equal(commit, git(root, "rev-parse", "HEAD"));
+  assert.deepEqual(snapshot, {
+    commit,
+    tree: git(root, "rev-parse", "HEAD^{tree}"),
+  });
   assert.throws(() => resolveCommit(root, "missing-revision"), /Cannot resolve commit/);
+  assert.throws(
+    () => resolveSnapshot(root, "missing-revision"),
+    /Cannot resolve/,
+  );
+  assert.throws(() => resolveSnapshot(root, "HEAD\nHEAD"), /Cannot resolve/);
 });
 
 test("materializes staged and full worktree snapshots without changing caller state", async () => {
@@ -155,5 +173,27 @@ test("materializes immutable commits without Git worktree commands", async () =>
     commands.some(([command]) => command === "worktree"),
     false,
     JSON.stringify(commands),
+  );
+});
+
+test("reads one immutable worktree snapshot after concurrent filesystem changes", async () => {
+  const { root } = await createRepository();
+  const snapshot = worktreeSnapshot(root);
+  const filesystem = createGitSnapshotFileSystem({
+    gitRoot: root,
+    preload: ({ name }) => name === "README.md",
+    root,
+    tree: snapshot.tree,
+  });
+
+  await writeFile(join(root, "README.md"), "changed after snapshot\n");
+
+  assert.equal(
+    await filesystem.readFile(join(root, "README.md"), "utf8"),
+    "fixture\n",
+  );
+  assert.equal(
+    await readFile(join(root, "README.md"), "utf8"),
+    "changed after snapshot\n",
   );
 });

@@ -1,35 +1,32 @@
-import { spawnSync } from "node:child_process";
 import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { traceAsync, traceSync } from "./trace.js";
+import { runSubprocess } from "./subprocess.js";
+import { traceAsync } from "./trace.js";
 
 let commandObserver = null;
 
 function executeGit(root, args, { encoding, env, input } = {}) {
   if (commandObserver) commandObserver([...args]);
-  return traceSync(
-    "git.command",
+  return runSubprocess(
+    "git",
+    root === null ? args : ["-C", root, ...args],
     {
-      argumentCount: args.length - 1,
-      network: args[0] === "fetch" || args[0] === "ls-remote",
-      subcommand: args[0] ?? null,
-    },
-    () => spawnSync("git", ["-C", root, ...args], {
       encoding,
       env: { ...process.env, GIT_TERMINAL_PROMPT: "0", ...env },
       input,
       windowsHide: true,
-    }),
-    (completed) => ({
+    },
+    {
+      spanName: "git.command",
       attributes: {
-        exitCode: completed.status,
-        signal: completed.signal,
+        argumentCount: args.length - 1,
+        network: args[0] === "fetch" || args[0] === "ls-remote",
+        subcommand: args[0] ?? null,
       },
-      status: completed.status === 0 ? "ok" : "error",
-    }),
+    },
   );
 }
 
@@ -98,6 +95,24 @@ function parseTreeEntries(source, label) {
   return entries;
 }
 
+function parseLongTreeEntries(source, label) {
+  const entries = [];
+  for (const record of source.split("\0")) {
+    if (!record) continue;
+    const match = /^([0-7]{6}) (blob|tree|commit) ([0-9a-f]{40}|[0-9a-f]{64}) +(-|(?:0|[1-9]\d*))\t([\s\S]+)$/
+      .exec(record);
+    if (!match) throw new Error(`Cannot parse ${label} entry`);
+    entries.push({
+      mode: match[1],
+      type: match[2],
+      object: match[3],
+      size: match[4] === "-" ? null : Number(match[4]),
+      name: match[5],
+    });
+  }
+  return entries;
+}
+
 export function inspectTreeEntry(root, tree, path) {
   const output = requireGit(
     root,
@@ -119,6 +134,22 @@ export function listTreeEntries(root, tree, path) {
     `Cannot inspect snapshot directory ${path}`,
   );
   return parseTreeEntries(output, `snapshot directory ${path}`);
+}
+
+export function inspectTree(root, tree, path) {
+  return inspectTreeLineage(root, tree, path)
+    .filter((entry) =>
+      entry.name === path || entry.name.startsWith(`${path}/`)
+    );
+}
+
+export function inspectTreeLineage(root, tree, path) {
+  const output = requireGit(
+    root,
+    ["ls-tree", "-r", "-t", "-l", "-z", tree, "--", path],
+    `Cannot inspect snapshot tree ${path}`,
+  );
+  return parseLongTreeEntries(output, `snapshot tree ${path}`);
 }
 
 export function gitObjectSize(root, object) {
@@ -149,6 +180,54 @@ export function readGitBlob(root, object) {
     );
   }
   return Buffer.from(result.stdout);
+}
+
+export function readGitBlobs(root, objects) {
+  const requested = [...new Set(objects)];
+  if (requested.length === 0) return new Map();
+  const result = executeGit(
+    root,
+    ["cat-file", "--batch"],
+    {
+      encoding: null,
+      input: Buffer.from(`${requested.join("\n")}\n`, "utf8"),
+    },
+  );
+  if (result.status !== 0) {
+    const stderr = Buffer.isBuffer(result.stderr)
+      ? result.stderr.toString("utf8")
+      : result.stderr;
+    throw new Error(
+      "Cannot read Git blobs: "
+      + `${sanitizeGitMessage(stderr?.trim() || result.error?.message || "Git failed")}`,
+    );
+  }
+
+  const source = Buffer.from(result.stdout);
+  const blobs = new Map();
+  let offset = 0;
+  for (const object of requested) {
+    const headerEnd = source.indexOf(0x0a, offset);
+    if (headerEnd < 0) throw new Error(`Missing Git blob header for ${object}`);
+    const header = source.subarray(offset, headerEnd).toString("utf8");
+    const match = /^([0-9a-f]{40}|[0-9a-f]{64}) blob (0|[1-9]\d*)$/
+      .exec(header);
+    if (!match || match[1] !== object) {
+      throw new Error(`Cannot parse Git blob header for ${object}`);
+    }
+    const size = Number(match[2]);
+    const contentStart = headerEnd + 1;
+    const contentEnd = contentStart + size;
+    if (contentEnd >= source.length || source[contentEnd] !== 0x0a) {
+      throw new Error(`Incomplete Git blob content for ${object}`);
+    }
+    blobs.set(object, source.subarray(contentStart, contentEnd));
+    offset = contentEnd + 1;
+  }
+  if (offset !== source.length) {
+    throw new Error("Unexpected trailing Git blob batch output");
+  }
+  return blobs;
 }
 
 export function inspectTreePaths(root, tree, paths) {
@@ -271,6 +350,88 @@ export function parseWorktreeChanges(source) {
   return result;
 }
 
+export function parseRepositoryStatus(source) {
+  let branch = null;
+  let head = null;
+  for (const record of source.split("\0")) {
+    if (record.startsWith("# branch.oid ")) {
+      const value = record.slice("# branch.oid ".length);
+      if (value !== "(initial)") {
+        if (!/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/.test(value)) {
+          throw new Error(`Unsupported Git HEAD object ID: ${value}`);
+        }
+        head = value;
+      }
+    } else if (record.startsWith("# branch.head ")) {
+      const value = record.slice("# branch.head ".length);
+      branch = value === "(detached)" ? null : value;
+    }
+  }
+  return {
+    branch,
+    changes: parseWorktreeChanges(source),
+    head,
+  };
+}
+
+function escapeConfigKeyPattern(value) {
+  return value.replace(/[\\^$.*+?()[\]{}|]/g, "\\$&");
+}
+
+function parseConfigRecords(source) {
+  const values = new Map();
+  for (const record of source.split("\0")) {
+    if (!record) continue;
+    const separator = record.indexOf("\n");
+    if (separator < 1) throw new Error("Cannot parse Git configuration record");
+    values.set(record.slice(0, separator), record.slice(separator + 1));
+  }
+  return values;
+}
+
+function inspectBranchConfiguration(root, branch) {
+  if (branch === null) {
+    return { branch: null, remote: null, repository: null, upstreamBranch: null };
+  }
+  const escapedBranch = escapeConfigKeyPattern(branch);
+  const result = runGit(root, [
+    "config",
+    "--null",
+    "--get-regexp",
+    `^(branch\\.${escapedBranch}\\.(remote|merge)|remote\\..*\\.url)$`,
+  ]);
+  const values = result.ok ? parseConfigRecords(result.stdout) : new Map();
+  const remote = values.get(`branch.${branch}.remote`) ?? null;
+  const merge = values.get(`branch.${branch}.merge`) ?? null;
+  const upstreamBranch = merge?.startsWith("refs/heads/")
+    ? merge.slice("refs/heads/".length)
+    : null;
+  const repository = remote === null || remote === "."
+    ? null
+    : values.get(`remote.${remote}.url`) ?? null;
+  return { branch, remote, repository, upstreamBranch };
+}
+
+export function inspectRepositoryState(root) {
+  const source = requireGit(
+    root,
+    [
+      "status",
+      "--porcelain=v2",
+      "--branch",
+      "--untracked-files=all",
+      "-z",
+    ],
+    "Cannot inspect repository state",
+  );
+  const status = parseRepositoryStatus(`${source}\0`);
+  return {
+    changes: status.changes,
+    head: status.head,
+    branch: inspectBranchConfiguration(root, status.branch),
+  };
+}
+
 export function inspectWorktreeChanges(root) {
   const source = requireGit(
     root,
@@ -360,6 +521,39 @@ export function resolveCommit(root, revision) {
   );
 }
 
+export function resolveSnapshot(root, revision) {
+  if (typeof revision !== "string" || /[\0\r\n]/.test(revision)) {
+    throw new Error(`Cannot resolve snapshot ${JSON.stringify(revision)}`);
+  }
+  const expressions = [`${revision}^{commit}`, `${revision}^{tree}`];
+  const result = runGit(
+    root,
+    ["cat-file", "--batch-check=%(objectname) %(objecttype)"],
+    { input: `${expressions.join("\n")}\n` },
+  );
+  if (!result.ok) {
+    throw new Error(
+      `Cannot resolve snapshot ${revision}: `
+      + `${sanitizeGitMessage(result.stderr || result.error?.message || "Git failed")}`,
+    );
+  }
+  const lines = result.stdout.split(/\r?\n/);
+  if (lines.length !== 2) {
+    throw new Error(`Cannot resolve snapshot ${revision}: unexpected Git output`);
+  }
+  const parsed = lines.map((line, index) => {
+    const match = /^([0-9a-f]{40}|[0-9a-f]{64}) (commit|tree)$/.exec(line);
+    if (!match) {
+      throw new Error(`Cannot resolve ${expressions[index]}`);
+    }
+    return { object: match[1], type: match[2] };
+  });
+  if (parsed[0].type !== "commit" || parsed[1].type !== "tree") {
+    throw new Error(`Cannot resolve snapshot ${revision}: invalid object types`);
+  }
+  return { commit: parsed[0].object, tree: parsed[1].object };
+}
+
 export function indexSnapshot(root) {
   return {
     tree: requireGit(root, ["write-tree"], "Cannot snapshot the index"),
@@ -391,9 +585,6 @@ export function fetchRepositoryBranch(root, repository, branch) {
     throw new Error(`Cannot determine fetched commit for branch ${branch}`);
   }
   const primary = updates[0][2];
-  if (!runGit(root, ["cat-file", "-e", `${primary}^{commit}`]).ok) {
-    throw new Error(`Fetched branch ${branch} does not resolve to a commit`);
-  }
   return primary;
 }
 

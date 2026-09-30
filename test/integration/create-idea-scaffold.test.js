@@ -157,6 +157,14 @@ test("[unrelated-active-create] [create-no-remote] creates an exact scaffold wit
     commands.some(([name]) => ["commit", "push"].includes(name)),
     false,
   );
+  const readinessCommands = commands.filter((args) =>
+    ["config", "status", "symbolic-ref"].includes(args[0])
+    || (args[0] === "rev-parse" && args[1] === "--verify")
+  );
+  assert.deepEqual(
+    readinessCommands.map(([name]) => name),
+    ["status", "config"],
+  );
 });
 
 test("creates the first idea when the ideas directory does not yet exist", async () => {

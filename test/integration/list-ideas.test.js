@@ -4,6 +4,7 @@ import {
   access,
   mkdir,
   mkdtemp,
+  readFile,
   rm,
   writeFile,
 } from "node:fs/promises";
@@ -13,8 +14,11 @@ import { afterEach, test } from "node:test";
 
 import { runCli } from "../../src/cli.js";
 import { observeGitCommands } from "../../src/git.js";
+import { readIdeaInventoryItem } from "../../src/idea-metadata.js";
+import { serializeIdeaStatus } from "../../src/ideas.js";
 import { listIdeas } from "../../src/list-ideas.js";
 import { ideaPaths } from "../../src/layout.js";
+import { withTraceFile } from "../../src/trace.js";
 import {
   createRepository,
   git,
@@ -187,6 +191,86 @@ test("[inventory-default] lists active ideas from the local snapshot with four p
     ),
     false,
   );
+});
+
+test("[inventory-title-budget] reads only two titles for two active ideas out of 32", async () => {
+  const ideas = Array.from({ length: 32 }, (_, index) => ({
+    id: idAt("2026-09-30T00:00:00.000Z", ALPHABET[index]),
+  }));
+  const repository = await createRepository({
+    ideas,
+    prefix: "silvermoon-list-budget-",
+    withRemote: false,
+  });
+  temporaryDirectories.push(repository.base);
+  const firstPaths = ideaPaths(ideas[0].id);
+  const revisions = {
+    approvedRevision: git(
+      repository.root,
+      "rev-parse",
+      `HEAD:${firstPaths.idealPath}`,
+    ),
+    implementationAcceptedRevision: git(
+      repository.root,
+      "rev-parse",
+      `HEAD:${firstPaths.innerPath}`,
+    ),
+    deploymentAcceptedRevision: git(
+      repository.root,
+      "rev-parse",
+      `HEAD:${firstPaths.outerPath}`,
+    ),
+  };
+  for (const [index, idea] of ideas.entries()) {
+    const status = index === 0
+      ? { version: 1, id: idea.id }
+      : index === 1
+        ? {
+            version: 1,
+            id: idea.id,
+            approvedRevision: revisions.approvedRevision,
+          }
+        : { version: 1, id: idea.id, ...revisions };
+    await writeFile(
+      join(repository.root, ...ideaPaths(idea.id).statusPath.split("/")),
+      serializeIdeaStatus(status),
+    );
+  }
+  git(repository.root, "add", ".");
+  git(repository.root, "commit", "-m", "Set 32 idea states");
+
+  const reads = [];
+  const tracePath = join(repository.base, "inventory-budget.trace.jsonl");
+  const report = await withTraceFile(
+    tracePath,
+    "test.inventory-budget",
+    {},
+    () => listIdeas({
+      metadataReader: async (root, idea) => {
+        reads.push(idea.id);
+        return readIdeaInventoryItem(root, idea);
+      },
+      root: repository.root,
+      userHome: repository.base,
+    }),
+  );
+
+  assert.equal(report.observation.summary.matched, 2);
+  assert.equal(report.observation.summary.returned, 2);
+  assert.deepEqual(new Set(reads), new Set(ideas.slice(0, 2).map(({ id }) => id)));
+  assert.equal(reads.length, 2);
+  const events = (await readFile(tracePath, "utf8"))
+    .trim()
+    .split("\n")
+    .map((line) => JSON.parse(line));
+  const metadataEnd = events.find(
+    ({ event, name }) =>
+      event === "span-end" && name === "ideas.inventory-metadata",
+  );
+  assert.equal(metadataEnd.attributes.ideaCount, 32);
+  assert.equal(metadataEnd.attributes.candidateCount, 2);
+  assert.equal(metadataEnd.attributes.queryCandidateCount, 0);
+  assert.equal(metadataEnd.attributes.titleReadCount, 2);
 });
 
 test("[inventory-empty] returns a successful complete shape for an empty inventory", async () => {

@@ -16,9 +16,7 @@ import {
 import {
   compareCommits,
   fetchPrimary,
-  inspectCurrentBranch,
-  inspectWorktreeChanges,
-  resolveHead,
+  inspectRepositoryState,
   sanitizeGitMessage,
 } from "./git.js";
 import { canonicalizeOutputLanguage } from "./language.js";
@@ -254,9 +252,9 @@ async function assessRepositoryReadinessInternal({
   synchronizePrimary = true,
 }) {
   const language = observed.outputLanguage;
-  let changes;
+  let repository;
   try {
-    changes = inspectWorktreeChanges(root);
+    repository = inspectRepositoryState(root);
   } catch (caught) {
     const problem = {
       type: "worktree-inspection-failed",
@@ -272,6 +270,7 @@ async function assessRepositoryReadinessInternal({
       ready: false,
     };
   }
+  const { branch, changes, head } = repository;
 
   const dirty =
     changes.conflicted.length > 0
@@ -319,7 +318,6 @@ async function assessRepositoryReadinessInternal({
     localSteps.push(...worktreeInstructionSteps(changes, language));
   }
 
-  const head = resolveHead(root);
   if (head === null) {
     localProblems.push({
       type: "head-missing",
@@ -336,7 +334,6 @@ async function assessRepositoryReadinessInternal({
     ));
   }
 
-  const branch = inspectCurrentBranch(root);
   if (branch.branch === null) {
     localProblems.push({
       type: "detached-head",

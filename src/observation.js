@@ -132,6 +132,7 @@ export function repositoryProblemObservation(observation, problems) {
 async function observeSnapshotInternal({
   allowMissingIdeas = false,
   contentRoot,
+  filesystem,
   gitRoot,
   ideaLanguage,
   outputLanguage: requestedOutputLanguage,
@@ -147,7 +148,12 @@ async function observeSnapshotInternal({
   const adoption = await traceAsync(
     "adoption.inspect",
     {},
-    () => inspectAdoption({ contentRoot, root }),
+    () => inspectAdoption({
+      contentRoot,
+      filesystem,
+      repositoryRoot: gitRoot,
+      root,
+    }),
   );
   const user = await traceAsync(
     "user-config.load",
@@ -233,6 +239,7 @@ async function observeSnapshotInternal({
       {},
       () => inspectIdeaLayout({
         config: adoption.config,
+        filesystem,
         gitRoot: gitRoot ?? adoption.root,
         root: contentRoot ?? adoption.root,
         snapshotTree,
@@ -257,6 +264,7 @@ async function observeSnapshotInternal({
 
   const guidanceDiagnostics = projectOnly
     ? (await inspectAllGuidance({
+      filesystem,
       gitRoot: gitRoot ?? adoption.root,
       snapshotTree,
     })).diagnostics

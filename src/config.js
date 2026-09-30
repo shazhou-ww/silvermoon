@@ -1,6 +1,7 @@
 import { lstat, readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
+import { inspectTreeLineage, readGitBlobs } from "./git.js";
 import { CONFIG_PATH, METADATA_ROOT } from "./layout.js";
 import { isCanonicalLanguageTag } from "./language.js";
 import { validBranchName, validRepository } from "./repository.js";
@@ -14,28 +15,32 @@ const CONFIG_KEYS = [
   "primaryBranch",
   "preferredLanguage",
 ];
+const DEFAULT_FILESYSTEM = { lstat, readFile };
 
 function configDiagnostic(code, path, message, remediation) {
   return { code, level: "error", path, message, remediation };
 }
 
-async function regularRepositoryFile(root) {
+async function regularRepositoryFile(root, filesystem) {
   const metadataRoot = resolve(root, METADATA_ROOT);
   const absolutePath = resolve(root, CONFIG_PATH);
   try {
-    const directoryMetadata = await lstat(metadataRoot);
+    const directoryMetadata = await filesystem.lstat(metadataRoot);
     if (!directoryMetadata.isDirectory() || directoryMetadata.isSymbolicLink()) {
       throw Object.assign(new Error(`${METADATA_ROOT} must be a regular directory`), {
         code: "EINVAL",
       });
     }
-    const fileMetadata = await lstat(absolutePath);
+    const fileMetadata = await filesystem.lstat(absolutePath);
     if (!fileMetadata.isFile() || fileMetadata.isSymbolicLink()) {
       throw Object.assign(new Error("Configuration must be a regular file"), {
         code: "EINVAL",
       });
     }
-    return { absolutePath, source: await readFile(absolutePath, "utf8") };
+    return {
+      absolutePath,
+      source: await filesystem.readFile(absolutePath, "utf8"),
+    };
   } catch (error) {
     const missing = error.code === "ENOENT";
     return {
@@ -70,17 +75,8 @@ export function serializeConfig(config) {
   return stringifyCanonicalYaml(canonical);
 }
 
-export async function loadConfig({ root }) {
-  const loaded = await regularRepositoryFile(root);
-  if (loaded.diagnostic) {
-    return {
-      config: null,
-      configPath: loaded.absolutePath,
-      diagnostics: [loaded.diagnostic],
-    };
-  }
-
-  const normalizedSource = loaded.source.replaceAll("\r\n", "\n");
+function parseConfigSource({ absolutePath, root, source }) {
+  const normalizedSource = source.replaceAll("\r\n", "\n");
   let value;
   try {
     value = parseStrictYaml(normalizedSource);
@@ -187,7 +183,71 @@ export async function loadConfig({ root }) {
 
   return {
     config: diagnostics.length === 0 ? value : null,
-    configPath: loaded.absolutePath,
+    configPath: absolutePath,
     diagnostics,
   };
+}
+
+export async function loadConfig({
+  filesystem = DEFAULT_FILESYSTEM,
+  root,
+}) {
+  const loaded = await regularRepositoryFile(root, filesystem);
+  if (loaded.diagnostic) {
+    return {
+      config: null,
+      configPath: loaded.absolutePath,
+      diagnostics: [loaded.diagnostic],
+    };
+  }
+  return parseConfigSource({
+    absolutePath: loaded.absolutePath,
+    root,
+    source: loaded.source,
+  });
+}
+
+export async function loadConfigSnapshot({ gitRoot, tree }) {
+  const absolutePath = resolve(gitRoot, CONFIG_PATH);
+  const entries = inspectTreeLineage(gitRoot, tree, CONFIG_PATH);
+  const metadataRoot = entries.find(({ name }) => name === METADATA_ROOT);
+  const config = entries.find(({ name }) => name === CONFIG_PATH);
+  if (metadataRoot === undefined || config === undefined) {
+    return {
+      config: null,
+      configPath: absolutePath,
+      diagnostics: [configDiagnostic(
+        "config.missing",
+        CONFIG_PATH,
+        `Missing Silvermoon configuration: ${CONFIG_PATH}`,
+        `Create ${CONFIG_PATH}.`,
+      )],
+    };
+  }
+  if (
+    metadataRoot.type !== "tree"
+    || metadataRoot.mode !== "040000"
+    || config.type !== "blob"
+    || !["100644", "100755"].includes(config.mode)
+  ) {
+    return {
+      config: null,
+      configPath: absolutePath,
+      diagnostics: [configDiagnostic(
+        "config.invalid-file",
+        CONFIG_PATH,
+        "Cannot read Silvermoon configuration: configuration paths must be regular",
+        `Replace ${METADATA_ROOT} and ${CONFIG_PATH} with repository-owned regular paths.`,
+      )],
+    };
+  }
+  const source = readGitBlobs(gitRoot, [config.object]).get(config.object);
+  if (source === undefined) {
+    throw new Error(`Cannot read Silvermoon configuration blob ${config.object}`);
+  }
+  return parseConfigSource({
+    absolutePath,
+    root: gitRoot,
+    source: source.toString("utf8"),
+  });
 }

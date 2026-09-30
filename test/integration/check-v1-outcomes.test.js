@@ -6,6 +6,7 @@ import { afterEach, test } from "node:test";
 
 import { observeGitCommands } from "../../src/git.js";
 import { checkRepository } from "../../src/index.js";
+import { withTraceFile } from "../../src/trace.js";
 import {
   REPOSITORY_SKILL_PATH,
   SILVERMOON_VERSION,
@@ -43,6 +44,99 @@ test("valid remote snapshot is not blocked by unrelated local HEAD skill damage"
     git(repository.root, "rev-parse", "HEAD~1"),
   );
   assert.deepEqual(report.observation.problems, []);
+});
+
+test("remote bootstrap reads config directly and opens only the primary snapshot", async () => {
+  const repository = await fixture({ withRemote: true });
+  const tracePath = join(repository.base, "remote-check.trace.jsonl");
+
+  const report = await withTraceFile(
+    tracePath,
+    "test.remote-check",
+    {},
+    () => checkRepository({
+      remote: true,
+      root: repository.root,
+      userHome: repository.base,
+    }),
+  );
+
+  assert.equal(report.observation.state, "project-ready");
+  const events = (await readFile(tracePath, "utf8"))
+    .trim()
+    .split("\n")
+    .map((line) => JSON.parse(line));
+  assert.equal(
+    events.some(({ name }) => name === "snapshot.materialize"),
+    false,
+  );
+  assert.equal(
+    events.filter(({ event, name }) =>
+      event === "span-start" && name === "snapshot.open"
+    ).length,
+    1,
+  );
+  assert.equal(
+    events.some(({ name }) => name === "snapshot.materialize-bounded"),
+    false,
+  );
+});
+
+test("direct snapshot checks preserve Git symlink modes", async () => {
+  const repository = await fixture();
+  const paths = ideaPaths(FIRST_ID);
+  const target = join(repository.root, "symlink-target.txt");
+  await writeFile(target, "target.txt\n");
+  const blob = git(repository.root, "hash-object", "-w", "symlink-target.txt");
+  const linkPath = `${paths.outerPath}/support-link.md`;
+  git(
+    repository.root,
+    "update-index",
+    "--add",
+    "--cacheinfo",
+    `120000,${blob},${linkPath}`,
+  );
+  git(repository.root, "commit", "-m", "Add world symlink entry");
+
+  const report = await checkRepository({
+    root: repository.root,
+    userHome: repository.base,
+  });
+
+  assert.equal(report.observation.state, "project-setup-required");
+  assert.ok(
+    report.observation.problems.some(
+      ({ type }) => type === "idea-world-symlink",
+    ),
+  );
+
+  const configRepository = await fixture();
+  const configTarget = join(configRepository.root, "config-target.txt");
+  await writeFile(configTarget, "config.yaml\n");
+  const configBlob = git(
+    configRepository.root,
+    "hash-object",
+    "-w",
+    "config-target.txt",
+  );
+  git(
+    configRepository.root,
+    "update-index",
+    "--add",
+    "--cacheinfo",
+    `120000,${configBlob},.silvermoon/config.yaml`,
+  );
+  git(configRepository.root, "commit", "-m", "Add config symlink entry");
+
+  const invalidConfig = await checkRepository({
+    root: configRepository.root,
+    userHome: configRepository.base,
+  });
+  assert.equal(invalidConfig.observation.state, "project-setup-required");
+  assert.equal(
+    invalidConfig.observation.problems[0].type,
+    "config-invalid-file",
+  );
 });
 
 test("remote check reports invalid HEAD primary coordinates before fetching", async () => {

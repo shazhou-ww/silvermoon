@@ -275,15 +275,53 @@ monotonic `sequence`, and UTC timestamp:
 - `channel: "telemetry"` records paired `span-start` and `span-end` events,
   parent span IDs, monotonic `durationMs`, and success or error status.
 
-Action telemetry carries the corresponding action ID. Trace projection never
-includes guidance or file content, Git arguments/stdout/stderr, environment
-data, credentials, tokens, or unbounded error text. Turning trace off, replacing
-the domain sink with a no-op, or deleting every telemetry event does not change
-the domain stream or final report. The path is relative to the caller's working
-directory when not absolute. Events are buffered so a trace inside the
-repository cannot affect that invocation's worktree observation. The file is
-written after measured command work finishes and uses exclusive creation, so
-an existing normalized target is never overwritten.
+The root `command.*` span starts after Commander has parsed the invocation and
+covers domain dispatch through JSON or Markdown output. Its safe attributes
+identify the renderer; executable invocations also include the monotonic
+`bootstrapDurationMs` from process entry through dispatch. Non-interactive
+output has a child `output.render` span. Human TUI rendering remains outside
+the command span so waiting for input is not reported as automated command
+work.
+
+Action telemetry carries the corresponding action ID. All production
+subprocesses use the trace-aware runner. Git subprocesses emit `git.command`
+with only the subcommand, argument count, network classification, exit code,
+and signal; neither Git arguments nor process input or output are recorded.
+Trace projection never includes guidance or file content, environment data,
+credentials, tokens, or unbounded error text. Turning trace off, replacing the
+domain sink with a no-op, or deleting every telemetry event does not change the
+domain stream or final report.
+
+The path is relative to the caller's working directory when not absolute.
+Events are buffered so a trace inside the repository cannot affect that
+invocation's worktree observation. After the command span ends, a root
+`trace.flush` span covers exclusive file creation and the durable write of all
+preceding events; its final span-end record is appended as the trace trailer.
+Flush and close failures are returned as command errors. An existing normalized
+target is never overwritten.
+
+### Reproducible performance traces
+
+Performance comparisons use a disposable clean clone pinned to one commit and
+tree on the same machine and storage volume. When a command needs the primary,
+map the canonical primary URL to a local bare repository with Git `insteadOf`;
+do not replace the configured URL or skip the command's normal fetch. Prove the
+clone clean before and after every sample. For `create-idea`, remove only the
+exact idea path returned by that sample, then prove the clone clean again.
+
+Benchmark this matrix: default and `--all` inventory; bare and selected aligned
+navigation; creation; and HEAD, staged, worktree, and remote checks. Run one
+unrecorded warm-up followed by five independent JSON invocations with unique
+trace files. Retain every measured sample rather than removing network, cache,
+or timing outliers.
+
+Use the matching `command.*` span-end duration as total command work. Network
+duration is the sum of child `git.command` span-end durations whose safe
+`network` attribute is `true`; subtract that sum from each individual total
+before calculating a non-network median. Report all five totals, all five
+network/non-network decompositions where applicable, median, minimum, maximum,
+Git process count, `snapshot.materialize*` count, and inventory candidate/title
+read counts. Keep raw traces outside the measured repository.
 
 Unsupported output locales, empty values, invalid BCP 47 tags, and invalid
 `list-ideas` filters are usage errors with exit status `2`, before repository

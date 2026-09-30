@@ -1,7 +1,7 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import { createHash, randomUUID } from "node:crypto";
 import { constants } from "node:fs";
-import { access, lstat, writeFile } from "node:fs/promises";
+import { access, lstat, open } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 
 export const TRACE_SCHEMA_VERSION = 2;
@@ -217,6 +217,41 @@ export function traceSync(name, attributes, callback, summarize = () => ({})) {
   );
 }
 
+async function flushTrace(path, trace) {
+  const span = trace.start("trace.flush", null, {});
+  let handle;
+  let failure;
+  let spanEnded = false;
+  try {
+    handle = await open(path, "wx");
+    await handle.writeFile(trace.serialize(), { encoding: "utf8" });
+    await handle.sync();
+    trace.end(span, "ok", { eventCount: trace.events.length + 1 });
+    spanEnded = true;
+    await handle.appendFile(
+      `${JSON.stringify(trace.events.at(-1))}\n`,
+      { encoding: "utf8" },
+    );
+    await handle.sync();
+  } catch (caught) {
+    if (!spanEnded) {
+      trace.end(span, "error", { errorName: errorName(caught) });
+    }
+    failure = caught;
+  }
+
+  if (handle) {
+    try {
+      await handle.close();
+    } catch (caught) {
+      failure = failure
+        ? new AggregateError([failure, caught], `Cannot close trace file: ${path}`)
+        : caught;
+    }
+  }
+  if (failure) throw failure;
+}
+
 export async function withTraceFile(file, name, attributes, callback) {
   if (file === undefined) return callback();
 
@@ -236,7 +271,7 @@ export async function withTraceFile(file, name, attributes, callback) {
 
   let traceError;
   try {
-    await writeFile(path, trace.serialize(), { encoding: "utf8", flag: "wx" });
+    await flushTrace(path, trace);
   } catch (caught) {
     traceError = caught;
   }

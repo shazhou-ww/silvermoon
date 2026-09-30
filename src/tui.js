@@ -1,5 +1,4 @@
 import { createCliRenderer } from "@opentui/core";
-import { spawnSync } from "node:child_process";
 import { win32 } from "node:path";
 import {
   createRoot,
@@ -10,12 +9,19 @@ import {
 import { createElement, useEffect, useMemo, useRef, useState } from "react";
 import { Markdown } from "tui-md";
 
+import { runSubprocess } from "./subprocess.js";
 import { tuiMarkdownBlocks } from "./tui-table.js";
 
 const COPY_STATUS_DURATION_MS = 3000;
 const SHORTCUT_HINT = "  [q/Esc] quit  [scroll] navigate  [drag, y] copy";
 const SUCCESS_COLOR = "#9ccb9e";
 const WARNING_COLOR = "#e2b86b";
+
+function spawnClipboard(command, args, options) {
+  return runSubprocess(command, args, options, {
+    attributes: { operation: "windows-clipboard" },
+  });
+}
 
 export function copyStatusColor(status) {
   if (status === null) return "#6b6b6b";
@@ -26,7 +32,7 @@ export function copyStatusColor(status) {
 
 export function copyWindowsClipboard(
   text,
-  spawn = spawnSync,
+  spawn = spawnClipboard,
   systemRoot = process.env.SystemRoot,
 ) {
   if (!systemRoot) return { ok: false, reason: "SystemRoot is unavailable" };

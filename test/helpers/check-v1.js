@@ -13,8 +13,9 @@ export function createCheckV1TestHelpers(afterEach) {
     );
   });
 
-  async function fixture({ withRemote = false } = {}) {
+  async function fixture({ objectFormat, withRemote = false } = {}) {
     const repository = await createRepository({
+      objectFormat,
       prefix: "silvermoon-check-",
       withRemote,
     });
