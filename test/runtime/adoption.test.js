@@ -316,8 +316,55 @@ test("classifies npm projects from the root manifest only and exempts the source
 
   const sourceRoot = fileURLToPath(new URL("../..", import.meta.url));
   const source = await inspectAdoption({ root: sourceRoot });
-  assert.equal(
-    source.problems.some(({ type }) => type.startsWith("npm-dependency-")),
-    false,
-  );
+  assert.deepEqual(source.problems, []);
+});
+
+test("source snapshots remain exempt without a self-dependency or matching version", async () => {
+  const sourceRoot = fileURLToPath(new URL("../..", import.meta.url));
+  const snapshotRoot = await temporaryDirectory();
+  const manifest = JSON.parse(await readFile(join(sourceRoot, "package.json"), "utf8"));
+  manifest.version = "0.0.0";
+  delete manifest.devDependencies.silvermoon;
+  await writeFile(join(snapshotRoot, "package.json"), JSON.stringify(manifest));
+
+  const snapshot = await inspectNpmProject(snapshotRoot, sourceRoot);
+  assert.equal(snapshot.sourceCheckout, true);
+  assert.deepEqual(snapshot.findings, []);
+
+  manifest.devDependencies.silvermoon = "^0.0.0";
+  await writeFile(join(snapshotRoot, "package.json"), JSON.stringify(manifest));
+  const historical = await inspectNpmProject(snapshotRoot, sourceRoot);
+  assert.deepEqual(historical.findings, []);
+});
+
+test("another runtime directs source projects to their checkout, never a self-dependency", async () => {
+  const sourceRoot = fileURLToPath(new URL("../..", import.meta.url));
+  const manifest = JSON.parse(await readFile(join(sourceRoot, "package.json"), "utf8"));
+  for (const repositoryUrl of [
+    "git+https://github.com/shazhou-ww/silvermoon.git",
+    "https://github.com/shazhou-ww/silvermoon",
+  ]) {
+    manifest.repository.url = repositoryUrl;
+    const root = await npmRepository(manifest, { skill: false });
+    const report = await inspectAdoption({ root });
+    assert.deepEqual(report.problems.map(({ type }) => type), [
+      "source-checkout-runtime-required",
+      "canonical-skill-missing",
+    ]);
+    assert.match(report.instructions[0], /same command and options.*node bin\/silvermoon\.js/);
+    assert.match(report.instructions[1], /pnpm sync:skills/);
+    assert.doesNotMatch(report.instructions.join("\n"), /node_modules|add --save-dev|npx skills/);
+  }
+});
+
+test("package name or repository URL alone does not exempt consumers", async () => {
+  for (const manifest of [
+    { name: "silvermoon" },
+    { name: "silvermoon", repository: { url: "https://example.com/silvermoon.git" } },
+    { name: "consumer", repository: { url: "https://github.com/shazhou-ww/silvermoon" } },
+  ]) {
+    const root = await npmRepository(manifest);
+    const report = await inspectAdoption({ root });
+    assert.deepEqual(report.problems.map(({ type }) => type), ["npm-dependency-missing"]);
+  }
 });

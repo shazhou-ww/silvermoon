@@ -1,5 +1,17 @@
 # Silvermoon repository instructions
 
+## Source runtime
+
+- This repository develops Silvermoon itself and must not depend on the
+  published `silvermoon` package in any dependency section.
+- Run every Silvermoon command from this checkout with
+  `node bin/silvermoon.js <command>` (or `pnpm silvermoon <command>`).
+  Treat `silvermoon` examples below and in the shared skill as this local
+  entrypoint, never a global, npx, or node_modules installation.
+- Maintain the canonical skill in `skills/silvermoon` and refresh its
+  registered copy with `pnpm sync:skills`; do not install the published
+  package to obtain this repository's skill.
+
 ## Idea workflow
 
 - Handle small, well-scoped tasks directly. For substantial, multi-step work

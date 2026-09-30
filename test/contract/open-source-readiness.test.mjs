@@ -11,6 +11,21 @@ async function read(path) {
   return readFile(new URL(path, repositoryRoot), "utf8");
 }
 
+test("develops Silvermoon with the source CLI and no published self-dependency", async () => {
+  const manifest = JSON.parse(await read("package.json"));
+  assert.equal(manifest.scripts.silvermoon, "node bin/silvermoon.js");
+  for (const section of [
+    "dependencies", "devDependencies", "peerDependencies", "optionalDependencies",
+  ]) {
+    assert.equal(Object.hasOwn(manifest[section] ?? {}, "silvermoon"), false, section);
+  }
+  const lock = parseDocument(await read("pnpm-lock.yaml")).toJS();
+  for (const section of ["dependencies", "devDependencies", "optionalDependencies"]) {
+    assert.equal(Object.hasOwn(lock.importers["."][section] ?? {}, "silvermoon"), false);
+  }
+  assert.equal(Object.keys(lock.packages).some((name) => name.startsWith("silvermoon@")), false);
+});
+
 test("configures reviewable dependency updates for npm and GitHub Actions", async () => {
   const document = parseDocument(await read(".github/dependabot.yml"));
   assert.deepEqual(document.errors, []);

@@ -54,9 +54,6 @@ importers:
       semver:
         specifier: ^7.8.5
         version: 7.8.5
-      silvermoon:
-        specifier: ^0.2.2
-        version: 0.2.2
 
 packages:
 
@@ -697,11 +694,6 @@ packages:
   shell-quote@1.10.0:
     resolution: {integrity: sha512-w1aiOKwKuRgtwAReIIj89puqg+I7GvX4IbLrvmhXbzQsj1+Zwi4VO3+fa6ZF91TWSjIxoEkKnMeHcLEODK5ZXA==}
     engines: {node: '>= 0.4'}
-
-  silvermoon@0.2.2:
-    resolution: {integrity: sha512-81rAbKXKmNAGQEaCiUOjOz4YB+VO8SOiIRocl5vhq0raWjGQwDlgDcfpgn0Nf4NWWzhKyYlTIbbe14v+h7ji8A==}
-    engines: {node: '>=22'}
-    hasBin: true
 
   slash@5.1.0:
     resolution: {integrity: sha512-ZA6oR3T/pEyuqwMgAKT0/hAv8oAXckzbkmR0UkUosQ+Mc4RxGoJkRmwHgHufaenlyAgE1Mxgpdcrf75y6XcnDg==}
@@ -1839,16 +1831,6 @@ snapshots:
   semver@7.8.5: {}
 
   shell-quote@1.10.0: {}
-
-  silvermoon@0.2.2:
-    dependencies:
-      commander: 14.0.3
-      marked: 18.0.14
-      mdast-util-from-markdown: 2.0.3
-      mdast-util-to-markdown: 2.1.2
-      yaml: 2.9.1
-    transitivePeerDependencies:
-      - supports-color
 
   slash@5.1.0: {}
 

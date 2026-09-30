@@ -50,11 +50,10 @@ function isRecord(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
-function isSilvermoonSourceCheckout(root, manifest) {
+function isSilvermoonSourceProject(manifest) {
   const repositoryUrl = manifest.repository?.url;
   if (
-    resolve(root) !== resolve(packageRoot)
-    || manifest.name !== "silvermoon"
+    manifest.name !== "silvermoon"
     || typeof repositoryUrl !== "string"
   ) {
     return false;
@@ -305,8 +304,17 @@ export async function inspectNpmProject(
     filesystem,
   );
   const findings = [];
-  const sourceCheckout = isSilvermoonSourceCheckout(repositoryRoot, manifest);
-  if (!expectedDependency) {
+  const sourceCheckout = isSilvermoonSourceProject(manifest);
+  if (sourceCheckout && resolve(repositoryRoot) !== resolve(packageRoot)) {
+    findings.push({
+      priority: 35,
+      problem: {
+        type: "source-checkout-runtime-required",
+        summary: "The Silvermoon source project must use its own checkout runtime, not an installed package or another checkout.",
+      },
+      instruction: "From the target repository root, rerun the same command and options with `node bin/silvermoon.js` instead of `silvermoon`. Do not add a Silvermoon dependency to its own source project.",
+    });
+  } else if (!expectedDependency) {
     findings.push({
       priority: 35,
       problem: {
@@ -538,11 +546,13 @@ export async function inspectAdoption({
     findings.push({
       priority: 40,
       problem: skill.problem,
-      instruction: skillInstruction(skillSource, npm.packageManager ?? {
-        manager: null,
-        reason: "The root package manager is unknown.",
-        workspace: null,
-      }),
+      instruction: npm.sourceCheckout
+        ? "From the Silvermoon source repository root, run `pnpm sync:skills` to register the current checkout's canonical skill, then rerun with `node bin/silvermoon.js`."
+        : skillInstruction(skillSource, npm.packageManager ?? {
+          manager: null,
+          reason: "The root package manager is unknown.",
+          workspace: null,
+        }),
     });
   }
   findings.sort((left, right) => left.priority - right.priority);

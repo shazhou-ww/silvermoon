@@ -93,6 +93,18 @@ try {
     ),
   );
   assert.equal(installedManifest.name, "silvermoon");
+  const sourceObservation = spawnSync(process.execPath, [
+    join(bootstrap, "node_modules", "silvermoon", "bin", "silvermoon.js"),
+    "list-ideas", "--root", packageRoot, "--json",
+  ], { cwd: bootstrap, encoding: "utf8", timeout: 120_000, windowsHide: true });
+  assert.equal(sourceObservation.status, 1, sourceObservation.stderr);
+  const sourceReport = JSON.parse(sourceObservation.stdout);
+  assert.equal(sourceReport.observation.problems[0].type, "source-checkout-runtime-required");
+  assert.equal(
+    sourceReport.observation.problems.some(({ type }) => type.startsWith("npm-dependency-")),
+    false,
+  );
+  assert.match(responseText(sourceReport), /node bin\/silvermoon\.js/);
   assert.equal(installedManifest.license, "MIT");
   assert.equal(
     installedManifest.homepage,

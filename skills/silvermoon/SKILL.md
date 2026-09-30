@@ -81,6 +81,15 @@ problems without modifying project files or registering skills. Register the
 canonical skill at `.agents/skills/silvermoon` with the supported
 `npx skills add` universal target.
 
+Silvermoon's own source repository is exempt from the dependency requirement.
+There, use `node bin/silvermoon.js` from the current checkout for every
+`silvermoon` command in this skill, preserving all arguments and options.
+Never add Silvermoon as its own dependency or use a globally installed,
+published, or different checkout's runtime. If an external runtime reports
+`source-checkout-runtime-required`, switch to that source entrypoint.
+Maintain its canonical skill in `skills/silvermoon` and refresh the registered
+copy with `pnpm sync:skills`, not from `node_modules`.
+
 ## Follow One Report
 
 Treat each command's `intention`, `observation`, `actions`, and `response` as

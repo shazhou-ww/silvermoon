@@ -3,6 +3,12 @@
 This repository uses the local [Silvermoon skill](/skills/silvermoon/SKILL.md)
 and the fixed `.silvermoon/` metadata layout.
 
+This is Silvermoon's own source repository: every `silvermoon` command below
+means `node bin/silvermoon.js` from the current checkout, also available as
+`pnpm silvermoon`. Never use a global or published package here, and never
+add Silvermoon as its own dependency. Refresh the local skill with
+`pnpm sync:skills`.
+
 ## Authority
 
 The shared authority is `https://github.com/shazhou-ww/silvermoon.git` on

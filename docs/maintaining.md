@@ -11,6 +11,19 @@ Install the locked dependency graph:
 pnpm install --frozen-lockfile
 ```
 
+Silvermoon does not depend on its own published package. Run the current
+checkout's CLI, including uncommitted source changes:
+
+```sh
+pnpm silvermoon list-ideas --audience agent
+# Equivalent: node bin/silvermoon.js list-ideas --audience agent
+```
+
+Use this entrypoint for all repository idea and check commands, not a global
+installation or `npx silvermoon`. An external runtime observing this source
+project reports `source-checkout-runtime-required`, not a missing or outdated
+self-dependency.
+
 Use the smallest check that covers a change:
 
 ```sh

@@ -40,6 +40,13 @@ This writes the single repository-local registration at
 Silvermoon compares that path with its bundled canonical skill but never
 overwrites it.
 
+Silvermoon's own source repository must not depend on its published package.
+Use `node bin/silvermoon.js` from that checkout instead of every `silvermoon`
+invocation below, and refresh its registered skill from the source using
+`pnpm sync:skills`. An external runtime reports
+`source-checkout-runtime-required`; switch to the source entrypoint rather
+than installing a self-dependency.
+
 Create `.silvermoon/config.yaml` with the fixed version 1 contract:
 
 ```yaml

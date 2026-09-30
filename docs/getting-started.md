@@ -43,6 +43,12 @@ registration at `.agents/skills/silvermoon` against its running canonical
 skill, and never mutates the manifest, package-manager files, dependencies, or
 skill registration itself. Non-npm repositories remain free of npm setup.
 
+Silvermoon's own source repository is the exception: it has no Silvermoon
+self-dependency and must run `node bin/silvermoon.js` from its current checkout.
+An external runtime directs contributors to that entrypoint rather than
+requiring the published package. See [Development](./maintaining.md#development)
+for the source CLI and skill workflow.
+
 ## Configure The Shared Primary
 
 Create `.silvermoon/config.yaml`:
