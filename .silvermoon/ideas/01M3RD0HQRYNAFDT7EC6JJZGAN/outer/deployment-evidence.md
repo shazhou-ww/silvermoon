@@ -58,9 +58,9 @@ RC 成功后仍需用户评估，再通过新的 stable implementation candidate
 | `D-AC03` | CodeQL configured 且两类 analysis 成功 | default-setup API、analysis IDs、run `36677849388` | 通过 |
 | `D-AC04` | main/tag rulesets active 且普通同步可用 | ruleset API、rule suite、push/ancestry、hosted CI | 通过 |
 | `D-AC05` | Community Profile 100%，Issue Forms 与 security/support routes 存在 | Community Profile/contents API、公开 URL 与预期 sign-in redirect | 通过 |
-| `D-AC06` | RC 授权、accepted candidate 与 fresh preflight 精确绑定 | user intent、absence、planner、ancestry | 待预检 |
-| `D-AC07` | `0.3.0-rc.1` 不可变发布身份一致 | workflow、registry、release、provenance | 待发布 |
-| `D-AC08` | `rc` 生效且 `latest`/stable surfaces 不变 | dist-tags、prerelease 与 absence observations | 待发布 |
+| `D-AC06` | RC 授权、accepted candidate 与 fresh preflight 精确绑定 | user intent、absence、planner、ancestry | 通过 |
+| `D-AC07` | `0.3.0-rc.1` tag、npm 与 provenance 一致，但 hosted verifier 假阴性且无 GitHub prerelease | failed workflow、registry、attestations、absence | 未通过 |
+| `D-AC08` | npm `rc` 生效且 `latest` 不变，但 GitHub prerelease 缺失 | dist-tags、release absence | 未通过 |
 | `D-AC09` | 稳定 `0.3.0` 仍需新候选与授权 | lifecycle、status、absence observations | hold 生效 |
 | `D-AC10` | 最终稳定公共开源契约完整 | 本文件、ledger、final diff/checks | 等待前置项 |
 
@@ -182,12 +182,61 @@ chooser URL 的认证跳转，不伪造 API recognition。
 这些 observations 早于 implementation acceptance；D-S06 必须在最新 primary 上重新
 执行后才能创建 tag。
 
+2026-09-30T07:50:30Z 对 primary
+`84d917dee90868e86f1bd7d0b7d3a77a64cd62ba` 的 first deployment preflight 通过，
+但随后 primary 前进到包含最终 README 更新的
+`5e116d1fed423bbd1ebed3ec08f2c0b955823022`，因此旧结果按契约失效且没有创建 tag。
+对新 tip 重新运行 `pnpm check`、release planner、hosted CI 与外部 absence checks：
+
+- release-grade checks exit 0；
+- planner 返回 `version=0.3.0-rc.1`、`distTag=rc`、
+  `publicationState=absent`；
+- [CI run 36686112542](https://github.com/shazhou-ww/silvermoon/actions/runs/36686112542)
+  的 package job `109793389519` 与 `Required checks` job `109793541709` 均为
+  success；
+- tag、GitHub Release 与 npm exact version 在 tag 创建前均不存在；
+- npm `latest=0.2.2`、历史 `rc=0.2.0-rc.1`。
+
+随后普通推送不可变 tag `npm/silvermoon/v0.3.0-rc.1`，远端 ref 与本地 tag 均解析到
+`5e116d1fed423bbd1ebed3ec08f2c0b955823022`。GitHub 返回 active tag ruleset 的
+configured maintainer bypass，未移动或重建任何 tag。
+
+Trusted-publishing
+[run 36686662834](https://github.com/shazhou-ww/silvermoon/actions/runs/36686662834)
+的 publish step 成功：
+
+- npm 输出 `+ silvermoon@0.3.0-rc.1`，使用 `rc` dist-tag；
+- Sigstore transparency log index 为 `3014623306`；
+- registry version 的 `gitHead` 为 release commit，MIT、homepage、bugs 与
+  repository metadata 正确；
+- tarball integrity 为
+  `sha512-0JWIBZFcGx4vKG8QtMbdzrwITizDp01cLVmKC4HjX3T0htQJB9G4yRGcZ3QEVPRo9iy4cBq0K8i958Pqr9+aSg==`，
+  shasum 为 `992b0587c400519653b3d28c2e2e87fe90fb3c24`；
+- npm attestation endpoint 返回 publish 与 SLSA provenance 两类 predicate；
+- npm dist-tags 最终读回 `rc=0.3.0-rc.1`、`latest=0.2.2`。
+
+同一 run 的 `Verify published package` step 在 12 次 retry 后失败，错误始终为：
+`README.md is missing immutable asset URL .../assets/silvermoon-avatar.svg.`。
+最终 README 合法只引用 `silvermoon.svg` 与 `silvermoon-mascot.png`；verifier
+仍错误要求每份 README 引用 allowlist 中全部三张 artwork。因此这是发布后 verifier
+与当前 README 的契约缺陷，不是 npm publish、tarball identity 或 provenance 失败。
+run conclusion 仍为 `failure`，且按 fail-closed 顺序没有创建 GitHub prerelease。
+
+用户随后明确选择保留不可变 rc.1 审计事实、修复 verifier 并发布
+`0.3.0-rc.2`。该恢复必须返回新的 implementation candidate；不得移动 rc.1 tag、
+覆盖已发布 npm version，或把失败 run 记录为成功。
+
 ## Failures and recovery
 
 权限不足、API schema 变化、重复同名 ruleset、CodeQL analysis 失败、public surface
 不一致或 release identity 不一致都必须在本节记录，并保持对应 ledger item 未完成。
 只在根因修复并重新验证后更新状态，不删除历史失败，也不以推断代替外部结果。
 
-当前唯一已恢复失败是 Dependabot security updates 首次 PUT 的 HTTP 422；根因、前置
-设置与成功重试均保留在上文。Issue Forms API 表示限制不是写入失败，已通过多项独立事实
-明确限定证据强度。
+Dependabot security updates 首次 PUT 的 HTTP 422 已恢复；根因、前置设置与成功重试
+均保留在上文。Issue Forms API 表示限制不是写入失败，已通过多项独立事实明确限定证据
+强度。
+
+当前未恢复失败是 rc.1 hosted verifier 对已移除 README avatar 引用的过度要求。
+npm version 与 tag 已不可变，因此不修改或重发 rc.1；恢复路径是修复 verifier、增加
+回归测试并发布新版本 `0.3.0-rc.2`。在 rc.2 hosted verifier 和 GitHub prerelease
+成功前，D-S07、D-S08、D-AC07 与 D-AC08 保持未完成。
