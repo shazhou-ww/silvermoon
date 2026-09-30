@@ -8,6 +8,7 @@
 - [ ] **I-S02:** 减少本地集成 fixture 的冗余 remote 初始化
 - [ ] **I-S03:** 输出各并发门禁与完整检查的耗时
 - [ ] **I-S04:** 固化性能回归覆盖与复现说明
+- [ ] **I-S05:** 拆分可独立并行的高成本集成测试组
 
 ### Implementation acceptance criteria
 
@@ -15,6 +16,7 @@
 - [ ] **I-AC02:** 所有既有验证覆盖保持完整
 - [ ] **I-AC03:** Fixture 隔离、失败汇总与耗时报告可验证
 - [ ] **I-AC04:** 性能测量方法可复现且不依赖机器硬预算
+- [ ] **I-AC05:** 拆分后的集成测试保持完整且彼此隔离
 
 ### Implementation notes
 
@@ -22,6 +24,7 @@
 - Integration 共 116 个测试（114 通过、2 个因 Windows symlink 权限跳过），unit 78 个、contract 31 个、installed-package E2E 1 个；五次完整检查均通过。
 - 默认 `createRepository()` 预热后五次建立真实隔离仓库为 1,507、1,495、1,464、1,495、1,621 ms，中位数 1,495 ms。细节与历史可比性限制见同世界辅助文件 `performance-baseline.md`。
 - 作为历史参考，已验收 `faster-test-suite` 使用 Node.js 24.12.0、pnpm 11.22.0，完整检查中位数 54,585 ms、integration 中位数 32,337 ms，integration 为 75 个测试；工具补丁版本与覆盖均不同，不作直接验收对照。
+- 当前迭代的默认 remote fixture 在预热后五次为 329、327、325、327、320 ms，中位数 327 ms；local-only fixture 为 189、207、195、201、189 ms，中位数 195 ms。单次独立 `pnpm test:integration` 为 145,270 ms，但完整并发 `pnpm check` 的预热为 168,309 ms、首个计量样本为 179,085 ms（integration 门禁 177,955 ms），尚未达到 I-AC01。四文件并发实验的 integration 为 174,195 ms，较默认文件并发慢；后续应先优化最大的独立测试文件分组，不能降低已记录的 15% 目标。
 
 ## Deployment
 
