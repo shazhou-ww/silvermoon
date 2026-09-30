@@ -21,7 +21,12 @@ Silvermoon 需要 Node.js 22 或更高版本，并且能够通过 Git 访问仓�
 将下面的提示词发送给项目中的 coding agent：
 
 ```text
-请在本项目中运行 `npx silvermoon whats-next --audience agent`，遵循最高优先级指示并保留已有工作；每次产生可观察变更后重新运行，直到报告显示 `navigation-ready`。
+请在本项目中运行：
+`npx silvermoon whats-next --audience agent`
+
+遵循最高优先级指示并保留已有工作。
+每次产生可观察变更后重新运行，直到报告显示：
+`navigation-ready`
 ```
 
 ### Talk to Silvermoon
@@ -37,14 +42,17 @@ Silvermoon 需要 Node.js 22 或更高版本，并且能够通过 Git 访问仓�
 
 ```text
 /silvermoon
-请继续推进这个项目中的 `<idea-alias>`，遵循 `whats-next` 的指引持续工作，直到需要我做决定时再停下来。
+请继续推进这个项目中的 `<idea-alias>`。
+遵循 `whats-next` 的指引持续工作。
+直到需要我做决定时再停下来。
 ```
 
 或者提出一个新想法：
 
 ```text
 /silvermoon
-我有个想法：增加一个独立于语言选择的修仙风格文案开关。
+我有个想法：
+增加一个独立于语言选择的修仙风格文案开关。
 ```
 
 也可以在终端直接运行 Silvermoon：

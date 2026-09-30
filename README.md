@@ -35,7 +35,12 @@ branch.
 Send this prompt to your coding agent from the project:
 
 ```text
-In this project, run `npx silvermoon whats-next --audience agent`. Follow its highest-priority instruction, preserve existing work, and repeat after each observable change until it reports `navigation-ready`.
+In this project, run:
+`npx silvermoon whats-next --audience agent`
+
+Follow its highest-priority instruction and preserve existing work.
+After each observable change, run it again until it reports:
+`navigation-ready`
 ```
 
 ### Talk to Silvermoon
@@ -51,14 +56,18 @@ Or continue an idea directly:
 
 ```text
 /silvermoon
-Continue working on `<idea-alias>` in this project. Follow the `whats-next` guidance and keep going until you need a decision from me.
+Continue working on `<idea-alias>` in this project.
+Follow the `whats-next` guidance.
+Keep going until you need a decision from me.
 ```
 
 Or start a new idea:
 
 ```text
 /silvermoon
-I have an idea: add an optional cultivation-style copy mode, independent of the selected language.
+I have an idea:
+Add an optional cultivation-style copy mode, independent of the selected
+language.
 ```
 
 Or use Silvermoon directly in a terminal:
