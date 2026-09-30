@@ -34,8 +34,21 @@ contents、Markdown lint 与 canonical skill 同步检查均通过。未创建 r
 
 ### Deployment steps
 
-- [ ] **D-S01:** 步骤标题
+- [x] **D-S01:** 核验 GitHub 主分支 README
 
 ### Deployment acceptance criteria
 
-- [ ] **D-AC01:** 标准标题
+- [x] **D-AC01:** 两种语言 README 的项目图片在线可用
+
+部署证据：在 primary commit
+`bc996fe08d0a1ef79c823caecb3ccf02d4303578` 上，GitHub 英文仓库页
+`https://github.com/shazhou-ww/silvermoon` 与中文 README 页面
+`https://github.com/shazhou-ww/silvermoon/blob/main/README.zh-CN.md` 均返回
+HTTP 200（`text/html; charset=utf-8`），并渲染 logo 与 mascot。两页解析出的
+`https://github.com/shazhou-ww/silvermoon/raw/main/assets/silvermoon.svg` 均返回
+HTTP 200（`image/svg+xml`），SHA-256 为
+`b60395a15bf57ed2f8e3ae41a7d29681d44b101626690962fa9bd7a802816796`；两页解析出
+的 `https://github.com/shazhou-ww/silvermoon/raw/main/assets/silvermoon-mascot.png`
+均返回 HTTP 200（`image/png`），SHA-256 为
+`aecbc9531d2f6735d843f42de4955613de0943c3b7f3f24cc5cd30afda8e13a8`。两种资源的
+响应字节均与该 primary commit 中对应文件完全一致。

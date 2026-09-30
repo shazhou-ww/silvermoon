@@ -2,24 +2,20 @@
 
 ## Steps
 
-<!--
-为每个步骤分配稳定的 D-Sxx 标识符和三级标题。
-描述部署或现实世界验证工作。
-不要在本文档中使用任务列表复选框。
--->
+### D-S01: 核验 GitHub 主分支 README
 
-### D-S01: 步骤标题
-
-<!-- 描述该部署或外部验证步骤。 -->
+在配置的 primary 上读取已发布的完整 commit，通过 GitHub 托管页面检查英文和
+中文 README 的项目 logo 与 mascot 均已渲染。对页面解析出的四个图片地址执行
+外部 HTTP 请求，确认状态为成功且内容类型为图片，并将响应字节与该 primary
+commit 中对应的 `assets/` 文件比较。完成后在 ledger 记录 commit、页面和图片
+地址、HTTP 状态与内容类型。此部署只验证 GitHub 展示，不创建 npm release tag，
+也不执行 npm 发布。
 
 ## Acceptance criteria
 
-<!--
-为每项标准分配稳定的 D-ACxx 标识符和三级标题。
-同时说明可观察的外部结果及其证明方法。
-不要创建单独的验证章节，也不要使用任务列表复选框。
--->
+### D-AC01: 两种语言 README 的项目图片在线可用
 
-### D-AC01: 标准标题
-
-<!-- 描述所需外部结果以及 Agent 如何证明该结果。 -->
+GitHub primary 上的英文和中文 README 页面均成功响应并渲染项目 logo 与
+mascot；页面解析出的四个图片地址均返回成功状态和图片内容，且响应字节分别
+匹配同一 primary commit 中的对应资源。通过记录页面与图片 URL、HTTP 状态、
+内容类型、primary commit，以及与该 commit 资源内容的比较结果证明。
