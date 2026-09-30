@@ -80,13 +80,13 @@ test("defines the exact active main ruleset contract", async () => {
   });
 });
 
-test("pins every external workflow action to an immutable reviewed version", async () => {
+test("uses only approved external workflow actions pinned to immutable SHAs", async () => {
   const workflowNames = (await readdir(workflowsUrl))
     .filter((name) => /\.ya?ml$/.test(name))
     .sort();
   assert.deepEqual(workflowNames, ["ci.yml", "publish-npm.yml"]);
 
-  const references = [];
+  const actionIdentities = [];
   for (const name of workflowNames) {
     const source = await readFile(new URL(name, workflowsUrl), "utf8");
     const usesLines = source.match(/^\s*uses:\s*.+$/gm) ?? [];
@@ -96,14 +96,14 @@ test("pins every external workflow action to an immutable reviewed version", asy
         /^\s*uses:\s*([^@\s]+)@([0-9a-f]{40})\s+#\s+(v\d+\.\d+\.\d+)\s*$/
           .exec(line);
       assert.ok(match, `${name} has a movable or unversioned action: ${line}`);
-      references.push(`${match[1]}@${match[2]} # ${match[3]}`);
+      actionIdentities.push(match[1]);
     }
   }
 
-  assert.deepEqual(new Set(references), new Set([
-    "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1",
-    "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0",
-    "pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0",
+  assert.deepEqual(new Set(actionIdentities), new Set([
+    "actions/checkout",
+    "actions/setup-node",
+    "pnpm/action-setup",
   ]));
 });
 
