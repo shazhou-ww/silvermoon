@@ -41,6 +41,7 @@ test("rejects legacy command spellings without changing the repository", async (
 test("returns one when check cannot validate a commit", async () => {
   const repository = await createRepository({
     prefix: "silvermoon-cli-exit-",
+    withRemote: false,
   });
   try {
     const logs = [];
@@ -79,6 +80,7 @@ test("returns one when check cannot validate a commit", async () => {
 test("writes schema-valid domain and telemetry events without changing the report", async () => {
   const repository = await createRepository({
     prefix: "silvermoon-cli-trace-",
+    withRemote: true,
   });
   const requestedTracePath = join(repository.root, "whats-next");
   const tracePath = `${requestedTracePath}.trace.jsonl`;
@@ -235,6 +237,7 @@ test("repository ignore rules cover only the trace JSONL convention", () => {
 test("checks the normalized trace target before running the command", async () => {
   const repository = await createRepository({
     prefix: "silvermoon-cli-trace-existing-",
+    withRemote: false,
   });
   const requestedTracePath = join(repository.root, "existing");
   const tracePath = `${requestedTracePath}.trace.jsonl`;
@@ -268,7 +271,10 @@ test("checks the normalized trace target before running the command", async () =
 });
 
 test("pre-commit staged check fails while unchanged HEAD passes", async () => {
-  const repository = await createRepository({ prefix: "silvermoon-hook-" });
+  const repository = await createRepository({
+    prefix: "silvermoon-hook-",
+    withRemote: false,
+  });
   try {
     const ledger = join(repository.root, ...ideaPaths(FIRST_ID).ledgerPath.split("/"));
     await rm(ledger);

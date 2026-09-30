@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { performance } from "node:perf_hooks";
 import { resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -77,10 +78,23 @@ export function runCheckScript(
 export async function runChecks({
   scripts = CHECK_SCRIPTS,
   runScript = runCheckScript,
+  now = () => performance.now(),
+  writeOutput = (message) => process.stdout.write(message),
 } = {}) {
+  const totalStartedAt = now();
   const results = await Promise.allSettled(
-    scripts.map((script) => runScript(script)),
+    scripts.map(async (script) => {
+      const scriptStartedAt = now();
+      try {
+        await runScript(script);
+      } finally {
+        const elapsedMs = Math.round(now() - scriptStartedAt);
+        writeOutput(`CHECK_DURATION ${script} ${elapsedMs}ms\n`);
+      }
+    }),
   );
+  const totalElapsedMs = Math.round(now() - totalStartedAt);
+  writeOutput(`CHECK_TOTAL ${totalElapsedMs}ms\n`);
   const failures = results.flatMap((result, index) =>
     result.status === "rejected"
       ? [`${scripts[index]}: ${result.reason?.message ?? result.reason}`]
