@@ -39,8 +39,7 @@ In this project, run:
 `npx silvermoon whats-next --audience agent`
 
 Follow its highest-priority instruction and preserve existing work.
-After each observable change, run it again until it reports:
-`navigation-ready`
+After each observable change, run it again until it reports: `navigation-ready`
 ```
 
 ### Talk to Silvermoon
@@ -66,8 +65,8 @@ Or start a new idea:
 ```text
 /silvermoon
 I have an idea:
-Add an optional cultivation-style copy mode, independent of the selected
-language.
+Add an optional cultivation-style copy mode,
+independent of the selected language.
 ```
 
 Or use Silvermoon directly in a terminal:
