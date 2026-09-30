@@ -101,8 +101,7 @@ test("pins every external workflow action to an immutable reviewed version", asy
   }
 
   assert.deepEqual(new Set(references), new Set([
-    "actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0",
-    "actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0",
+    "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1",
     "actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0",
     "actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0",
     "pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0",

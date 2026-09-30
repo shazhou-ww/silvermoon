@@ -137,7 +137,7 @@ test("uses a protected, least-privilege trusted-publishing workflow", async () =
   assert.equal(checkout.with["fetch-depth"], 0);
   assert.equal(
     checkout.uses,
-    "actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803",
+    "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
   );
   assert.equal(
     setupPnpm.uses,
