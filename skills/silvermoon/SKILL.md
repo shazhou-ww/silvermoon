@@ -20,8 +20,12 @@ repository or external actions with ordinary tools and Git.
   or previously selected it.
 - Bare `whats-next` lists active ideas and offers creation, even when exactly one idea is active.
   Never infer selection; require an explicit ULID or alias.
+- As an Agent, explicitly pass `--audience agent` to report commands such as
+  `silvermoon whats-next <idea> --audience agent`, including hygiene retries.
+  This keeps response Markdown readable even when both streams are TTYs;
+  the default human audience would open an interactive TUI.
 - Use `--json` only when a programmatic consumer needs all four report
-  projections.
+  projections. Do not combine `--json` with `--audience agent`.
 - Use `--language en-US|zh-CN` with `whats-next` or `check` only when the user
   explicitly requests a temporary output locale. Preserve the same canonical
   option in every hygiene retry. It changes Silvermoon-owned rendering for

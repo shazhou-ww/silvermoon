@@ -29,6 +29,17 @@ const formalTerminologySources = [
   "src/whatsnext.js",
 ];
 
+test("guides agents to raw Markdown without opening the human TUI", async () => {
+  const skill = await readFile(
+    resolve(repositoryRoot, "skills", "silvermoon", "SKILL.md"),
+    "utf8",
+  );
+  assert.match(skill, /As an Agent, explicitly pass `--audience agent`/);
+  assert.match(skill, /silvermoon whats-next <idea> --audience agent/);
+  assert.match(skill, /including hygiene retries/);
+  assert.match(skill, /Do not combine `--json` with `--audience agent`/);
+});
+
 test("keeps both READMEs reader-first and structurally aligned", async () => {
   const [english, chinese] = await Promise.all([
     readFile(resolve(repositoryRoot, "README.md"), "utf8"),
