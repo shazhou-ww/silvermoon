@@ -13,10 +13,14 @@ contract，也不代表未执行动作已经完成。
   `794a386f2d3d194bba20a73704a0b3c58d880310`
 - Deployment contract commit:
   `694a83d9b484642e34e8185f0e48ea51868d968b`
+- GitHub settings evidence commit:
+  `82a2280cca86d3bd5acc0f5ba7ce9a044cfeb8d3`
 - Deployment revision: 由同步后的 `whats-next` report 提供；world tree 不记录自己
   的 revision，避免内容寻址自引用
-- Synchronized deployment revision:
+- Initial synchronized deployment revision:
   `b00714e1182b03d00d502c645256ff07eeeb9d66`
+- GitHub settings evidence revision:
+  `5e3e5ad9c72a7bef84f92c74125634f3126e4846`
 
 ## Active release hold
 
@@ -41,7 +45,7 @@ contract，也不代表未执行动作已经完成。
 | `D-AC01` | 外层契约同步且 revision 稳定 | primary commit、Silvermoon worktree/staged checks、`whats-next` | 通过 |
 | `D-AC02` | Private reporting、vulnerability alerts 与 security updates enabled | GitHub API、advisory route、config blob | 通过 |
 | `D-AC03` | CodeQL configured 且两类 analysis 成功 | default-setup API、analysis IDs、run `36677849388` | 通过 |
-| `D-AC04` | main/tag rulesets active 且普通同步可用 | ruleset API、push/ancestry | 待部署 |
+| `D-AC04` | main/tag rulesets active 且普通同步可用 | ruleset API、rule suite、push/ancestry、hosted CI | 通过 |
 | `D-AC05` | Community Profile 100%，Issue Forms 与 security/support routes 存在 | Community Profile/contents API、公开 URL 与预期 sign-in redirect | 通过 |
 | `D-AC06` | README/authorization gate 未被绕过 | absence observation、后续授权/preflight | hold 生效 |
 | `D-AC07` | `0.3.0` 不可变发布身份一致 | workflow、registry、release、provenance | 等待授权 |
@@ -110,9 +114,21 @@ CodeQL 在 06:21:53Z 的 baseline 为 `state: not-configured`、无 analysis。�
 - ruleset 列表恰有上述 branch/tag 两项；
 - tag ruleset ID `23758427` 再次读回未变化。
 
-本 evidence candidate 将通过 ordinary non-force push 验证 maintainer
-synchronization；成功 commit、ancestry 与 rule-suite 结果在下一次 evidence 更新中
-记录。
+GitHub settings evidence candidate 使用 ordinary non-force
+`HEAD:main` push 从 `694a83d9b484642e34e8185f0e48ea51868d968b` 更新到
+`82a2280cca86d3bd5acc0f5ba7ce9a044cfeb8d3`，没有 force、tag 或 history rewrite。
+GitHub 明确返回 configured maintainer bypass，并指出 push 时
+`Required checks` 尚未产生；rule suite `4290502544` 对 `refs/heads/main` 记录同一
+before/after SHA、actor `shazhou-ww` 与 result `bypass`，证明 bypass 是 active
+ruleset 的可审计结果，而不是规则缺失。
+
+2026-09-30T06:28:32Z 刷新 `origin/main` 后，`git merge-base --is-ancestor`
+确认 `82a2280cca86d3bd5acc0f5ba7ce9a044cfeb8d3` 可达。随后
+[CI run 36678396244](https://github.com/shazhou-ww/silvermoon/actions/runs/36678396244)
+对该精确 commit 成功完成，`Required checks` job `109768498959` 为 success；仅
+`Package contents and installed CLI` 按文档-only risk selection 正常 skipped。
+因此 active main ruleset、预期 maintainer maintenance path 和 required check
+context 均有实际外部证据，既有 tag ruleset 保持不变。
 
 ### Community surfaces
 
