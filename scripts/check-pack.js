@@ -3,10 +3,11 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { basename, dirname, join, resolve } from "node:path";
+import { basename, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { inspectNpmTarball } from "./npm-tarball.mjs";
+import { npmCommand } from "./npm-command.mjs";
 
 const packageRoot = fileURLToPath(new URL("..", import.meta.url));
 const configuredTarball = process.env.SILVERMOON_TARBALL?.trim();
@@ -56,15 +57,7 @@ const npmArguments = [
   "--dry-run",
   "--json",
 ];
-const configuredNpmCli = process.env.npm_execpath;
-const npmCli =
-  configuredNpmCli && /^npm-cli\.js$/i.test(basename(configuredNpmCli))
-    ? configuredNpmCli
-    : resolve(dirname(process.execPath), "node_modules", "npm", "bin", "npm-cli.js");
-const command = process.platform === "win32" ? process.execPath : "npm";
-const args = process.platform === "win32"
-  ? [npmCli, ...npmArguments]
-  : npmArguments;
+const { command, args } = npmCommand(npmArguments);
 const packed = spawnSync(command, args, {
   cwd: packageRoot,
   encoding: "utf8",
@@ -167,11 +160,10 @@ if (packed.status !== 0) {
         "--pack-destination",
         comparisonDirectory,
       ];
+      const comparisonCommand = npmCommand(comparisonArguments);
       const comparison = spawnSync(
-        command,
-        process.platform === "win32"
-          ? [npmCli, ...comparisonArguments]
-          : comparisonArguments,
+        comparisonCommand.command,
+        comparisonCommand.args,
         {
           cwd: packageRoot,
           encoding: "utf8",

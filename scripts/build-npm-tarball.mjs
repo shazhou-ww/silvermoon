@@ -1,26 +1,10 @@
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import { appendFile, mkdir, readFile, stat, writeFile } from "node:fs/promises";
-import { basename, dirname, resolve } from "node:path";
+import { basename, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
-function packCommand(outputDirectory) {
-  if (process.platform === "win32") {
-    const configuredNpmCli = process.env.npm_execpath;
-    const npmCli =
-      configuredNpmCli && /^npm-cli\.js$/i.test(basename(configuredNpmCli))
-        ? configuredNpmCli
-        : resolve(dirname(process.execPath), "node_modules", "npm", "bin", "npm-cli.js");
-    return {
-      command: process.execPath,
-      args: [npmCli, "pack", "--json", "--pack-destination", outputDirectory],
-    };
-  }
-  return {
-    command: "npm",
-    args: ["pack", "--json", "--pack-destination", outputDirectory],
-  };
-}
+import { npmCommand } from "./npm-command.mjs";
 
 function parsePackResult(stdout) {
   let results;
@@ -127,7 +111,7 @@ export async function buildNpmTarball({
   const readmeFilename = await stampReleaseMetadata(packageRoot, releaseGitHead);
   await mkdir(outputRoot, { recursive: true });
 
-  const invocation = packCommand(outputRoot);
+  const invocation = npmCommand(["pack", "--json", "--pack-destination", outputRoot]);
   const packed = spawnImpl(invocation.command, invocation.args, {
     cwd: packageRoot,
     encoding: "utf8",

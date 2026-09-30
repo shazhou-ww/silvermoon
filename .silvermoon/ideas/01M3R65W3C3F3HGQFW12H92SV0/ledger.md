@@ -34,8 +34,14 @@
   - worktree/staged Silvermoon 校验、`git diff --check`、
     `git diff --cached --check` 均退出 0；提交前 index 与 worktree 无差异。
   - 托管 CI [36668763265](https://github.com/shazhou-ww/silvermoon/actions/runs/36668763265)
-    对实现 commit 已排队；等待三平台双 Node、核心 job 及条件 package/E2E
-    的实际结果，尚不记录托管验证成功。
+    的六个 unit/runtime 矩阵、contract、integration、risk 全部成功，但新增
+    package job 的 E2E 失败：Linux 经 pnpm 启动时沿用了 Windows 的 npm-cli
+    相对路径，找不到 `/opt/hostedtoolcache/node/24.21.0/x64/bin/node_modules/npm/bin/npm-cli.js`。
+    该失败由新增普通 CI 门禁暴露，不跳过或改用另一候选掩盖。
+  - 已将 package build/check/E2E 的 npm 调用收敛到同一平台 helper：
+    POSIX 用 PATH 的 npm，Windows 保留 shell-free npm-cli。新增跨平台
+    确定性测试，窄测 6/6、本地完整 `pnpm check` 退出 0（248 项、2 原有
+    skip）。等待修复 commit 的托管 package/E2E 实证。
 
 ### Implementation acceptance criteria
 
