@@ -8,9 +8,9 @@ contract，也不代表未执行动作已经完成。
 - Idea: `open-source-readiness`
 - ULID: `01M3RD0HQRYNAFDT7EC6JJZGAN`
 - Accepted implementation revision:
-  `276b88c0c55afa47717991105f67bc768f4aeb38`
+  `d2de2d4c5a40c188eb6b5d5d938f13d2602c401d`
 - Implementation acceptance commit:
-  `794a386f2d3d194bba20a73704a0b3c58d880310`
+  `e90d01900b975d43d50d3e9f2ef5b62755c8ac36`
 - Deployment contract commit:
   `694a83d9b484642e34e8185f0e48ea51868d968b`
 - GitHub settings evidence commit:
@@ -24,32 +24,41 @@ contract，也不代表未执行动作已经完成。
 
 ## Active release hold
 
-2026-09-30T14:18:06+08:00，用户明确要求继续非发布 deployment，并说明 README 文案
-仍在调整，`0.3.0` 应在该工作完成后一起发布。当前没有
-`/publish silvermoon 0.3.0` 授权。
+先前 README hold 已由 primary commit
+`fb1ce53` 的双语文案更新和后续 RC candidate 取代。2026-09-30，用户要求优先发布
+RC，并明确选择 `silvermoon@0.3.0-rc.1`；该授权只覆盖 RC，不覆盖稳定 `0.3.0`。
 
-因此在收到后续明确授权前：
+因此 RC implementation acceptance 后允许按本 Deployment contract 执行：
+
+- 创建并普通推送 `npm/silvermoon/v0.3.0-rc.1`；
+- 只通过 npm trusted-publishing workflow 发布到 `rc` dist-tag；
+- verifier 成功后创建 GitHub prerelease。
+
+稳定 hold 继续生效：
 
 - 不创建或推送 `npm/silvermoon/v0.3.0`；
-- 不创建 GitHub Release；
-- 不触发或绕过 npm trusted-publishing workflow；
+- 不创建稳定 GitHub Release；
+- 不发布 npm exact `0.3.0` 或更新 `latest`；
 - 不本地运行 `npm publish`；
-- README 或其他 primary 变更发生后，旧 release preflight 一律失效并重新执行。
+- primary 发生新变更后，旧 release preflight 一律失效并重新执行。
 
-此 hold 不阻止已批准的 GitHub security settings、CodeQL、ruleset 与公共表面验证。
+RC 成功后仍需用户评估，再通过新的 stable implementation candidate 和授权推进
+`0.3.0`。
 
 ## Stable-ID evidence
 
 | Stable ID | 外部结果 | 证明 | 状态 |
 | --- | --- | --- | --- |
-| `D-AC01` | 外层契约同步且 revision 稳定 | primary commit、Silvermoon worktree/staged checks、`whats-next` | 通过 |
+| `D-AC01` | RC-first 外层契约同步且 revision 稳定 | primary commit、Silvermoon worktree/staged checks、`whats-next` | 待同步 |
 | `D-AC02` | Private reporting、vulnerability alerts 与 security updates enabled | GitHub API、advisory route、config blob | 通过 |
 | `D-AC03` | CodeQL configured 且两类 analysis 成功 | default-setup API、analysis IDs、run `36677849388` | 通过 |
 | `D-AC04` | main/tag rulesets active 且普通同步可用 | ruleset API、rule suite、push/ancestry、hosted CI | 通过 |
 | `D-AC05` | Community Profile 100%，Issue Forms 与 security/support routes 存在 | Community Profile/contents API、公开 URL 与预期 sign-in redirect | 通过 |
-| `D-AC06` | README/authorization gate 未被绕过 | absence observation、后续授权/preflight | hold 生效 |
-| `D-AC07` | `0.3.0` 不可变发布身份一致 | workflow、registry、release、provenance | 等待授权 |
-| `D-AC08` | 最终公共开源契约完整 | 本文件、ledger、final diff/checks | 等待前置项 |
+| `D-AC06` | RC 授权、accepted candidate 与 fresh preflight 精确绑定 | user intent、absence、planner、ancestry | 待预检 |
+| `D-AC07` | `0.3.0-rc.1` 不可变发布身份一致 | workflow、registry、release、provenance | 待发布 |
+| `D-AC08` | `rc` 生效且 `latest`/stable surfaces 不变 | dist-tags、prerelease 与 absence observations | 待发布 |
+| `D-AC09` | 稳定 `0.3.0` 仍需新候选与授权 | lifecycle、status、absence observations | hold 生效 |
+| `D-AC10` | 最终稳定公共开源契约完整 | 本文件、ledger、final diff/checks | 等待前置项 |
 
 ## External observations
 
@@ -159,7 +168,15 @@ chooser URL 的认证跳转，不伪造 API recognition。
 
 ### Release surfaces
 
-当前只验证 absence；实际 release evidence 等待 README 完成和明确授权。
+2026-09-30T07:34:12Z 的 RC implementation preflight 已观察：
+
+- `TAG_ABSENT npm/silvermoon/v0.3.0-rc.1`；
+- `GITHUB_RELEASE_ABSENT npm/silvermoon/v0.3.0-rc.1`；
+- `NPM_VERSION_ABSENT silvermoon@0.3.0-rc.1`；
+- npm `latest=0.2.2`、历史 `rc=0.2.0-rc.1`。
+
+这些 observations 早于 implementation acceptance；D-S06 必须在最新 primary 上重新
+执行后才能创建 tag。
 
 ## Failures and recovery
 

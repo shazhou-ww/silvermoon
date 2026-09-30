@@ -38,28 +38,48 @@ non-force evidence commit 证明维护路径仍可用，不执行 force 测试�
 reporting、Dependabot、CodeQL、branch ruleset 与 tag ruleset 的可复核链接或最小必要
 响应字段。页面或 API 不一致时不使用文档声明代替实际结果。
 
-### D-S06: 保持 0.3.0 发布门禁并刷新候选
+### D-S06: 刷新并预检 0.3.0-rc.1 候选
 
-在用户完成 README 文案并明确调用 `/publish silvermoon 0.3.0` 之前，保持
-`npm/silvermoon/v0.3.0` tag、GitHub Release 与 npm `0.3.0` 均不存在。获得授权后先
-刷新 primary 与 tags，确认 README 变更已包含在精确 release commit，重新运行
-release-grade checks，并复核 `package.json`、changelog 与 release notes 仍与候选
-一致；任何新变更都会使旧 preflight 失效。
+基于用户对 `silvermoon@0.3.0-rc.1` 的明确选择与发布意图，刷新 primary、tags、
+GitHub Releases 和 npm metadata，确认 accepted implementation、最终双语 README、
+`package.json`、changelog 与 RC notes 均包含在同一精确 primary commit。重新执行
+release planner 与 release-grade checks，要求 RC tag、GitHub prerelease 和 npm
+exact version 仍不存在，planner 返回 `distTag=rc`；任何新 primary 变更都会使旧
+preflight 失效。
 
-### D-S07: 通过可信链路发布 0.3.0
+### D-S07: 通过可信链路发布 0.3.0-rc.1
 
 只在 D-S06 满足后，于最新 `origin/main` 精确 commit 创建并普通推送不可变
-`npm/silvermoon/v0.3.0` tag。等待 `.github/workflows/publish-npm.yml` 成功并输出
-`VERIFY_NPM_RELEASE_OK`，随后用已存在 tag 和 repository-owned notes 创建 GitHub
-Release；不本地运行 `npm publish`，不创建 token，也不移动或重建 tag。
+`npm/silvermoon/v0.3.0-rc.1` tag。等待 `.github/workflows/publish-npm.yml`
+成功并输出 `VERIFY_NPM_RELEASE_OK`，随后用已存在 tag、repository-owned RC notes
+和 `--prerelease` 创建 GitHub prerelease；不本地运行 `npm publish`，不创建 token，
+也不移动或重建 tag。
 
-### D-S08: 验证发布身份并封存外部证据
+### D-S08: 验证 RC 身份与 channel 隔离
 
-读回 GitHub Release、npm exact version、`latest` dist-tag、MIT license、homepage、
-bugs、maintainer、package README、tarball integrity、`gitHead`、npm publish
-attestation 与 SLSA provenance，要求全部指向同一 release commit。将成功 hosted
-run、immutable URLs、API 最小字段和验证器输出记录到 `deployment-evidence.md`，
-同步到 primary 后再请求 deployment acceptance。
+读回 GitHub prerelease、npm exact RC version、`rc` 与 `latest` dist-tags、MIT
+license、homepage、bugs、maintainer、package README、tarball integrity、
+`gitHead`、npm publish attestation 与 SLSA provenance。要求 RC 表面全部指向同一
+release commit，`rc` 指向 `0.3.0-rc.1`，`latest` 仍指向 `0.2.2`。将 successful
+hosted run、immutable URLs、API 最小字段和 verifier 输出记录到
+`deployment-evidence.md` 并同步到 primary。
+
+### D-S09: 保持稳定 0.3.0 门禁并返回候选实施
+
+RC 成功不授权稳定 release，也不把当前 prerelease manifest 直接发布为 stable。
+在用户评估 RC 并明确授权稳定 `0.3.0` 前，保持
+`npm/silvermoon/v0.3.0` tag、GitHub stable Release 与 npm exact version 不存在，
+且 npm `latest` 不变。获得授权后，先通过新的 repository implementation candidate
+把 manifest 和 release materials 切换到 `0.3.0`，重新完成 release-grade
+validation 与精确 implementation revision acceptance，再返回 Deployment。
+
+### D-S10: 发布稳定 0.3.0 并封存最终证据
+
+只在 D-S09 的新 stable candidate 被验收后，通过同一 protected tag、OIDC trusted
+publishing 和 post-publication verifier 发布不可变 `0.3.0`，创建 GitHub stable
+Release，并要求 npm `latest`、tag、Release、tarball、`gitHead` 与 provenance
+解析到同一 primary commit。将最终外部证据同步到 primary 后再进入 deployment
+acceptance。
 
 ## Acceptance criteria
 
@@ -93,21 +113,34 @@ GitHub 识别 repository community files，issue chooser routes 与 security/sup
 指引一致，公开链接可达；通过 Community Profile API、公开 URL 与 commit-pinned 文件
 证明。
 
-### D-AC06: 发布授权门禁没有被提前绕过
+### D-AC06: RC 授权与 preflight 精确绑定
 
-用户 README 工作完成且明确授权前，远端 tag、GitHub Release 与 npm `0.3.0` 均不存在；
-授权后使用包含最终 README 的最新 primary commit 重新验证。通过带时间的 absence
-observations、明确授权和 release preflight 证明。
+用户明确选择 `0.3.0-rc.1`，accepted implementation 包含最终 README 与 exact RC
+materials；tag、GitHub prerelease 与 npm exact version 在创建前均不存在，release
+planner 返回 `distTag=rc`。通过带时间的 absence observations、primary ancestry、
+明确授权和重新执行的 release preflight 证明。
 
-### D-AC07: 0.3.0 发布身份不可变且一致
+### D-AC07: 0.3.0-rc.1 发布身份不可变且一致
 
-`npm/silvermoon/v0.3.0`、GitHub Release、npm `silvermoon@0.3.0`、`latest` dist-tag、
-tarball `gitHead`、integrity 与 provenance 全部解析到同一 primary commit，MIT 与公共
-metadata 正确；通过 hosted workflow、`VERIFY_NPM_RELEASE_OK`、registry 和 immutable
-release URLs 证明。
+`npm/silvermoon/v0.3.0-rc.1`、GitHub prerelease、npm
+`silvermoon@0.3.0-rc.1`、`rc` dist-tag、tarball `gitHead`、integrity 与 provenance
+全部解析到同一 primary commit，MIT 与公共 metadata 正确；通过 hosted workflow、
+`VERIFY_NPM_RELEASE_OK`、registry 和 immutable release URLs 证明。
 
-### D-AC08: 公共开源契约完整可用
+### D-AC08: RC channel 不改变稳定消费者
 
-GitHub 与 npm 的最终公共结果同时满足 D-AC02 至 D-AC07，所有 evidence 已同步到
-primary 且没有未解释的失败、权限缺口或成功形状 fallback；通过
+npm `rc` 指向 `0.3.0-rc.1`，`latest` 保持 `0.2.2`，GitHub Release 标记为
+prerelease，稳定 tag/version 均不存在；通过 registry dist-tags、GitHub Release API
+与 absence observations 证明。
+
+### D-AC09: 稳定 0.3.0 门禁没有被 RC 绕过
+
+RC 发布后，稳定 `0.3.0` 仍要求新的 accepted implementation revision、明确授权与
+fresh preflight；在满足前不存在 stable tag、GitHub Release 或 npm exact version。
+通过 lifecycle report、status fact 与外部 absence observations 证明。
+
+### D-AC10: 公共开源契约完整可用
+
+GitHub 与 npm 的最终 stable 公共结果同时满足 D-AC02 至 D-AC09，所有 evidence 已
+同步到 primary 且没有未解释的失败、权限缺口或成功形状 fallback；通过
 `deployment-evidence.md`、ledger、Silvermoon checks 与最终 candidate diff 证明。
