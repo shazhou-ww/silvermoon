@@ -15,6 +15,8 @@ contract，也不代表未执行动作已经完成。
   `694a83d9b484642e34e8185f0e48ea51868d968b`
 - RC deployment contract commit:
   `fa65a8fbc6344f660e6482955332d18693fc495c`
+- RC2 deployment contract commit:
+  `21fac7462c663e7155ab3498717417f44159d4c4`
 - GitHub settings evidence commit:
   `82a2280cca86d3bd5acc0f5ba7ce9a044cfeb8d3`
 - Deployment revision: 由同步后的 `whats-next` report 提供；world tree 不记录自己
@@ -25,6 +27,8 @@ contract，也不代表未执行动作已经完成。
   `5e3e5ad9c72a7bef84f92c74125634f3126e4846`
 - RC deployment contract revision:
   `a37b660b188fd14f3bb3382df717c421f778259b`
+- RC2 deployment contract revision:
+  `14ca800dccbf06fb595623e821d9af360effe549`
 
 ## Active release hold
 
@@ -54,7 +58,7 @@ RC 成功后仍需用户评估，再通过新的 stable implementation candidate
 
 | Stable ID | 外部结果 | 证明 | 状态 |
 | --- | --- | --- | --- |
-| `D-AC01` | RC2 recovery 外层契约同步且 revision 稳定 | primary commit、Silvermoon worktree/staged checks、`whats-next` | 待同步 |
+| `D-AC01` | RC2 recovery 外层契约同步且 revision 稳定 | primary commit、Silvermoon worktree/staged checks、`whats-next` | 通过 |
 | `D-AC02` | Private reporting、vulnerability alerts 与 security updates enabled | GitHub API、advisory route、config blob | 通过 |
 | `D-AC03` | CodeQL configured 且两类 analysis 成功 | default-setup API、analysis IDs、run `36677849388` | 通过 |
 | `D-AC04` | main/tag rulesets active 且普通同步可用 | ruleset API、rule suite、push/ancestry、hosted CI | 通过 |

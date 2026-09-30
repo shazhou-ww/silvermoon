@@ -28,7 +28,7 @@
 
 ### Deployment steps
 
-- [ ] **D-S01:** 发布外层契约并建立部署证据
+- [x] **D-S01:** 发布外层契约并建立部署证据
 - [x] **D-S02:** 启用私密报告与依赖安全更新
 - [x] **D-S03:** 启用并验证 CodeQL default setup
 - [x] **D-S04:** 应用并验证 main ruleset
@@ -41,7 +41,7 @@
 
 ### Deployment acceptance criteria
 
-- [ ] **D-AC01:** 外层契约稳定且证据可追溯
+- [x] **D-AC01:** 外层契约稳定且证据可追溯
 - [x] **D-AC02:** 安全报告与 Dependabot 已实际启用
 - [x] **D-AC03:** CodeQL default setup 产生成功分析
 - [x] **D-AC04:** main 与 release tag 保护同时成立
