@@ -58,11 +58,12 @@ canonical BCP 47 tag.
 
 `whats-next` may fetch after local readiness passes, but it does not move the
 worktree, index, branches, or named refs. Human approvals, implementation
-acceptance, deployment acceptance, and abandonment are ordinary edits to one
-idea `status.yaml` after an explicit decision in this still-v1 source repository.
-V2 projects instead use the controlled
+acceptance, deployment acceptance, and abandonment require an explicit decision.
+For a v1 project, record that decision in the idea's `status.yaml`.
+For a v2 project, including this source repository after its explicitly
+authorized migration, use the controlled
 [event protocol](../skills/silvermoon/references/events.md). Developing v2
-does not authorize migration of this checkout.
+alone does not authorize migration of a checkout.
 
 Before requesting a human decision, validate the candidate, synchronize its
 normal non-force commit to primary, confirm reachability from the refreshed
