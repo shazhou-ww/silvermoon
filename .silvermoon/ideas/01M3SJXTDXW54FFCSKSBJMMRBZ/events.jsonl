@@ -1,1 +1,2 @@
 {"sequence":1,"type":"alias.updated","payload":{"alias":"local-agent-handoff"}}
+{"sequence":2,"type":"ideal.approved","payload":{"idealRevision":"92b44e74417cfbe7a02673524b767d2a032e19bf"}}
