@@ -70,7 +70,7 @@ test("project setup uses cumulative observation variants and reports all setup f
   const configured = await fixture();
   await writeFile(
     join(configured.root, ".silvermoon", "config.yaml"),
-    `version: 2
+    `version: 3
 primaryRepository: ${PRIMARY_REPOSITORY}
 primaryBranch: main
 `,

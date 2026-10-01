@@ -42,24 +42,56 @@
 
 ### Implementation steps
 
-- [ ] **I-S01:** 实现最小事件核心与严格 schema
-- [ ] **I-S02:** 接入 v2 项目读取与创建
-- [ ] **I-S03:** 实现基线检查与修复例外
-- [ ] **I-S04:** 接入受控追加、修订和恢复指引
-- [ ] **I-S05:** 实现独立的一次性迁移
-- [ ] **I-S06:** 完成文档、skill、集成与交付证明
+- [x] **I-S01:** 实现最小事件核心与严格 schema
+- [x] **I-S02:** 接入 v2 项目读取与创建
+- [x] **I-S03:** 实现基线检查与修复例外
+- [x] **I-S04:** 接入受控追加、修订和恢复指引
+- [x] **I-S05:** 实现独立的一次性迁移
+- [x] **I-S06:** 完成文档、skill、集成与交付证明
 
 ### Implementation acceptance criteria
 
-- [ ] **I-AC01:** 七种事件完整且克制
-- [ ] **I-AC02:** 旧事实与五态行为保持
-- [ ] **I-AC03:** 检查准确区分追加、修复和不可用
-- [ ] **I-AC04:** 并发写入和修订安全
-- [ ] **I-AC05:** 迁移显式、完整、可恢复
-- [ ] **I-AC06:** 全部入口与发布级检查通过
+- [x] **I-AC01:** 七种事件完整且克制
+- [x] **I-AC02:** 旧事实与五态行为保持
+- [x] **I-AC03:** 检查准确区分追加、修复和不可用
+- [x] **I-AC04:** 并发写入和修订安全
+- [x] **I-AC05:** 迁移显式、完整、可恢复
+- [x] **I-AC06:** 全部入口与发布级检查通过
 
-已制定实施契约及匹配稳定 ID；上述功能仍未实现，尚无交付证据。
-当前仓库不自动迁移，不将 Ideal World 演示模型的检查当作生产实现验收。
+### 实现与证明索引
+
+| 标准 | 生产交付与可复现证据 |
+| --- | --- |
+| I-AC01 | [事件核心](../../../src/idea-events.js)、[七类 schema](../../../schema/v2/idea-event.schema.json)；[纯单元测试](../../../test/unit/idea-events.test.js) 与 [schema 契约测试](../../../test/contract/schema-v2.test.js) 覆盖七类、严格字节解析、非法字段/序号、无操作、空日志和不可变输入。 |
+| I-AC02 | 同一纯单元测试逐项比较 216 种 v1 字段组合；[运行时测试](../../../test/runtime/event-state.test.js) 比较迁移前后 inventory，并证明修改/准确还原世界时的五态变化与日志只读。原有级联失效测试保持通过。 |
+| I-AC03 | [历史检查](../../../src/event-history.js) 及运行时测试覆盖四类目标、健康前缀、坏 base 修复、修复后恢复保护、跨 idea 隔离、格式错误、缺 tracking ref、shallow 缺父、迁移边界、正常 v1 历史与禁止降级。 |
+| I-AC04 | [受控命令](../../../src/event-command.js)、[事务](../../../src/state-transaction.js)；运行时测试用两个 CLI 进程争用同一前态，覆盖旧摘要/重复请求/无操作、准确人工门槛、本地 commit 修订后的 first-parent 合并、事件进程中断、primary 移动后拒绝旧恢复及准确回滚。 |
+| I-AC05 | [独立入口](../../../bin/migrate-v1-to-v2.js)、[迁移实现](../../../src/migrate-events.js)；运行时测试在计划准备、候选落盘、状态删除、配置切换和完成后注入进程退出，逐项恢复/回滚；未知修改保持原样，重复运行不追加。 |
+| I-AC06 | [安装包 E2E](../../../test/e2e/installed-package.test.js) 从真实 tarball 运行独立迁移、check、event replay/append；[命令与恢复文档](../../../skills/silvermoon/references/events.md) 和 canonical/registered skill 同步，包内容检查包含新入口与 schema。 |
+
+本机 Windows、Node `v24.12.0` 上已执行：
+
+- `pnpm check:sanity`：通过，包含新 v2 schema 与纯事件测试。
+- `node --test test/runtime/event-state.test.js` 的全部场景在最终
+  `pnpm check` 的 unit/runtime 套件中通过。
+- `node --test test/e2e/installed-package.test.js`：通过。
+- `pnpm sync:skills`、`pnpm check:skills:local`：通过。
+- `node bin/silvermoon.js check --worktree --audience agent`、
+  `node bin/silvermoon.js check --staged --audience agent`：通过。
+- `pnpm check:commit`：通过；本次实施源码的 index 与 worktree 对齐，
+  未将 metadata check 当作源码测试结果。
+- `pnpm check`：通过全部 release checks，包括 Markdown、unit/runtime、
+  contract、integration、包内容、安装包 E2E 和外部 skill discovery。
+  原有需要 Windows symlink 特权的场景按原测试规则跳过，不将其写成通过。
+
+恢复边界已写入 Implementation 和操作文档：文件 fsync、同目录原子替换；
+Windows 不宣称目录 fsync 或硬件断电保证。恢复进程自身被终止后保留其
+互斥文件，需停下所有恢复参与者并核验 PID/原计划后再明确清理该互斥文件，
+不按年龄抢锁、不自动删除未知文件。真正的数据写入中断由准确计划恢复。
+
+这些勾选和证明仅记录 Agent 实施工作，不构成人工验收。已批准的 ideal
+revision 保持不变；当前仓库仍为 v1，未迁移真实 idea，未创建 PR、发布
+npm 或记录 implementation/deployment acceptance。
 
 ## Deployment
 

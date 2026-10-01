@@ -1,0 +1,176 @@
+# Event-backed projects
+
+These rules apply only when `.silvermoon/config.yaml` has `version: 2`.
+V1 projects remain readable and use their existing canonical `status.yaml`.
+Never change the version alone or migrate a project implicitly.
+
+## Storage and state
+
+V2 replaces each idea's `status.yaml` with `events.jsonl`; never keep both.
+An empty file is the identity-only initial state, not a missing file.
+Identity comes from the ULID directory. Events are canonical UTF-8 JSONL
+without BOM, with LF and a final LF for nonempty logs. Do not let Git convert
+these bytes: add `**/events.jsonl -text` to the project's `.gitattributes`.
+
+Every record has a consecutive positive safe-integer `sequence` and `type`.
+Only these seven business changes exist:
+
+| Type | Payload |
+| --- | --- |
+| `alias.updated` | `{"alias":"unique-name"}` or `{"alias":null}` |
+| `language.updated` | `{"language":"zh-CN"}` or `{"language":null}` |
+| `ideal.approved` | `{"idealRevision":"<exact world tree OID>"}` |
+| `implementation.accepted` | `{"implementationRevision":"<exact world tree OID>"}` |
+| `deployment.accepted` | `{"deploymentRevision":"<exact world tree OID>"}` |
+| `idea.abandoned` | No payload |
+| `idea.resumed` | No payload |
+
+No timestamps, actors, repository commits, IDs, observations, imports,
+creation, arbitrary patches, or decision retractions belong in a record.
+Null clears only alias/language. Identical state changes are not appended.
+The last decision for each field is compared to current nested world trees
+using the existing five-state algorithm. Queries never write observations.
+Change meaningful world content when requirements or results change; do not
+clear approval to reset the lifecycle.
+
+## Observe and append
+
+Use the project-version CLI, not hand-edited JSONL. In Silvermoon's source
+checkout, replace `silvermoon` below with `node bin/silvermoon.js`.
+
+```sh
+silvermoon event replay <idea> --audience agent
+```
+
+The receipt gives exact byte `length`, SHA-256 `digest`, the reduction result,
+and a local primary tracking commit explicitly marked **not fetched**.
+Refresh the configured named remote before relying on that baseline. A
+missing/ambiguous tracking ref blocks rather than choosing an arbitrary base.
+Use the exact ULID if invalid logs prevent alias resolution.
+
+Put a business request in a JSON file, without sequence, for example:
+
+```json
+{"type":"alias.updated","payload":{"alias":"event-state-model"}}
+```
+
+Then bind it to the observed log and primary:
+
+```sh
+silvermoon event append <idea> --input request.json --expected-length <bytes> --expected-digest <sha256> --expected-primary <commit> --audience agent
+```
+
+The writer fetches primary, verifies the request, validates the entire project,
+acquires an exclusive project transaction, rechecks the source and world
+snapshot, refreshes primary again, and atomically replaces the log. The commit
+is an external write precondition, never event data. Cooperating writers
+cannot write the same position; unexpected external edits block recovery.
+Do not concurrently hand-edit a target while its CLI transaction runs.
+
+Only after an explicit human decision, add `--confirm-decision` for approval,
+acceptance, abandonment or resumption. This flag asserts authorization; it
+does not manufacture or prove it. Approvals/acceptances also require the
+correct lifecycle phase and exact world tree already on primary. Keep the
+review-and-synchronization human gate from the main skill.
+
+Receipts distinguish `candidate-written`, `already-present` and
+`no-state-change`; none means integrated into primary. Retries recognize the
+original prefix and exact record. A stale request with another record at that
+position is a conflict, not permission to renumber. Two metadata edits are two
+requests; if the second fails, the first remains a completed local append.
+
+## Check and revise
+
+V2 `check` validates both the chosen snapshot and primary event history:
+
+- Worktree/index candidates use a fixed local named-primary tracking commit;
+  local checks never fetch or claim remote freshness.
+- Unintegrated commits use that primary. Fast-forward candidates must also
+  have valid transitions along their prospective primary first-parent chain.
+- Already-integrated first-parent commits are audited against their historical
+  primary predecessor. `--remote` fetches the primary tip and audits it.
+- Each idea is independent: successful base reduction requires an exact byte
+  prefix; definite `ok: false` allows a complete valid repair. Parse errors,
+  missing objects and shallow missing parents do not grant repair permission.
+- Valid repair/migration/initialization boundaries stop older audit for that
+  idea. Repair is reported as repair, not append-only. The repaired log
+  immediately becomes protected again; another idea receives no exemption.
+
+Keep unknown work. Sync and reassess intent and ownership before revising an
+unintegrated suffix. Save a JSON array of the complete desired business
+requests (without sequence), then run:
+
+```sh
+silvermoon event revise <ULID> --input reviewed-requests.json --owned-suffix --expected-length <bytes> --expected-digest <sha256> --expected-primary <commit> --audience agent
+```
+
+`--owned-suffix` asserts that the replacement has been reviewed and is yours
+to revise. The CLI assigns sequences and enforces the primary prefix or
+definite failed-base repair rule. Newly introduced decisions still require
+their human gate. It never automatically discards unknown candidates.
+
+After local committed candidates have been revised, preserve their history.
+If their intermediate transitions cannot fast-forward legally, integrate
+through an ordinary merge with current primary as first parent. Never force,
+reset, or rebase away those candidates to conceal the conflict.
+
+An integration gate must refresh primary and bind the reported baseline to
+the actual old tip being updated. Primary movement requires rechecking.
+The CLI cannot substitute for a server-side required gate or distributed lock.
+
+## Interrupted writes
+
+`.silvermoon/transaction` is a complete recovery plan and exclusive lock, not
+business state; it stores original and candidate bytes. Normal commands block
+while it exists. Never commit it or `.pending`/`.prepared` temporary files.
+Do not delete a lock by age.
+
+After confirming the original writer has stopped:
+
+```sh
+silvermoon event recover --confirm-stopped --audience agent
+silvermoon event recover --confirm-stopped --rollback --audience agent
+```
+
+Recovery refuses active/reused PIDs, foreign hosts, unknown bytes and a changed
+plan. Resume revalidates primary and worlds; rollback restores only exact
+operation-owned bytes. A second recovery is excluded by `transaction.recovery`.
+If a recovery process itself is killed, stop all recovery participants, verify
+its recorded PID is inactive and inspect the original plan, then explicitly
+remove only that recovery mutex before retrying. The tool never guesses it is
+stale or removes it automatically. Preserve unexpected files for investigation. Files are
+fsynced before same-directory rename. POSIX directory entries are also synced;
+Node on Windows provides no directory-fsync guarantee, so power-loss durability
+depends on the filesystem. Process-interruption recovery does not imply a
+hardware power-loss guarantee.
+
+## Explicit one-time migration
+
+Migration is not a Silvermoon subcommand. Run the bundled
+`bin/migrate-v1-to-v2.js` with Node only after explicit project-upgrade
+authorization. In this source repository use the local entrypoint:
+
+```sh
+node bin/migrate-v1-to-v2.js --root <project>
+node bin/migrate-v1-to-v2.js --root <project> --apply --expected-digest <plan-digest>
+```
+
+The first invocation is read-only. Apply requires the same plan digest and a
+clean committed source. All ideas and project format change together through
+the recoverable transaction. It preserves every known fact, identity, world
+and ledger, including old or incomplete decisions. Fixed event order is a
+representation order, not invented historical chronology. No-field sources
+produce empty logs. Ordinary commands and installation never migrate.
+
+Recovery uses the separate entrypoint:
+
+```sh
+node bin/migrate-v1-to-v2.js --root <project> --resume --confirm-stopped
+node bin/migrate-v1-to-v2.js --root <project> --rollback --confirm-stopped
+```
+
+Changed source/candidate bytes block rather than overwrite. A completed v2
+project is detected without appending again. Do not downgrade or roll back
+after accepting new facts. Validate and integrate the exact migration boundary
+before adding new events; history checks compare it with the original primary
+v1 facts. Migration never commits, pushes, approves, or publishes a package.

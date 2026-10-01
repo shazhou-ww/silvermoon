@@ -16,7 +16,7 @@ Each idea is self-contained under one canonical uppercase ULID:
 |   `-- deploying.md
 `-- ideas/
     `-- 01M36QGPNTXEPP61DA4KP4AVZF/
-        |-- status.yaml
+        |-- status.yaml (v1) or events.jsonl (v2)
         |-- ledger.md
         `-- outer/
             |-- Deployment.md
@@ -80,12 +80,13 @@ Each world is an opaque Git tree:
 - `implementationRevision` identifies `inner/` and includes the Ideal World.
 - `deploymentRevision` identifies `outer/` and includes both nested worlds.
 
-`status.yaml` and `ledger.md` are outside all three world trees. The repository
+`status.yaml` (v1), `events.jsonl` (v2), and `ledger.md` are outside all three
+world trees. The repository
 object format in use determines revision shape. Silvermoon validates canonical
 revision shape, computes the current world trees, and compares those values to
 status facts rather than interpreting world contents.
 
-## Status File
+## Status File (v1)
 
 ```yaml
 version: 1
@@ -141,6 +142,22 @@ State is derived in order:
    `deploymentRevision`.
 5. `completed` when all three revisions match.
 
+## Event State (v2)
+
+Project `version: 2` replaces mutable status with a required `events.jsonl`
+at each idea root. Identity comes from the directory and an empty log is
+valid. A strict seven-event union deterministically updates the old status
+facts; no observations, creation/import markers, or audit envelope are stored.
+The existing nested-world revisions and five lifecycle states are unchanged.
+
+Use `event replay`, `event append`, and `event revise`, never direct JSONL
+editing. Requests carry log byte length, SHA-256 and expected primary outside
+the business event. Canonical JSONL, no-op handling, human gates, concurrency,
+conditional append-only history, and interrupted-write recovery are specified
+in the [event operations contract](../skills/silvermoon/references/events.md).
+That contract also documents the separate `bin/migrate-v1-to-v2.js` entrypoint.
+No command automatically migrates a v1 project.
+
 ## Experimental JavaScript Package API
 
 The package root export is available for programmatic reuse, but remains
@@ -162,6 +179,7 @@ silvermoon list-ideas [--state <state>] [--all] [--query <text>] [--created-sinc
 silvermoon whats-next [idea] [--language <en|en-US|zh|zh-CN>] [--audience <human|agent>] [--trace <file.trace.jsonl>]
 silvermoon create-idea [--language <tag>] [--audience <human|agent>] [--trace <file.trace.jsonl>]
 silvermoon check [--remote | --commit <revision> | --staged | --worktree] [--language <en|en-US|zh|zh-CN>] [--audience <human|agent>] [--trace <file.trace.jsonl>]
+silvermoon event <replay|append|revise|recover> [idea] [--input <request.json>] [--expected-length <bytes>] [--expected-digest <sha256>] [--expected-primary <commit>] [--confirm-decision] [--owned-suffix] [--confirm-stopped] [--rollback] [--audience <human|agent>]
 ```
 
 Every valid invocation starts one ordered domain-message stream with
@@ -212,7 +230,7 @@ projections:
 - `response` is a command-specific discriminated union produced only from the
   intention and final internal observation. Its variants are `blocked`,
   `choice-required`, `idea-created`, `idea-list`, `next-steps`, and
-  `validation-result`. It contains the localized summary and any ordered
+  `validation-result`, and `event-result`. It contains the localized summary and any ordered
   `nextSteps`, choices, items, validation result, or guidance needed by the
   caller.
 
@@ -437,22 +455,31 @@ resolved output language is used.
   index, unstaged changes, and nonignored untracked files.
 - `check --staged` validates the index snapshot for a pre-commit hook.
 - `check --commit <revision>` validates one local commit snapshot.
-- `check --remote` fetches primary using committed coordinates, validates its
-  immutable tip, and does not audit the history or provenance of retained
-  revision facts. Unrelated skill or idea findings in local `HEAD` do not block
+- `check --remote` fetches primary using committed coordinates and validates its
+  immutable tip, including first-parent event history for v2. Unrelated skill
+  or idea findings in local `HEAD` do not block
   locating and validating the remote snapshot.
 
 Targets are mutually exclusive and never change the caller's branch, index, or
 worktree. `--remote` may fetch Git objects and records that attempt as an
-action. `check` validates the selected snapshot's project contract only:
+action. `check` validates the selected snapshot's project contract:
 Git, configuration, canonical skill, idea layout, world revisions, status, and
 the complete optional phase guidance directory.
-Its result depends on the materialized tree, not commit parents, parent order,
-branch, merge/cherry-pick path, or retained decision reachability. A canonical
+For v1 its result depends on the materialized tree, not commit parents, parent
+order, branch, merge/cherry-pick path, or retained decision reachability. A canonical
 decision revision that differs from the current world is a valid historical
 fact and naturally derives an earlier lifecycle state; it need not still exist
 in the local object database. `check` does not check local worktree cleanliness,
 upstream, or ancestry readiness, route ideas, or give next-step instructions.
+V2 additionally reports `validation.eventHistory`: the fixed baseline and its
+source, candidate reduction, and initialization/migration/append/repair audit
+boundaries. Local targets use named primary tracking refs without fetching;
+unavailable or conflicting refs fail closed. History rules depend on each
+base's complete reduction, not the candidate's failure: `ok: true` requires
+its exact byte prefix; definite `ok: false` permits a valid complete repair.
+Missing/invalidly encoded history never grants repair permission.
+Configuration ancestry prevents downgrading an already-v2 project to v1;
+genuine v1 historical snapshots remain readable without auditing their decisions.
 
 Like every public command, `check --json` contains all four projections:
 
@@ -535,14 +562,16 @@ rendered report or empty-looking output.
 Runtime checks verify canonical YAML, fixed paths, the three world entries,
 unique aliases, Git object format, current world tree resolution, phase
 guidance structure and content, and lifecycle derivation from the selected
-snapshot. They do not infer newly made decisions from a parent diff or audit
-decision provenance through history.
+snapshot. V2 also checks its state-event transitions and primary history, but
+neither format treats a Git diff as proof of human authorization.
 
 ## Schemas
 
 - [Command report](../schema/v1/command-report.schema.json)
 - [Domain message](../schema/v1/domain-message.schema.json)
 - [Repository configuration](../schema/v1/config.schema.json)
+- [Event project configuration](../schema/v2/config.schema.json)
+- [Idea state event](../schema/v2/idea-event.schema.json)
 - [User configuration](../schema/v1/user-config.schema.json)
 - [Idea status](../schema/v1/idea-status.schema.json)
 - [Shared definitions](../schema/v1/definitions.schema.json)

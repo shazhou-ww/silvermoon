@@ -100,7 +100,8 @@ validates preparing guidance from local `HEAD`. Invalid guidance leaves no
 creation path; valid guidance is attached only to the success report.
 
 For `create-idea`, `--language` normalizes any valid BCP 47 tag and writes it
-to the new idea's `status.yaml` as a persistent content-language preference.
+to v1 `status.yaml`, or a v2 `language.updated` event, as a persistent
+content-language preference.
 Without the option, creation writes no language field and the idea dynamically
 inherits project, user, or `en-US` defaults. This is distinct from the
 non-persistent `en|en-US|zh|zh-CN` output override accepted by `list-ideas`,
@@ -171,7 +172,10 @@ its requirement or proof changes materially.
 ## Record A Human Decision
 
 After an explicit decision, reconfirm that it applies to the selected idea and
-the current reported world revision. Edit only the corresponding status fact:
+the current reported world revision. For v2, use the
+[event commands and recovery protocol](../skills/silvermoon/references/events.md)
+instead of editing JSONL; stage `events.jsonl` after a validated append.
+For v1, edit only the corresponding status fact:
 
 - `approvedRevision`
 - `implementationAcceptedRevision`
@@ -187,8 +191,9 @@ git add .silvermoon/ideas/<ULID>/status.yaml
 silvermoon check --staged
 ```
 
-`check` is a project-only validator, not a navigation command. It does not
-check worktree hygiene, upstream, or ancestry and does not suggest next steps.
+`check` is a project validator, not a navigation command. V2 additionally
+validates conditional append-only primary history. It does not check worktree
+hygiene or upstream and does not suggest lifecycle next steps.
 Without a target it validates committed `HEAD`, not the pending commit.
 `--worktree` validates the full candidate, while `--staged` validates exactly
 the index and is the pre-commit hook target. Every target validates all present

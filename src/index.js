@@ -6,6 +6,7 @@ import {
 } from "./dialogue.js";
 import { loadConfigSnapshot } from "./config.js";
 import { createCommandRun } from "./domain.js";
+import { inspectEventHistory } from "./event-history.js";
 import {
   fetchPrimary,
   indexSnapshot,
@@ -37,7 +38,7 @@ function preloadCheckBlob({ name }) {
     || name.startsWith(`${GUIDANCE_ROOT}/`)
     || (
       name.startsWith(`${IDEAS_ROOT}/`)
-      && name.endsWith("/status.yaml")
+      && (name.endsWith("/status.yaml") || name.endsWith("/events.jsonl"))
     )
   );
 }
@@ -83,7 +84,7 @@ async function inspectTree({
     root,
     tree,
   });
-  return observeSnapshot({
+  const observed = await observeSnapshot({
     contentRoot: root,
     filesystem,
     gitRoot,
@@ -94,6 +95,43 @@ async function inspectTree({
     userHome,
     version,
   });
+  const eventHistoryConfig = observed.config?.version === 2 ? observed.config : null;
+  if (observed.config?.version === 1) {
+    const commits = runGit(gitRoot, [
+      "log", "--first-parent", "--format=%H", version?.commit ?? "HEAD", "--", CONFIG_PATH,
+    ]);
+    if (!commits.ok) throw new Error("Cannot determine project format ancestry.");
+    for (const previous of commits.stdout.split("\n").filter(Boolean)) {
+      const previousConfig = await loadConfigSnapshot({ gitRoot, tree: previous });
+      if (previousConfig.config?.version !== 2) continue;
+      observed.observation.problems.push({
+        type: "idea.events.downgrade", summary: "A v2 event project cannot be downgraded to mutable v1 status.",
+      });
+      observed.observation.state = "check-unavailable";
+      return observed;
+    }
+  }
+  if (eventHistoryConfig) {
+    try {
+      observed.observation.eventHistory = await inspectEventHistory({
+        root: gitRoot, tree, config: eventHistoryConfig, auditCandidate: true,
+        commit: version?.commit ?? undefined,
+        primary: version?.type === "remote" ? version.commit : undefined,
+      });
+    } catch (caught) {
+      observed.observation.eventHistory = {
+        valid: false, error: caught.message, candidateSnapshotValid: observed.projectReady,
+        ...(caught.eventBaseline ? { baseline: caught.eventBaseline } : {}),
+        ...(caught.eventStage ? { unavailableStage: caught.eventStage } : {}),
+        ...(caught.eventCheck ? { result: caught.eventCheck } : {}),
+      };
+      observed.observation.problems.push({
+        type: "idea.events.history-invalid", summary: caught.message,
+      });
+      observed.observation.state = "check-unavailable";
+    }
+  }
+  return observed;
 }
 
 function finishCheck(runtime, observed) {
@@ -352,6 +390,20 @@ export {
   serializeIdeaStatus,
   validateIdeaStatus,
 } from "./ideas.js";
+export {
+  IDEA_EVENT_TYPES,
+  IdeaEventFormatError,
+  checkEventChange,
+  eventsFromStatus,
+  initialEventState,
+  parseIdeaEvents,
+  reduceIdeaEvent,
+  replayIdeaEvents,
+  serializeIdeaEvent,
+  serializeIdeaEvents,
+  validateIdeaEvent,
+} from "./idea-events.js";
+export { eventCommand } from "./event-command.js";
 export {
   extractIdeaTitle,
   ideaCreatedAt,

@@ -51,15 +51,27 @@ while it refers to the exact artifacts that were reviewed.
 ## Decisions And Continuation
 
 Humans own four decisions: approval of the ideal, acceptance of the
-implementation, acceptance of the deployment, and abandonment. Silvermoon has
-no mutation command for these decisions and never infers them from prose,
-checklists, Git activity, or silence.
+implementation, acceptance of the deployment, and abandonment. Silvermoon never
+infers them from prose, checklists, Git activity, or silence. V1 records explicit
+decisions in canonical status YAML; v2 uses controlled event commands bound to
+the exact world, log and primary. A confirmation flag asserts a prior human
+decision, not authorization by itself.
 
 Agents own continuation. The project skill combines `whats-next`,
 `response.nextSteps`, the world contracts, the idea ledger, and Git facts to
 choose one safe action. The ledger is operational memory: it mirrors stable
 contract IDs and records completed work, but a checked item is not approval or
 acceptance.
+
+## Persistent State Events
+
+In v2 projects, each idea's minimal `events.jsonl` is its sole durable state
+authority. Seven kinds change alias, language, the three revision facts, or
+abandonment. Replay is pure; observation of real world trees is still read-only
+and separate. No-op events are rejected. Healthy primary prefixes are immutable;
+a definitively reduction-failed base may be repaired to a fully valid log.
+Old valid facts and concurrent candidates are preserved through ordinary Git.
+See the [event operations contract](../skills/silvermoon/references/events.md).
 
 ## Command Event Model
 

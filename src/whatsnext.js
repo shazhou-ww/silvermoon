@@ -8,6 +8,7 @@ import {
   localize,
 } from "./dialogue.js";
 import { createCommandRun } from "./domain.js";
+import { inspectEventHistory } from "./event-history.js";
 import { inspectPhaseGuidance } from "./guidance.js";
 import {
   metadataFailureObservation,
@@ -18,6 +19,7 @@ import {
   fetchPrimary,
   inspectRepositoryState,
   sanitizeGitMessage,
+  worktreeSnapshot,
 } from "./git.js";
 import { canonicalizeOutputLanguage } from "./language.js";
 import {
@@ -187,6 +189,22 @@ function lifecycleContentLanguageInstruction(contentLanguage, language) {
 
 function lifecycleInstruction(idea, language, contentLanguage) {
   const name = ideaName(idea);
+  if (idea.statusPath.endsWith("/events.jsonl")) {
+    const action = {
+      preparing: ["ideal.approved", idea.idealRevision, idea.worlds.idealRevision.documentPath],
+      implementing: ["implementation.accepted", idea.implementationRevision, idea.worlds.implementationRevision.documentPath],
+      deploying: ["deployment.accepted", idea.deploymentRevision, idea.worlds.deploymentRevision.documentPath],
+    }[idea.state];
+    return joinInstructions([
+      action ? localize(language,
+        `Continue ${name} in ${action[2]} and ${idea.ledgerPath}. Synchronize the candidate to primary before requesting the explicit human decision for ${action[0]} at exact revision ${action[1]}. Then use silvermoon event replay ${idea.id} --audience agent and silvermoon event append with its exact log length, digest and refreshed primary. Never edit events.jsonl directly.`,
+        `在 ${action[2]} 和 ${idea.ledgerPath} 继续 ${name}。先同步候选到 primary，再请求针对准确 revision ${action[1]} 的 ${action[0]} 人工决定。之后用 silvermoon event replay ${idea.id} --audience agent 观察，并通过 silvermoon event append 绑定准确日志长度、摘要和刷新后的 primary 写入；不要直接编辑 events.jsonl。`)
+        : localize(language,
+          `Review ${name} (${idea.state}); preserve decisions. Resume only through idea.resumed after an explicit human decision; revise world content for changed requirements.`,
+          `复查 ${name}（${idea.state}），保留已有决定。只有明确人工决定才通过 idea.resumed 恢复；需求变化应修改对应世界内容。`),
+      lifecycleContentLanguageInstruction(contentLanguage, language),
+    ]);
+  }
   if (idea.state === "preparing") {
     return joinInstructions([localize(
       language,
@@ -452,6 +470,21 @@ async function assessRepositoryReadinessInternal({
     };
   }
   const primary = fetched.result.commit;
+  if (observed.config.version === 2) {
+    try {
+      await inspectEventHistory({ root, tree: head, commit: head, config: observed.config, primary, auditCandidate: true });
+    } catch (caught) {
+      return {
+        branch, head, primary, ready: false,
+        observation: repositoryProblemObservation(observed.observation, [{
+          type: "idea.events.history-invalid", summary: caught.message,
+        }]),
+        instructions: localize(language,
+          `Preserve both histories. Synchronize with primary ${primary}, review candidate ownership and decisions, then use event revise and check before integration. Retry ${recheckCommand} --audience agent.`,
+          `保留双方历史。同步 primary ${primary}，重审候选归属和人工决定，再通过 event revise 与 check 处理后集成。随后重试 ${recheckCommand} --audience agent。`),
+      };
+    }
+  }
 
   let relation;
   try {
@@ -589,6 +622,21 @@ export async function whatsNext({
   }
 
   const selected = selectIdea(observed.layout.ideas, selector);
+  if (observed.config.version === 2) {
+    try {
+      await inspectEventHistory({
+        root: observed.observation.root,
+        tree: worktreeSnapshot(observed.observation.root).tree,
+        config: observed.config,
+      });
+    } catch (caught) {
+      return runtime.complete(repositoryProblemObservation(observed.observation, [{
+        type: "idea.events.history-invalid", summary: caught.message,
+      }]), {
+        nextSteps: `Preserve all candidates. Refresh the configured primary and run silvermoon check --worktree --audience agent. A successful base requires its exact prefix; only a definite base reduction failure permits repair. Reassess ownership and human decisions, use silvermoon event revise (not a manual JSONL edit), then retry ${recheckCommand} --audience agent.`,
+      });
+    }
+  }
   if (selected?.status.language) {
     observed = withObservationLanguage(observed, selected.status.language);
   }

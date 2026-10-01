@@ -27,6 +27,7 @@ export function ideaPaths(id) {
   return {
     ideaPath,
     statusPath: `${ideaPath}/status.yaml`,
+    eventsPath: `${ideaPath}/events.jsonl`,
     ledgerPath: `${ideaPath}/ledger.md`,
     outerPath,
     deploymentDocumentPath: `${outerPath}/Deployment.md`,

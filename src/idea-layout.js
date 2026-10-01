@@ -2,6 +2,7 @@ import { lstat, readFile, readdir } from "node:fs/promises";
 import { relative, resolve } from "node:path";
 
 import { deriveIdeaState, isValidUlid, parseIdeaStatus } from "./ideas.js";
+import { parseIdeaEvents, replayIdeaEvents } from "./idea-events.js";
 import { inspectTreePaths, worktreeSnapshot } from "./git.js";
 import { IDEAS_ROOT, ideaPaths } from "./layout.js";
 
@@ -114,7 +115,7 @@ function requiredTree(objects, path) {
 }
 
 export async function inspectIdeaLayout({
-  config: _config,
+  config,
   filesystem = DEFAULT_FILESYSTEM,
   root,
   gitRoot = root,
@@ -239,13 +240,16 @@ export async function inspectIdeaLayout({
     }
 
     const paths = ideaPaths(entry.name);
+    const eventFormat = config?.version === 2;
+    const stateName = eventFormat ? "events.jsonl" : "status.yaml";
+    const statePath = eventFormat ? paths.eventsPath : paths.statusPath;
     const children = (
       await filesystem.readdir(folderPath, { withFileTypes: true })
     )
       .sort((left, right) => left.name.localeCompare(right.name));
     for (const child of children) {
       if (
-        child.name === "status.yaml" ||
+        child.name === stateName ||
         child.name === "ledger.md" ||
         child.name === "outer"
       ) continue;
@@ -255,7 +259,7 @@ export async function inspectIdeaLayout({
           : "idea.entry.unexpected",
         `${paths.ideaPath}/${child.name}`,
         `Unexpected entry at the idea root: ${child.name}`,
-        "Keep only status.yaml, ledger.md, and outer/ at the idea root; put supporting files in their world.",
+        `Keep only ${stateName}, ledger.md, and outer/ at the idea root; put supporting files in their world.`,
       ));
     }
     await requireLedger(root, paths.ledgerPath, diagnostics, filesystem);
@@ -289,38 +293,49 @@ export async function inspectIdeaLayout({
     }
 
     const statusMetadata = await metadata(
-      resolve(root, paths.statusPath),
+      resolve(root, statePath),
       filesystem,
     );
     if (!statusMetadata || !statusMetadata.isFile() || statusMetadata.isSymbolicLink()) {
       diagnostics.push(error(
         "idea.status.invalid-file",
-        paths.statusPath,
-        "Idea status must be a repository-owned regular file named status.yaml.",
-        `Create ${paths.statusPath} as canonical YAML.`,
+        statePath,
+        `Idea state must be a repository-owned regular file named ${stateName}.`,
+        `Restore ${statePath} from its authoritative history.`,
       ));
       continue;
     }
 
     let status;
     try {
-      status = parseIdeaStatus(
-        await filesystem.readFile(resolve(root, paths.statusPath), "utf8"),
-        { objectIdLength: repositoryObjectIdLength },
-      );
+      const options = { objectIdLength: repositoryObjectIdLength };
+      if (eventFormat) {
+        const events = parseIdeaEvents(
+          await filesystem.readFile(resolve(root, statePath)), options,
+        );
+        const result = replayIdeaEvents(entry.name, events, options);
+        if (!result.ok) throw new Error(`Event ${result.sequence}: ${result.code}`);
+        status = { version: 1, ...result.state.status };
+      } else {
+        status = parseIdeaStatus(
+          await filesystem.readFile(resolve(root, statePath), "utf8"), options,
+        );
+      }
     } catch (caught) {
       diagnostics.push(error(
         "idea.status.invalid",
-        paths.statusPath,
+        statePath,
         caught.message,
-        "Rewrite status.yaml in canonical form.",
+        eventFormat
+          ? "Inspect the primary baseline, then use the event command to revise an owned candidate or repair a reduction-failed baseline."
+          : "Rewrite status.yaml in canonical form.",
       ));
       continue;
     }
     if (status.id !== entry.name) {
       diagnostics.push(error(
         "idea.status.id-mismatch",
-        `${paths.statusPath}#id`,
+        `${statePath}#id`,
         `Status id ${status.id} does not match ${entry.name}.`,
         "Use the same canonical ULID in the folder and status id.",
       ));
@@ -329,7 +344,7 @@ export async function inspectIdeaLayout({
       if (ideaIds.has(status.alias)) {
         diagnostics.push(error(
           "idea.alias.id-collision",
-          `${paths.statusPath}#alias`,
+          `${statePath}#alias`,
           `Alias ${status.alias} collides with an idea ULID.`,
           "Choose an alias that is distinct from every idea ULID.",
         ));
@@ -338,7 +353,7 @@ export async function inspectIdeaLayout({
       if (aliasOwner) {
         diagnostics.push(error(
           "idea.alias.duplicate",
-          `${paths.statusPath}#alias`,
+          `${statePath}#alias`,
           `Alias ${status.alias} is shared by ${aliasOwner} and ${entry.name}.`,
           "Assign a unique exact case-sensitive alias.",
         ));
@@ -399,7 +414,7 @@ export async function inspectIdeaLayout({
       ...revisions,
       state: deriveIdeaState(revisions, status),
       status,
-      statusPath: paths.statusPath,
+      statusPath: statePath,
       ledgerPath: paths.ledgerPath,
       worlds,
     };

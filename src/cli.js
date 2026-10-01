@@ -14,6 +14,7 @@ import { normalizeIdeaQuery } from "./idea-query.js";
 import { listIdeas } from "./list-ideas.js";
 import { checkRepository } from "./index.js";
 import { createIdea } from "./create-idea.js";
+import { eventCommand } from "./event-command.js";
 import { renderResponse } from "./response.js";
 import { traceAsync, withTraceFile } from "./trace.js";
 import { whatsNext } from "./whatsnext.js";
@@ -357,6 +358,49 @@ Examples:
     );
   });
 
+  addCommonOptions(
+    program.command("event <operation> [idea]")
+      .description("replay, append, revise, or recover v2 idea events")
+      .option("--language <tag>", "use a built-in output language for this invocation", outputLanguageArgument)
+      .option("--input <file>", "JSON business request, or request array for revise (no sequence)")
+      .option("--expected-length <bytes>", "observed log byte length", (value) => {
+        if (!/^(0|[1-9][0-9]*)$/.test(value) || !Number.isSafeInteger(Number(value))) {
+          throw new InvalidArgumentError("expected length must be a nonnegative safe integer");
+        }
+        return Number(value);
+      })
+      .option("--expected-digest <sha256>", "observed exact log digest")
+      .option("--expected-primary <commit>", "observed primary commit (never stored in events)")
+      .option("--confirm-decision", "assert an explicit human decision for this exact request")
+      .option("--owned-suffix", "confirm ownership and review of the candidate suffix being replaced")
+      .option("--confirm-stopped", "confirm the interrupted transaction writer has stopped")
+      .option("--rollback", "restore transaction sources instead of completing it"),
+  ).action(async (operation, idea, options) => {
+    if (!["replay", "append", "revise", "recover"].includes(operation)
+      || (operation !== "recover" && !idea)
+      || (operation === "recover" && idea)
+      || (["append", "revise"].includes(operation) && !options.input)
+      || (["replay", "recover"].includes(operation) && options.input)
+      || (operation !== "recover" && (options.rollback || options.confirmStopped))
+      || (operation !== "revise" && options.ownedSuffix)
+      || (["replay", "recover"].includes(operation) && [
+        options.expectedLength, options.expectedDigest, options.expectedPrimary, options.confirmDecision,
+      ].some((value) => value !== undefined))) {
+      throw Object.assign(new Error("Use event replay|append|revise <idea>, or event recover; writes require --input."), { exitCode: 2 });
+    }
+    let input;
+    if (options.input) {
+      try { input = JSON.parse(readFileSync(options.input, "utf8")); }
+      catch (cause) { throw Object.assign(new Error(`Cannot read business request: ${cause.message}`), { exitCode: 2 }); }
+    }
+    const report = await runCommand({
+      name: "command.event", options, attributes: { command: "event", operation },
+      execute: () => eventCommand({ ...options, operation, idea, input }),
+    }, io, runtime);
+    program.setOptionValue("resultCode", report.observation.state === "event-result"
+      && report.observation.receipt.reduction?.ok !== false
+      && report.observation.receipt.format?.ok !== false ? 0 : 1);
+  });
   return program;
 }
 

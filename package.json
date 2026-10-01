@@ -41,7 +41,7 @@
     "test:contract": "node --test \"test/contract/*.test.*\"",
     "test:e2e": "node --test \"test/e2e/*.test.*\"",
     "test:integration": "node --test \"test/integration/*.test.*\"",
-    "test:sanity": "node --import ./test/helpers/sanity-guard.mjs --test \"test/unit/*.test.*\" test/contract/schema-v1.test.js test/contract/package-api.test.js",
+    "test:sanity": "node --import ./test/helpers/sanity-guard.mjs --test \"test/unit/*.test.*\" test/contract/schema-v1.test.js test/contract/schema-v2.test.js test/contract/package-api.test.js",
     "test:smoke": "node --test test/runtime/adoption.test.js test/runtime/cli-v1.test.js",
     "test:unit": "node --test \"test/unit/*.test.*\" \"test/runtime/*.test.*\""
   },

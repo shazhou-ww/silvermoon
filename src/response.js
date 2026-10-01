@@ -107,6 +107,7 @@ function validationResponse(intention, observation, language) {
     validation: {
       target: clone(intention.args.target),
       valid,
+      ...(observation.eventHistory === undefined ? {} : { eventHistory: clone(observation.eventHistory) }),
       ...(observation.version === undefined
         ? {}
         : { version: clone(observation.version) }),
@@ -124,6 +125,14 @@ function dialogueResponse(intention, internalObservation, language) {
   };
   const nextSteps = normalizeNextSteps(context.nextSteps);
 
+  if (intention.command === "event" && observation.state === "event-result") {
+    return {
+      ...base, kind: "event-result",
+      summary: localize(language, `Event result: ${observation.receipt.outcome}. Local writes are not primary integration.`,
+        `事件结果：${observation.receipt.outcome}。本地写入不代表已集成 primary。`),
+      receipt: clone(observation.receipt), nextSteps,
+    };
+  }
   if (BLOCKED_STATES.has(observation.state)) {
     return {
       ...base,
@@ -403,6 +412,7 @@ export function renderResponse(response, { now = new Date() } = {}) {
   }
   const lines = [`## ${responseTitle(response)}`, "", response.summary];
 
+  if (response.receipt) lines.push("", "```json", JSON.stringify(response.receipt, null, 2), "```");
   if (response.validation) {
     const target = response.validation.target.type === "commit"
       ? `${response.validation.target.type} ${response.validation.target.revision}`
@@ -411,6 +421,9 @@ export function renderResponse(response, { now = new Date() } = {}) {
       "",
       `- ${localize(language, "Target", "目标")}: ${codeSpan(target)}`,
     );
+    if (response.validation.eventHistory) {
+      lines.push("", "```json", JSON.stringify(response.validation.eventHistory, null, 2), "```");
+    }
     const version = renderVersion(response.validation.version);
     if (version) {
       lines.push(`- ${localize(language, "Version", "版本")}: ${codeSpan(version)}`);

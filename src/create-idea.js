@@ -13,6 +13,7 @@ import {
   ideaTemplates,
 } from "./idea-templates.js";
 import { isValidUlid, serializeIdeaStatus } from "./ideas.js";
+import { eventsFromStatus, serializeIdeaEvents } from "./idea-events.js";
 import { canonicalizeLanguageTag } from "./language.js";
 import { IDEAS_ROOT, ideaPaths } from "./layout.js";
 import { observeSnapshot } from "./observation.js";
@@ -207,6 +208,7 @@ async function cleanupScaffold(cleanupPlan, operations) {
 async function createScaffold({
   canonicalLanguage,
   contentLanguage,
+  formatVersion,
   generateId,
   operations,
   repositoryRoot,
@@ -267,7 +269,12 @@ async function createScaffold({
       [paths.implementationDocumentPath, templates.implementation],
       [paths.deploymentDocumentPath, templates.deployment],
       [paths.ledgerPath, templates.ledger],
-      [paths.statusPath, serializeIdeaStatus({
+      [formatVersion === 2 ? paths.eventsPath : paths.statusPath, formatVersion === 2
+        ? serializeIdeaEvents(eventsFromStatus({
+          version: 1, id,
+          ...(canonicalLanguage === undefined ? {} : { language: canonicalLanguage }),
+        }))
+        : serializeIdeaStatus({
         version: 1,
         id,
         ...(canonicalLanguage === undefined ? {} : { language: canonicalLanguage }),
@@ -420,6 +427,7 @@ export async function createIdea({
     () => createScaffold({
       canonicalLanguage,
       contentLanguage: observed.contentLanguage,
+      formatVersion: observed.config.version,
       generateId,
       operations,
       repositoryRoot,

@@ -25,6 +25,12 @@ async function regularRepositoryFile(root, filesystem) {
   const metadataRoot = resolve(root, METADATA_ROOT);
   const absolutePath = resolve(root, CONFIG_PATH);
   try {
+    try {
+      await filesystem.lstat(resolve(root, ".silvermoon/transaction"));
+      throw Object.assign(new Error("Unfinished state transaction; preserve its plan and run the explicit event or migration recovery command."), { code: "EBUSY" });
+    } catch (error) {
+      if (error.code !== "ENOENT") throw error;
+    }
     const directoryMetadata = await filesystem.lstat(metadataRoot);
     if (!directoryMetadata.isDirectory() || directoryMetadata.isSymbolicLink()) {
       throw Object.assign(new Error(`${METADATA_ROOT} must be a regular directory`), {
@@ -83,7 +89,7 @@ function parseConfigSource({ absolutePath, root, source }) {
   } catch (error) {
     return {
       config: null,
-      configPath: loaded.absolutePath,
+      configPath: absolutePath,
       diagnostics: [configDiagnostic(
         "config.invalid-yaml",
         CONFIG_PATH,
@@ -96,7 +102,7 @@ function parseConfigSource({ absolutePath, root, source }) {
   if (value === null || Array.isArray(value) || typeof value !== "object") {
     return {
       config: null,
-      configPath: loaded.absolutePath,
+      configPath: absolutePath,
       diagnostics: [configDiagnostic(
         "config.invalid-type",
         CONFIG_PATH,
@@ -131,12 +137,12 @@ function parseConfigSource({ absolutePath, root, source }) {
       ));
     }
   }
-  if (Object.hasOwn(value, "version") && value.version !== 1) {
+  if (Object.hasOwn(value, "version") && ![1, 2].includes(value.version)) {
     diagnostics.push(configDiagnostic(
       "config.unsupported-version",
       `${CONFIG_PATH}#version`,
       `Unsupported Silvermoon version: ${String(value.version)}`,
-      "Use version: 1.",
+      "Use version: 1 or version: 2; migrate existing v1 projects explicitly.",
     ));
   }
   if (

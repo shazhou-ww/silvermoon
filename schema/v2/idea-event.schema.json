@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/shazhou-ww/silvermoon/raw/refs/heads/main/schema/v2/idea-event.schema.json",
+  "title": "Silvermoon idea state event v2",
+  "description": "One canonical JSONL record. Replay additionally enforces consecutive sequences and nonempty transitions.",
+  "type": "object",
+  "required": ["sequence", "type"],
+  "properties": {
+    "sequence": { "type": "integer", "minimum": 1, "maximum": 9007199254740991 },
+    "type": { "type": "string" }
+  },
+  "oneOf": [
+    {
+      "properties": {
+        "type": { "const": "alias.updated" },
+        "payload": {
+          "type": "object", "additionalProperties": false, "required": ["alias"],
+          "properties": { "alias": { "anyOf": [
+            { "$ref": "../v1/idea-status.schema.json#/properties/alias" }, { "type": "null" }
+          ] } }
+        }
+      },
+      "required": ["payload"]
+    },
+    {
+      "properties": {
+        "type": { "const": "language.updated" },
+        "payload": {
+          "type": "object", "additionalProperties": false, "required": ["language"],
+          "properties": { "language": { "anyOf": [
+            { "$ref": "../v1/definitions.schema.json#/$defs/languageTag" }, { "type": "null" }
+          ] } }
+        }
+      },
+      "required": ["payload"]
+    },
+    {
+      "properties": {
+        "type": { "const": "ideal.approved" },
+        "payload": {
+          "type": "object", "additionalProperties": false, "required": ["idealRevision"],
+          "properties": { "idealRevision": { "$ref": "../v1/definitions.schema.json#/$defs/objectId" } }
+        }
+      },
+      "required": ["payload"]
+    },
+    {
+      "properties": {
+        "type": { "const": "implementation.accepted" },
+        "payload": {
+          "type": "object", "additionalProperties": false, "required": ["implementationRevision"],
+          "properties": { "implementationRevision": { "$ref": "../v1/definitions.schema.json#/$defs/objectId" } }
+        }
+      },
+      "required": ["payload"]
+    },
+    {
+      "properties": {
+        "type": { "const": "deployment.accepted" },
+        "payload": {
+          "type": "object", "additionalProperties": false, "required": ["deploymentRevision"],
+          "properties": { "deploymentRevision": { "$ref": "../v1/definitions.schema.json#/$defs/objectId" } }
+        }
+      },
+      "required": ["payload"]
+    },
+    { "properties": { "type": { "const": "idea.abandoned" } } },
+    { "properties": { "type": { "const": "idea.resumed" } } }
+  ],
+  "unevaluatedProperties": false
+}

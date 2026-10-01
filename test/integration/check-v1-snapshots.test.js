@@ -314,7 +314,10 @@ test("validates identical trees independently of target and parent topology", as
     false,
   );
   assert.equal(commands.some(([name]) => name === "show"), false);
-  assert.equal(commands.some(([name]) => name === "log"), false);
+  // V1 facts remain snapshot-only; config ancestry only prevents v2 downgrades.
+  for (const args of commands.filter(([name]) => name === "log")) {
+    assert.deepEqual(args.slice(-2), ["--", ".silvermoon/config.yaml"]);
+  }
   assert.equal(
     commands.some(([name, ...args]) =>
       name === "cat-file" && args.includes(historicalRevision)

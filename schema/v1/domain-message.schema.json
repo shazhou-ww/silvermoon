@@ -40,7 +40,8 @@
             "whats-next",
             "create-idea",
             "check",
-            "list-ideas"
+            "list-ideas",
+            "event"
           ]
         },
         "args": {

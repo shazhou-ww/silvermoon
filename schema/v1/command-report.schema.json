@@ -25,7 +25,8 @@
             "whats-next",
             "create-idea",
             "check",
-            "list-ideas"
+            "list-ideas",
+            "event"
           ]
         },
         "args": {
@@ -138,7 +139,8 @@
             "idea-created",
             "idea-list",
             "next-steps",
-            "validation-result"
+            "validation-result",
+            "event-result"
           ]
         },
         "language": {

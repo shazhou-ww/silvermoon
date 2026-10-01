@@ -76,7 +76,7 @@ test("registers only the approved command surface", () => {
   const program = createProgram(capture().io);
   assert.deepEqual(
     program.commands.map((command) => command.name()).sort(),
-    ["check", "create-idea", "list-ideas", "whats-next"],
+    ["check", "create-idea", "event", "list-ideas", "whats-next"],
   );
   const create = program.commands.find((command) =>
     command.name() === "create-idea"

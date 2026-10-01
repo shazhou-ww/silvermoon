@@ -59,7 +59,10 @@ canonical BCP 47 tag.
 `whats-next` may fetch after local readiness passes, but it does not move the
 worktree, index, branches, or named refs. Human approvals, implementation
 acceptance, deployment acceptance, and abandonment are ordinary edits to one
-idea `status.yaml` after an explicit decision.
+idea `status.yaml` after an explicit decision in this still-v1 source repository.
+V2 projects instead use the controlled
+[event protocol](../skills/silvermoon/references/events.md). Developing v2
+does not authorize migration of this checkout.
 
 Before requesting a human decision, validate the candidate, synchronize its
 normal non-force commit to primary, confirm reachability from the refreshed
@@ -122,7 +125,8 @@ branches.
   `silvermoon check --remote` for complete primary-history evidence.
 - Use `silvermoon check --staged` in pre-commit hooks: default `check` validates
   committed `HEAD`, not the pending index. `check` validates only the chosen
-  project's snapshot, not repository synchronization or idea navigation.
+  project's snapshot and v2 primary event history, not repository
+  synchronization or idea navigation.
   Only exit code `0` permits the commit; `1` means invalid or unavailable and
   `2` means invalid usage. Its JSON uses all four projections; only
   `check --remote` normally records an action.

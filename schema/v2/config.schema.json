@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/shazhou-ww/silvermoon/raw/refs/heads/main/schema/v2/config.schema.json",
+  "title": "Silvermoon event project configuration v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "primaryRepository", "primaryBranch"],
+  "properties": {
+    "version": { "const": 2 },
+    "primaryRepository": { "$ref": "../v1/definitions.schema.json#/$defs/repository" },
+    "primaryBranch": { "$ref": "../v1/definitions.schema.json#/$defs/branch" },
+    "preferredLanguage": { "$ref": "../v1/definitions.schema.json#/$defs/languageTag" }
+  }
+}

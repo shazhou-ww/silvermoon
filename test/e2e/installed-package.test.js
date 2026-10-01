@@ -608,6 +608,37 @@ try {
   );
   assert.doesNotMatch(lifecycleText, /### Ideas you can continue/);
   assert.doesNotMatch(lifecycleText, /## Actions and results/);
+  const eventConsumer = join(temporaryRoot, "event-consumer");
+  run("git", ["-c", "core.autocrlf=false", "clone", primary, eventConsumer], temporaryRoot);
+  run("git", ["config", "user.name", "event smoke"], eventConsumer);
+  run("git", ["config", "user.email", "events@example.invalid"], eventConsumer);
+  run("git", ["config", "core.autocrlf", "false"], eventConsumer);
+  run("git", ["remote", "set-url", "origin", "https://example.com/owner/repository.git"], eventConsumer);
+  run("git", ["config", `url.${pathToFileURL(primary).href}.insteadOf`, "https://example.com/owner/repository.git"], eventConsumer);
+  const installedRoot = join(bootstrap, "node_modules", "silvermoon");
+  const migrationEntrypoint = join(installedRoot, "bin", "migrate-v1-to-v2.js");
+  const eventEntrypoint = join(installedRoot, "bin", "silvermoon.js");
+  const migrationPlan = JSON.parse(run(process.execPath, [migrationEntrypoint, "--root", eventConsumer], bootstrap));
+  assert.equal(migrationPlan.outcome, "migration-planned");
+  const migrated = JSON.parse(run(process.execPath, [migrationEntrypoint, "--root", eventConsumer,
+    "--apply", "--expected-digest", migrationPlan.digest], bootstrap));
+  assert.equal(migrated.outcome, "migrated");
+  const migrationCheck = JSON.parse(run(process.execPath, [eventEntrypoint, "check",
+    "--root", eventConsumer, "--worktree", "--json"], bootstrap));
+  assert.equal(migrationCheck.observation.state, "project-ready");
+  run("git", ["add", "."], eventConsumer);
+  run("git", ["commit", "-m", "Migrate installed event fixture"], eventConsumer);
+  run("git", ["push", "origin", "HEAD:main"], eventConsumer);
+  const observedEvents = JSON.parse(run(process.execPath, [eventEntrypoint, "event", "replay",
+    id, "--root", eventConsumer, "--json"], bootstrap)).observation.receipt;
+  const requestFile = join(temporaryRoot, "event-request.json");
+  await writeFile(requestFile, JSON.stringify({ type: "alias.updated", payload: { alias: "installed-events" } }));
+  const appended = JSON.parse(run(process.execPath, [eventEntrypoint, "event", "append", id,
+    "--root", eventConsumer, "--input", requestFile,
+    "--expected-length", String(observedEvents.length), "--expected-digest", observedEvents.digest,
+    "--expected-primary", observedEvents.baseline.commit, "--json"], bootstrap));
+  assert.equal(appended.observation.receipt.outcome, "candidate-written");
+  assert.equal((await readFile(join(eventConsumer, paths.root, "events.jsonl"), "utf8")).includes("installed-events"), true);
   await writeFile(
     join(consumer, ".agents", "skills", "silvermoon", "SKILL.md"),
     "drift\n",

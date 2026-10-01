@@ -62,8 +62,9 @@ for those filters; the default is all active ideas.
 refs. `create-idea` requires the configured primary branch and upstream plus a
 clean worktree; it does not fetch or compare ancestry.
 
-`check` validates only a project snapshot; it does not navigate ideas or check
-repository synchronization. Default `check` validates committed `HEAD`;
+`check` validates a project snapshot and, for v2 projects, its event history
+against primary. It does not navigate ideas or perform synchronization.
+Default `check` validates committed `HEAD`;
 `--worktree` validates the full candidate and `--staged` the index. Its JSON
 uses the same four projections; only `check --remote` normally records an
 action. Exit `0` means valid, `1` invalid or unavailable, and `2` invalid
@@ -141,12 +142,14 @@ in its selected snapshot but never returns their content.
 ### Create A New Idea
 
 `create-idea` creates only the scaffold: `Idea.md`, `Implementation.md`,
-`Deployment.md`, `ledger.md`, and `status.yaml`. It never stages, commits,
+`Deployment.md`, `ledger.md`, and either v1 `status.yaml` or v2 `events.jsonl`.
+It never stages, commits,
 pushes, or records a decision. Preserve explicit creation intent through
 hygiene retries: retry `create-idea`, not bare `whats-next`.
 
-When creating a new idea, proactively assign a concise, unique alias in its
-`status.yaml`: use an alias supplied by the user, or derive one from the idea's
+When creating a new idea, proactively assign a concise, unique alias: edit
+v1 `status.yaml`, or use v2 `event append` with `alias.updated`.
+Use an alias supplied by the user, or derive one from the idea's
 goal. Do not leave the alias absent or ask for a name solely to choose one.
 
 Pass `create-idea --language <tag>` only when the user explicitly requests a
@@ -187,7 +190,7 @@ Each idea has three canonical entries:
 
 ```text
 .silvermoon/ideas/<ULID>/
-├── status.yaml
+├── status.yaml (v1) or events.jsonl (v2)
 ├── ledger.md
 └── outer/
     ├── Deployment.md
@@ -207,7 +210,7 @@ In `Implementation.md` and `Deployment.md`, put plans under `## Steps` and
 outcomes under `## Acceptance criteria`. Use stable level-three IDs: `I-Sxx`,
 `I-ACxx`, `D-Sxx`, and `D-ACxx`. Each criterion states an observable outcome
 and how to prove it. Do not put checkboxes in world contracts. World content
-changes its world revision and containing revisions; `status.yaml` and
+changes its world revision and containing revisions; `status.yaml`/`events.jsonl` and
 `ledger.md` are outside those trees.
 
 The required idea-root `ledger.md` is operational memory, not a fourth world,
@@ -311,10 +314,16 @@ surface can resolve the link.
 Synchronization and links make review possible; neither constitutes a human
 decision.
 
-Silvermoon has no approval, acceptance, or abandonment mutation commands.
-After an explicit human decision, reconfirm that it applies to the selected
-idea and exact revision from `whats-next`; change only the corresponding status
-fact:
+For v2 projects, follow [events.md](./references/events.md): observe the exact
+log and primary, then use the project-version `event append` command after an
+explicit decision. Never hand-edit JSONL, infer authorization from a CLI flag,
+clear decisions, or append observations. `event revise` is only for reviewed
+owned suffixes or a definite reduction-failed primary repair. Keep selector,
+audience, and output language through conflicts and retries.
+
+For v1 projects there is no decision mutation command. After an explicit human
+decision, reconfirm the selected idea and exact revision from `whats-next`;
+change only the corresponding status fact:
 
 - ideal approval records `approvedRevision`;
 - implementation acceptance records `implementationAcceptedRevision`;

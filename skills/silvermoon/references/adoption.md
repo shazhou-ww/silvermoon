@@ -47,7 +47,13 @@ invocation below, and refresh its registered skill from the source using
 `source-checkout-runtime-required`; switch to the source entrypoint rather
 than installing a self-dependency.
 
-Create `.silvermoon/config.yaml` with the fixed version 1 contract:
+Existing v1 projects keep the following configuration and storage contract.
+New projects may explicitly choose `version: 2` with the
+[event storage and command rules](./events.md); create `events.jsonl` rather
+than status YAML and configure a named-primary tracking ref before checking.
+Never convert an existing project by editing only its version.
+
+The compatible version 1 configuration is:
 
 ```yaml
 version: 1
@@ -67,7 +73,8 @@ silvermoon create-idea
 silvermoon whats-next <ULID>
 ```
 
-`check` validates the selected project snapshot only; it does not navigate
+`check` validates the selected project snapshot (and v2 primary event history);
+it does not navigate
 ideas or check worktree hygiene and upstream. Default `check` validates
 committed `HEAD`, whereas `check --staged` validates the index for pre-commit
 hooks. Its JSON uses all four report projections; `actions` is empty except

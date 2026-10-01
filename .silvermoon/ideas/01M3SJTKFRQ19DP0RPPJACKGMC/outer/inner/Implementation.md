@@ -36,6 +36,12 @@ v1 项目及历史仍可读取；v2 `create-idea` 创建空日志，有显式语
 审计 primary 集成主线并识别已验证修复边界，不将坏祖先永久变成恢复障碍。
 输出基线、候选和实际使用的追加/修复规则，保持 check 退出码约定。
 
+具体基线选择落在 `src/event-history.js`：本地目标固定匹配配置坐标的
+named remote tracking ref，并标注尚未 fetch；remote 目标使用本次 fetch
+返回的准确 OID。已集成提交沿 primary first-parent 审计；可 fast-forward
+的本地提交还需逐步合法，否则保留双方历史并形成 primary 为首父的合并。
+真正 v1 历史仍按快照读事实；额外查看配置历史仅用于阻止 v2 降级。
+
 ### I-S04: 接入受控追加、修订和恢复指引
 
 通过项目 CLI 提供事件追加、回放、候选修订及符合 I-S03 的修复路径，
@@ -46,6 +52,23 @@ v1 项目及历史仍可读取；v2 `create-idea` 创建空日志，有显式语
 `whats-next` 和 skill 在冲突时指导保留现场、同步、重审、重验；
 base 失败时指导修复而不是无限要求追加。所有重试保留 selector/audience。
 
+生产命令为 `event replay|append|revise|recover`。
+append 输入单个 `{ type, payload? }` JSON 请求；revise 输入完整候选请求
+数组，不让调用方分配 sequence 或编辑 JSONL。写入参数采用
+`--expected-length`（字节数）、`--expected-digest`（SHA-256）和
+`--expected-primary`。`--confirm-decision` 是对已有明确人工决定的断言，
+不伪称授权证明；`--owned-suffix` 是对待修订后缀归属和意图的确认。
+
+共享 `src/state-transaction.js` 在 `.silvermoon/transaction` 保存完整
+原始/候选字节，借同目录 hard link 原子发布恢复计划并取得排他权。
+候选文件先 fsync，再同目录 rename；中断后只接受准确原始/候选字节。
+`event recover --confirm-stopped` 重验 primary 和世界；
+`--rollback` 仅恢复操作自己的准确原始字节，不覆盖后来新增事实。
+恢复进程本身若被终止，保留 `transaction.recovery`，由操作者停下所有
+恢复参与者、核实 PID 和原计划后明确移除这个互斥文件；不自动抢锁。
+Windows 的 Node API 无目录 fsync 保证，因此承诺进程中断恢复，不把
+测试结果表述成硬件断电持久性保证。POSIX 另外同步目录项。
+
 ### I-S05: 实现独立的一次性迁移
 
 交付 `bin/migrate-v1-to-v2.js`，不注册到常规 CLI，不自动运行。
@@ -54,6 +77,11 @@ base 失败时指导修复而不是无限要求追加。所有重试保留 selec
 项目级预检、切换、恢复和重试保持来源可恢复，不制造重复事件或新决定。
 将迁移边界接入历史检查，不依赖 imported 事件或逐行 commit 元数据。
 只对测试夹具和明确选择升级的项目执行，不使用真实 idea 做隐式试迁移。
+
+独立入口默认只生成只读计划；`--apply --expected-digest` 绑定准确计划，
+要求干净且已提交的源状态。`--resume`/`--rollback --confirm-stopped`
+使用原事务恢复；源 commit 或字节变化则阻塞。迁移边界须先验证并集成，
+之后再追加新事实；check 比较旧 primary 事实及固定普通事件表示。
 
 ### I-S06: 完成文档、skill、集成与交付证明
 
