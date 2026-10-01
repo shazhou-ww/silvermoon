@@ -1,12 +1,28 @@
 /**
- * 理想世界中的本地 ping/pong 协议设计，不是运行时实现。
- * 规范序列化、历史前缀校验和迁移继续由 event-state-model 负责。
+ * 理想世界的协议设计，不是当前运行时代码。
+ * Before: v2 events.jsonl 只有生命周期事件；回放结果为
+ *   { status: { id, ...原 status 字段 }, sequence }。
+ * After: 原 status 和 sequence 不变；同一日志新增 ping/pong 两种
+ *   事件，完整回放结果再包含 interaction。不创建第二份权威。
+ *   所有已有事件只增加写入时的发送权限校验，不改其 payload 或归约。
  */
 
 export type Ulid = string;
 export type GitObjectId = string;
+export type Sender = "upstream" | "downstream";
+export type Permission = Sender | "both";
 
-/** 现有 v2 事件归约的 status 投影；世界 revision 仍由观察提供。 */
+/** Before 的七种业务事件；After 仅为它们定义发送方权限，不另设 tap。 */
+export type ExistingEventType =
+  | "alias.updated"
+  | "language.updated"
+  | "ideal.approved"
+  | "implementation.accepted"
+  | "deployment.accepted"
+  | "idea.abandoned"
+  | "idea.resumed";
+
+/** Before/After 均保留的 v2 status 字段；世界 revision 仍由观察决定。 */
 export interface StatusProjection {
   readonly id: Ulid;
   readonly alias?: string;
@@ -17,184 +33,90 @@ export interface StatusProjection {
   readonly deploymentAcceptedRevision?: GitObjectId;
 }
 
-export type InstructionStatus =
-  | "queued"
-  | "delivered"
-  | "processing"
-  | "responded";
-
-export type PongOutcome =
-  | "result"
-  | "needs-input"
-  | "blocked"
-  | "git-failure"
-  | "runtime-failure"
-  | "sign-off";
-
-export interface EvidenceReference {
-  readonly kind: "repository" | "external" | "message";
-  readonly reference: string;
-  readonly commit?: GitObjectId;
+/** After 新增：日志序号就是消息的身份，不再另设消息 ID。 */
+export interface Message {
+  readonly sequence: number;
+  readonly message: string;
 }
 
-export interface InstructionState {
-  readonly instructionId: Ulid;
-  readonly idempotencyKey: string;
-  readonly instruction: string;
-  readonly executionContextId: string;
-  readonly status: InstructionStatus;
-  readonly statusSequence: number;
-  readonly responseId?: Ulid;
-  readonly evidence: readonly EvidenceReference[];
-}
-
-export interface PongState {
-  readonly responseId: Ulid;
-  readonly instructionIds: readonly Ulid[];
-  readonly outcome: PongOutcome;
-  readonly summary: string;
-  readonly awaitingUpstream: boolean;
-  readonly stateSequence: number;
-  readonly evidence: readonly EvidenceReference[];
-}
-
+/** After 新增；Before 不存在 interaction 投影。 */
 export interface InteractionProjection {
-  readonly executionContextId: string | null;
-  readonly instructions: Readonly<Record<Ulid, InstructionState>>;
-  readonly instructionIdByIdempotencyKey: Readonly<Record<string, Ulid>>;
-  readonly pongs: Readonly<Record<Ulid, PongState>>;
+  readonly unansweredPings: readonly Message[];
+  readonly lastPong?: Message;
+  readonly lastSignal: "ping" | "pong" | null;
 }
 
+/** Before 只有 status 与 sequence；After 增加 interaction。 */
 export interface IdeaStateProjection {
   readonly status: StatusProjection;
   readonly sequence: number;
   readonly interaction: InteractionProjection;
 }
 
-export type InteractionEventType =
-  | "interaction.ping.appended"
-  | "interaction.instructions.delivered"
-  | "interaction.instructions.processing"
-  | "interaction.pong.returned";
-
-/** 现有 v2 记录的类型视图；实施时扩展共享事件联合类型，不另建 envelope。 */
-export interface InteractionEventEnvelope<
-  TType extends InteractionEventType,
-  TPayload,
-> {
+/** Before 的记录已有 sequence/type/payload；After 只新增以下两种 type。 */
+export type InteractionEvent = {
   readonly sequence: number;
-  readonly type: TType;
-  readonly payload: TPayload;
+  readonly type: "interaction.ping" | "interaction.pong";
+  readonly payload: { readonly message: string };
+};
+
+/**
+ * After 新增的权限规则。upstream/downstream/both 仅约束谁可写入，
+ * 不等同于球权；三个决策与放弃/恢复仍需单独的人类授权校验。
+ * 旧日志不含发送者身份，回放不凭空断言历史记录由谁写入。
+ */
+export const EVENT_PERMISSIONS = {
+  "alias.updated": "both",
+  "language.updated": "both",
+  "ideal.approved": "upstream",
+  "implementation.accepted": "upstream",
+  "deployment.accepted": "upstream",
+  "idea.abandoned": "upstream",
+  "idea.resumed": "upstream",
+  "interaction.ping": "upstream",
+  "interaction.pong": "downstream",
+} as const satisfies Record<ExistingEventType | InteractionEvent["type"], Permission>;
+
+/**
+ * 角色必须来自可信调用边界；不能让输入文件或自报 CLI 参数充当身份。
+ * 球在下游时仍允许上游连续 ping 或修改双方可写的 metadata。
+ */
+export function assertSenderAllowed(
+  type: keyof typeof EVENT_PERMISSIONS,
+  sender: Sender,
+): void {
+  const permission: Permission = EVENT_PERMISSIONS[type];
+  if (permission !== "both" && permission !== sender) {
+    throw new Error(`${sender} 无权追加 ${type}。`);
+  }
 }
 
-export interface PongAcknowledgement {
-  readonly responseId: Ulid;
-  readonly expectedStateSequence: number;
+/** 仅最后的 ping/pong 决定路由；其他事件不更改 lastSignal。 */
+export function nextRecipient(state: IdeaStateProjection): Sender {
+  return state.interaction.lastSignal === "ping" ? "downstream" : "upstream";
 }
-
-export interface PingAppendedPayload {
-  readonly instructionId: Ulid;
-  readonly idempotencyKey: string;
-  readonly executionContextId: string;
-  readonly instruction: string;
-  readonly acknowledges: readonly PongAcknowledgement[];
-  readonly evidence: readonly EvidenceReference[];
-}
-
-export interface InstructionTransitionTarget<
-  TStatus extends InstructionStatus,
-> {
-  readonly instructionId: Ulid;
-  readonly expectedStatus: TStatus;
-  readonly expectedStatusSequence: number;
-}
-
-export interface InstructionsDeliveredPayload {
-  readonly executionContextId: string;
-  readonly targets: readonly InstructionTransitionTarget<"queued">[];
-  readonly evidence: readonly EvidenceReference[];
-}
-
-export interface InstructionsProcessingPayload {
-  readonly executionContextId: string;
-  readonly targets: readonly InstructionTransitionTarget<"delivered">[];
-  readonly evidence: readonly EvidenceReference[];
-}
-
-export interface PongReturnedPayload {
-  readonly responseId: Ulid;
-  readonly executionContextId: string;
-  readonly targets: readonly InstructionTransitionTarget<
-    "delivered" | "processing"
-  >[];
-  readonly outcome: PongOutcome;
-  readonly summary: string;
-  readonly evidence: readonly EvidenceReference[];
-}
-
-export type PingAppendedEvent = InteractionEventEnvelope<
-  "interaction.ping.appended",
-  PingAppendedPayload
->;
-
-export type InstructionsDeliveredEvent = InteractionEventEnvelope<
-  "interaction.instructions.delivered",
-  InstructionsDeliveredPayload
->;
-
-export type InstructionsProcessingEvent = InteractionEventEnvelope<
-  "interaction.instructions.processing",
-  InstructionsProcessingPayload
->;
-
-export type PongReturnedEvent = InteractionEventEnvelope<
-  "interaction.pong.returned",
-  PongReturnedPayload
->;
-
-export type InteractionEvent =
-  | PingAppendedEvent
-  | InstructionsDeliveredEvent
-  | InstructionsProcessingEvent
-  | PongReturnedEvent;
-
-export type TransitionErrorCode =
-  | "sequence-conflict"
-  | "duplicate-input"
-  | "incomplete-event"
-  | "unknown-instruction"
-  | "stale-transition"
-  | "wrong-context";
 
 export class InteractionTransitionError extends Error {
-  readonly code: TransitionErrorCode;
+  readonly code: "sequence-conflict" | "incomplete-event" | "no-state-change";
 
-  constructor(code: TransitionErrorCode, message: string) {
+  constructor(code: InteractionTransitionError["code"], message: string) {
     super(message);
     this.name = "InteractionTransitionError";
     this.code = code;
   }
 }
 
-export function createEmptyInteractionProjection(): InteractionProjection {
-  return {
-    executionContextId: null,
-    instructions: Object.create(null) as Record<Ulid, InstructionState>,
-    instructionIdByIdempotencyKey: Object.create(null) as Record<string, Ulid>,
-    pongs: Object.create(null) as Record<Ulid, PongState>,
-  };
-}
-
+/** Before 的空状态已有 status.id 和 sequence: 0；After 增加空交互状态。 */
 export function createInitialIdeaState(ideaId: Ulid): IdeaStateProjection {
   return {
     status: { id: ideaId },
     sequence: 0,
-    interaction: createEmptyInteractionProjection(),
+    interaction: { unansweredPings: [], lastSignal: null },
   };
 }
 
-/** 重试由追加入口返回既有结果；重复事件在归约时拒绝。 */
-export function transitionIdeaState(
+/** After 新增的两种转换；Before 的生命周期事件沿用原 status 归约。 */
+export function transitionInteraction(
   state: IdeaStateProjection,
   event: InteractionEvent,
 ): IdeaStateProjection {
@@ -204,302 +126,50 @@ export function transitionIdeaState(
       `事件序号必须是 ${state.sequence + 1}。`,
     );
   }
-
-  const interaction = cloneInteraction(state.interaction);
-
-  switch (event.type) {
-    case "interaction.ping.appended":
-      applyPing(interaction, event);
-      break;
-    case "interaction.instructions.delivered":
-      applyInstructionTransition(
-        interaction,
-        event,
-        "queued",
-        "delivered",
-      );
-      break;
-    case "interaction.instructions.processing":
-      applyInstructionTransition(
-        interaction,
-        event,
-        "delivered",
-        "processing",
-      );
-      break;
-    case "interaction.pong.returned":
-      applyPong(interaction, event);
-      break;
+  if (typeof event.payload.message !== "string" || !event.payload.message.trim()) {
+    throw new InteractionTransitionError("incomplete-event", "message 不能为空。");
   }
 
+  const current: Message = { sequence: event.sequence, message: event.payload.message };
+  if (event.type === "interaction.ping") {
+    return {
+      status: state.status,
+      sequence: event.sequence,
+      interaction: {
+        ...state.interaction,
+        unansweredPings: [...state.interaction.unansweredPings, current],
+        lastSignal: "ping",
+      },
+    };
+  }
+  if (event.type !== "interaction.pong") {
+    throw new InteractionTransitionError("incomplete-event", "未知交互事件。");
+  }
+  if (state.interaction.unansweredPings.length === 0) {
+    throw new InteractionTransitionError("no-state-change", "没有未回应的 ping。");
+  }
   return {
     status: state.status,
     sequence: event.sequence,
-    interaction,
+    interaction: { unansweredPings: [], lastPong: current, lastSignal: "pong" },
   };
 }
 
-export function deriveInteractionReadiness(
-  state: InteractionProjection,
-): {
-  readonly hasRunnableInstructions: boolean;
-  readonly hasOpenPongs: boolean;
-} {
-  return {
-    hasRunnableInstructions: Object.values(state.instructions).some(
-      ({ status }) => status !== "responded",
-    ),
-    hasOpenPongs: Object.values(state.pongs).some(
-      ({ awaitingUpstream }) => awaitingUpstream,
-    ),
-  };
-}
-
-interface MutableInteractionProjection {
-  executionContextId: string | null;
-  instructions: Record<Ulid, InstructionState>;
-  instructionIdByIdempotencyKey: Record<string, Ulid>;
-  pongs: Record<Ulid, PongState>;
-}
-
-function cloneInteraction(
-  state: InteractionProjection,
-): MutableInteractionProjection {
-  return {
-    executionContextId: state.executionContextId,
-    instructions: Object.assign(Object.create(null), state.instructions),
-    instructionIdByIdempotencyKey: Object.assign(
-      Object.create(null),
-      state.instructionIdByIdempotencyKey,
-    ),
-    pongs: Object.assign(Object.create(null), state.pongs),
-  };
-}
-
-function applyPing(
-  state: MutableInteractionProjection,
-  event: PingAppendedEvent,
-): void {
-  const { payload } = event;
-  requireText(payload.instructionId, "instructionId");
-  requireText(payload.idempotencyKey, "idempotencyKey");
-  requireText(payload.executionContextId, "executionContextId");
-  requireText(payload.instruction, "instruction");
-
-  if (state.instructions[payload.instructionId]) {
-    throw new InteractionTransitionError(
-      "duplicate-input",
-      `指令 ${payload.instructionId} 已存在。`,
-    );
-  }
-
-  const duplicateInstructionId =
-    state.instructionIdByIdempotencyKey[payload.idempotencyKey];
-  if (duplicateInstructionId) {
-    throw new InteractionTransitionError(
-      "duplicate-input",
-      `去重键已对应指令 ${duplicateInstructionId}。`,
-    );
-  }
-
-  requireContext(state, payload.executionContextId);
-  requireUnique(
-    payload.acknowledges.map(({ responseId }) => responseId),
-    "acknowledges",
-  );
-
-  for (const acknowledgement of payload.acknowledges) {
-    requireSequence(acknowledgement.expectedStateSequence, "expectedStateSequence");
-    const pong = state.pongs[acknowledgement.responseId];
-    if (
-      !pong ||
-      !pong.awaitingUpstream ||
-      pong.stateSequence !== acknowledgement.expectedStateSequence
-    ) {
-      throw new InteractionTransitionError(
-        "stale-transition",
-        `响应 ${acknowledgement.responseId} 不存在、已关闭或已变化。`,
-      );
-    }
-    state.pongs[acknowledgement.responseId] = {
-      ...pong,
-      awaitingUpstream: false,
-      stateSequence: event.sequence,
-    };
-  }
-
-  state.instructions[payload.instructionId] = {
-    instructionId: payload.instructionId,
-    idempotencyKey: payload.idempotencyKey,
-    instruction: payload.instruction,
-    executionContextId: payload.executionContextId,
-    status: "queued",
-    statusSequence: event.sequence,
-    evidence: payload.evidence,
-  };
-  state.instructionIdByIdempotencyKey[payload.idempotencyKey] =
-    payload.instructionId;
-}
-
-function applyInstructionTransition(
-  state: MutableInteractionProjection,
-  event: InstructionsDeliveredEvent | InstructionsProcessingEvent,
-  expectedStatus: "queued" | "delivered",
-  nextStatus: "delivered" | "processing",
-): void {
-  requireContext(state, event.payload.executionContextId);
-  requireTargets(event.payload.targets);
-
-  for (const target of event.payload.targets) {
-    requireSequence(target.expectedStatusSequence, "expectedStatusSequence");
-    const instruction = requireInstruction(state, target.instructionId);
-    if (
-      instruction.status !== expectedStatus ||
-      target.expectedStatus !== expectedStatus ||
-      instruction.statusSequence !== target.expectedStatusSequence
-    ) {
-      throw new InteractionTransitionError(
-        "stale-transition",
-        `指令 ${target.instructionId} 不在预期状态。`,
-      );
-    }
-  }
-
-  for (const target of event.payload.targets) {
-    const instruction = state.instructions[target.instructionId];
-    state.instructions[target.instructionId] = {
-      ...instruction,
-      status: nextStatus,
-      statusSequence: event.sequence,
-      evidence: [...instruction.evidence, ...event.payload.evidence],
-    };
-  }
-}
-
-function applyPong(
-  state: MutableInteractionProjection,
-  event: PongReturnedEvent,
-): void {
-  const { payload } = event;
-  requireText(payload.responseId, "responseId");
-  requireText(payload.summary, "summary");
-  requireContext(state, payload.executionContextId);
-  requireTargets(payload.targets);
-
-  if (state.pongs[payload.responseId]) {
-    throw new InteractionTransitionError(
-      "duplicate-input",
-      `响应 ${payload.responseId} 已存在。`,
-    );
-  }
-
-  for (const target of payload.targets) {
-    requireSequence(target.expectedStatusSequence, "expectedStatusSequence");
-    const instruction = requireInstruction(state, target.instructionId);
-    if (
-      instruction.status !== target.expectedStatus ||
-      (instruction.status !== "delivered" &&
-        instruction.status !== "processing") ||
-      instruction.statusSequence !== target.expectedStatusSequence
-    ) {
-      throw new InteractionTransitionError(
-        "stale-transition",
-        `指令 ${target.instructionId} 不能接收该响应。`,
-      );
-    }
-  }
-
-  for (const target of payload.targets) {
-    const instruction = state.instructions[target.instructionId];
-    state.instructions[target.instructionId] = {
-      ...instruction,
-      status: "responded",
-      statusSequence: event.sequence,
-      responseId: payload.responseId,
-      evidence: [...instruction.evidence, ...payload.evidence],
-    };
-  }
-
-  state.pongs[payload.responseId] = {
-    responseId: payload.responseId,
-    instructionIds: payload.targets.map(({ instructionId }) => instructionId),
-    outcome: payload.outcome,
-    summary: payload.summary,
-    awaitingUpstream: payload.outcome !== "result",
-    stateSequence: event.sequence,
-    evidence: payload.evidence,
-  };
-}
-
-function requireContext(
-  state: MutableInteractionProjection,
-  executionContextId: string,
-): void {
-  requireText(executionContextId, "executionContextId");
-  if (state.executionContextId === null) {
-    state.executionContextId = executionContextId;
-    return;
-  }
-  if (state.executionContextId !== executionContextId) {
-    throw new InteractionTransitionError(
-      "wrong-context",
-      `预期执行上下文为 ${state.executionContextId}。`,
-    );
-  }
-}
-
-function requireInstruction(
-  state: MutableInteractionProjection,
-  instructionId: Ulid,
-): InstructionState {
-  const instruction = state.instructions[instructionId];
-  if (!instruction) {
-    throw new InteractionTransitionError(
-      "unknown-instruction",
-      `指令 ${instructionId} 不存在。`,
-    );
-  }
-  return instruction;
-}
-
-function requireTargets(
-  targets: readonly InstructionTransitionTarget<InstructionStatus>[],
-): void {
-  if (targets.length === 0) {
-    throw new InteractionTransitionError(
-      "incomplete-event",
-      "转换事件至少需要一个目标指令。",
-    );
-  }
-  requireUnique(
-    targets.map(({ instructionId }) => instructionId),
-    "targets",
-  );
-}
-
-function requireUnique(values: readonly string[], field: string): void {
-  if (new Set(values).size !== values.length) {
-    throw new InteractionTransitionError(
-      "incomplete-event",
-      `${field} 包含重复标识。`,
-    );
-  }
-}
-
-function requireText(value: string, field: string): void {
-  if (value.trim().length === 0) {
-    throw new InteractionTransitionError(
-      "incomplete-event",
-      `${field} 不能为空。`,
-    );
-  }
-}
-
-function requireSequence(value: number, field: string): void {
-  if (!Number.isSafeInteger(value) || value < 1) {
-    throw new InteractionTransitionError(
-      "incomplete-event",
-      `${field} 必须是正安全整数。`,
-    );
-  }
-}
+/**
+ * 只有两种状态变化：ping 在日志中新增一条未回应的消息；pong 回应
+ * 前一完整投影中所有未回应的 ping，并清空该集合。下一条 ping 不受旧
+ * pong 影响。只有这两类事件更新 lastSignal；所有既有业务事件（包括
+ * 准确 revision 的批准/验收、放弃/恢复）都不交球。若上游完成决定后
+ * 要把工作交给下游，必须另写 ping；已放弃状态先于路由阻止派发。
+ * 消息内容是供人或 Agent 阅读的字符串，不解析结果类型。
+ *
+ * CLI 仍使用 event replay/append，不新增 interaction 命令组。
+ * append 的交互请求为 {type,payload:{message}}，CLI 分配 sequence；
+ * 交互写入只绑定 replay 给出的准确本地日志长度、摘要和可信角色，
+ * 无须 fetch、--expected-primary、commit 或 clean worktree。乐观锁冲突后必须
+ * 重新观察再提交 pong：不可把旧响应自动扩展到并发新增的 ping。
+ * 仅在原前态后已写入准确相同的请求时，重试返回原结果；其余
+ * 长度/摘要冲突必须重新观察，不能误认后来相同 message 为同一请求。
+ * 生命周期决策仍要求准确 primary、世界 revision 和人类授权；
+ * 原有事务恢复、schema 与 append-only 历史检查继续有效。
+ */
