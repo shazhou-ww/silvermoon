@@ -1,0 +1,5 @@
+{"sequence":1,"type":"alias.updated","payload":{"alias":"release-silvermoon-0-0-2"}}
+{"sequence":2,"type":"language.updated","payload":{"language":"zh-CN"}}
+{"sequence":3,"type":"ideal.approved","payload":{"idealRevision":"b613797907331ab2c53c6adaa01d2f1c2dcb4f0f"}}
+{"sequence":4,"type":"implementation.accepted","payload":{"implementationRevision":"d8bcdb4575f0d396814bc618a016d4d05c669cfd"}}
+{"sequence":5,"type":"deployment.accepted","payload":{"deploymentRevision":"063ebae16cb71065a471068e0a6970cb58c8c8e6"}}

@@ -1,0 +1,3 @@
+{"sequence":1,"type":"ideal.approved","payload":{"idealRevision":"e040b49e03fc0fcb91213ccd7e5beedc551a553a"}}
+{"sequence":2,"type":"implementation.accepted","payload":{"implementationRevision":"925b1af1bb4a3a21cc46c05d0461e15cb59f6e8d"}}
+{"sequence":3,"type":"deployment.accepted","payload":{"deploymentRevision":"07210a74bffb8a39a4995d94bb8cc3e01e6216e7"}}

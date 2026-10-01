@@ -1,0 +1,4 @@
+{"sequence":1,"type":"alias.updated","payload":{"alias":"phase-guidance"}}
+{"sequence":2,"type":"ideal.approved","payload":{"idealRevision":"f1c64847ff65587a6631e5438dfb7414bd576ab1"}}
+{"sequence":3,"type":"implementation.accepted","payload":{"implementationRevision":"1a11fd68adb45fca3aa7c30070622c7db68d86ce"}}
+{"sequence":4,"type":"deployment.accepted","payload":{"deploymentRevision":"927b57876df7d7eb91c57707f3878b14c0b8dac5"}}

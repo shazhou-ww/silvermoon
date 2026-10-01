@@ -1,0 +1,5 @@
+{"sequence":1,"type":"alias.updated","payload":{"alias":"concise-whats-next-hygiene"}}
+{"sequence":2,"type":"language.updated","payload":{"language":"zh-CN"}}
+{"sequence":3,"type":"ideal.approved","payload":{"idealRevision":"f0c9a496b49803328b615a7623b3172c39717ddf"}}
+{"sequence":4,"type":"implementation.accepted","payload":{"implementationRevision":"a407515f0facf00c1b73ff8aca824534cc586917"}}
+{"sequence":5,"type":"deployment.accepted","payload":{"deploymentRevision":"2d980bdb7e5304b6d9c7360629126d0adacd64c8"}}

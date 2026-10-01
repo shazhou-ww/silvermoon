@@ -1,0 +1,4 @@
+{"sequence":1,"type":"alias.updated","payload":{"alias":"plain-language-terminology"}}
+{"sequence":2,"type":"ideal.approved","payload":{"idealRevision":"03ec70d423a8206bf2d1a78810a50fbd0a381db8"}}
+{"sequence":3,"type":"implementation.accepted","payload":{"implementationRevision":"64719cdcd4558a2f656f066166175f5e2b334cca"}}
+{"sequence":4,"type":"deployment.accepted","payload":{"deploymentRevision":"1de6201fd39e8f8a6ec213f95ee9cb430f1f959a"}}

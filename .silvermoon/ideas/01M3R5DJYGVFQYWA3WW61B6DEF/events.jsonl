@@ -1,0 +1,4 @@
+{"sequence":1,"type":"alias.updated","payload":{"alias":"cli-command-performance"}}
+{"sequence":2,"type":"ideal.approved","payload":{"idealRevision":"e6d74108efda6f98e9f582434e2e3ed6f56afb38"}}
+{"sequence":3,"type":"implementation.accepted","payload":{"implementationRevision":"a01c1c734ffac5297f7a44aec3ca95aa149889cf"}}
+{"sequence":4,"type":"deployment.accepted","payload":{"deploymentRevision":"8270ba3fc9515114445d9e251773b0df4e48d931"}}

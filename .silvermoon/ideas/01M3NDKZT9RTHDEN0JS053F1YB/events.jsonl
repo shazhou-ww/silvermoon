@@ -1,0 +1,4 @@
+{"sequence":1,"type":"alias.updated","payload":{"alias":"list-ideas"}}
+{"sequence":2,"type":"ideal.approved","payload":{"idealRevision":"525bd9d71aaca5256b319e4b11df7c90d724e3b8"}}
+{"sequence":3,"type":"implementation.accepted","payload":{"implementationRevision":"2677cd88ece4b474c56508373c7365af2de74ff3"}}
+{"sequence":4,"type":"deployment.accepted","payload":{"deploymentRevision":"ace89b2d5596184ccf16c5cf9669d1ca88894666"}}

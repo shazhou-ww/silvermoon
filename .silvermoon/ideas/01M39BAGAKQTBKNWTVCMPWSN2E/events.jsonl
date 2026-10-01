@@ -1,0 +1,4 @@
+{"sequence":1,"type":"alias.updated","payload":{"alias":"reader-first-documentation"}}
+{"sequence":2,"type":"ideal.approved","payload":{"idealRevision":"15ac625a243f747a6ca809b6f97ada80d86d4101"}}
+{"sequence":3,"type":"implementation.accepted","payload":{"implementationRevision":"46aedac5d0fd7cb8f38ba01739138c314871cdfb"}}
+{"sequence":4,"type":"deployment.accepted","payload":{"deploymentRevision":"1a44c47b9345ad7dbc02e0b440d7696461c0d238"}}

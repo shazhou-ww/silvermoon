@@ -1,0 +1,4 @@
+{"sequence":1,"type":"alias.updated","payload":{"alias":"npm-project-adoption"}}
+{"sequence":2,"type":"ideal.approved","payload":{"idealRevision":"c559c4250fc088766951e76e52aab20adf10d54b"}}
+{"sequence":3,"type":"implementation.accepted","payload":{"implementationRevision":"ea38271000e191f7fddb679a8de2f242945b7fbd"}}
+{"sequence":4,"type":"deployment.accepted","payload":{"deploymentRevision":"6be2b0c2006415e3045e2e15f780e37cea47f7c8"}}

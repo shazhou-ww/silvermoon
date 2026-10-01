@@ -1,0 +1,4 @@
+{"sequence":1,"type":"alias.updated","payload":{"alias":"content-language-contracts"}}
+{"sequence":2,"type":"ideal.approved","payload":{"idealRevision":"82cbc5b73ccc604ccc071f0f5db2b9e82842f924"}}
+{"sequence":3,"type":"implementation.accepted","payload":{"implementationRevision":"f3e69e36d9e4658fd8a3d9703fa7b1ecf4c07ea0"}}
+{"sequence":4,"type":"deployment.accepted","payload":{"deploymentRevision":"4fc1b93f9795baf1b92c7eaa8c6b84d4dc01630e"}}
