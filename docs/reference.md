@@ -189,8 +189,10 @@ using its canonical credential-free HTTPS remote URL and a worktree root
 whose `.silvermoon/config.yaml` names that remote. Then construct
 `new CopilotAdapter({ registry, onPermissionRequest })`; callers must
 explicitly decide Copilot tool permissions rather than inheriting blanket
-approval. `start({ projectUrl, ideaId })` creates or reuses a detached
-worktree under the local registry and a durable Copilot session. `send`
+approval. `start({ projectUrl, ideaId })` creates or reuses a dedicated worktree
+whose branch tracks the project's configured primary, and a durable Copilot
+session. A missing local primary tracking ref blocks creation rather than
+guessing a base. `send`
 returns an asynchronous stream of delivery observations, while `events`
 returns only final Agent replies and `observe` returns session and activity
 observations. Call `close()` to release connections; it does not delete
@@ -207,6 +209,19 @@ The registry excludes concurrent owners of the same route. If an owner exits
 without `close()`, explicitly verify it stopped, then call
 `registry.recover(route, { confirmStopped: true })`; recovery refuses a live
 owner, another host, or an unknown lock. It does not replay an uncertain send.
+
+The `silvermoon/agents/project-runtime` subpath exports `ProjectRuntime`.
+It resolves the registered project's own installed Silvermoon CLI (or this
+source checkout's entrypoint), starts it in a separate process with the
+idea worktree as its working directory, and returns its structured report
+with `exitCode` (0 for success, 1 for a structured invalid/unavailable report).
+`next(route)` calls only that project's `whats-next`; it does not reproduce
+Silvermoon's lifecycle rules. `replay(route)` observes the local event log;
+`appendInteraction(route, { type, message, expectedLength, expectedDigest })`
+passes an exact-log-bound `ping` or `pong` to the project's event command.
+Unsupported CLI/report versions, missing installations, and process failures
+are explicit errors. The caller still owns the loop, decision authorization,
+and the safe correlation of delivery and reply observations.
 
 ## Public Commands
 

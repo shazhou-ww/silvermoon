@@ -12,6 +12,10 @@
     "./agents/copilot": {
       "types": "./src/agents/copilot.d.ts",
       "default": "./src/agents/copilot.js"
+    },
+    "./agents/project-runtime": {
+      "types": "./src/agents/project-runtime.d.ts",
+      "default": "./src/agents/project-runtime.js"
     }
   },
   "files": [

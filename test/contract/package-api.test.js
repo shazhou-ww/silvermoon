@@ -3,10 +3,12 @@ import { test } from "node:test";
 
 import * as silvermoon from "../../src/index.js";
 import { CopilotAdapter, LocalProjectRegistry } from "silvermoon/agents/copilot";
+import { ProjectRuntime } from "silvermoon/agents/project-runtime";
 
 test("exports the Copilot adapter and local project registry separately", () => {
   assert.equal(typeof CopilotAdapter, "function");
   assert.equal(typeof LocalProjectRegistry, "function");
+  assert.equal(typeof ProjectRuntime, "function");
   assert.equal(Object.hasOwn(silvermoon, "CopilotAdapter"), false);
 });
 

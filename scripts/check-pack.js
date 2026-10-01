@@ -101,6 +101,8 @@ if (packed.status !== 0) {
     "src/agents/copilot.d.ts",
     "src/agents/copilot.js",
     "src/agents/project-registry.js",
+    "src/agents/project-runtime.js",
+    "src/agents/project-runtime.d.ts",
     "src/adoption.js",
     "src/cli.js",
     "src/config.js",

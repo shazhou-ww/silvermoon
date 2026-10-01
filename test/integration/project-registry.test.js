@@ -25,6 +25,7 @@ test("requires registration and persistently binds one idea worktree", async () 
     execFileSync("git", ["-C", projectRoot, "remote", "add", "origin", URL]);
     execFileSync("git", ["-C", projectRoot, "add", ".silvermoon"]);
     execFileSync("git", ["-C", projectRoot, "-c", "user.name=Test", "-c", "user.email=test@example.invalid", "commit", "-qm", "Fixture"]);
+    execFileSync("git", ["-C", projectRoot, "update-ref", "refs/remotes/origin/main", "HEAD"]);
     await assert.rejects(registry.register("https://github.com/other/project.git", projectRoot), /remote matches/);
     await registry.register(URL, projectRoot);
     await registry.register(URL, projectRoot);
@@ -36,6 +37,7 @@ test("requires registration and persistently binds one idea worktree", async () 
     const first = await registry.resolve(route);
     assert.equal(await new LocalProjectRegistry({ root }).resolve(route), first);
     assert.equal((await readFile(join(first, ".silvermoon", "config.yaml"), "utf8")).includes(URL), true);
+    assert.equal(execFileSync("git", ["-C", first, "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}"], { encoding: "utf8" }).trim(), "origin/main");
     await assert.rejects(registry.register(URL, join(base, "other")), /ENOENT/);
     execFileSync("git", ["-C", projectRoot, "worktree", "remove", first]);
   } finally {

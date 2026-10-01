@@ -42,6 +42,16 @@
 和能力，不让调用方重新解释项目 schema。无 daemon 的受控调用方复用
 同一边界。
 
+已新增独立进程边界：从本机注册表定位项目及 worktree，选择项目自身
+已安装的 Silvermoon CLI（源仓库则用其本地入口），以 `--json` 请求
+`whats-next` 或 `event replay/append`，校验基础报告形状并直接返回
+四投影与退出码（`1` 为结构化的无效/不可用报告）；缺少安装或不支持的
+报告明确报错。idea worktree 使用跟踪项目 primary 的专用分支，不以
+detached HEAD 绕过项目版本对 upstream 的检查。进程测试使用两个不同的
+项目入口验证分别派发，也用本仓库实际入口验证事件读取；尚未证明两个
+真实安装版本的兼容协商，也没有
+设备级循环调度器。
+
 ### I-S03: 实现单实例 Agent 接口和 Copilot 适配器
 
 在本仓库独立模块实现 [接口设计契约](./ideal/Agent-adapter.ts)，供未来每种

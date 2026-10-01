@@ -4,6 +4,7 @@ import { mkdir, open, readFile, realpath, unlink, writeFile } from "node:fs/prom
 import { homedir, hostname } from "node:os";
 import { dirname, join, resolve } from "node:path";
 
+import { loadConfig } from "../config.js";
 import { canonicalRepository } from "../repository.js";
 
 const IDEA_ID = /^[0-9A-HJKMNP-TV-Z]{26}$/i;
@@ -45,8 +46,8 @@ export class LocalProjectRegistry {
     if (!remotes.some((name) => git(path, ["config", "--get", `remote.${name}.url`]) === canonical)) {
       throw new Error("No configured Git remote matches the project URL.");
     }
-    const projectConfig = await readFile(join(path, ".silvermoon", "config.yaml"), "utf8");
-    if (!projectConfig.split(/\r?\n/).includes(`primaryRepository: ${canonical}`)) {
+    const projectConfig = await loadConfig({ root: path });
+    if (projectConfig.diagnostics.length || projectConfig.config?.primaryRepository !== canonical) {
       throw new Error("Registered project URL does not match the project's Silvermoon config.");
     }
     const file = join(this.#root, "projects", `${hash(canonical)}.json`);
@@ -67,8 +68,8 @@ export class LocalProjectRegistry {
     await writeFile(file, `${JSON.stringify({ projectUrl: canonical, projectRoot: path })}\n`, { flag: "wx", mode: 0o600 });
   }
 
-  async resolve(route) {
-    const { projectUrl, ideaId } = canonicalRoute(route);
+  async projectRoot(route) {
+    const { projectUrl } = canonicalRoute(route);
     const file = join(this.#root, "projects", `${hash(projectUrl)}.json`);
     let entry;
     try {
@@ -80,22 +81,41 @@ export class LocalProjectRegistry {
     if (entry.projectUrl !== projectUrl) throw new Error("Project registry entry does not match the requested URL.");
     const projectRoot = await realpath(entry.projectRoot);
     if (projectRoot !== entry.projectRoot) throw new Error("Project registration moved; explicit relocation is required.");
-    const configured = await readFile(join(projectRoot, ".silvermoon", "config.yaml"), "utf8");
-    if (!configured.split(/\r?\n/).includes(`primaryRepository: ${projectUrl}`)) {
+    const configured = await loadConfig({ root: projectRoot });
+    if (configured.diagnostics.length || configured.config?.primaryRepository !== projectUrl) {
       throw new Error("Project registration no longer matches its Silvermoon config.");
     }
+    return projectRoot;
+  }
+
+  async resolve(route) {
+    const { projectUrl, ideaId } = canonicalRoute(route);
+    const projectRoot = await this.projectRoot(route);
+    const configured = await loadConfig({ root: projectRoot });
     const ideaPath = join(projectRoot, ".silvermoon", "ideas", ideaId);
     await realpath(ideaPath);
     const worktreePath = join(await realpath(this.#root), "worktrees", hash(projectUrl), ideaId);
     const list = git(projectRoot, ["worktree", "list", "--porcelain"]);
     const registered = list.split("\n").some((line) => line === `worktree ${worktreePath}`);
+    const remotes = git(projectRoot, ["remote"]).split("\n").filter(Boolean);
+    const remote = remotes.find((name) =>
+      git(projectRoot, ["config", "--get", `remote.${name}.url`]) === projectUrl);
+    if (!remote) throw new Error("No configured Git remote matches the registered project.");
+    const upstream = `${remote}/${configured.config.primaryBranch}`;
+    const branch = `silvermoon/agent-${ideaId}`;
     if (registered) {
       if (await realpath(worktreePath) !== worktreePath) throw new Error("Registered worktree path changed.");
+      if (git(worktreePath, ["symbolic-ref", "--short", "HEAD"]) !== branch
+        || git(worktreePath, ["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}"]) !== upstream) {
+        throw new Error("Idea worktree branch or upstream changed; explicit repair is required.");
+      }
       return worktreePath;
     }
+    git(projectRoot, ["rev-parse", "--verify", `refs/remotes/${upstream}`]);
     await mkdir(dirname(worktreePath), { recursive: true });
-    // Git refuses an occupied path or concurrent worktree registration; never delete it.
-    git(projectRoot, ["worktree", "add", "--detach", worktreePath, "HEAD"]);
+    // Git refuses an occupied path or concurrent branch registration; never delete it.
+    git(projectRoot, ["worktree", "add", "-b", branch, worktreePath, upstream]);
+    git(projectRoot, ["branch", "--set-upstream-to", upstream, branch]);
     return worktreePath;
   }
 
