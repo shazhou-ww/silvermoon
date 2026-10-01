@@ -89,16 +89,22 @@ Windows 不宣称目录 fsync 或硬件断电保证。恢复进程自身被终�
 互斥文件，需停下所有恢复参与者并核验 PID/原计划后再明确清理该互斥文件，
 不按年龄抢锁、不自动删除未知文件。真正的数据写入中断由准确计划恢复。
 
-这些勾选和证明仅记录 Agent 实施工作，不构成人工验收。已批准的 ideal
-revision 保持不变；当前仓库仍为 v1，未迁移真实 idea，未创建 PR、发布
-npm 或记录 implementation/deployment acceptance。
+这些勾选和证明仅记录 Agent 实施工作，不构成人工验收。用户随后明确验收
+implementation revision `0dbc1f0cc26965ce613fbf28d8dad624f3cdc767`；
+独立状态提交 `3280fa037ce8248a9b8820e4198f3005ed007b74` 已同步 primary，
+重新观察进入 deploying。已批准的 ideal revision 保持不变；仓库仍为 v1，
+未迁移真实 idea，未创建 PR、发布 npm 或记录 deployment acceptance。
 
 ## Deployment
 
 ### Deployment steps
 
-- [ ] **D-S01:** 待主体世界验收后细化部署步骤
+- [ ] **D-S01:** 固定部署候选与隔离边界
+- [ ] **D-S02:** 验证可安装交付与独立迁移
+- [ ] **D-S03:** 复验状态、恢复与历史规则并交付证据
 
 ### Deployment acceptance criteria
 
-- [ ] **D-AC01:** 待主体世界验收后细化部署验收标准
+- [ ] **D-AC01:** 安装包在隔离消费环境完成升级和受控写入
+- [ ] **D-AC02:** 故障与并发边界可复现
+- [ ] **D-AC03:** 证据同步且发布边界保持
