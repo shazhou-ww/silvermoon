@@ -32,7 +32,7 @@ export function localPrimary(root, config) {
   return { ...refs[0], source: "local-tracking-ref-not-fetched" };
 }
 
-async function snapshot(root, tree, overrides, commit) {
+async function snapshot(root, tree, overrides, commit, blobs) {
   const configEntry = inspectTreeLineage(root, tree, CONFIG_PATH)
     .find(({ name }) => name === CONFIG_PATH);
   const entries = inspectTreeLineage(root, tree, IDEAS_ROOT);
@@ -47,7 +47,7 @@ async function snapshot(root, tree, overrides, commit) {
     .map(({ name }) => name.split("/")[2]);
   if (ids.some((id) => !isValidUlid(id))) throw new Error("Historical idea identity is invalid.");
   const sourceProject = loaded.config.primaryRepository === SOURCE_REPOSITORY;
-  const state = { version: loaded.config.version, entries, ids, sourceProject, overrides, commit };
+  const state = { version: loaded.config.version, entries, ids, sourceProject, overrides, commit, blobs };
   if (state.version !== 2) return { ...state, format: null };
   const formats = new Set();
   for (const id of ids) {
@@ -91,7 +91,9 @@ function source(root, state, id, name) {
   if (!entry || entry.type !== "blob" || !["100644", "100755"].includes(entry.mode)) {
     throw new Error(`Historical state file missing or irregular: ${path}`);
   }
-  return readGitBlob(root, entry.object);
+  if (!state.blobs) return readGitBlob(root, entry.object);
+  if (!state.blobs.has(entry.object)) state.blobs.set(entry.object, readGitBlob(root, entry.object));
+  return state.blobs.get(entry.object);
 }
 
 function transition(root, base, candidate, id, options) {
@@ -206,17 +208,25 @@ export async function inspectEventHistory(options) {
 async function inspectBoundHistory({
   root, tree, commit, overrides, baseline, auditCandidate = false,
 }) {
+  const blobs = new Map();
+  const snapshots = new Map();
+  const committedSnapshot = async (revision) => {
+    if (!snapshots.has(revision)) {
+      snapshots.set(revision, await snapshot(root, revision, undefined, revision, blobs));
+    }
+    return snapshots.get(revision);
+  };
   const primaryCommit = resolveCommit(root, baseline.commit);
   const chain = git(root, ["rev-list", "--first-parent", primaryCommit]).split("\n");
   const integrated = commit !== undefined && chain.includes(commit);
-  const target = await snapshot(root, tree, overrides);
+  const target = await snapshot(root, tree, overrides, commit, blobs);
   const options = { objectIdLength: primaryCommit.length };
   const results = [];
   let auditCommit;
   if (integrated) {
     auditCommit = commit;
   } else {
-    const base = await snapshot(root, primaryCommit, undefined, primaryCommit);
+    const base = await committedSnapshot(primaryCommit);
     noDeletion(base, target);
     if (target.version === 2) {
       for (const id of target.ids) results.push(transition(root, base, target, id, options));
@@ -227,11 +237,11 @@ async function inspectBoundHistory({
   const settled = new Set(results.filter(({ mode }) => mode === "repair").map(({ id }) => id));
   const history = [];
   while (auditCommit) {
-    const current = await snapshot(root, auditCommit, undefined, auditCommit);
+    const current = await committedSnapshot(auditCommit);
     if (current.version !== 2) break;
     const parent = firstParent(root, auditCommit);
     const previous = parent
-      ? await snapshot(root, resolveCommit(root, parent), undefined, parent)
+      ? await committedSnapshot(parent)
       : { version: null, ids: [], entries: [] };
     noDeletion(previous, current);
     for (const id of current.ids) {
@@ -251,9 +261,9 @@ async function inspectBoundHistory({
       // These commits would become primary history on a fast-forward, so each
       // transition must be legal. Other merge parents remain local candidate history.
       const pending = localChain.slice(0, primaryIndex).reverse();
-      let previous = await snapshot(root, primaryCommit, undefined, primaryCommit);
+      let previous = await committedSnapshot(primaryCommit);
       for (const pendingCommit of pending) {
-        const current = await snapshot(root, pendingCommit, undefined, pendingCommit);
+        const current = await committedSnapshot(pendingCommit);
         noDeletion(previous, current);
         if (current.version === 2) {
           for (const id of current.ids) {
