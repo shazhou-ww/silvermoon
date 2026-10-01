@@ -4,7 +4,7 @@
 
 ### Implementation steps
 
-- [ ] **I-S01:** 待批准后细化事件类型、状态迭代与协议实施步骤
+- [ ] **I-S01:** 待批准后落地已审阅的类型与状态转移设计
 
 ### Implementation acceptance criteria
 

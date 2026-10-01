@@ -142,3 +142,15 @@ idea 的交互状态。重复命令若已由去重键接受，返回既有结果
 每种事件必须说明如何从前一完整投影迭代到下一完整投影；无状态变化或信息
 不足的候选类型必须调整或取消。这些细节不得重新引入严格乒乓轮次或提交
 成功后才能通信的前置条件。
+
+## 类型与状态转移设计
+
+[交互协议类型与状态转移](./Interaction-protocol.ts) 是本 Ideal World 的
+可执行式配套设计，随本世界 revision 一起审阅，不是仓库运行时代码或第四份
+契约。它定义旧 `status.yaml` 的兼容投影、交互状态、四种状态推进事件、
+完整 payload、陈旧前置条件检查、重复输入拒绝和纯状态转移函数。
+
+文件中的 reducer-facing envelope 只表达状态函数需要的公共字段；实施时必须
+复用 `event-state-model` 交付的共享 envelope、存储和 append-only 校验，
+不得复制为第二套 schema。实际模块路径、错误到 CLI 输出的映射及 JSON Schema
+在准确 ideal revision 获批后写入实施契约。
