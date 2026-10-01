@@ -83,13 +83,14 @@ After an explicit decision, change only the corresponding status fact,
 validate it, prefer a status-only commit when practical, synchronize it to
 primary, and reobserve the resulting lifecycle state.
 
-The required idea-root `ledger.md` is the Agent continuation surface. After
-repository hygiene and lifecycle routing, combine the reported
-`response.nextSteps`, world contracts, and unchecked Implementation or
-Deployment ledger entries to infer the next work. Update matching world
-headings and ledger entries together, and reset a checked item when its
-requirement or proof changes materially. Ledger checkboxes are Agent notes only
-and never imply approval or acceptance.
+The required idea-root `ledger.md` is an execution checklist only, not
+operational prose, a decision log, or a discussion record. After repository
+hygiene and lifecycle routing, combine the reported `response.nextSteps`, world
+contracts, and unchecked Implementation or Deployment ledger entries to infer
+the next work. Do not record work notes or explanations in `ledger.md`. Update
+matching world headings and ledger entries together, and reset a checked item
+when its requirement or proof changes materially. Ledger checkboxes are Agent
+notes only and never imply approval or acceptance.
 
 When a successful selected lifecycle report or `create-idea` report includes
 `response.guidance`, consume only that snapshot-bound field.

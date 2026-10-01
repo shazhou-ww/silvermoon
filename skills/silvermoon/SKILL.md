@@ -213,8 +213,11 @@ and how to prove it. Do not put checkboxes in world contracts. World content
 changes its world revision and containing revisions; `status.yaml`/`events.jsonl` and
 `ledger.md` are outside those trees.
 
-The required idea-root `ledger.md` is operational memory, not a fourth world,
-contract, or human decision. Mirror the stable IDs and short titles for
+The required idea-root `ledger.md` is an execution checklist only, not
+operational prose, a decision log, a discussion record, or a fourth world. It
+contains only the mirrored checkbox lists for Implementation and Deployment
+steps and criteria. Do not record work notes, explanations, discussion history,
+or extra sections in `ledger.md`. Mirror the stable IDs and short titles for
 Implementation and Deployment steps and criteria. Update ledger entries with
 their contract changes; add new items unchecked and reset completed items when
 requirements or proof change materially.

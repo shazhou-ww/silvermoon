@@ -164,10 +164,13 @@ World's real-world deployment contract. The latter two contain `## Steps` and
 Each criterion states both the observable outcome and how an Agent can prove
 it. World contracts do not use task-list checkboxes.
 
-The required idea-root `ledger.md` mirrors those IDs and short titles as
-checkboxes under Implementation and Deployment. Update a world heading and its
-ledger entry together. Add new items unchecked, and reset a completed item when
-its requirement or proof changes materially.
+The required idea-root `ledger.md` is an execution checklist only, not
+operational prose, a decision log, a discussion record, or a fourth world. It
+mirrors those IDs and short titles as checkboxes under Implementation and
+Deployment. Do not record work notes, explanations, or extra sections in
+`ledger.md`. Update a world heading and its ledger entry together. Add new
+items unchecked, and reset a completed item when its requirement or proof
+changes materially.
 
 ## Record A Human Decision
 
