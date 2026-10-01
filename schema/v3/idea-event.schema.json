@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/shazhou-ww/silvermoon/raw/refs/heads/main/schema/v3/idea-event.schema.json",
+  "title": "Silvermoon idea state event v3",
+  "description": "One canonical JSONL record. Replay additionally enforces consecutive sequences, nonempty transitions, and the abandoned boundary.",
+  "type": "object",
+  "required": ["sequence", "type"],
+  "properties": {
+    "sequence": { "type": "integer", "minimum": 1, "maximum": 9007199254740991 },
+    "type": { "type": "string" }
+  },
+  "oneOf": [
+    {
+      "properties": {
+        "type": { "const": "setAlias" },
+        "payload": {
+          "type": "object", "additionalProperties": false, "required": ["alias"],
+          "properties": { "alias": { "anyOf": [
+            { "$ref": "../v1/idea-status.schema.json#/properties/alias" }, { "type": "null" }
+          ] } }
+        }
+      },
+      "required": ["payload"]
+    },
+    {
+      "properties": {
+        "type": { "const": "setLanguage" },
+        "payload": {
+          "type": "object", "additionalProperties": false, "required": ["language"],
+          "properties": { "language": { "anyOf": [
+            { "$ref": "../v1/definitions.schema.json#/$defs/languageTag" }, { "type": "null" }
+          ] } }
+        }
+      },
+      "required": ["payload"]
+    },
+    {
+      "properties": {
+        "type": { "const": "approveIdeal" },
+        "payload": {
+          "type": "object", "additionalProperties": false, "required": ["idealRevision"],
+          "properties": { "idealRevision": { "$ref": "../v1/definitions.schema.json#/$defs/objectId" } }
+        }
+      },
+      "required": ["payload"]
+    },
+    {
+      "properties": {
+        "type": { "const": "acceptImplementation" },
+        "payload": {
+          "type": "object", "additionalProperties": false, "required": ["implementationRevision"],
+          "properties": { "implementationRevision": { "$ref": "../v1/definitions.schema.json#/$defs/objectId" } }
+        }
+      },
+      "required": ["payload"]
+    },
+    {
+      "properties": {
+        "type": { "const": "acceptDeployment" },
+        "payload": {
+          "type": "object", "additionalProperties": false, "required": ["deploymentRevision"],
+          "properties": { "deploymentRevision": { "$ref": "../v1/definitions.schema.json#/$defs/objectId" } }
+        }
+      },
+      "required": ["payload"]
+    },
+    { "properties": { "type": { "const": "abandon" } } },
+    { "properties": { "type": { "const": "resume" } } },
+    {
+      "properties": {
+        "type": { "const": "ping" },
+        "payload": {
+          "type": "object", "additionalProperties": false, "required": ["message"],
+          "properties": { "message": { "type": "string", "pattern": "\\S" } }
+        }
+      },
+      "required": ["payload"]
+    },
+    {
+      "properties": {
+        "type": { "const": "pong" },
+        "payload": {
+          "type": "object", "additionalProperties": false, "required": ["message"],
+          "properties": { "message": { "type": "string", "pattern": "\\S" } }
+        }
+      },
+      "required": ["payload"]
+    }
+  ],
+  "unevaluatedProperties": false
+}

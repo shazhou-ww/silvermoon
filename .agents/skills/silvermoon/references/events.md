@@ -1,6 +1,6 @@
 # Event-backed projects
 
-These rules apply only when `.silvermoon/config.yaml` has `version: 2`.
+These rules apply when `.silvermoon/config.yaml` has `version: 2` or `version: 3`.
 V1 projects remain readable and use their existing canonical `status.yaml`.
 Never change the version alone or migrate a project implicitly.
 
@@ -13,7 +13,7 @@ without BOM, with LF and a final LF for nonempty logs. Do not let Git convert
 these bytes: add `**/events.jsonl -text` to the project's `.gitattributes`.
 
 Every record has a consecutive positive safe-integer `sequence` and `type`.
-Only these seven business changes exist:
+In v2, only these seven business changes exist:
 
 | Type | Payload |
 | --- | --- |
@@ -24,6 +24,19 @@ Only these seven business changes exist:
 | `deployment.accepted` | `{"deploymentRevision":"<exact world tree OID>"}` |
 | `idea.abandoned` | No payload |
 | `idea.resumed` | No payload |
+
+V3 renames those types, preserving each payload: `setAlias`, `setLanguage`,
+`approveIdeal`, `acceptImplementation`, `acceptDeployment`, `abandon`,
+`resume`. V3 also adds `ping` and `pong`, each with exactly
+`{"message":"nonempty string"}`. These messages occupy the same sequence
+and log as business events. Replay adds `interaction.messages` (ordered
+`sequence`, `type`, `message`) and `interaction.lastSignal` (`ping`, `pong`,
+or `null`). Only `ping` and `pong` change the last signal; neither represents
+completion or clears a previous goal. Consecutive `pong` events, including
+without a prior `ping`, are valid. After `abandon`, only `resume` is valid.
+The sender convention is upstream for decisions, `abandon`, `resume`, `ping`;
+downstream for `pong`; and both for metadata. The stateless CLI does not
+authenticate senders or reject messages based on the last signal.
 
 No timestamps, actors, repository commits, IDs, observations, imports,
 creation, arbitrary patches, or decision retractions belong in a record.
@@ -54,7 +67,8 @@ Put a business request in a JSON file, without sequence, for example:
 {"type":"alias.updated","payload":{"alias":"event-state-model"}}
 ```
 
-Then bind it to the observed log and primary:
+For metadata and human decisions, bind the request to the observed log and
+primary:
 
 ```sh
 silvermoon event append <idea> --input request.json --expected-length <bytes> --expected-digest <sha256> --expected-primary <commit> --audience agent
@@ -66,6 +80,14 @@ snapshot, refreshes primary again, and atomically replaces the log. The commit
 is an external write precondition, never event data. Cooperating writers
 cannot write the same position; unexpected external edits block recovery.
 Do not concurrently hand-edit a target while its CLI transaction runs.
+
+For v3 `ping`/`pong`, supply a request of the form
+`{"type":"pong","payload":{"message":"blocked"}}` to the same `event append`
+command, but pass only `--expected-length` and `--expected-digest` (no
+`--expected-primary`). The local write does not fetch, commit, or require a
+clean worktree. If the exact full observed log has changed, reobserve before
+responding. A local message is not synchronized to primary merely because
+it was appended.
 
 Only after an explicit human decision, add `--confirm-decision` for approval,
 acceptance, abandonment or resumption. This flag asserts authorization; it
@@ -81,7 +103,7 @@ requests; if the second fails, the first remains a completed local append.
 
 ## Check and revise
 
-V2 `check` validates both the chosen snapshot and primary event history:
+V2/v3 `check` validates both the chosen snapshot and primary event history:
 
 - Worktree/index candidates use a fixed local named-primary tracking commit;
   local checks never fetch or claim remote freshness.
@@ -133,7 +155,8 @@ silvermoon event recover --confirm-stopped --rollback --audience agent
 ```
 
 Recovery refuses active/reused PIDs, foreign hosts, unknown bytes and a changed
-plan. Resume revalidates primary and worlds; rollback restores only exact
+plan. Resume revalidates primary and worlds for lifecycle writes, or the
+complete candidate log for local interaction writes; rollback restores only exact
 operation-owned bytes. A second recovery is excluded by `transaction.recovery`.
 If a recovery process itself is killed, stop all recovery participants, verify
 its recorded PID is inactive and inspect the original plan, then explicitly
@@ -144,7 +167,32 @@ Node on Windows provides no directory-fsync guarantee, so power-loss durability
 depends on the filesystem. Process-interruption recovery does not imply a
 hardware power-loss guarantee.
 
-## Explicit one-time migration
+## Explicit v2-to-v3 migration
+
+Only after explicit project-upgrade authorization, run the standalone entrypoint
+from the running checkout:
+
+```sh
+node bin/migrate-v2-to-v3.js --root <project>
+node bin/migrate-v2-to-v3.js --root <project> --apply --expected-digest <plan-digest>
+```
+
+The read-only plan checks all v2 logs against the local primary tracking tip,
+per-record type renames,
+equivalent fact projections, and the v3 abandoned-window rule. Apply requires
+a fresh fetch and a clean committed source at that exact primary tip. The
+transaction switches every
+idea log and the config together; prior Git commits remain v2. Validate the
+candidate with `check --worktree` and `check --staged`, commit and synchronize
+normally. Do not manually rename JSONL types. After the original writer has
+stopped, an interrupted transaction can be completed or rolled back:
+
+```sh
+node bin/migrate-v2-to-v3.js --root <project> --resume --confirm-stopped
+node bin/migrate-v2-to-v3.js --root <project> --rollback --confirm-stopped
+```
+
+## Explicit v1-to-v2 migration
 
 Migration is not a Silvermoon subcommand. Run the bundled
 `bin/migrate-v1-to-v2.js` with Node only after explicit project-upgrade

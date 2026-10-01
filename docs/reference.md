@@ -16,7 +16,7 @@ Each idea is self-contained under one canonical uppercase ULID:
 |   `-- deploying.md
 `-- ideas/
     `-- 01M36QGPNTXEPP61DA4KP4AVZF/
-        |-- status.yaml (v1) or events.jsonl (v2)
+        |-- status.yaml (v1) or events.jsonl (v2/v3)
         |-- ledger.md
         `-- outer/
             |-- Deployment.md
@@ -80,7 +80,7 @@ Each world is an opaque Git tree:
 - `implementationRevision` identifies `inner/` and includes the Ideal World.
 - `deploymentRevision` identifies `outer/` and includes both nested worlds.
 
-`status.yaml` (v1), `events.jsonl` (v2), and `ledger.md` are outside all three
+`status.yaml` (v1), `events.jsonl` (v2/v3), and `ledger.md` are outside all three
 world trees. The repository
 object format in use determines revision shape. Silvermoon validates canonical
 revision shape, computes the current world trees, and compares those values to
@@ -157,6 +157,25 @@ conditional append-only history, and interrupted-write recovery are specified
 in the [event operations contract](../skills/silvermoon/references/events.md).
 That contract also documents the separate `bin/migrate-v1-to-v2.js` entrypoint.
 No command automatically migrates a v1 project.
+
+## Event State (v3)
+
+Project `version: 3` retains the single canonical `events.jsonl` and the
+same lifecycle facts. Its seven existing event types become `setAlias`,
+`setLanguage`, `approveIdeal`, `acceptImplementation`, `acceptDeployment`,
+`abandon`, and `resume`, with unchanged payloads. The new `ping` and `pong`
+events each carry only a nonempty string `message`. Replay exposes ordered
+messages and `lastSignal` without interpreting a response as task completion
+or removing older goals. After `abandon`, only `resume` is legal.
+
+`event replay` observes the complete local byte prefix. `event append` for
+`ping`/`pong` requires its exact length and SHA-256 but not primary/network;
+business events and human decisions retain the primary and revision gates.
+The CLI cannot authenticate upstream or downstream senders. Migration from v2
+is explicit, validates each record's rename and equivalent fact projection,
+and leaves historical v2 Git commits intact. See the
+[event operations contract](../skills/silvermoon/references/events.md) for
+the migration entrypoint, append-only history and interrupted-write recovery.
 
 ## Experimental JavaScript Package API
 

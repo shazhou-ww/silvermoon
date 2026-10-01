@@ -240,7 +240,7 @@ export async function inspectIdeaLayout({
     }
 
     const paths = ideaPaths(entry.name);
-    const eventFormat = config?.version === 2;
+    const eventFormat = config?.version === 2 || config?.version === 3;
     const stateName = eventFormat ? "events.jsonl" : "status.yaml";
     const statePath = eventFormat ? paths.eventsPath : paths.statusPath;
     const children = (
@@ -308,7 +308,7 @@ export async function inspectIdeaLayout({
 
     let status;
     try {
-      const options = { objectIdLength: repositoryObjectIdLength };
+      const options = { objectIdLength: repositoryObjectIdLength, version: config?.version };
       if (eventFormat) {
         const events = parseIdeaEvents(
           await filesystem.readFile(resolve(root, statePath)), options,

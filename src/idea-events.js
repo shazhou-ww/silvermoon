@@ -12,6 +12,37 @@ const FIELDS = Object.freeze({
 export const IDEA_EVENT_TYPES = Object.freeze([
   ...Object.keys(FIELDS), "idea.abandoned", "idea.resumed",
 ]);
+export const EVENT_RENAMES = Object.freeze({
+  "alias.updated": "setAlias",
+  "language.updated": "setLanguage",
+  "ideal.approved": "approveIdeal",
+  "implementation.accepted": "acceptImplementation",
+  "deployment.accepted": "acceptDeployment",
+  "idea.abandoned": "abandon",
+  "idea.resumed": "resume",
+});
+export function renameV2Events(events) {
+  return events.map((event) => {
+    const type = EVENT_RENAMES[event.type];
+    if (!type) throw new IdeaEventFormatError(`unsupported v2 event type: ${event.type}`);
+    return { ...event, type };
+  });
+}
+export const V3_EVENT_TYPES = Object.freeze([...Object.values(EVENT_RENAMES), "ping", "pong"]);
+export const EVENT_PERMISSIONS = Object.freeze({
+  setAlias: "both",
+  setLanguage: "both",
+  approveIdeal: "upstream",
+  acceptImplementation: "upstream",
+  acceptDeployment: "upstream",
+  abandon: "upstream",
+  resume: "upstream",
+  ping: "upstream",
+  pong: "downstream",
+});
+const LEGACY_TYPES = Object.fromEntries(
+  Object.entries(EVENT_RENAMES).map(([legacy, current]) => [current, legacy]),
+);
 const VALIDATION_ID = "00000000000000000000000000";
 
 export class IdeaEventFormatError extends Error {
@@ -30,11 +61,13 @@ function keys(value, expected, label) {
 }
 
 export function validateIdeaEvent(event, options) {
-  if (!IDEA_EVENT_TYPES.includes(event?.type)) {
+  const version = options?.version ?? 2;
+  if (!(version === 3 ? V3_EVENT_TYPES : IDEA_EVENT_TYPES).includes(event?.type)) {
     throw new IdeaEventFormatError(`unsupported event type: ${String(event?.type)}`);
   }
-  const field = FIELDS[event.type];
-  keys(event, field ? ["sequence", "type", "payload"] : ["sequence", "type"], "event");
+  const field = FIELDS[version === 3 ? LEGACY_TYPES[event.type] : event.type];
+  const message = version === 3 && (event.type === "ping" || event.type === "pong");
+  keys(event, field || message ? ["sequence", "type", "payload"] : ["sequence", "type"], "event");
   if (!Number.isSafeInteger(event.sequence) || event.sequence < 1) {
     throw new IdeaEventFormatError("sequence must be a positive safe integer");
   }
@@ -49,14 +82,21 @@ export function validateIdeaEvent(event, options) {
       throw new IdeaEventFormatError(cause.message, { cause });
     }
   }
+  if (message) {
+    keys(event.payload, ["message"], "payload");
+    if (typeof event.payload.message !== "string" || !event.payload.message.trim()) {
+      throw new IdeaEventFormatError("message must be a nonempty string");
+    }
+  }
   return event;
 }
 
 export function serializeIdeaEvent(event, options) {
   validateIdeaEvent(event, options);
   const value = { sequence: event.sequence, type: event.type };
-  const field = FIELDS[event.type];
+  const field = FIELDS[options?.version === 3 ? LEGACY_TYPES[event.type] : event.type];
   if (field) value.payload = { [field[0]]: event.payload[field[0]] };
+  else if (event.type === "ping" || event.type === "pong") value.payload = { message: event.payload.message };
   return JSON.stringify(value);
 }
 
@@ -89,33 +129,50 @@ export function parseIdeaEvents(source, options) {
   });
 }
 
-export function initialEventState(ideaId) {
+export function initialEventState(ideaId, options) {
   if (!isValidUlid(ideaId)) throw new IdeaEventFormatError("invalid idea identity");
-  return { status: { id: ideaId }, sequence: 0 };
+  return options?.version === 3
+    ? { status: { id: ideaId }, sequence: 0, interaction: { messages: [], lastSignal: null } }
+    : { status: { id: ideaId }, sequence: 0 };
 }
 
 export function reduceIdeaEvent(before, event, options) {
   validateIdeaEvent(event, options);
   const reject = (code) => ({ ok: false, code, sequence: event.sequence });
   if (event.sequence !== before.sequence + 1) return reject("sequence-conflict");
+  const v3 = options?.version === 3;
+  if (v3 && before.status.abandoned && event.type !== "resume") return reject("abandoned");
   const status = { ...before.status };
-  const field = FIELDS[event.type];
+  const field = FIELDS[v3 ? LEGACY_TYPES[event.type] : event.type];
   if (field) {
     const [input, output] = field;
     const value = event.payload[input];
     if (value === null) delete status[output];
     else status[output] = value;
-  } else if (event.type === "idea.abandoned") {
+  } else if (event.type === "idea.abandoned" || event.type === "abandon") {
     status.abandoned = true;
-  } else {
+  } else if (event.type === "idea.resumed" || event.type === "resume") {
     delete status.abandoned;
   }
+  if (v3 && (event.type === "ping" || event.type === "pong")) {
+    return { ok: true, state: {
+      status, sequence: event.sequence,
+      interaction: {
+        messages: [...before.interaction.messages, {
+          sequence: event.sequence, type: event.type, message: event.payload.message,
+        }],
+        lastSignal: event.type,
+      },
+    } };
+  }
   if (isDeepStrictEqual(status, before.status)) return reject("no-state-change");
-  return { ok: true, state: { status, sequence: event.sequence } };
+  return { ok: true, state: v3
+    ? { status, sequence: event.sequence, interaction: before.interaction }
+    : { status, sequence: event.sequence } };
 }
 
 export function replayIdeaEvents(ideaId, events, options) {
-  let state = initialEventState(ideaId);
+  let state = initialEventState(ideaId, options);
   for (const event of events) {
     const result = reduceIdeaEvent(state, event, options);
     if (!result.ok) return result;

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import {
+  EVENT_PERMISSIONS, EVENT_RENAMES, V3_EVENT_TYPES,
   checkEventChange, eventsFromStatus, initialEventState, parseIdeaEvents,
   reduceIdeaEvent, replayIdeaEvents, serializeIdeaEvents,
 } from "../../src/idea-events.js";
@@ -15,6 +16,59 @@ const revisions = {
 };
 const alias = (sequence, value) => ({
   sequence, type: "alias.updated", payload: { alias: value },
+});
+
+test("v3 renames facts without changing their projection and retains ordered interaction", () => {
+  const options = { version: 3 };
+  const legacy = [
+    alias(1, "example"),
+    { sequence: 2, type: "ideal.approved", payload: { idealRevision: revisions.idealRevision } },
+    { sequence: 3, type: "idea.abandoned" },
+    { sequence: 4, type: "idea.resumed" },
+  ];
+  const migrated = legacy.map((event) => ({ ...event, type: EVENT_RENAMES[event.type] }));
+  assert.equal(V3_EVENT_TYPES.length, 9);
+  assert.equal(EVENT_PERMISSIONS.approveIdeal, "upstream");
+  assert.equal(EVENT_PERMISSIONS.ping, "upstream");
+  assert.equal(EVENT_PERMISSIONS.pong, "downstream");
+  assert.equal(EVENT_PERMISSIONS.setAlias, "both");
+  assert.deepEqual(replayIdeaEvents(id, migrated, options).state.status,
+    replayIdeaEvents(id, legacy).state.status);
+  const messages = [
+    { sequence: 5, type: "pong", payload: { message: "blocked" } },
+    { sequence: 6, type: "ping", payload: { message: "new objective" } },
+    { sequence: 7, type: "pong", payload: { message: "still blocked" } },
+    { sequence: 8, type: "pong", payload: { message: "waiting" } },
+  ];
+  const events = [...migrated, ...messages];
+  assert.deepEqual(parseIdeaEvents(serializeIdeaEvents(events, options), options), events);
+  assert.deepEqual(replayIdeaEvents(id, events, options).state.interaction, {
+    messages: messages.map(({ sequence, type, payload }) => ({
+      sequence, type, message: payload.message,
+    })),
+    lastSignal: "pong",
+  });
+  assert.equal(replayIdeaEvents(id, events, options).state.status.approvedRevision,
+    revisions.idealRevision);
+  for (const invalid of [
+    { sequence: 1, type: "ping", payload: { message: " " } },
+    { sequence: 1, type: "pong", payload: { message: "", outcome: "blocked" } },
+    { sequence: 1, type: "alias.updated", payload: { alias: "old" } },
+  ]) assert.throws(() => serializeIdeaEvents([invalid], options), /Invalid idea events/);
+  assert.throws(() => parseIdeaEvents(serializeIdeaEvents(migrated, options)), /Invalid idea events/);
+});
+
+test("v3 abandoned state accepts only resume, including neutral metadata and messages", () => {
+  const options = { version: 3 };
+  const abandoned = replayIdeaEvents(id, [{ sequence: 1, type: "abandon" }], options).state;
+  for (const event of [
+    { sequence: 2, type: "ping", payload: { message: "continue" } },
+    { sequence: 2, type: "pong", payload: { message: "blocked" } },
+    { sequence: 2, type: "setAlias", payload: { alias: "new-alias" } },
+    { sequence: 2, type: "approveIdeal", payload: { idealRevision: revisions.idealRevision } },
+    { sequence: 2, type: "abandon" },
+  ]) assert.equal(reduceIdeaEvent(abandoned, event, options).code, "abandoned");
+  assert.equal(reduceIdeaEvent(abandoned, { sequence: 2, type: "resume" }, options).ok, true);
 });
 
 test("serializes a minimal seven-event log and replays without mutating inputs", () => {

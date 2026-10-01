@@ -470,7 +470,7 @@ async function assessRepositoryReadinessInternal({
     };
   }
   const primary = fetched.result.commit;
-  if (observed.config.version === 2) {
+  if (observed.config.version >= 2) {
     try {
       await inspectEventHistory({ root, tree: head, commit: head, config: observed.config, primary, auditCandidate: true });
     } catch (caught) {
@@ -622,7 +622,7 @@ export async function whatsNext({
   }
 
   const selected = selectIdea(observed.layout.ideas, selector);
-  if (observed.config.version === 2) {
+  if (observed.config.version >= 2) {
     try {
       await inspectEventHistory({
         root: observed.observation.root,

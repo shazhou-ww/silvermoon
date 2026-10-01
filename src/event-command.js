@@ -18,15 +18,20 @@ const DECISIONS = {
   "implementation.accepted": ["implementationRevision", "implementing"],
   "deployment.accepted": ["deploymentRevision", "deploying"],
 };
+const V3_DECISIONS = {
+  approveIdeal: DECISIONS["ideal.approved"],
+  acceptImplementation: DECISIONS["implementation.accepted"],
+  acceptDeployment: DECISIONS["deployment.accepted"],
+};
 
-function parseRequest(input, sequence) {
+function parseRequest(input, sequence, options) {
   if (input === null || typeof input !== "object" || Array.isArray(input)
     || Object.hasOwn(input, "sequence")) {
     throw new Error("Supply a business request object without sequence; the CLI assigns it.");
   }
   const event = { sequence, ...input };
   // Round-trip through the strict parser rejects unknown/missing business fields.
-  return parseIdeaEvents(serializeIdeaEvents([event]))[0];
+  return parseIdeaEvents(serializeIdeaEvents([event], options), options)[0];
 }
 
 async function inspectCandidate(root, tree, config, path, bytes, { recovering = false } = {}) {
@@ -66,8 +71,8 @@ async function resolveIdea(root, tree, config, selector) {
 }
 
 function assertHumanGate(event, idea, primaryWorlds, confirmed) {
-  const decision = DECISIONS[event.type];
-  if (!decision && !["idea.abandoned", "idea.resumed"].includes(event.type)) return;
+  const decision = DECISIONS[event.type] ?? V3_DECISIONS[event.type];
+  if (!decision && !["idea.abandoned", "idea.resumed", "abandon", "resume"].includes(event.type)) return;
   if (!confirmed) throw new Error("This event requires an explicit human decision; --confirm-decision asserts one, it does not create authorization.");
   if (!decision) return;
   const [revision, state] = decision;
@@ -75,6 +80,47 @@ function assertHumanGate(event, idea, primaryWorlds, confirmed) {
     || event.payload[revision] !== primaryWorlds[revision]) {
     throw new Error(`Decision requires ${state} and its exact world revision already synchronized to primary.`);
   }
+}
+
+async function appendLocalInteraction({ root, id, paths, bytes, input, expectedLength, expectedDigest, options }) {
+  if (!Number.isSafeInteger(expectedLength) || expectedLength < 0 || !/^[0-9a-f]{64}$/.test(expectedDigest ?? "")) {
+    throw new Error("Interaction writes require --expected-length and --expected-digest from event replay.");
+  }
+  if (bytes.length !== expectedLength || digest(bytes) !== expectedDigest) {
+    if (bytes.length > expectedLength && digest(bytes.subarray(0, expectedLength)) === expectedDigest) {
+      const previous = replayIdeaEvents(id,
+        parseIdeaEvents(bytes.subarray(0, expectedLength), options), options);
+      if (previous.ok) {
+        const event = parseRequest(input, previous.state.sequence + 1, options);
+        const record = Buffer.from(serializeIdeaEvents([event], options));
+        if (["ping", "pong"].includes(event.type)
+          && bytes.subarray(expectedLength, expectedLength + record.length).equals(record)) {
+          const current = replayIdeaEvents(id, parseIdeaEvents(bytes, options), options);
+          if (!current.ok) throw new Error(`Current log reduction failed: ${current.code}`);
+          return { id, outcome: "already-present", written: false,
+            length: bytes.length, digest: digest(bytes), sequence: current.state.sequence };
+        }
+      }
+    }
+    throw new Error("Stale log length or digest; reobserve before responding to new messages.");
+  }
+  const before = replayIdeaEvents(id, parseIdeaEvents(bytes, options), options);
+  if (!before.ok) throw new Error(`Current log reduction failed: ${before.code}`);
+  const event = parseRequest(input, before.state.sequence + 1, options);
+  const candidate = Buffer.concat([bytes, Buffer.from(serializeIdeaEvents([event], options))]);
+  const after = replayIdeaEvents(id, parseIdeaEvents(candidate, options), options);
+  if (!after.ok) throw new Error(`Candidate reduction failed: ${after.code} at ${after.sequence}`);
+  await stateTransaction(root, "events", [{ path: paths.eventsPath, before: bytes, after: candidate }], {
+    context: { id, localInteraction: true },
+    validate: async () => {
+      const current = await stateBytes(root, paths.eventsPath);
+      if (current === null || !current.equals(bytes)) throw new Error("Log changed before local interaction write.");
+    },
+  });
+  return {
+    id, outcome: "candidate-written", written: true,
+    length: candidate.length, digest: digest(candidate), sequence: after.state.sequence,
+  };
 }
 
 export async function eventCommand({
@@ -100,12 +146,23 @@ export async function eventCommand({
         () => recoverStateTransaction(root, {
           rollback, confirmedStopped: confirmStopped, kind: "events",
           validate: async (plan) => {
-            if (plan.files.length !== 1 || !plan.context?.id || !plan.context?.primary) {
+            if (plan.files.length !== 1 || !plan.context?.id
+              || (!plan.context.localInteraction && !plan.context.primary)) {
               throw new Error("Event recovery context is missing; preserve the plan.");
             }
             const { tree } = worktreeSnapshot(root);
             const loaded = await loadConfigSnapshot({ gitRoot: root, tree });
-            if (loaded.config?.version !== 2) throw new Error("Event recovery requires the original v2 project.");
+            if (![2, 3].includes(loaded.config?.version)) throw new Error("Event recovery requires the original event project.");
+            if (plan.context.localInteraction) {
+              const file = plan.files[0];
+              if (file.path !== ideaPaths(plan.context.id).eventsPath) throw new Error("Interaction recovery path mismatch.");
+              const candidate = Buffer.from(file.after, "base64");
+              const eventOptions = { version: 3, objectIdLength: tree.length };
+              const result = replayIdeaEvents(plan.context.id,
+                parseIdeaEvents(candidate, eventOptions), eventOptions);
+              if (!result.ok) throw new Error(`Invalid local interaction recovery: ${result.code}`);
+              return;
+            }
             const fetched = await runtime.performAction({ type: "fetch-primary" },
               () => ({ commit: fetchPrimary(root, loaded.config) }),
               (cause) => ({ problem: { type: "primary-fetch-failed", summary: cause.message } }));
@@ -129,13 +186,14 @@ export async function eventCommand({
       receipt = action.result;
     } else {
       const adoption = await inspectAdoption({ root });
-      if (adoption.findings.length || adoption.config?.version !== 2) {
-        throw new Error(adoption.problems.map((p) => p.summary).join("; ") || "Event commands require an explicitly initialized or migrated v2 project.");
+      if (adoption.findings.length || ![2, 3].includes(adoption.config?.version)) {
+        throw new Error(adoption.problems.map((p) => p.summary).join("; ") || "Event commands require an explicitly initialized or migrated event project.");
       }
       root = adoption.root;
       const config = adoption.config;
       outputLanguage = resolveOutputLanguage({ content: config.preferredLanguage, override: language }).tag;
       const { tree } = worktreeSnapshot(root);
+      const options = { version: config.version, objectIdLength: tree.length };
       const protectedPaths = [".silvermoon/ideas", ".silvermoon/config.yaml"];
       const protectedTree = worktreeSnapshot(root, { paths: protectedPaths }).tree;
       const id = await resolveIdea(root, tree, config, selector);
@@ -147,16 +205,33 @@ export async function eventCommand({
         let reduction = null;
         let format = { ok: true };
         try {
-          const options = { objectIdLength: tree.length };
           reduction = replayIdeaEvents(id, parseIdeaEvents(bytes, options), options);
         }
         catch (error) {
           if (!(error instanceof IdeaEventFormatError)) throw error;
           format = { ok: false, error: error.message };
         }
-        receipt = { ...observation, outcome: "observed", format, reduction, baseline: localPrimary(root, config) };
+        let baseline;
+        try {
+          baseline = localPrimary(root, config);
+        } catch (cause) {
+          if (config.version !== 3) throw cause;
+          baseline = { unavailable: cause.message };
+        }
+        receipt = { ...observation, outcome: "observed", format, reduction, baseline };
       } else {
         if (!["append", "revise"].includes(operation)) throw new Error(`Unknown event operation: ${operation}`);
+        if (config.version === 3 && operation === "append"
+          && (input?.type === "ping" || input?.type === "pong")) {
+          if (expectedPrimary !== undefined) throw new Error("Local interaction append does not accept --expected-primary.");
+          const action = await runtime.performAction({ type: "write-idea-events" },
+            () => appendLocalInteraction({
+              root, id, paths, bytes, input, expectedLength, expectedDigest, options,
+            }),
+            (cause) => ({ problem: { type: "event.write-failed", summary: cause.message } }));
+          if (action.status === "failure") throw new Error(action.problem.summary);
+          receipt = action.result;
+        } else {
         if (!Number.isSafeInteger(expectedLength) || expectedLength < 0
           || !/^[0-9a-f]{64}$/.test(expectedDigest ?? "")
           || !/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/.test(expectedPrimary ?? "")) {
@@ -175,12 +250,12 @@ export async function eventCommand({
         const matches = bytes.length === expectedLength && digest(bytes) === expectedDigest;
         if (!matches) {
           if (operation === "append" && bytes.length > expectedLength && digest(prefix) === expectedDigest) {
-            const before = replayIdeaEvents(id, parseIdeaEvents(prefix));
+            const before = replayIdeaEvents(id, parseIdeaEvents(prefix, options), options);
             if (before.ok) {
-              const event = parseRequest(input, before.state.sequence + 1);
-              const record = Buffer.from(serializeIdeaEvents([event]));
+              const event = parseRequest(input, before.state.sequence + 1, options);
+              const record = Buffer.from(serializeIdeaEvents([event], options));
               if (bytes.subarray(expectedLength, expectedLength + record.length).equals(record)) {
-                const result = replayIdeaEvents(id, parseIdeaEvents(bytes));
+                const result = replayIdeaEvents(id, parseIdeaEvents(bytes, options), options);
                 if (!result.ok) throw new Error(`Retry encountered invalid current state: ${result.code}`);
                 receipt = { ...observation, outcome: "already-present", written: false, primary };
               }
@@ -192,16 +267,16 @@ export async function eventCommand({
           let candidate;
           let proposed;
           if (operation === "append") {
-            const before = replayIdeaEvents(id, parseIdeaEvents(bytes));
+            const before = replayIdeaEvents(id, parseIdeaEvents(bytes, options), options);
             if (!before.ok) throw new Error(`Current log reduction failed: ${before.code}; inspect primary and use revise for authorized repair.`);
-            proposed = [parseRequest(input, before.state.sequence + 1)];
-            candidate = Buffer.concat([bytes, Buffer.from(serializeIdeaEvents(proposed))]);
+            proposed = [parseRequest(input, before.state.sequence + 1, options)];
+            candidate = Buffer.concat([bytes, Buffer.from(serializeIdeaEvents(proposed, options))]);
           } else {
             if (!ownedSuffix || !Array.isArray(input)) throw new Error("Revise requires --owned-suffix and an array of reviewed business requests for the complete resulting log.");
-            proposed = input.map((request, index) => parseRequest(request, index + 1));
-            candidate = Buffer.from(serializeIdeaEvents(proposed));
+            proposed = input.map((request, index) => parseRequest(request, index + 1, options));
+            candidate = Buffer.from(serializeIdeaEvents(proposed, options));
           }
-          const reduction = replayIdeaEvents(id, parseIdeaEvents(candidate));
+          const reduction = replayIdeaEvents(id, parseIdeaEvents(candidate, options), options);
           if (candidate.equals(bytes)) {
             receipt = { ...observation, outcome: "no-state-change", written: false, primary };
           }
@@ -224,23 +299,23 @@ export async function eventCommand({
               deploymentRevision: worlds.get(paths.outerPath)?.object,
             };
             let oldEvents = [];
-            try { oldEvents = parseIdeaEvents(bytes); }
+            try { oldEvents = parseIdeaEvents(bytes, options); }
             catch (error) {
               if (operation !== "revise" || !(error instanceof IdeaEventFormatError)) throw error;
               // The valid primary prefix is still enforced by inspectEventHistory.
             }
-            const candidateEvents = parseIdeaEvents(candidate);
+            const candidateEvents = parseIdeaEvents(candidate, options);
             let oldPosition = 0;
             for (let index = 0; index < candidateEvents.length; index++) {
               const event = candidateEvents[index];
-              const businessRecord = (value) => serializeIdeaEvents([{ ...value, sequence: 1 }]);
+              const businessRecord = (value) => serializeIdeaEvents([{ ...value, sequence: 1 }], options);
               const preserved = oldEvents.findIndex((old, position) =>
                 position >= oldPosition && businessRecord(old) === businessRecord(event));
               if (preserved >= 0) {
                 oldPosition = preserved + 1;
                 continue;
               }
-              const before = replayIdeaEvents(id, candidateEvents.slice(0, index)).state;
+              const before = replayIdeaEvents(id, candidateEvents.slice(0, index), options).state;
               assertHumanGate(event, {
                 ...selected,
                 state: deriveIdeaState(selected.revisions, { version: 1, ...before.status }),
@@ -267,10 +342,12 @@ export async function eventCommand({
             receipt = action.result;
           }
         }
+        }
       }
     }
     return runtime.complete({ state: "event-result", root, outputLanguage, problems: [], receipt });
   } catch (cause) {
+    if (runtime.observation.progress === "ready") throw cause;
     return runtime.complete({
       state: "check-unavailable", root, outputLanguage,
       problems: [{ type: "event.failed", summary: cause.message }],

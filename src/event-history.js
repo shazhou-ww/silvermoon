@@ -1,7 +1,7 @@
 import { isDeepStrictEqual } from "node:util";
 
 import { loadConfigSnapshot } from "./config.js";
-import { checkEventChange, eventsFromStatus, parseIdeaEvents, replayIdeaEvents, serializeIdeaEvents } from "./idea-events.js";
+import { checkEventChange, eventsFromStatus, parseIdeaEvents, renameV2Events, replayIdeaEvents, serializeIdeaEvents } from "./idea-events.js";
 import { isValidUlid, parseIdeaStatus } from "./ideas.js";
 import { inspectTreeLineage, readGitBlob, resolveCommit, runGit } from "./git.js";
 import { CONFIG_PATH, IDEAS_ROOT, ideaPaths } from "./layout.js";
@@ -59,12 +59,14 @@ function source(root, state, id, name) {
 
 function transition(root, base, candidate, id, options) {
   const next = source(root, candidate, id, "events.jsonl");
+  const candidateOptions = candidate.version === 3 ? { ...options, version: 3 } : options;
   if (!base.ids.includes(id)) {
-    const result = replayIdeaEvents(id, parseIdeaEvents(next, options), options);
+    const result = replayIdeaEvents(id, parseIdeaEvents(next, candidateOptions), candidateOptions);
     if (!result.ok) throw new Error(`${id}: candidate ${result.code} at ${result.sequence}`);
     return { id, mode: "initialization", candidate: result };
   }
   if (base.version === 1) {
+    if (candidate.version !== 2) throw new Error(`${id}: v1 ideas must migrate to v2 before v3`);
     const legacy = parseIdeaStatus(source(root, base, id, "status.yaml").toString("utf8"), options);
     const result = replayIdeaEvents(id, parseIdeaEvents(next, options), options);
     const { version: _version, ...facts } = legacy;
@@ -74,7 +76,28 @@ function transition(root, base, candidate, id, options) {
     }
     return { id, mode: "migration", candidate: result };
   }
-  const result = checkEventChange(id, source(root, base, id, "events.jsonl"), next, options);
+  const previous = source(root, base, id, "events.jsonl");
+  if (base.version === 2 && candidate.version === 3) {
+    const oldEvents = parseIdeaEvents(previous, options);
+    const old = replayIdeaEvents(id, oldEvents, options);
+    if (!old.ok) throw new Error(`${id}: cannot migrate invalid v2 event ${old.sequence}: ${old.code}`);
+    const newEvents = parseIdeaEvents(next, candidateOptions);
+    if (!isDeepStrictEqual(newEvents, renameV2Events(oldEvents))) {
+      throw new Error(`${id}: v3 migration must preserve every v2 record, sequence and payload with only the exact type rename`);
+    }
+    const result = replayIdeaEvents(id, newEvents, candidateOptions);
+    if (!result.ok || !isDeepStrictEqual(
+      { status: result.state.status, sequence: result.state.sequence },
+      old.state,
+    ) || !isDeepStrictEqual(result.state.interaction, { messages: [], lastSignal: null })) {
+      throw new Error(`${id}: v3 migration changes historical facts or contains an invalid abandoned window`);
+    }
+    return { id, mode: "migration-v3", candidate: result };
+  }
+  const result = checkEventChange(id, previous, next, candidateOptions);
+  if (base.version === 3 && result.mode === "repair") {
+    throw new Error(`${id}: v3 history must remain append-only after the migration boundary`);
+  }
   if (!result.ok) throw Object.assign(new Error(`${id}: ${result.code} (${result.mode})`), { eventCheck: { id, ...result } });
   return { id, ...result };
 }
@@ -83,8 +106,11 @@ function noDeletion(base, candidate) {
   for (const id of base.ids) {
     if (!candidate.ids.includes(id)) throw new Error(`${id}: removing an integrated idea is not an event repair`);
   }
-  if (base.version === 2 && candidate.version !== 2) {
-    throw new Error("An event project cannot be downgraded to v1.");
+  if (base.version >= 2 && candidate.version < base.version) {
+    throw new Error("An event project cannot be downgraded to an earlier version.");
+  }
+  if (base.version === 1 && candidate.version === 3) {
+    throw new Error("A v1 project must migrate to v2 before v3.");
   }
 }
 
@@ -122,7 +148,7 @@ async function inspectBoundHistory({
   } else {
     const base = await snapshot(root, primaryCommit);
     noDeletion(base, target);
-    if (target.version === 2) {
+    if (target.version === 2 || target.version === 3) {
       for (const id of target.ids) results.push(transition(root, base, target, id, options));
     }
     // A verified repair is the audit boundary for this idea, not for its peers.
@@ -132,7 +158,7 @@ async function inspectBoundHistory({
   const history = [];
   while (auditCommit) {
     const current = await snapshot(root, auditCommit);
-    if (current.version !== 2) break;
+    if (current.version !== 2 && current.version !== 3) break;
     const parent = firstParent(root, auditCommit);
     const previous = parent
       ? await snapshot(root, resolveCommit(root, parent))
@@ -142,7 +168,7 @@ async function inspectBoundHistory({
       if (settled.has(id)) continue;
       const result = transition(root, previous, current, id, options);
       history.push({ commit: auditCommit, ...result });
-      if (result.mode !== "append") settled.add(id);
+      if (result.mode !== "append" && result.mode !== "migration-v3") settled.add(id);
     }
     auditCommit = parent;
     if (current.ids.every((id) => settled.has(id))) break;
@@ -159,7 +185,7 @@ async function inspectBoundHistory({
       for (const pendingCommit of pending) {
         const current = await snapshot(root, pendingCommit);
         noDeletion(previous, current);
-        if (current.version === 2) {
+        if (current.version === 2 || current.version === 3) {
           for (const id of current.ids) {
             try { transition(root, previous, current, id, options); }
             catch (cause) {
