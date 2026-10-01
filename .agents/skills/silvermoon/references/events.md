@@ -102,19 +102,18 @@ requests; if the second fails, the first remains a completed local append.
 
 ## Check and revise
 
-V2 `check` validates both the chosen snapshot and primary event history:
+V2 `check` validates the chosen snapshot against its immediate event boundary:
 
 - Worktree/index candidates use a fixed local named-primary tracking commit;
   local checks never fetch or claim remote freshness.
-- Unintegrated commits use that primary. Fast-forward candidates must also
-  have valid transitions along their prospective primary first-parent chain.
-- Already-integrated first-parent commits are audited against their historical
-  primary predecessor. `--remote` fetches the primary tip and audits it.
+- Worktree/index candidates compare against primary. A committed target
+  compares against its first parent; `--remote` fetches the primary tip and
+  checks only that commit's boundary. Use `check --commit <revision>` for a
+  specific older commit. Normal navigation does not walk committed history.
 - Each idea is independent: successful base reduction requires an exact byte
   prefix; definite `ok: false` allows a complete valid repair. Parse errors,
   missing objects and shallow missing parents do not grant repair permission.
-- Valid repair/migration/initialization boundaries stop older audit for that
-  idea. Repair is reported as repair, not append-only. The repaired log
+- Repair is reported as repair, not append-only. The repaired log
   immediately becomes protected again; another idea receives no exemption.
 
 Keep unknown work. Sync and reassess intent and ownership before revising an

@@ -470,22 +470,6 @@ async function assessRepositoryReadinessInternal({
     };
   }
   const primary = fetched.result.commit;
-  if (observed.config.version === 2) {
-    try {
-      await inspectEventHistory({ root, tree: head, commit: head, config: observed.config, primary, auditCandidate: true });
-    } catch (caught) {
-      return {
-        branch, head, primary, ready: false,
-        observation: repositoryProblemObservation(observed.observation, [{
-          type: "idea.events.history-invalid", summary: caught.message,
-        }]),
-        instructions: localize(language,
-          `Preserve both histories. Synchronize with primary ${primary}, review candidate ownership and decisions, then use event revise and check before integration. Retry ${recheckCommand} --audience agent.`,
-          `保留双方历史。同步 primary ${primary}，重审候选归属和人工决定，再通过 event revise 与 check 处理后集成。随后重试 ${recheckCommand} --audience agent。`),
-      };
-    }
-  }
-
   let relation;
   try {
     relation = compareCommits(root, head, primary);
@@ -507,6 +491,21 @@ async function assessRepositoryReadinessInternal({
     };
   }
   if (relation === "aligned") {
+    if (observed.config.version === 2) {
+      try {
+        await inspectEventHistory({ root, tree: head, commit: head, config: observed.config, primary });
+      } catch (caught) {
+        return {
+          branch, head, primary, ready: false,
+          observation: repositoryProblemObservation(observed.observation, [{
+            type: "idea.events.history-invalid", summary: caught.message,
+          }]),
+          instructions: localize(language,
+            `Preserve both histories. Review the selected commit's event boundary and repair only an authorized failure, then retry ${recheckCommand} --audience agent.`,
+            `保留双方历史。检查所选提交的事件边界，仅在获得授权时修复明确的错误，然后重试 ${recheckCommand} --audience agent。`),
+        };
+      }
+    }
     return { branch, head, observation: observed.observation, primary, ready: true };
   }
   const problem = {
@@ -622,21 +621,6 @@ export async function whatsNext({
   }
 
   const selected = selectIdea(observed.layout.ideas, selector);
-  if (observed.config.version === 2) {
-    try {
-      await inspectEventHistory({
-        root: observed.observation.root,
-        tree: worktreeSnapshot(observed.observation.root).tree,
-        config: observed.config,
-      });
-    } catch (caught) {
-      return runtime.complete(repositoryProblemObservation(observed.observation, [{
-        type: "idea.events.history-invalid", summary: caught.message,
-      }]), {
-        nextSteps: `Preserve all candidates. Refresh the configured primary and run silvermoon check --worktree --audience agent. A successful base requires its exact prefix; only a definite base reduction failure permits repair. Reassess ownership and human decisions, use silvermoon event revise (not a manual JSONL edit), then retry ${recheckCommand} --audience agent.`,
-      });
-    }
-  }
   if (selected?.status.language) {
     observed = withObservationLanguage(observed, selected.status.language);
   }

@@ -490,9 +490,10 @@ resolved output language is used.
 - `check --worktree` validates the hypothetical commit formed from `HEAD`, the
   index, unstaged changes, and nonignored untracked files.
 - `check --staged` validates the index snapshot for a pre-commit hook.
-- `check --commit <revision>` validates one local commit snapshot.
+- `check --commit <revision>` validates one local commit and its first-parent
+  event boundary, without walking older commits.
 - `check --remote` fetches primary using committed coordinates and validates its
-  immutable tip, including first-parent event history for v2. Unrelated skill
+  tip and its immediate event boundary for v2. Unrelated skill
   or idea findings in local `HEAD` do not block
   locating and validating the remote snapshot.
 
@@ -507,14 +508,16 @@ decision revision that differs from the current world is a valid historical
 fact and naturally derives an earlier lifecycle state; it need not still exist
 in the local object database. `check` does not check local worktree cleanliness,
 upstream, or ancestry readiness, route ideas, or give next-step instructions.
-V2 additionally reports `validation.eventHistory`: the fixed baseline and its
-source, candidate reduction, and initialization/migration/append/repair audit
-boundaries. Local targets use named primary tracking refs without fetching;
-unavailable or conflicting refs fail closed. History rules depend on each
+V2 additionally reports `validation.eventHistory`: the fixed primary reference,
+the selected commit's first parent when applicable, and the current
+initialization/migration/append/repair boundary. Local targets use named primary
+tracking refs without fetching; unavailable or conflicting refs fail closed.
+Normal checks do not audit earlier commits; use `check --commit <revision>` to
+inspect a specific historical boundary. History rules depend on each
 base's complete reduction, not the candidate's failure: `ok: true` requires
 its exact byte prefix; definite `ok: false` permits a valid complete repair.
 Missing/invalidly encoded history never grants repair permission.
-Configuration ancestry prevents downgrading an already-v2 project to v1;
+The immediate predecessor prevents downgrading a v2 project to v1;
 genuine v1 historical snapshots remain readable without auditing their decisions.
 
 Like every public command, `check --json` contains all four projections:

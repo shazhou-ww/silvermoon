@@ -206,76 +206,26 @@ export async function inspectEventHistory(options) {
 }
 
 async function inspectBoundHistory({
-  root, tree, commit, overrides, baseline, auditCandidate = false,
+  root, tree, commit, overrides, baseline,
 }) {
   const blobs = new Map();
-  const snapshots = new Map();
-  const committedSnapshot = async (revision) => {
-    if (!snapshots.has(revision)) {
-      snapshots.set(revision, await snapshot(root, revision, undefined, revision, blobs));
-    }
-    return snapshots.get(revision);
-  };
   const primaryCommit = resolveCommit(root, baseline.commit);
-  const chain = git(root, ["rev-list", "--first-parent", primaryCommit]).split("\n");
-  const integrated = commit !== undefined && chain.includes(commit);
   const target = await snapshot(root, tree, overrides, commit, blobs);
   const options = { objectIdLength: primaryCommit.length };
   const results = [];
-  let auditCommit;
-  if (integrated) {
-    auditCommit = commit;
-  } else {
-    const base = await committedSnapshot(primaryCommit);
-    noDeletion(base, target);
-    if (target.version === 2) {
-      for (const id of target.ids) results.push(transition(root, base, target, id, options));
-    }
-    // A verified repair is the audit boundary for this idea, not for its peers.
-    auditCommit = primaryCommit;
+  const targetCommit = commit === undefined ? null : resolveCommit(root, commit);
+  const parent = targetCommit ? firstParent(root, targetCommit) : null;
+  const baseCommit = targetCommit ? parent : primaryCommit;
+  const base = baseCommit
+    ? await snapshot(root, baseCommit, undefined, baseCommit, blobs)
+    : { version: null, ids: [], entries: [] };
+  noDeletion(base, target);
+  if (target.version === 2) {
+    for (const id of target.ids) results.push(transition(root, base, target, id, options));
   }
-  const settled = new Set(results.filter(({ mode }) => mode === "repair").map(({ id }) => id));
-  const history = [];
-  while (auditCommit) {
-    const current = await committedSnapshot(auditCommit);
-    if (current.version !== 2) break;
-    const parent = firstParent(root, auditCommit);
-    const previous = parent
-      ? await committedSnapshot(parent)
-      : { version: null, ids: [], entries: [] };
-    noDeletion(previous, current);
-    for (const id of current.ids) {
-      if (settled.has(id)) continue;
-      const result = transition(root, previous, current, id, options);
-      history.push({ commit: auditCommit, ...result });
-      if (result.mode !== "append" && result.mode !== "migration-final") settled.add(id);
-    }
-    auditCommit = parent;
-    if (current.ids.every((id) => settled.has(id))) break;
-  }
-  if (auditCandidate && !integrated) {
-    const candidateCommit = commit ?? resolveCommit(root, "HEAD");
-    const localChain = git(root, ["rev-list", "--first-parent", candidateCommit]).split("\n");
-    const primaryIndex = localChain.indexOf(primaryCommit);
-    if (primaryIndex > 0) {
-      // These commits would become primary history on a fast-forward, so each
-      // transition must be legal. Other merge parents remain local candidate history.
-      const pending = localChain.slice(0, primaryIndex).reverse();
-      let previous = await committedSnapshot(primaryCommit);
-      for (const pendingCommit of pending) {
-        const current = await committedSnapshot(pendingCommit);
-        noDeletion(previous, current);
-        if (current.version === 2) {
-          for (const id of current.ids) {
-            try { transition(root, previous, current, id, options); }
-            catch (cause) {
-              throw new Error(`Cannot fast-forward candidate ${pendingCommit}: ${cause.message}. Preserve both histories and use a merge with current primary as first parent.`, { cause });
-            }
-          }
-        }
-        previous = current;
-      }
-    }
-  }
-  return { valid: true, baseline, target: integrated ? "integrated-first-parent" : "candidate", results, history };
+  return {
+    valid: true, baseline, target: targetCommit ? "commit" : "candidate",
+    ...(targetCommit ? { parent: baseCommit } : {}),
+    results,
+  };
 }
