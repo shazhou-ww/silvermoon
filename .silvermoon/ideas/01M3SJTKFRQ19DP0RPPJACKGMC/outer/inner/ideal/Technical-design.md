@@ -80,6 +80,14 @@ CLI 不执行、插值或自动访问其内容。此模型不宣称提供人类�
 
 ## T-03: 事件类型目录
 
+[Event-state-model.ts](./Event-state-model.ts) 给出本目录九种事件的判别联合、
+完整 payload、事实来源定位、`reduceEvent`、`replayEvents` 和保持旧逻辑的
+`deriveLifecycle`。纯 reducer 不读取外部环境、不修改输入；失败不消费序号。
+其 `VerifiedRecord` 是严格解析后的边界，不是对任意 JSON 的类型断言：
+外层仍须验证字符串格式、未知字段、规范行/hash、快照证据真实性、alias
+唯一性、primary 前缀及实时乐观锁。内存尾序号/来源索引不是业务状态，
+也不是独立权威缓存。此文件仅用于理想审阅，不接入当前 CLI/schema。
+
 ### 每条事件必须是非空状态转换
 
 持久归约的业务投影包含 `id`、可选 alias/language、可选 `abandoned: true`

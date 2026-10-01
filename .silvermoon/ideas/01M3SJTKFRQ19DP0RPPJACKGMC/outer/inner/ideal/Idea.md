@@ -125,6 +125,8 @@ JSONL；成功切换后移除旧权威文件。入口独立于 Silvermoon 的常
 [事件状态模型技术方案](./Technical-design.md) 是本 Ideal World 的配套
 设计，随本世界 revision 一起审阅，不是第四份契约。它具体说明事件类型、
 状态兼容性、观察与追加边界、并发与 Git 历史校验、schema 升级和迁移恢复。
+[TypeScript 事件与归约模型](./Event-state-model.ts) 具体表达事件类型、
+前后态转换及拒绝条件，同属理想设计，不是生产实现或迁移入口。
 
 其中原状态推演、只读查询、持久事件必须改变状态，以及仅对已集成 primary
 前缀强制 append-only 的边界已由用户明确确认。自增序与乐观锁的具体设计
