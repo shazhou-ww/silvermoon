@@ -14,8 +14,6 @@
   <a href="https://npmx.dev/package/silvermoon"><img src="https://img.shields.io/npm/dm/silvermoon?style=flat-square" alt="monthly npm downloads"></a>
   <!-- markdownlint-disable-next-line MD013 -->
   <a href="./LICENSE"><img src="https://img.shields.io/github/license/shazhou-ww/silvermoon?style=flat-square" alt="MIT license"></a>
-  <!-- markdownlint-disable-next-line MD013 -->
-  <a href="https://github.com/shazhou-ww/silvermoon/actions/workflows/ci.yml?query=branch%3Amain"><img src="https://img.shields.io/github/actions/workflow/status/shazhou-ww/silvermoon/ci.yml?branch=main&style=flat-square&label=CI" alt="CI status"></a>
 </p>
 
 <p align="center">

@@ -46,7 +46,7 @@ pnpm check:skills      # local consistency and external skill discovery
 | --- | --- |
 | Edit / Agent iteration | `check:sanity`: CLI syntax, pure unit tests, schema and API contracts; add change-specific tests |
 | Before commit | `check:commit`: sanity, local contracts and Markdown, skill consistency, Git/CLI smoke, whitespace, staged Silvermoon metadata |
-| Ordinary CI | Unconditional sanity then complete unit/runtime on Ubuntu/Windows/macOS, Node 22/24; complete contracts and integration, static checks and skill discovery |
+| Ordinary CI | Triggered on pull request, daily scheduled run, or manual dispatch. Unconditional sanity then complete unit/runtime on Ubuntu/Windows/macOS, Node 22/24; complete contracts and integration, static checks and skill discovery |
 | Before delivery / release | `check` or `check:release`: every release-grade gate including package contents, installed-package E2E and external discovery |
 | After publication | The existing release workflow's `verify-npm-release.mjs`: registry identity, integrity, provenance, README and CDN |
 
