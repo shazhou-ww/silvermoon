@@ -1,1 +1,1 @@
-{"sequence":1,"type":"alias.updated","payload":{"alias":"daemon-event-bridge"}}
+{"sequence":1,"type":"setAlias","payload":{"alias":"daemon-event-bridge"}}

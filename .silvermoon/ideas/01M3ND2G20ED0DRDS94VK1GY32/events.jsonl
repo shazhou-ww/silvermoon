@@ -1,4 +1,4 @@
-{"sequence":1,"type":"alias.updated","payload":{"alias":"command-output-language"}}
-{"sequence":2,"type":"ideal.approved","payload":{"idealRevision":"dbf77eda3d6737daf9a155a05023979ddcfb5752"}}
-{"sequence":3,"type":"implementation.accepted","payload":{"implementationRevision":"f340abdb026fc92f6b758b47df41421c41ad1182"}}
-{"sequence":4,"type":"deployment.accepted","payload":{"deploymentRevision":"7fe6d740d8a851b222afd2e147f0ef521916972f"}}
+{"sequence":1,"type":"setAlias","payload":{"alias":"command-output-language"}}
+{"sequence":2,"type":"acceptIdeal","payload":{"idealRevision":"dbf77eda3d6737daf9a155a05023979ddcfb5752"}}
+{"sequence":3,"type":"acceptInner","payload":{"implementationRevision":"f340abdb026fc92f6b758b47df41421c41ad1182"}}
+{"sequence":4,"type":"acceptOuter","payload":{"deploymentRevision":"7fe6d740d8a851b222afd2e147f0ef521916972f"}}

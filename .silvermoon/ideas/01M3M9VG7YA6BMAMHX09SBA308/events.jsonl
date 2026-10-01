@@ -1,4 +1,4 @@
-{"sequence":1,"type":"alias.updated","payload":{"alias":"faster-test-suite"}}
-{"sequence":2,"type":"ideal.approved","payload":{"idealRevision":"5f925151c587c83c48636c178379d9e884066327"}}
-{"sequence":3,"type":"implementation.accepted","payload":{"implementationRevision":"0edccd07659ac3f42346f7450dbe6a87e542ed62"}}
-{"sequence":4,"type":"deployment.accepted","payload":{"deploymentRevision":"098a8829654505e4c1bfa159d7e2ae08ccb4b0e5"}}
+{"sequence":1,"type":"setAlias","payload":{"alias":"faster-test-suite"}}
+{"sequence":2,"type":"acceptIdeal","payload":{"idealRevision":"5f925151c587c83c48636c178379d9e884066327"}}
+{"sequence":3,"type":"acceptInner","payload":{"implementationRevision":"0edccd07659ac3f42346f7450dbe6a87e542ed62"}}
+{"sequence":4,"type":"acceptOuter","payload":{"deploymentRevision":"098a8829654505e4c1bfa159d7e2ae08ccb4b0e5"}}

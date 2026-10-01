@@ -1,4 +1,4 @@
-{"sequence":1,"type":"alias.updated","payload":{"alias":"pnpm-check-regression"}}
-{"sequence":2,"type":"ideal.approved","payload":{"idealRevision":"52ca8edf9852fda63aacb306e315ba48a7697ca0"}}
-{"sequence":3,"type":"implementation.accepted","payload":{"implementationRevision":"986e6a54fe4bf853b1431fbadd06a0a3ddebc03f"}}
-{"sequence":4,"type":"deployment.accepted","payload":{"deploymentRevision":"3327e2e0666db482fbb559498305ca54194c10c7"}}
+{"sequence":1,"type":"setAlias","payload":{"alias":"pnpm-check-regression"}}
+{"sequence":2,"type":"acceptIdeal","payload":{"idealRevision":"52ca8edf9852fda63aacb306e315ba48a7697ca0"}}
+{"sequence":3,"type":"acceptInner","payload":{"implementationRevision":"986e6a54fe4bf853b1431fbadd06a0a3ddebc03f"}}
+{"sequence":4,"type":"acceptOuter","payload":{"deploymentRevision":"3327e2e0666db482fbb559498305ca54194c10c7"}}

@@ -1,4 +1,4 @@
-{"sequence":1,"type":"alias.updated","payload":{"alias":"stratify-test-pipeline"}}
-{"sequence":2,"type":"ideal.approved","payload":{"idealRevision":"a5317dadc948513f637c5ddba7ee444b33af5b54"}}
-{"sequence":3,"type":"implementation.accepted","payload":{"implementationRevision":"d10112271a53ed3373b833514de75293c232d6dc"}}
-{"sequence":4,"type":"deployment.accepted","payload":{"deploymentRevision":"96bc9342d997f4a734d464d842473e99caf60a6f"}}
+{"sequence":1,"type":"setAlias","payload":{"alias":"stratify-test-pipeline"}}
+{"sequence":2,"type":"acceptIdeal","payload":{"idealRevision":"a5317dadc948513f637c5ddba7ee444b33af5b54"}}
+{"sequence":3,"type":"acceptInner","payload":{"implementationRevision":"d10112271a53ed3373b833514de75293c232d6dc"}}
+{"sequence":4,"type":"acceptOuter","payload":{"deploymentRevision":"96bc9342d997f4a734d464d842473e99caf60a6f"}}

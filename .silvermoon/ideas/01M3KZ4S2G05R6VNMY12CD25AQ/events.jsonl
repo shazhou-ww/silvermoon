@@ -1,4 +1,4 @@
-{"sequence":1,"type":"alias.updated","payload":{"alias":"create-idea-output-readiness"}}
-{"sequence":2,"type":"ideal.approved","payload":{"idealRevision":"46b1df480e6a0c6b1006a3c8f09b5ea07d16be96"}}
-{"sequence":3,"type":"implementation.accepted","payload":{"implementationRevision":"2843f92edca7b61dde93fe27d5f0d3f370b18f04"}}
-{"sequence":4,"type":"deployment.accepted","payload":{"deploymentRevision":"60657f64def499931c96079cf0bf23266c5c5c95"}}
+{"sequence":1,"type":"setAlias","payload":{"alias":"create-idea-output-readiness"}}
+{"sequence":2,"type":"acceptIdeal","payload":{"idealRevision":"46b1df480e6a0c6b1006a3c8f09b5ea07d16be96"}}
+{"sequence":3,"type":"acceptInner","payload":{"implementationRevision":"2843f92edca7b61dde93fe27d5f0d3f370b18f04"}}
+{"sequence":4,"type":"acceptOuter","payload":{"deploymentRevision":"60657f64def499931c96079cf0bf23266c5c5c95"}}

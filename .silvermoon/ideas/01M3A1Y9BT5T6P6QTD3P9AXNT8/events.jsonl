@@ -1,4 +1,4 @@
-{"sequence":1,"type":"alias.updated","payload":{"alias":"npm-package-badges"}}
-{"sequence":2,"type":"ideal.approved","payload":{"idealRevision":"1cbbbc02d1df204af7dee28ae157f791bcb5df86"}}
-{"sequence":3,"type":"implementation.accepted","payload":{"implementationRevision":"6d8199af9cdae5bb4a2137d7dbed86fff43d52f2"}}
-{"sequence":4,"type":"deployment.accepted","payload":{"deploymentRevision":"4717641ed094ebc1fa6ddcb586fc6285483bed76"}}
+{"sequence":1,"type":"setAlias","payload":{"alias":"npm-package-badges"}}
+{"sequence":2,"type":"acceptIdeal","payload":{"idealRevision":"1cbbbc02d1df204af7dee28ae157f791bcb5df86"}}
+{"sequence":3,"type":"acceptInner","payload":{"implementationRevision":"6d8199af9cdae5bb4a2137d7dbed86fff43d52f2"}}
+{"sequence":4,"type":"acceptOuter","payload":{"deploymentRevision":"4717641ed094ebc1fa6ddcb586fc6285483bed76"}}

@@ -1,4 +1,4 @@
-{"sequence":1,"type":"alias.updated","payload":{"alias":"output-audiences"}}
-{"sequence":2,"type":"ideal.approved","payload":{"idealRevision":"1dac86a5dc9ede87fb798a8fb24506359e362490"}}
-{"sequence":3,"type":"implementation.accepted","payload":{"implementationRevision":"2919f5d36b7718cd08f0f90d66526ea853850547"}}
-{"sequence":4,"type":"deployment.accepted","payload":{"deploymentRevision":"e8ff557c5be3c5008b1d62ed94c874fc4e0cfe24"}}
+{"sequence":1,"type":"setAlias","payload":{"alias":"output-audiences"}}
+{"sequence":2,"type":"acceptIdeal","payload":{"idealRevision":"1dac86a5dc9ede87fb798a8fb24506359e362490"}}
+{"sequence":3,"type":"acceptInner","payload":{"implementationRevision":"2919f5d36b7718cd08f0f90d66526ea853850547"}}
+{"sequence":4,"type":"acceptOuter","payload":{"deploymentRevision":"e8ff557c5be3c5008b1d62ed94c874fc4e0cfe24"}}

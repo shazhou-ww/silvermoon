@@ -1,1 +1,1 @@
-{"sequence":1,"type":"alias.updated","payload":{"alias":"dependency-update-evaluation"}}
+{"sequence":1,"type":"setAlias","payload":{"alias":"dependency-update-evaluation"}}

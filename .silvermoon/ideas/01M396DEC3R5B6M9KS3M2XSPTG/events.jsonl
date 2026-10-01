@@ -1,3 +1,3 @@
-{"sequence":1,"type":"ideal.approved","payload":{"idealRevision":"a60df172ba173290267f4a2e0ab5450b00399a7e"}}
-{"sequence":2,"type":"implementation.accepted","payload":{"implementationRevision":"17fe5816248ede4bec56d6c75985ed87bae88e0e"}}
-{"sequence":3,"type":"deployment.accepted","payload":{"deploymentRevision":"650bfd1f45f0ff96b03b4b08614860fdb8515656"}}
+{"sequence":1,"type":"acceptIdeal","payload":{"idealRevision":"a60df172ba173290267f4a2e0ab5450b00399a7e"}}
+{"sequence":2,"type":"acceptInner","payload":{"implementationRevision":"17fe5816248ede4bec56d6c75985ed87bae88e0e"}}
+{"sequence":3,"type":"acceptOuter","payload":{"deploymentRevision":"650bfd1f45f0ff96b03b4b08614860fdb8515656"}}

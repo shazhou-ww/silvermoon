@@ -1,1 +1,1 @@
-{"sequence":1,"type":"alias.updated","payload":{"alias":"agent-session-eval-harness"}}
+{"sequence":1,"type":"setAlias","payload":{"alias":"agent-session-eval-harness"}}

@@ -1,4 +1,4 @@
-{"sequence":1,"type":"alias.updated","payload":{"alias":"relative-readme-assets"}}
-{"sequence":2,"type":"ideal.approved","payload":{"idealRevision":"d94bcc190e9d843cbb6f68ce1eb61a2974244da2"}}
-{"sequence":3,"type":"implementation.accepted","payload":{"implementationRevision":"f754420b891b9a18c988f57bf0020cb00a14f900"}}
-{"sequence":4,"type":"deployment.accepted","payload":{"deploymentRevision":"368ca02908758a290a426515aa99aed44b4b2514"}}
+{"sequence":1,"type":"setAlias","payload":{"alias":"relative-readme-assets"}}
+{"sequence":2,"type":"acceptIdeal","payload":{"idealRevision":"d94bcc190e9d843cbb6f68ce1eb61a2974244da2"}}
+{"sequence":3,"type":"acceptInner","payload":{"implementationRevision":"f754420b891b9a18c988f57bf0020cb00a14f900"}}
+{"sequence":4,"type":"acceptOuter","payload":{"deploymentRevision":"368ca02908758a290a426515aa99aed44b4b2514"}}

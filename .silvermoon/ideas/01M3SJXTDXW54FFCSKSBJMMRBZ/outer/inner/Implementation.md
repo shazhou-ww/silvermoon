@@ -57,8 +57,12 @@ schema 与 CLI 测试证实项目版本仍为 2，九种单词事件和原 paylo
 区分内部前后格式而不暴露 `schema/v3` 或 `version: 3`，迁移后
 健康前缀禁止修订。
 `test/runtime/migrate-internal-events.test.js` 覆盖计划摘要、逐条等价、
-空日志、外部仓库拒绝、并发和事务恢复。源仓库当前仍保留旧日志；
-实际执行显式迁移须另行确定时点，不能把测试视为已迁移。
+空日志、外部仓库拒绝、并发和事务恢复。经明确确认后，以 primary
+`b2e53ba18ebc05d97b048bc1f7a4fe0118fe48c6` 的准确计划摘要
+`d7d4f9c308c03c01122fc52f21b482c6c90965cc190e197877d8f51edb5c21bc`
+执行内部入口，40 个 idea 日志转换成功。`check --worktree` 的
+`eventHistory` 对所有转换均报告 `migration-final`，逐条核对旧事实与
+新投影等价；没有直接编辑日志或迁移其他仓库。
 
 ### I-AC03: 本地消息不受 Git 故障锁死
 
@@ -73,7 +77,7 @@ schema 与 CLI 测试证实项目版本仍为 2，九种单词事件和原 paylo
 针对性测试、`pnpm check:commit`、`pnpm check`、Silvermoon
 `check --worktree` 和 `check --staged` 通过；同步的提交从
 刷新后的 primary 可达，没有自动发布或跨仓库旧格式迁移。
-当前候选的针对性测试共 30 项通过；`pnpm check:commit`、
+实现候选的针对性测试共 30 项通过；`pnpm check:commit`、
 `pnpm check`、`pnpm pack:check`、`node bin/silvermoon.js check --worktree`
-及 `node bin/silvermoon.js check --staged` 均已通过。同步与实际迁移
-仍需分别验证，不提前宣称本项完成。
+及 `node bin/silvermoon.js check --staged` 均已通过。迁移后的最终候选
+仍须复验、提交并从刷新后的 primary 确认可达；未自动发布 npm。
