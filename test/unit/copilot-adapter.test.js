@@ -55,6 +55,7 @@ class FakeClient {
 
   async createSession(config) {
     this.creates++;
+    if (this.createError) throw this.createError;
     const session = new FakeSession(config.sessionId);
     session.worktreePath = config.workingDirectory;
     this.sessions.set(config.sessionId, session);
@@ -71,7 +72,16 @@ async function fixture(fn) {
   const worktreePath = await mkdtemp(join(tmpdir(), "silvermoon-agent-"));
   try {
     const client = new FakeClient();
-    const registry = { resolve: async () => worktreePath, acquire: async () => async () => {} };
+    const bindings = new Set();
+    const registry = {
+      resolve: async () => worktreePath,
+      acquire: async () => async () => {},
+      sessionBinding: async (_, sessionId) => {
+        const exists = bindings.has(sessionId);
+        bindings.add(sessionId);
+        return exists;
+      },
+    };
     const adapter = new CopilotAdapter({ client, registry, onPermissionRequest: () => ({ kind: "deny" }) });
     const route = { projectUrl: "https://github.com/example/project.git", ideaId: IDEA };
     await fn({ adapter, client, registry, route });
@@ -107,6 +117,29 @@ test("one adapter isolates routes and recovers the same persisted session", asyn
     } finally {
       await rm(second, { recursive: true });
     }
+  });
+});
+
+test("never creates a replacement when a previously bound session is not listed", async () => {
+  await fixture(async ({ adapter, client, registry, route }) => {
+    await adapter.start(route);
+    const original = [...client.sessions.keys()][0];
+    client.sessions.delete(original);
+    const replacement = new CopilotAdapter({ client, registry, onPermissionRequest: () => ({ kind: "deny" }) });
+    await assert.rejects(replacement.start(route), /previously bound Copilot session is not listed/);
+    assert.equal(client.creates, 1);
+    assert.equal(client.resumes, 0);
+  });
+});
+
+test("an ambiguous creation failure retains the binding until explicit recovery", async () => {
+  await fixture(async ({ adapter, client, registry, route }) => {
+    client.createError = new Error("connection failed after request");
+    await assert.rejects(adapter.start(route), /connection failed/);
+    client.createError = undefined;
+    const replacement = new CopilotAdapter({ client, registry, onPermissionRequest: () => ({ kind: "deny" }) });
+    await assert.rejects(replacement.start(route), /previously bound Copilot session is not listed/);
+    assert.equal(client.creates, 1);
   });
 });
 

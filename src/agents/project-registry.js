@@ -119,6 +119,39 @@ export class LocalProjectRegistry {
     return worktreePath;
   }
 
+  async sessionBinding(route, sessionId, worktreePath) {
+    const { projectUrl, ideaId } = canonicalRoute(route);
+    const file = join(this.#root, "sessions", hash(projectUrl), `${ideaId}.json`);
+    await mkdir(dirname(file), { recursive: true });
+    let binding;
+    try {
+      binding = JSON.parse(await readFile(file, "utf8"));
+    } catch (error) {
+      if (error.code !== "ENOENT") throw error;
+    }
+    if (binding) {
+      if (binding.projectUrl !== projectUrl || binding.ideaId !== ideaId
+        || binding.sessionId !== sessionId || binding.worktreePath !== worktreePath) {
+        throw new Error("Copilot session binding changed; explicit relocation is required.");
+      }
+      return true;
+    }
+    await writeFile(file, `${JSON.stringify({ projectUrl, ideaId, sessionId, worktreePath })}\n`,
+      { flag: "wx", mode: 0o600 });
+    return false;
+  }
+
+  async forgetSession(route, { confirmLost } = {}) {
+    if (confirmLost !== true) throw new Error("Explicit confirmation that the old session is lost is required.");
+    const { projectUrl, ideaId } = canonicalRoute(route);
+    const release = await this.acquire(route);
+    try {
+      await unlink(join(this.#root, "sessions", hash(projectUrl), `${ideaId}.json`));
+    } finally {
+      await release();
+    }
+  }
+
   async acquire(route) {
     const { projectUrl, ideaId } = canonicalRoute(route);
     const lockPath = join(this.#root, "locks", hash(projectUrl), ideaId);

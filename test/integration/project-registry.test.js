@@ -36,6 +36,15 @@ test("requires registration and persistently binds one idea worktree", async () 
     await releaseAgain();
     const first = await registry.resolve(route);
     assert.equal(await new LocalProjectRegistry({ root }).resolve(route), first);
+    assert.equal(await registry.sessionBinding(route, "original-session", first), false);
+    assert.equal(await new LocalProjectRegistry({ root }).sessionBinding(route, "original-session", first), true);
+    await assert.rejects(registry.sessionBinding(route, "other-session", first), /binding changed/);
+    await assert.rejects(registry.forgetSession(route, {}), /confirmation/);
+    const owner = await registry.acquire(route);
+    await assert.rejects(registry.forgetSession(route, { confirmLost: true }), /already in use/);
+    await owner();
+    await registry.forgetSession(route, { confirmLost: true });
+    assert.equal(await registry.sessionBinding(route, "replacement-session", first), false);
     assert.equal((await readFile(join(first, ".silvermoon", "config.yaml"), "utf8")).includes(URL), true);
     assert.equal(execFileSync("git", ["-C", first, "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}"], { encoding: "utf8" }).trim(), "origin/main");
     await assert.rejects(registry.register(URL, join(base, "other")), /ENOENT/);

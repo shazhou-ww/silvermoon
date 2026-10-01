@@ -216,6 +216,13 @@ The registry excludes concurrent owners of the same route. If an owner exits
 without `close()`, explicitly verify it stopped, then call
 `registry.recover(route, { confirmStopped: true })`; recovery refuses a live
 owner, another host, or an unknown lock. It does not replay an uncertain send.
+The registry also persists the route's Copilot session identity before
+creation: a missing SDK listing or an ambiguous creation failure cannot
+silently spawn a replacement. Only after verifying that the old session is
+truly lost and no route owner is active, call
+`registry.forgetSession(route, { confirmLost: true })` to permit a new session.
+This does not erase the old session, undo side effects, or authorize retrying
+messages with uncertain delivery.
 
 The `silvermoon/agents/project-runtime` subpath exports `ProjectRuntime`.
 It resolves the registered project's own installed Silvermoon CLI (or this

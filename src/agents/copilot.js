@@ -185,6 +185,10 @@ export class CopilotAdapter {
     if (existing?.context?.cwd && existing.context.cwd !== worktreePath) {
       throw new Error("Copilot session is bound to a different worktree; explicit relocation is required.");
     }
+    const previouslyBound = await this.#registry.sessionBinding(identified, id, worktreePath);
+    if (previouslyBound && !existing) {
+      throw new Error("The previously bound Copilot session is not listed; verify its state before explicit recovery.");
+    }
     const entry = {
       observers: new Set(), replies: new Set(),
       state: { type: "session", state: "unknown", reason: "No current execution status has been observed." },

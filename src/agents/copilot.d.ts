@@ -63,6 +63,8 @@ export class LocalProjectRegistry {
   register(projectUrl: string, projectRoot: string): Promise<void>;
   projectRoot(route: IdeaRoute): Promise<string>;
   resolve(route: IdeaRoute): Promise<string>;
+  sessionBinding(route: IdeaRoute, sessionId: string, worktreePath: string): Promise<boolean>;
+  forgetSession(route: IdeaRoute, options: { confirmLost: true }): Promise<void>;
   acquire(route: IdeaRoute): Promise<() => Promise<void>>;
   recover(route: IdeaRoute, options: { confirmStopped: true }): Promise<void>;
 }

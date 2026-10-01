@@ -79,6 +79,11 @@ projectUrl/ideaId 为 Copilot session 生成稳定身份；同一路由不并发
 无法确认旧 session 状态时不暗中替换。`send`、`events`、`observe` 并行
 工作；`observe` 只宣称实测可提供的粒度。不能从 SDK 的接收确认推断
 `processed`，不确定时报告 `unknown`；处理权限、认证和退出错误。
+注册表在创建 Copilot session 前持久绑定 route、worktree 和 session ID；
+已绑定的 session 若未出现在 SDK 列表或创建请求的结果不明，不会创建
+替代 session。确认旧 session 已失效且没有活跃 route owner 后才能显式
+忘记绑定；这不授权重投未确认的消息。单元测试覆盖缺席列表及不确定创建
+失败，真实断线后的 session 存活状态仍需进一步实测。
 
 ### I-S04: 接入本地交互事件并验证恢复
 
