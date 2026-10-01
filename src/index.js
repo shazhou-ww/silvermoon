@@ -97,24 +97,27 @@ async function inspectTree({
   });
   const eventHistoryConfig = observed.config?.version === 2 ? observed.config : null;
   if (observed.config?.version === 1) {
-    const commits = runGit(gitRoot, [
-      "log", "--first-parent", "--format=%H", version?.commit ?? "HEAD", "--", CONFIG_PATH,
-    ]);
-    if (!commits.ok) throw new Error("Cannot determine project format ancestry.");
-    for (const previous of commits.stdout.split("\n").filter(Boolean)) {
-      const previousConfig = await loadConfigSnapshot({ gitRoot, tree: previous });
-      if (previousConfig.config?.version !== 2) continue;
-      observed.observation.problems.push({
-        type: "idea.events.downgrade", summary: "A v2 event project cannot be downgraded to mutable v1 status.",
-      });
-      observed.observation.state = "check-unavailable";
-      return observed;
+    const currentCommit = version?.commit ?? "HEAD";
+    const current = runGit(gitRoot, ["cat-file", "-p", currentCommit]);
+    if (!current.ok) throw new Error("Cannot inspect the candidate's first parent.");
+    const parent = /^parent ([0-9a-f]+)$/m.exec(current.stdout.split("\n\n")[0])?.[1];
+    const base = version?.type === "worktree" || version?.type === "staged"
+      ? currentCommit : parent;
+    if (base) {
+      const previousConfig = await loadConfigSnapshot({ gitRoot, tree: base });
+      if (previousConfig.config?.version === 2) {
+        observed.observation.problems.push({
+          type: "idea.events.downgrade", summary: "A v2 event project cannot be downgraded to mutable v1 status.",
+        });
+        observed.observation.state = "check-unavailable";
+        return observed;
+      }
     }
   }
   if (eventHistoryConfig) {
     try {
       observed.observation.eventHistory = await inspectEventHistory({
-        root: gitRoot, tree, config: eventHistoryConfig, auditCandidate: true,
+        root: gitRoot, tree, config: eventHistoryConfig,
         commit: version?.commit ?? undefined,
         primary: version?.type === "remote" ? version.commit : undefined,
       });

@@ -11,6 +11,7 @@ import { parseIdeaEvents, serializeIdeaEvents } from "../../src/idea-events.js";
 import { worktreeSnapshot } from "../../src/git.js";
 import { migrateInternalEvents } from "../../src/migrate-internal-events.js";
 import { ideaPaths } from "../../src/layout.js";
+import { whatsNext } from "../../src/whatsnext.js";
 import { createRepository, FIRST_ID, SECOND_ID, git } from "../helpers/repository.js";
 
 const SOURCE_REPOSITORY = "https://github.com/shazhou-ww/silvermoon.git";
@@ -83,8 +84,10 @@ test("internal migration plans without writes and preserves legacy records acros
   publish(root, "Convert internal events");
   const report = await checkRepository({ root, remote: true });
   assert.equal(report.observation.state, "project-ready", JSON.stringify(report.observation));
-  assert.ok(report.response.validation.eventHistory.history.some(({ mode }) => mode === "migration-final"));
-  assert.ok(report.response.validation.eventHistory.history.some(({ mode }) => mode === "migration"));
+  assert.ok(report.response.validation.eventHistory.results.some(({ mode }) => mode === "migration-final"));
+  const legacyCommit = git(root, "rev-parse", "HEAD~1");
+  const legacyReport = await checkRepository({ root, commit: legacyCommit });
+  assert.ok(legacyReport.response.validation.eventHistory.results.some(({ mode }) => mode === "append"));
   await assert.rejects(migrateInternalEvents({ root }), /unsupported event type|legacy/);
   await writeFile(path, Buffer.concat([
     await readFile(path),
@@ -110,6 +113,22 @@ test("migration converts all ideas including empty logs and rejects partial conv
   const report = await checkRepository({ root, remote: true });
   assert.equal(report.observation.state, "check-unavailable");
   assert.match(report.observation.eventHistory.error, /exact type rename/);
+});
+
+test("navigation reports a checkout behind the migration before comparing event formats", async (t) => {
+  const root = await fixture(t);
+  git(root, "checkout", "-b", "behind");
+  git(root, "checkout", "main");
+  const plan = await migrateInternalEvents({ root });
+  await migrateInternalEvents({ root, apply: true, expectedDigest: plan.digest });
+  publish(root, "Convert internal events");
+  git(root, "checkout", "behind");
+  git(root, "branch", "--set-upstream-to", "origin/main", "behind");
+  const report = await whatsNext({ root });
+  assert.equal(report.observation.state, "repository-sync-required", JSON.stringify(report.observation));
+  assert.ok(report.observation.problems.some(({ type }) => type === "primary-behind"),
+    JSON.stringify(report.observation.problems));
+  assert.ok(!report.observation.problems.some(({ type }) => type === "idea.events.history-invalid"));
 });
 
 test("migration rejects invalid abandoned windows and empty-only ambiguous boundaries", async (t) => {
@@ -170,14 +189,21 @@ test("internal migration requires clean fetched primary and the exact plan diges
     /clean committed source/);
 });
 
-test("migration refuses an invalid legacy first-parent history", async (t) => {
+test("ordinary migration checks current state while explicit commit check detects a past rewrite", async (t) => {
   const root = await fixture(t);
   const path = join(root, ideaPaths(FIRST_ID).eventsPath);
+  const original = await readFile(path);
   await writeFile(path, serializeIdeaEvents([
     { sequence: 1, type: "alias.updated", payload: { alias: "rewritten" } },
   ], { legacy: true }));
   publish(root, "Rewrite legacy prefix");
-  await assert.rejects(migrateInternalEvents({ root }), /not-append-only/);
+  const rewritten = git(root, "rev-parse", "HEAD");
+  await writeFile(path, original);
+  publish(root, "Restore legacy prefix");
+  assert.equal((await migrateInternalEvents({ root })).outcome, "migration-planned");
+  const audit = await checkRepository({ root, commit: rewritten });
+  assert.equal(audit.observation.state, "check-unavailable");
+  assert.match(audit.observation.eventHistory.error, /not-append-only/);
 });
 
 test("final history refuses rewrites and repair after a failed reducer", async (t) => {

@@ -68,7 +68,7 @@ test("explicit migration preserves inventory and supplies check evidence for all
   git(root, "push", "origin", "main");
   const remote = await checkRepository({ root, remote: true });
   assert.equal(remote.observation.state, "project-ready", JSON.stringify(remote));
-  assert.ok(remote.response.validation.eventHistory.history.some(({ mode }) => mode === "migration"));
+  assert.ok(remote.response.validation.eventHistory.results.some(({ mode }) => mode === "migration"));
   assert.equal((await migrateEvents({ root })).outcome, "already-v2");
 });
 
@@ -199,7 +199,7 @@ test("two CLI processes cannot append different events at the same observed posi
   assert.equal((await replay(root)).reduction.state.sequence, 2);
 });
 
-test("revise preserves primary and demands a first-parent-safe merge before integrating rewritten commits", async (t) => {
+test("revise preserves primary while checks inspect only the selected commit boundary", async (t) => {
   const { root } = await fixture(t);
   await migrate(root);
   publish(root, "Migrate");
