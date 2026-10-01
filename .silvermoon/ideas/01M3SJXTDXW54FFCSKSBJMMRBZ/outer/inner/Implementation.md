@@ -77,7 +77,9 @@ schema 与 CLI 测试证实项目版本仍为 2，九种单词事件和原 paylo
 针对性测试、`pnpm check:commit`、`pnpm check`、Silvermoon
 `check --worktree` 和 `check --staged` 通过；同步的提交从
 刷新后的 primary 可达，没有自动发布或跨仓库旧格式迁移。
-实现候选的针对性测试共 30 项通过；`pnpm check:commit`、
+实现候选的针对性测试共 30 项通过；迁移后的 `pnpm check:commit`、
 `pnpm check`、`pnpm pack:check`、`node bin/silvermoon.js check --worktree`
-及 `node bin/silvermoon.js check --staged` 均已通过。迁移后的最终候选
-仍须复验、提交并从刷新后的 primary 确认可达；未自动发布 npm。
+及 `node bin/silvermoon.js check --staged` 均已通过。迁移提交
+`8c52d60f8f5e368aead419be86a6ecf9d7ceff5c` 经普通非 force
+推送后从刷新后的 primary 可达，集成快照的历史审计仍通过；
+没有自动发布 npm。
