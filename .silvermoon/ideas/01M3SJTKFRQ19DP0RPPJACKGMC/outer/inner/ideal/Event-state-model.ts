@@ -1,11 +1,6 @@
 // Ideal World 设计模型，不是生产入口。外层负责严格解析、授权及 Git 校验。
 export type GitOid = string;
 
-export type DecisionField =
-  | "approvedRevision"
-  | "implementationAcceptedRevision"
-  | "deploymentAcceptedRevision";
-
 export interface StatusProjection {
   readonly id: string;
   readonly alias?: string;
@@ -50,13 +45,6 @@ export type IdeaEvent = { readonly sequence: number } & (
   | {
       readonly type: "idea.resumed";
     }
-  | {
-      readonly type: "decision.retracted";
-      readonly payload: {
-        readonly field: DecisionField;
-        readonly expectedRevision: GitOid;
-      };
-    }
 );
 
 export interface EventState {
@@ -74,8 +62,7 @@ export type Lifecycle =
 export type Rejection =
   | "unsupported-event"
   | "sequence-conflict"
-  | "no-state-change"
-  | "stale-decision-target";
+  | "no-state-change";
 
 export type Reduction =
   | { readonly ok: true; readonly state: EventState }
@@ -168,14 +155,6 @@ export function reduceEvent(
       if (!status.abandoned) return reject("no-state-change");
       delete status.abandoned;
       break;
-    case "decision.retracted": {
-      const { field, expectedRevision } = event.payload;
-      if (status[field] !== expectedRevision) {
-        return reject("stale-decision-target");
-      }
-      delete status[field];
-      break;
-    }
     default: {
       const unreachable: never = event;
       void unreachable;
