@@ -101,10 +101,10 @@ Git 故障等内容由人或 Agent 解读，不定义 `outcome`、`summary` 或
 交给下游；放弃仍阻止派发，恢复不自动派发。球在下游时上游仍能连续追加
 `ping`，并非严格交替。
 
-球权与发送权限是两回事：`ping`、三个批准/验收事件以及
-`idea.abandoned`、`idea.resumed` 只允许上游发；`pong` 只允许
-下游发；`alias.updated`、`language.updated` 双方都可以发。普通 metadata
-变更不改变球权，人类决策事件仍须独立通过准确 revision 与显式授权的 gate。
+球权与发送权限是两回事：`ping`、三个批准/验收事件以及放弃、恢复事件
+只允许上游发；`pong` 只允许下游发；alias、language 更新双方都可以发。
+普通 metadata 变更不改变球权，人类决策事件仍须独立通过准确 revision
+与显式授权的 gate。
 追加入口必须从可信调用边界取得发送角色，不能从消息正文、事件自报角色
 或仅凭当前球权推断身份；若不能确认角色，拒绝写入而非默许。旧事件回放
 按其业务事实归约，不伪造历史发送者身份。
@@ -126,13 +126,15 @@ Git 故障等内容由人或 Agent 解读，不定义 `outcome`、`summary` 或
 - 独立 `.ts` 文件中的交互事件类型定义，供 CLI、状态投影和后续适配复用。
 - 每种权威事件的前置条件、完整 payload、状态迭代和无操作拒绝规则。
 - 现有 `event` 子命令对本地 `ping/pong` 事件的写入、回放及相应校验。
+- 一次性将既有事件名转换为单词 type 的受控版本迁移和历史等价校验。
 - 运行中允许追加指令的规则，以及不丢失未完成指令的状态恢复。
 - 合法未提交事件的卫生检查边界和 Git 阻塞下的求助、诊断通道。
 - 协议文档、skill 指引和不依赖真实 Agent 的行为证明。
 
 ### 范围外
 
-- 重新实现前置 idea 的事件存储、生命周期 reducer 或迁移工具。
+- 重新实现前置 idea 的事件存储或生命周期 reducer；除本次明确要求的
+  事件命名迁移外，不重做前置 idea 的旧格式迁移。
 - 真实 Agent 启动、session 管理、Copilot API 适配和完整执行日志。
 - 设备级 daemon、跨项目资源调度和常驻进程恢复。
 - 严格交替轮次、追加指令前必须停止的限制或跨设备锁服务。
@@ -161,12 +163,24 @@ Git 故障等内容由人或 Agent 解读，不定义 `outcome`、`summary` 或
 
 [交互协议类型与状态转移](./Interaction-protocol.ts) 是本 Ideal World 的
 可执行式配套设计，随本世界 revision 一起审阅，不是仓库运行时代码或第四份
-契约。其 `Before/After` 注释区分现有生命周期事件与新增的两种交互
-事件，并列出各个既有事件的发送角色。新增事件的 `type` 直接为 `ping`
-或 `pong`，payload 只含 `message`；其余事件保留既有结构。相同日志的
+契约。其 `Before/After` 注释列出全部事件的单词命名、发送角色及新增
+交互状态。新增事件的 `type` 为 `ping` 或 `pong`，payload 只含
+`message`；既有事件仅改 type，payload 和业务意义不变。相同日志的
 完整投影增加未回应消息与球权，不再增加 `ack`、指令 ID 或独立的
 `interaction` 命令组。
-已有事件名曾写入持久日志，保持不变；不为命名简化重写历史。
+既有七种事件按配套设计逐一重命名：`alias.updated` → `setAlias`、
+`language.updated` → `setLanguage`、`ideal.approved` → `approveIdeal`、
+`implementation.accepted` → `acceptImplementation`、
+`deployment.accepted` → `acceptDeployment`、`idea.abandoned` → `abandon`、
+`idea.resumed` → `resume`。这里的“单词”指无点号的单个 type token。
+
+这不是允许直接修改受保护的 `events.jsonl`：项目当前为 v2，健康的
+primary 前缀禁止重写。实施时需先交付独立的、显式授权的 v2 → v3
+迁移入口及版本边界历史校验，保留所有旧 Git 提交，再以新提交将项目
+中全部 idea 的现有日志一次性转换、验证前后事实投影完全一致；迁移后
+继续强制 append-only。并发或校验失败要保留原有事实并阻断，不从迁移
+推断新的批准/验收。普通查询和追加不得自动迁移；本次只修订契约，
+不执行迁移，也不绕过当前项目版本的检查。
 
 现有 `event replay/append` 需要扩展：交互追加只绑定本地日志长度、
 摘要和受信的调用角色，不以 primary fetch 或 commit 为前置条件。

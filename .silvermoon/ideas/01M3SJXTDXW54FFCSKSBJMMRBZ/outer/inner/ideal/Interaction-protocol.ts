@@ -1,10 +1,10 @@
 /**
  * 理想世界的协议设计，不是当前运行时代码。
- * Before: v2 events.jsonl 只有生命周期事件；回放结果为
+ * Before: v2 events.jsonl 有七种点分事件；回放结果为
  *   { status: { id, ...原 status 字段 }, sequence }。
- * After: 原 status 和 sequence 不变；同一日志新增 ping/pong 两种
- *   事件，完整回放结果再包含 interaction。不创建第二份权威。
- *   所有已有事件只增加写入时的发送权限校验，不改其 payload 或归约。
+ * After: 显式版本迁移将七种既有事件改为单词 type，再新增 ping/pong；
+ *   保留原 payload、sequence、status 语义，完整回放增加 interaction。
+ *   不创建第二份权威，也不改写 Git 中已存在的旧提交。
  */
 
 export type Ulid = string;
@@ -12,8 +12,8 @@ export type GitObjectId = string;
 export type Sender = "upstream" | "downstream";
 export type Permission = Sender | "both";
 
-/** Before 的七种业务事件；After 仅为它们定义发送方权限，不另设 tap。 */
-export type ExistingEventType =
+/** Before: 已写入 v2 日志的事件名；迁移入口专用，不再接受为新写入请求。 */
+export type LegacyEventType =
   | "alias.updated"
   | "language.updated"
   | "ideal.approved"
@@ -21,6 +21,19 @@ export type ExistingEventType =
   | "deployment.accepted"
   | "idea.abandoned"
   | "idea.resumed";
+
+/** After: 每个 type 是一个不含分隔符的 token，payload 与旧事件完全相同。 */
+export const EVENT_RENAMES = {
+  "alias.updated": "setAlias",
+  "language.updated": "setLanguage",
+  "ideal.approved": "approveIdeal",
+  "implementation.accepted": "acceptImplementation",
+  "deployment.accepted": "acceptDeployment",
+  "idea.abandoned": "abandon",
+  "idea.resumed": "resume",
+} as const satisfies Record<LegacyEventType, string>;
+
+export type ExistingEventType = (typeof EVENT_RENAMES)[LegacyEventType];
 
 /** Before/After 均保留的 v2 status 字段；世界 revision 仍由观察决定。 */
 export interface StatusProjection {
@@ -53,7 +66,7 @@ export interface IdeaStateProjection {
   readonly interaction: InteractionProjection;
 }
 
-/** Before 的记录已有 sequence/type/payload；After 只新增单词 type。 */
+/** Before 的记录已有 sequence/type/payload；After 两种新增 type 也是单词。 */
 export type InteractionEvent = {
   readonly sequence: number;
   readonly type: "ping" | "pong";
@@ -61,18 +74,18 @@ export type InteractionEvent = {
 };
 
 /**
- * After 新增的权限规则。upstream/downstream/both 仅约束谁可写入，
+ * After 的权限规则。upstream/downstream/both 仅约束谁可写入，
  * 不等同于球权；三个决策与放弃/恢复仍需单独的人类授权校验。
  * 旧日志不含发送者身份，回放不凭空断言历史记录由谁写入。
  */
 export const EVENT_PERMISSIONS = {
-  "alias.updated": "both",
-  "language.updated": "both",
-  "ideal.approved": "upstream",
-  "implementation.accepted": "upstream",
-  "deployment.accepted": "upstream",
-  "idea.abandoned": "upstream",
-  "idea.resumed": "upstream",
+  setAlias: "both",
+  setLanguage: "both",
+  approveIdeal: "upstream",
+  acceptImplementation: "upstream",
+  acceptDeployment: "upstream",
+  abandon: "upstream",
+  resume: "upstream",
   ping: "upstream",
   pong: "downstream",
 } as const satisfies Record<ExistingEventType | InteractionEvent["type"], Permission>;
@@ -158,7 +171,7 @@ export function transitionInteraction(
 /**
  * 只有两种状态变化：ping 在日志中新增一条未回应的消息；pong 回应
  * 前一完整投影中所有未回应的 ping，并清空该集合。下一条 ping 不受旧
- * pong 影响。只有这两类事件更新 lastSignal；所有既有业务事件（包括
+ * pong 影响。只有这两类事件更新 lastSignal；迁移后的业务事件（包括
  * 准确 revision 的批准/验收、放弃/恢复）都不交球。若上游完成决定后
  * 要把工作交给下游，必须另写 ping；已放弃状态先于路由阻止派发。
  * 消息内容是供人或 Agent 阅读的字符串，不解析结果类型。
@@ -170,6 +183,15 @@ export function transitionInteraction(
  * 重新观察再提交 pong：不可把旧响应自动扩展到并发新增的 ping。
  * 仅在原前态后已写入准确相同的请求时，重试返回原结果；其余
  * 长度/摘要冲突必须重新观察，不能误认后来相同 message 为同一请求。
- * 生命周期决策仍要求准确 primary、世界 revision 和人类授权；
- * 原有事务恢复、schema 与 append-only 历史检查继续有效。
+ * 生命周期决策仍要求准确 primary、世界 revision 和人类授权。
+ *
+ * 显式一次性 v2 -> v3 迁移：冻结并观察 primary，先验证每个 v2 日志
+ * 可完整归约；逐条只改 type（EVENT_RENAMES），保持顺序、sequence、
+ * payload 和最终 status。用 v3 schema 与归约重验所有 idea 后，在
+ * 同一可恢复事务中切换所有日志与项目版本；只允许经独立校验的版本
+ * 边界突破旧日志的字节前缀，立即重新启用 append-only 保护。
+ * Git 历史旧提交仍按 v2 解释，迁移 commit 按 v2 -> v3 验证逐条
+ * 等价；绝不重写 Git 历史、直接手工编辑 JSONL 或推断新的人工决定。
+ * 无法验证的日志、并发 primary 变化或中断必须阻断并明确恢复；
+ * 老版运行时不能误读 v3。普通命令不自动触发迁移。
  */
