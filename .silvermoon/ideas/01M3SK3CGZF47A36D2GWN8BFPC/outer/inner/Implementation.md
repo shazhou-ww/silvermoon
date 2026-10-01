@@ -26,6 +26,17 @@
 本机注册、独立 worktree、真实 Copilot session、一次 `queued` 后
 `unknown` 的投递观察及最终预期回复均成功；该项目与本仓库隔离，
 不授予工具权限，测试后清理。它不替代完整故障验收。
+故障注入测试覆盖 aborted idle、`session.error` 与 `session.shutdown`：
+过程消息不能冒充正式回复；待收的回复流明确失败，后续发送只报告未知，
+`start` 不会暗中替换故障 session。注入不确定的 SDK 发送失败后也清除
+旧的 idle 状态且阻止盲目重试。此测试不证明真实进程断线后的输出可恢复。
+受控实测命令
+`SILVERMOON_REAL_COPILOT=1 node --test test/integration/copilot-runtime-live.test.js`
+通过：在一次性 Git 项目中，拒绝全部工具权限，项目版本 CLI 按准确日志
+前态写入两次 `ping`，同一真实 Copilot session 两轮各返回预期标识，
+项目版本 CLI 追加两次 `pong` 后回放四条有序消息；无 daemon，也未保存
+完整对话到本仓库。普通测试跳过在线用例。它不证明运行中 steering、
+断线恢复、Git 诊断或工具副作用去重。
 官方
 [steering/queueing 文档](https://github.com/github/copilot-sdk/blob/main/docs/features/steering-and-queueing.md)
 说明 `immediate` 可在时机错过时转排队，`send` 的消息 ID 仅证明接收；

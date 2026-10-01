@@ -31,6 +31,11 @@ const command = args[0];
 const content = args.includes("--input") ? JSON.parse(require("node:fs").readFileSync(args[args.indexOf("--input") + 1], "utf8")) : null;
 const operation = command === "event" ? args[1] : undefined;
 const idea = args[command === "event" ? 2 : 1];
+if (content?.payload?.message === "transport-failure") process.exit(2);
+if (content?.payload?.message === "invalid-json") {
+  console.log("not a report");
+  process.exit(0);
+}
 console.log(JSON.stringify({
   intention: { command, args: { idea, operation: content?.payload?.message === "wrong-operation" ? "revise" : operation } },
   observation: command === "event"
@@ -65,6 +70,12 @@ if (content?.payload?.message === "fail") process.exitCode = 1;
     await assert.rejects(runtime.appendInteraction(routes[0], {
       type: "pong", message: "wrong-operation", expectedLength: 0, expectedDigest: "0".repeat(64),
     }), /does not support report protocol/);
+    await assert.rejects(runtime.appendInteraction(routes[0], {
+      type: "pong", message: "transport-failure", expectedLength: 0, expectedDigest: "0".repeat(64),
+    }), /Project runtime event failed/);
+    await assert.rejects(runtime.appendInteraction(routes[0], {
+      type: "pong", message: "invalid-json", expectedLength: 0, expectedDigest: "0".repeat(64),
+    }), /invalid JSON/);
     await assert.rejects(runtime.appendInteraction(routes[0], {
       type: "acceptIdeal", message: "yes", expectedLength: 0, expectedDigest: "0".repeat(64),
     }), TypeError);

@@ -61,6 +61,7 @@ export interface AgentAdapter {
 export class LocalProjectRegistry {
   constructor(options?: { root?: string });
   register(projectUrl: string, projectRoot: string): Promise<void>;
+  projectRoot(route: IdeaRoute): Promise<string>;
   resolve(route: IdeaRoute): Promise<string>;
   acquire(route: IdeaRoute): Promise<() => Promise<void>>;
   recover(route: IdeaRoute, options: { confirmStopped: true }): Promise<void>;

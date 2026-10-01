@@ -197,6 +197,13 @@ returns an asynchronous stream of delivery observations, while `events`
 returns only final Agent replies and `observe` returns session and activity
 observations. Call `close()` to release connections; it does not delete
 session history or worktrees.
+An aborted turn or session error fails the formal reply stream, and a
+shutdown reports the session as `gone`; partial messages and subsequent
+idle notifications do not become final replies. Further sends report
+`unknown` and `start` cannot silently replace the failed session. Reconcile
+the project log and session state before explicit recovery.
+An uncertain SDK send similarly invalidates the current observation and
+reply stream; retrying the same message on that route does not send it again.
 
 The SDK acknowledges *acceptance*, not per-message consumption. Consequently
 the adapter reports `queued` followed by `unknown`; it does not claim
@@ -226,6 +233,14 @@ report (`exitCode: 1`); no v2 event support is inferred from `next(route)`.
 Unsupported CLI/report versions, missing installations, and process failures
 are explicit errors. The caller still owns the loop, decision authorization,
 and the safe correlation of delivery and reply observations.
+
+For an isolated, opt-in live acceptance run (requires an authenticated
+Copilot CLI), use
+`SILVERMOON_REAL_COPILOT=1 node --test test/integration/copilot-runtime-live.test.js`.
+This creates and removes a disposable Git project and idea worktree, denies
+tool permissions, and checks two sequential `ping`/reply/`pong` handoffs in
+one session. Normal test runs skip the live case; it does not establish
+in-flight disconnect recovery, side-effect deduplication, or Git repair.
 
 ## Public Commands
 

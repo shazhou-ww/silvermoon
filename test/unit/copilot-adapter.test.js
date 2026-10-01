@@ -28,6 +28,7 @@ class FakeSession {
   }
 
   async send(options) {
+    if (this.sendError) throw this.sendError;
     this.messages.push(options);
     return `message-${this.messages.length}`;
   }
@@ -148,3 +149,62 @@ test("reports send acceptance without claiming per-message processing", async ()
     }, TypeError);
   });
 });
+
+test("an uncertain send invalidates observed state and does not permit blind retry", async () => {
+  await fixture(async ({ adapter, client, route }) => {
+    await adapter.start(route);
+    const session = [...client.sessions.values()][0];
+    session.emit("session.idle");
+    const observations = adapter.observe(route)[Symbol.asyncIterator]();
+    assert.equal((await nextWithin(observations)).value.state, "idle");
+    const replies = adapter.events(route)[Symbol.asyncIterator]();
+    const pending = assert.rejects(replies.next(), /delivery cannot be confirmed/);
+    await new Promise((resolve) => setImmediate(resolve));
+    session.sendError = new Error("connection lost");
+    const delivery = [];
+    for await (const result of adapter.send(route, "first")) delivery.push(result);
+    assert.deepEqual(delivery.map(({ state }) => state), ["unknown"]);
+    assert.equal((await nextWithin(observations)).value.state, "unknown");
+    await pending;
+    session.sendError = undefined;
+    const again = [];
+    for await (const result of adapter.send(route, "first")) again.push(result);
+    assert.deepEqual(again.map(({ state }) => state), ["unknown"]);
+    assert.equal(session.messages.length, 0);
+    await observations.return();
+    await replies.return();
+  });
+});
+
+for (const [eventType, data, state] of [
+  ["session.idle", { aborted: true }, "unknown"],
+  ["session.error", { message: "connection lost" }, "unknown"],
+  ["session.shutdown", { shutdownType: "normal" }, "gone"],
+]) {
+  test(`${eventType} stops reply waiting without assuming the turn completed`, async () => {
+    await fixture(async ({ adapter, client, route }) => {
+      await adapter.start(route);
+      const session = [...client.sessions.values()][0];
+      const observations = adapter.observe(route)[Symbol.asyncIterator]();
+      const replies = adapter.events(route)[Symbol.asyncIterator]();
+      await nextWithin(observations);
+      const pending = assert.rejects(replies.next(), /aborted turn|connection lost|shut down/);
+      await new Promise((resolve) => setImmediate(resolve));
+      session.emit("assistant.message", { content: "unconfirmed reply" });
+      session.emit(eventType, data);
+      assert.equal((await nextWithin(observations)).value.type, "message");
+      assert.equal((await nextWithin(observations)).value.state, state);
+      await pending;
+      session.emit("session.idle");
+      await assert.rejects(nextWithin(adapter.events(route)), /aborted turn|connection lost|shut down/);
+      const deliveries = [];
+      for await (const item of adapter.send(route, "do not replay")) deliveries.push(item);
+      assert.equal(deliveries.length, 1);
+      assert.equal(deliveries[0].state, "unknown");
+      assert.equal(session.messages.length, 0);
+      await assert.rejects(adapter.start(route), /aborted turn|connection lost|shut down/);
+      await observations.return();
+      await replies.return();
+    });
+  });
+}

@@ -68,8 +68,16 @@ function formatDetail(value) {
   return typeof value === "string" ? value : JSON.stringify(value);
 }
 
+function failReplies(entry, reason) {
+  entry.fault = new Error(reason);
+  for (const queue of entry.replies) queue.fail(entry.fault);
+  entry.replies.clear();
+  entry.lastMessage = undefined;
+}
+
 function onSessionEvent(entry, event) {
   const { type, data } = event;
+  if (entry.fault && type !== "session.shutdown") return;
   if (type === "assistant.turn_start" && !event.agentId) {
     entry.state = { type: "session", state: "running" };
     for (const queue of entry.observers) queue.push(entry.state);
@@ -83,17 +91,20 @@ function onSessionEvent(entry, event) {
       ? { type: "session", state: "unknown", reason: "Copilot reported an aborted turn." }
       : { type: "session", state: "idle" };
     for (const queue of entry.observers) queue.push(entry.state);
-    if (!data.aborted && entry.lastMessage) {
+    if (data.aborted) {
+      failReplies(entry, entry.state.reason);
+    } else if (entry.lastMessage) {
       for (const queue of entry.replies) queue.push(entry.lastMessage);
     }
     entry.lastMessage = undefined;
   } else if (type === "session.error") {
     entry.state = { type: "session", state: "unknown", reason: data.message };
-    entry.fault = new Error(data.message);
     for (const queue of entry.observers) queue.push(entry.state);
-    for (const queue of entry.replies) queue.fail(entry.fault);
-    entry.replies.clear();
-    entry.lastMessage = undefined;
+    failReplies(entry, data.message);
+  } else if (type === "session.shutdown") {
+    entry.state = { type: "session", state: "gone" };
+    for (const queue of entry.observers) queue.push(entry.state);
+    failReplies(entry, "Copilot session shut down; replies may have been missed.");
   } else if (type === "tool.execution_start" || type === "tool.execution_complete") {
     if (type === "tool.execution_start") entry.lastMessage = undefined;
     const base = { toolCallId: data.toolCallId, name: data.toolName ?? "unknown" };
@@ -142,7 +153,9 @@ export class CopilotAdapter {
     if (this.#closed) throw new Error("CopilotAdapter is closed.");
     const identified = canonicalRoute(route);
     const id = routeId(identified);
-    if (this.#routes.has(id)) return;
+    const active = this.#routes.get(id);
+    if (active?.fault) throw active.fault;
+    if (active) return;
     if (this.#starting.has(id)) return this.#starting.get(id);
     const pending = this.#startSession(identified, id);
     this.#starting.set(id, pending);
@@ -243,10 +256,18 @@ export class CopilotAdapter {
   async *send(route, message) {
     if (typeof message !== "string" || !message.trim()) throw new TypeError("message must be nonempty.");
     const entry = await this.#entry(route);
+    if (entry.fault) {
+      yield { state: "unknown", reason: `Copilot session cannot accept another message: ${entry.fault.message}` };
+      return;
+    }
     try {
       await entry.session.send({ prompt: message, mode: "immediate" });
     } catch (error) {
-      yield { state: "unknown", reason: `Copilot send failed; delivery cannot be confirmed: ${error.message}` };
+      const reason = `Copilot send failed; delivery cannot be confirmed: ${error.message}`;
+      entry.state = { type: "session", state: "unknown", reason };
+      for (const queue of entry.observers) queue.push(entry.state);
+      failReplies(entry, reason);
+      yield { state: "unknown", reason };
       return;
     }
     yield { state: "queued", boundary: "Copilot accepted the message; immediate steering may become queued." };
