@@ -45,6 +45,11 @@ Silvermoon 提供统一适配边界，并内置 GitHub Copilot CLI 的启动、�
 每个 session 明确关联项目、工作区和 idea，避免把消息或执行结果投递到
 错误上下文。同一 idea 的多轮交互尽量复用同一 session；失效时才新建，
 并明确恢复依据，不把新 session 冒充原有会话。
+对调用方的 Agent 消息路由只使用项目规范化的唯一 remote URL 与 idea ID，
+不传 worktree 路径或 Agent session ID。适配器通过本机项目注册表定位
+项目，创建或定位该 idea 的唯一执行 worktree，并持久保存 worktree、
+session 与路由的关联。未知项目、重复注册和路径迁移须显式处理，不能
+把相同 remote 的不同本地工作区当成不同项目或暗中改投其他会话。
 
 ### 运行中追加指令与求助
 
@@ -90,6 +95,8 @@ Git 阻塞后的诊断指令仍可执行。该验证不需要先建设跨项目�
 - 项目流程判断与调用方执行的职责分界及结构化结果。
 - 统一 Agent 适配边界和首个 GitHub Copilot CLI 适配器。
 - session 关联、复用、重建与状态报告，以及运行中指令的真实送达。
+- 本机项目注册表到单 idea worktree 的定位与持久关联；不依赖 daemon
+  维护第二份 worktree 路由事实。
 - 单次执行恢复、求助和 Git 诊断指令的端到端证明。
 - 相应文档、skill 指引和无需 daemon 的受控验收场景。
 

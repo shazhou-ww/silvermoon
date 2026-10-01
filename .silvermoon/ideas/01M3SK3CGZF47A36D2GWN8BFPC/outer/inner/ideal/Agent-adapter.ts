@@ -5,11 +5,11 @@
  */
 
 /**
- * worktreePath 指定项目及执行位置；同一 idea 同时只关联一个 worktree。
- * 路径迁移须显式处理，不能被视为一个全新的 idea。
+ * projectUrl 是本机项目注册表中规范化的唯一 remote URL；
+ * ideaId 定位该项目中的 idea。路由不包含 worktree 或 Agent session ID。
  */
 export interface IdeaRoute {
-  readonly worktreePath: string;
+  readonly projectUrl: string;
   readonly ideaId: string;
 }
 
@@ -60,9 +60,11 @@ export type SessionObservation =
     };
 
 /**
- * Agent session ID 是适配器内部细节。适配器持久保存 route 到 session 的
- * 关联并在进程重启后恢复；同一 route 同时至多有一个有效 session。
- * 无法确认旧 session 是否仍有效时，不得暗中创建替代会话。
+ * 适配器通过本机项目注册表找到 projectUrl 对应的项目，首次使用时
+ * 创建或定位 idea 的 worktree，并持久保存 route 到 worktree 和 Agent
+ * session 的关联。工作区迁移必须显式处理，不视为新 idea。
+ * 同一 route 同时至多有一个执行 worktree 和有效 session；若项目未
+ * 注册、映射冲突或无法确认旧 session 状态，不得暗中创建替代会话。
  */
 export interface AgentAdapter {
   capabilities(): Promise<AdapterCapabilities>;
