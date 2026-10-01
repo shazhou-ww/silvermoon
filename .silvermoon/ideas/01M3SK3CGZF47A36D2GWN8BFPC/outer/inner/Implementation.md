@@ -2,25 +2,95 @@
 
 ## Steps
 
-<!--
-为每个步骤分配稳定的 I-Sxx 标识符和三级标题。
-说明修改内容、边界和重要设计细节。
-不要在本文档中使用任务列表复选框。
--->
+### I-S01: 实测 Copilot SDK 的运行与恢复边界
 
-### I-S01: 待理想契约批准后细化实施步骤
+在隔离的测试工作区和明确的权限设置下，使用拟采用版本的
+`@github/copilot-sdk` 与真实 Copilot CLI，验证多 session、指定工作目录、
+会话复用与重启后恢复、运行中的 `immediate` 与 `enqueue`、消息及工具观察、
+认证失败和连接中断。记录 `send` 接收确认与实际处理的区别、
+`immediate` 转排队的边界、恢复时未完成工作的状态和是否会遗漏正式回复。
+只发送不含仓库私有内容的可控指令；不保存完整对话。
 
-当前仅记录理想契约；批准准确的 ideal revision 后再制定实施步骤，
-优先明确真实 Copilot 能力验证和前置协议集成的边界。
+初步调查：本机 `copilot --version` 为 `1.0.11`，在独立目录执行无工具的
+`copilot -p` 请求成功，返回预期文本、无代码修改。隔离目录中使用
+`@github/copilot-sdk@1.0.16` 的实际请求进一步验证：一个 session 收到
+消息 ID 确认和 `user.message`、`assistant.message`、`session.idle`，
+断开并恢复后相同 session ID 可继续返回预期文本；另一次测试在
+`assistant.turn_start` 后追加 `mode: "immediate"`，两条请求均收到确认，
+一次 Agent 回复采纳了后续指令。测试未开放工具权限，未接触仓库文件。
+这些结果仍不证明断线期间恢复执行、并发排队、工具观察和副作用去重。
+官方
+[steering/queueing 文档](https://github.com/github/copilot-sdk/blob/main/docs/features/steering-and-queueing.md)
+说明 `immediate` 可在时机错过时转排队，`send` 的消息 ID 仅证明接收；
+[session persistence 文档](https://github.com/github/copilot-sdk/blob/main/docs/features/session-persistence.md)
+说明恢复与缺少内建 session 锁；
+[streaming events 文档](https://github.com/github/copilot-sdk/blob/main/docs/features/streaming-events.md)
+区分持久事件与恢复后不会重放的临时事件。未实测的能力仍不得宣称支持。
+
+### I-S02: 实现隔离的项目运行时协议
+
+在同一 Silvermoon 包中增加项目版本运行时的发现、启动与结构化消息边界。
+只有项目对应版本的 `whats-next` 判断正常流程；调用方负责循环、执行和将
+执行结果通过该项目版本的事件子命令交回。协议协商显式拒绝不支持的版本
+和能力，不让调用方重新解释项目 schema。无 daemon 的受控调用方复用
+同一边界。
+
+### I-S03: 实现单实例 Agent 接口和 Copilot 适配器
+
+在本仓库独立模块实现 [接口设计契约](./ideal/Agent-adapter.ts)，供未来每种
+Agent 单实例管理多个 route。为现有 JavaScript 运行时提供实际可导入的
+模块，并保留可供调用方检查的 TypeScript 类型契约。适配器持久保存
+worktree/idea 到真实 session 的映射；同一路由不并发开启第二执行者，
+无法确认旧 session 状态时不暗中替换。`send`、`events`、`observe` 并行
+工作；`observe` 只宣称实测可提供的粒度。不能从 SDK 的接收确认推断
+`processed`，不确定时报告 `unknown`；处理权限、认证和退出错误。
+
+### I-S04: 接入本地交互事件并验证恢复
+
+依赖 `event-state-model` 和 `local-agent-handoff` 的真实项目行为，以准确
+日志长度/摘要调用项目版本事件子命令追加 `ping/pong`，只由本地事件确定
+待处理消息。适配器反馈不是第二份项目权威。连续 `ping`、并发旧 `pong`、
+断线与进程退出均需先重新观察，不能自动重复投递或扩大回复范围。
+Agent 求助和 Git 提交阻塞后追加诊断指令均在同一 session 验证。
+
+### I-S05: 完成受控验收和使用指引
+
+为协议、适配器、调用方及跨版本行为增加针对性测试；对真实 Copilot
+执行一次不依赖 daemon 的受控验收。更新对应文档及 skill，明确认证、
+权限、观察档次、恢复不确定性与不支持能力的处理，不宣称仅用 mock
+完成真实适配。
 
 ## Acceptance criteria
 
-<!--
-为每项标准分配稳定的 I-ACxx 标识符和三级标题。
-同时说明可观察结果及其证明方法。
-不要创建单独的验证章节，也不要使用任务列表复选框。
--->
+### I-AC01: 真实 Copilot 能力和限制有可重复证据
 
-### I-AC01: 待理想契约批准后细化实施验收标准
+真实 SDK/CLI 测试分别记录 session 创建与恢复、运行中追加消息的接收及
+处理边界、输出和工具活动、进程/连接故障；每项标记实测通过、不支持或
+未能确认。已实测的无工具 SDK 创建、恢复和一次运行中追加只是部分证据，
+不等同于故障恢复、工具可视化或完整送达保证。
 
-实施阶段再定义可观察结果及证明方法；当前没有实施完成或验收事实。
+### I-AC02: 项目版本独立解释流程
+
+受控测试以两个不同 Silvermoon 版本或项目 schema 的进程运行时取得各自
+结构化结果；调用方不读取项目事件来决定生命周期，未知协议能力显式报错。
+用跨版本集成测试和运行时异常测试证明。
+
+### I-AC03: 单实例适配器安全复用会话
+
+多 route 在一个适配器实例中互不串话；同一 idea 多轮复用一个 session；
+重启后恢复原关联，确实失效才显式重建。`send` 投递状态和 `observe`
+档次与实测 Copilot 能力一致，过程消息不混入正式 `pong`。以隔离工作区
+真实测试及错误注入测试证明。
+
+### I-AC04: 全双工交互不会重放副作用
+
+运行中连续 `ping` 可投递给同一执行者，一个旧 `pong` 不消去后来的
+`ping`；连接丢失、结果不明和重复观察都不触发盲目重发或重复追加。
+Git 阻塞后同一 session 接收“暂缓提交，先调查 Git”并执行或显式报告
+阻塞。以真实交互和可控竞争/故障测试证明。
+
+### I-AC05: 交付的包可由调用方使用
+
+统一接口及 Copilot 适配模块可从本仓库发布包导入，类型声明与实际
+JavaScript 行为一致；现有 CLI 与无状态 `whats-next` 独立可用。
+运行相关测试、`pnpm check:sanity` 和 `pnpm check`，记录准确结果。
