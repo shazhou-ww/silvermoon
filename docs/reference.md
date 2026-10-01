@@ -215,6 +215,8 @@ It resolves the registered project's own installed Silvermoon CLI (or this
 source checkout's entrypoint), starts it in a separate process with the
 idea worktree as its working directory, and returns its structured report
 with `exitCode` (0 for success, 1 for a structured invalid/unavailable report).
+Reports with an unexpected command, idea, event operation, or malformed
+event receipt are rejected rather than treated as successful capabilities.
 `next(route)` calls only that project's `whats-next`; it does not reproduce
 Silvermoon's lifecycle rules. `replay(route)` observes the local event log;
 `appendInteraction(route, { type, message, expectedLength, expectedDigest })`

@@ -24,7 +24,7 @@ async function cliPath(projectRoot) {
   }
 }
 
-function decodeReport(output, command, exitCode) {
+function decodeReport(output, command, operation, ideaId, exitCode) {
   let report;
   try {
     report = JSON.parse(output);
@@ -32,7 +32,16 @@ function decodeReport(output, command, exitCode) {
     throw new Error(`Project runtime returned invalid JSON for ${command}.`);
   }
   if (!report || typeof report !== "object" || report.intention?.command !== command
-    || !report.observation || !report.response || !report.actions) {
+    || report.intention.args?.idea !== ideaId
+    || (operation && report.intention.args?.operation !== operation)
+    || !report.observation || typeof report.observation.state !== "string"
+    || !report.response || !Array.isArray(report.response.nextSteps)
+    || !Array.isArray(report.actions)
+    || (command === "event" && report.observation.state === "event-result"
+      && (report.observation.receipt?.id !== ideaId
+        || typeof report.observation.receipt.outcome !== "string"
+        || !Number.isSafeInteger(report.observation.receipt.length)
+        || !/^[a-f0-9]{64}$/.test(report.observation.receipt.digest ?? "")))) {
     throw new Error(`Project runtime does not support report protocol ${PROTOCOL_VERSION} for ${command}.`);
   }
   return { protocolVersion: PROTOCOL_VERSION, exitCode, report };
@@ -68,7 +77,7 @@ export class ProjectRuntime {
       stdout = error.stdout;
       exitCode = 1;
     }
-    return decodeReport(stdout, command, exitCode);
+    return decodeReport(stdout, command, command === "event" ? args[0] : undefined, canonical.ideaId, exitCode);
   }
 
   /** The project version alone decides what should happen next. */

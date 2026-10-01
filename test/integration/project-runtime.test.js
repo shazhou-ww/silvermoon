@@ -1,11 +1,14 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 
 import { ProjectRuntime } from "../../src/agents/project-runtime.js";
+import { LocalProjectRegistry } from "../../src/agents/project-registry.js";
+import { migrateEvents } from "../../src/migrate-events.js";
+import { createRepository, FIRST_ID, git, PRIMARY_REPOSITORY } from "../helpers/repository.js";
 
 const ROUTE = { projectUrl: "https://github.com/example/project.git", ideaId: "01M3SK3CGZF47A36D2GWN8BFPC" };
 const sourceRoot = fileURLToPath(new URL("../..", import.meta.url));
@@ -26,9 +29,16 @@ test("dispatches to each project's own isolated CLI and relays its report", asyn
 const args = process.argv.slice(2);
 const command = args[0];
 const content = args.includes("--input") ? JSON.parse(require("node:fs").readFileSync(args[args.indexOf("--input") + 1], "utf8")) : null;
+const operation = command === "event" ? args[1] : undefined;
+const idea = args[command === "event" ? 2 : 1];
 console.log(JSON.stringify({
-  intention: { command }, observation: { state: "${index}", content },
-  actions: {}, response: { nextSteps: ["${index}"] }
+  intention: { command, args: { idea, operation: content?.payload?.message === "wrong-operation" ? "revise" : operation } },
+  observation: command === "event"
+    ? { state: "event-result", content, receipt: {
+      id: idea, outcome: "observed", length: 0, digest: "0".repeat(64)
+    } }
+    : { state: "idea-selected" },
+  actions: [], response: { nextSteps: ["${index}"] }
 }));
 if (content?.payload?.message === "fail") process.exitCode = 1;
 `);
@@ -53,6 +63,9 @@ if (content?.payload?.message === "fail") process.exitCode = 1;
     assert.equal(unavailable.report.response.nextSteps[0], "0");
     assert.equal(unavailable.exitCode, 1);
     await assert.rejects(runtime.appendInteraction(routes[0], {
+      type: "pong", message: "wrong-operation", expectedLength: 0, expectedDigest: "0".repeat(64),
+    }), /does not support report protocol/);
+    await assert.rejects(runtime.appendInteraction(routes[0], {
       type: "acceptIdeal", message: "yes", expectedLength: 0, expectedDigest: "0".repeat(64),
     }), TypeError);
   } finally {
@@ -70,4 +83,38 @@ test("runs this checkout's real event reader in a child process", async () => {
   });
   assert.equal(result.report.intention.command, "event");
   assert.equal(result.report.observation.receipt.id, ROUTE.ideaId);
+});
+
+test("real project CLI preserves exact interaction state across child processes", async (t) => {
+  const { base, root } = await createRepository();
+  t.after(() => rm(base, { recursive: true, force: true }));
+  const migration = await migrateEvents({ root });
+  await migrateEvents({ root, apply: true, expectedDigest: migration.digest });
+  git(root, "add", ".");
+  git(root, "commit", "-m", "Migrate fixture");
+  git(root, "push", "origin", "HEAD:main");
+  await writeFile(join(root, "package.json"), JSON.stringify({ name: "consumer" }));
+  await mkdir(join(root, "node_modules"), { recursive: true });
+  await symlink(sourceRoot, join(root, "node_modules", "silvermoon"), "dir");
+  const registry = new LocalProjectRegistry({ root: join(base, "registry") });
+  await registry.register(PRIMARY_REPOSITORY, root);
+  const route = { projectUrl: PRIMARY_REPOSITORY, ideaId: FIRST_ID };
+  const runtime = new ProjectRuntime({ registry });
+  const selected = await runtime.next(route);
+  assert.equal(selected.exitCode, 0);
+  assert.equal(selected.report.observation.state, "idea-selected");
+  const initial = await runtime.replay(route);
+  assert.equal(initial.exitCode, 0);
+  const before = initial.report.observation.receipt;
+  const request = {
+    type: "ping", message: "diagnose Git", expectedLength: before.length, expectedDigest: before.digest,
+  };
+  const written = await runtime.appendInteraction(route, request);
+  assert.equal(written.report.observation.receipt.outcome, "candidate-written");
+  assert.equal((await runtime.appendInteraction(route, request)).report.observation.receipt.outcome, "already-present");
+  const after = await runtime.replay(route);
+  assert.equal(after.report.observation.receipt.reduction.state.interaction.lastSignal, "ping");
+  const stale = await runtime.appendInteraction(route, { ...request, type: "pong", message: "old answer" });
+  assert.equal(stale.exitCode, 1);
+  assert.equal((await runtime.replay(route)).report.observation.receipt.length, after.report.observation.receipt.length);
 });
