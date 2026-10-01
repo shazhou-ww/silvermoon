@@ -1,2 +1,3 @@
 {"sequence":1,"type":"setAlias","payload":{"alias":"project-agent-runtime"}}
 {"sequence":2,"type":"acceptIdeal","payload":{"idealRevision":"49811345356892ed4bc7720a20e6a484013c162a"}}
+{"sequence":3,"type":"acceptIdeal","payload":{"idealRevision":"3941cde4d2452941840ec412d06a94ca370db90d"}}
