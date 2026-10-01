@@ -1,21 +1,13 @@
 /**
- * Ideal World contract for local ping/pong interaction events.
- *
- * This file is a reviewable protocol design, not the runtime implementation.
- * Persistence, canonical serialization, parent validation, append-only checks,
- * and migration remain owned by event-state-model.
+ * 理想世界中的本地 ping/pong 协议设计，不是运行时实现。
+ * 规范序列化、历史前缀校验和迁移继续由 event-state-model 负责。
  */
 
 export type Ulid = string;
 export type GitObjectId = string;
-export type Rfc3339Timestamp = string;
 
-/**
- * Exact in-memory projection previously represented by status.yaml.
- * Interaction events preserve these fields and extend the same idea state.
- */
-export interface LegacyStatusProjection {
-  readonly version: 1;
+/** 现有 v2 事件归约的 status 投影；世界 revision 仍由观察提供。 */
+export interface StatusProjection {
   readonly id: Ulid;
   readonly alias?: string;
   readonly language?: string;
@@ -51,7 +43,7 @@ export interface InstructionState {
   readonly instruction: string;
   readonly executionContextId: string;
   readonly status: InstructionStatus;
-  readonly statusEventId: Ulid;
+  readonly statusSequence: number;
   readonly responseId?: Ulid;
   readonly evidence: readonly EvidenceReference[];
 }
@@ -62,7 +54,7 @@ export interface PongState {
   readonly outcome: PongOutcome;
   readonly summary: string;
   readonly awaitingUpstream: boolean;
-  readonly stateEventId: Ulid;
+  readonly stateSequence: number;
   readonly evidence: readonly EvidenceReference[];
 }
 
@@ -74,7 +66,8 @@ export interface InteractionProjection {
 }
 
 export interface IdeaStateProjection {
-  readonly status: LegacyStatusProjection;
+  readonly status: StatusProjection;
+  readonly sequence: number;
   readonly interaction: InteractionProjection;
 }
 
@@ -84,27 +77,19 @@ export type InteractionEventType =
   | "interaction.instructions.processing"
   | "interaction.pong.returned";
 
-/**
- * Reducer-facing subset of the shared event-state-model envelope.
- * The implementation must import the shared envelope rather than define a
- * second persistence schema.
- */
+/** 现有 v2 记录的类型视图；实施时扩展共享事件联合类型，不另建 envelope。 */
 export interface InteractionEventEnvelope<
   TType extends InteractionEventType,
   TPayload,
 > {
-  readonly schemaVersion: 2;
-  readonly eventId: Ulid;
-  readonly ideaId: Ulid;
+  readonly sequence: number;
   readonly type: TType;
-  readonly parents: readonly Ulid[];
-  readonly recordedAt: Rfc3339Timestamp;
   readonly payload: TPayload;
 }
 
 export interface PongAcknowledgement {
   readonly responseId: Ulid;
-  readonly expectedStateEventId: Ulid;
+  readonly expectedStateSequence: number;
 }
 
 export interface PingAppendedPayload {
@@ -121,7 +106,7 @@ export interface InstructionTransitionTarget<
 > {
   readonly instructionId: Ulid;
   readonly expectedStatus: TStatus;
-  readonly expectedStatusEventId: Ulid;
+  readonly expectedStatusSequence: number;
 }
 
 export interface InstructionsDeliveredPayload {
@@ -174,6 +159,7 @@ export type InteractionEvent =
   | PongReturnedEvent;
 
 export type TransitionErrorCode =
+  | "sequence-conflict"
   | "duplicate-input"
   | "incomplete-event"
   | "unknown-instruction"
@@ -193,26 +179,29 @@ export class InteractionTransitionError extends Error {
 export function createEmptyInteractionProjection(): InteractionProjection {
   return {
     executionContextId: null,
-    instructions: {},
-    instructionIdByIdempotencyKey: {},
-    pongs: {},
+    instructions: Object.create(null) as Record<Ulid, InstructionState>,
+    instructionIdByIdempotencyKey: Object.create(null) as Record<string, Ulid>,
+    pongs: Object.create(null) as Record<Ulid, PongState>,
   };
 }
 
-/**
- * Applies exactly one accepted event.
- *
- * A duplicate command is resolved before append by returning its existing
- * result. Passing it here therefore fails rather than producing a no-op event.
- */
+export function createInitialIdeaState(ideaId: Ulid): IdeaStateProjection {
+  return {
+    status: { id: ideaId },
+    sequence: 0,
+    interaction: createEmptyInteractionProjection(),
+  };
+}
+
+/** 重试由追加入口返回既有结果；重复事件在归约时拒绝。 */
 export function transitionIdeaState(
   state: IdeaStateProjection,
   event: InteractionEvent,
 ): IdeaStateProjection {
-  if (event.ideaId !== state.status.id) {
+  if (!Number.isSafeInteger(event.sequence) || event.sequence !== state.sequence + 1) {
     throw new InteractionTransitionError(
-      "incomplete-event",
-      `Event idea ${event.ideaId} does not match ${state.status.id}.`,
+      "sequence-conflict",
+      `事件序号必须是 ${state.sequence + 1}。`,
     );
   }
 
@@ -245,6 +234,7 @@ export function transitionIdeaState(
 
   return {
     status: state.status,
+    sequence: event.sequence,
     interaction,
   };
 }
@@ -277,11 +267,12 @@ function cloneInteraction(
 ): MutableInteractionProjection {
   return {
     executionContextId: state.executionContextId,
-    instructions: { ...state.instructions },
-    instructionIdByIdempotencyKey: {
-      ...state.instructionIdByIdempotencyKey,
-    },
-    pongs: { ...state.pongs },
+    instructions: Object.assign(Object.create(null), state.instructions),
+    instructionIdByIdempotencyKey: Object.assign(
+      Object.create(null),
+      state.instructionIdByIdempotencyKey,
+    ),
+    pongs: Object.assign(Object.create(null), state.pongs),
   };
 }
 
@@ -298,7 +289,7 @@ function applyPing(
   if (state.instructions[payload.instructionId]) {
     throw new InteractionTransitionError(
       "duplicate-input",
-      `Instruction ${payload.instructionId} already exists.`,
+      `指令 ${payload.instructionId} 已存在。`,
     );
   }
 
@@ -307,7 +298,7 @@ function applyPing(
   if (duplicateInstructionId) {
     throw new InteractionTransitionError(
       "duplicate-input",
-      `Idempotency key already identifies ${duplicateInstructionId}.`,
+      `去重键已对应指令 ${duplicateInstructionId}。`,
     );
   }
 
@@ -318,21 +309,22 @@ function applyPing(
   );
 
   for (const acknowledgement of payload.acknowledges) {
+    requireSequence(acknowledgement.expectedStateSequence, "expectedStateSequence");
     const pong = state.pongs[acknowledgement.responseId];
     if (
       !pong ||
       !pong.awaitingUpstream ||
-      pong.stateEventId !== acknowledgement.expectedStateEventId
+      pong.stateSequence !== acknowledgement.expectedStateSequence
     ) {
       throw new InteractionTransitionError(
         "stale-transition",
-        `Pong ${acknowledgement.responseId} is absent, closed, or changed.`,
+        `响应 ${acknowledgement.responseId} 不存在、已关闭或已变化。`,
       );
     }
     state.pongs[acknowledgement.responseId] = {
       ...pong,
       awaitingUpstream: false,
-      stateEventId: event.eventId,
+      stateSequence: event.sequence,
     };
   }
 
@@ -342,7 +334,7 @@ function applyPing(
     instruction: payload.instruction,
     executionContextId: payload.executionContextId,
     status: "queued",
-    statusEventId: event.eventId,
+    statusSequence: event.sequence,
     evidence: payload.evidence,
   };
   state.instructionIdByIdempotencyKey[payload.idempotencyKey] =
@@ -359,15 +351,16 @@ function applyInstructionTransition(
   requireTargets(event.payload.targets);
 
   for (const target of event.payload.targets) {
+    requireSequence(target.expectedStatusSequence, "expectedStatusSequence");
     const instruction = requireInstruction(state, target.instructionId);
     if (
       instruction.status !== expectedStatus ||
       target.expectedStatus !== expectedStatus ||
-      instruction.statusEventId !== target.expectedStatusEventId
+      instruction.statusSequence !== target.expectedStatusSequence
     ) {
       throw new InteractionTransitionError(
         "stale-transition",
-        `Instruction ${target.instructionId} is not at the expected state.`,
+        `指令 ${target.instructionId} 不在预期状态。`,
       );
     }
   }
@@ -377,7 +370,7 @@ function applyInstructionTransition(
     state.instructions[target.instructionId] = {
       ...instruction,
       status: nextStatus,
-      statusEventId: event.eventId,
+      statusSequence: event.sequence,
       evidence: [...instruction.evidence, ...event.payload.evidence],
     };
   }
@@ -396,21 +389,22 @@ function applyPong(
   if (state.pongs[payload.responseId]) {
     throw new InteractionTransitionError(
       "duplicate-input",
-      `Pong ${payload.responseId} already exists.`,
+      `响应 ${payload.responseId} 已存在。`,
     );
   }
 
   for (const target of payload.targets) {
+    requireSequence(target.expectedStatusSequence, "expectedStatusSequence");
     const instruction = requireInstruction(state, target.instructionId);
     if (
       instruction.status !== target.expectedStatus ||
       (instruction.status !== "delivered" &&
         instruction.status !== "processing") ||
-      instruction.statusEventId !== target.expectedStatusEventId
+      instruction.statusSequence !== target.expectedStatusSequence
     ) {
       throw new InteractionTransitionError(
         "stale-transition",
-        `Instruction ${target.instructionId} cannot receive this pong.`,
+        `指令 ${target.instructionId} 不能接收该响应。`,
       );
     }
   }
@@ -420,7 +414,7 @@ function applyPong(
     state.instructions[target.instructionId] = {
       ...instruction,
       status: "responded",
-      statusEventId: event.eventId,
+      statusSequence: event.sequence,
       responseId: payload.responseId,
       evidence: [...instruction.evidence, ...payload.evidence],
     };
@@ -432,7 +426,7 @@ function applyPong(
     outcome: payload.outcome,
     summary: payload.summary,
     awaitingUpstream: payload.outcome !== "result",
-    stateEventId: event.eventId,
+    stateSequence: event.sequence,
     evidence: payload.evidence,
   };
 }
@@ -449,7 +443,7 @@ function requireContext(
   if (state.executionContextId !== executionContextId) {
     throw new InteractionTransitionError(
       "wrong-context",
-      `Expected execution context ${state.executionContextId}.`,
+      `预期执行上下文为 ${state.executionContextId}。`,
     );
   }
 }
@@ -462,7 +456,7 @@ function requireInstruction(
   if (!instruction) {
     throw new InteractionTransitionError(
       "unknown-instruction",
-      `Instruction ${instructionId} does not exist.`,
+      `指令 ${instructionId} 不存在。`,
     );
   }
   return instruction;
@@ -474,7 +468,7 @@ function requireTargets(
   if (targets.length === 0) {
     throw new InteractionTransitionError(
       "incomplete-event",
-      "A transition event must target at least one instruction.",
+      "转换事件至少需要一个目标指令。",
     );
   }
   requireUnique(
@@ -487,7 +481,7 @@ function requireUnique(values: readonly string[], field: string): void {
   if (new Set(values).size !== values.length) {
     throw new InteractionTransitionError(
       "incomplete-event",
-      `${field} contains duplicate identifiers.`,
+      `${field} 包含重复标识。`,
     );
   }
 }
@@ -496,7 +490,16 @@ function requireText(value: string, field: string): void {
   if (value.trim().length === 0) {
     throw new InteractionTransitionError(
       "incomplete-event",
-      `${field} must not be empty.`,
+      `${field} 不能为空。`,
+    );
+  }
+}
+
+function requireSequence(value: number, field: string): void {
+  if (!Number.isSafeInteger(value) || value < 1) {
+    throw new InteractionTransitionError(
+      "incomplete-event",
+      `${field} 必须是正安全整数。`,
     );
   }
 }

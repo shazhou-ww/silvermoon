@@ -147,10 +147,95 @@ idea 的交互状态。重复命令若已由去重键接受，返回既有结果
 
 [交互协议类型与状态转移](./Interaction-protocol.ts) 是本 Ideal World 的
 可执行式配套设计，随本世界 revision 一起审阅，不是仓库运行时代码或第四份
-契约。它定义旧 `status.yaml` 的兼容投影、交互状态、四种状态推进事件、
-完整 payload、陈旧前置条件检查、重复输入拒绝和纯状态转移函数。
+契约。下列数据形状与该文件的类型及纯状态转移函数共同定义审阅边界。
 
-文件中的 reducer-facing envelope 只表达状态函数需要的公共字段；实施时必须
-复用 `event-state-model` 交付的共享 envelope、存储和 append-only 校验，
-不得复制为第二套 schema。实际模块路径、错误到 CLI 输出的映射及 JSON Schema
-在准确 ideal revision 获批后写入实施契约。
+### 事件记录与 payload
+
+沿用现有 v2 日志的 `{sequence, type, payload}` JSONL 记录：`sequence`
+是从 1 起连续递增的安全整数，类型只能是已支持的生命周期事件或以下四种
+新增交互事件。事件本身不增加 `eventId`、`parents`、时间戳或执行者字段；
+`sequence` 同时作为交互状态最近一次变化的定位符。各 payload 只携带确定
+归约所需的数据，禁止额外字段；`evidence` 是证据引用数组，不是执行日志。
+
+| 事件类型 | 完整 payload | 前置条件与实际变化 |
+| --- | --- | --- |
+| `interaction.ping.appended` | `instructionId`, `idempotencyKey`, `executionContextId`, `instruction`, `acknowledges: [{responseId, expectedStateSequence}]`, `evidence` | 指令 ID 与去重键均未出现，且上下文匹配；新增一条 `queued` 指令。可同时关闭明确引用、仍待上游处理且序号匹配的 `pong`；无需等待旧 `pong`。 |
+| `interaction.instructions.delivered` | `executionContextId`, `targets: [{instructionId, expectedStatus: "queued", expectedStatusSequence}]`, `evidence` | 非空、不重复的目标均仍处于指定序号的 `queued`；逐条推进为 `delivered`，记录证据。接收 `ping` 本身绝不算送达。 |
+| `interaction.instructions.processing` | `executionContextId`, `targets: [{instructionId, expectedStatus: "delivered", expectedStatusSequence}]`, `evidence` | 目标均仍处于指定序号的 `delivered`；逐条推进为 `processing`。送达本身绝不算已处理。 |
+| `interaction.pong.returned` | `responseId`, `executionContextId`, `targets: [{instructionId, expectedStatus: "delivered" \| "processing", expectedStatusSequence}]`, `outcome`, `summary`, `evidence` | 响应 ID 未出现且目标非空、不重复、仍在指定状态与序号；目标变为 `responded`，新增关联其 ID 集合的响应。不能响应尚未送达的指令，也不能改变未引用的新指令。 |
+
+`instructionId` 与 `responseId` 是各自 idea 内的 ULID；`idempotencyKey`
+是上游提供、在该 idea 内唯一且重试保持不变的请求键，重复请求返回已接受结果，
+不得以新序号追加无操作事件。同一条指令不能复用另一键；同一键也不能换指令。
+`executionContextId` 是同一 idea 的逻辑执行上下文标识，而非物理 session ID：
+首个 `ping` 设定它，后续四类事件都必须匹配；物理 session 故障与重建不会
+凭空切换该标识或授权并行执行。若未来需要切换逻辑上下文，须另行定义明确
+状态转换，不能靠读外部 session 或复用 `ping` 偷换。
+
+`outcome` 限于 `result`、`needs-input`、`blocked`、`git-failure`、
+`runtime-failure`、`sign-off`；非 `result` 的响应等待上游处理。
+`evidence` 元素具有 `kind: "repository" | "external" | "message"`、
+`reference` 及可选 `commit`，它仅指向证据，不声称证据已验证。
+所有标识和正文必须非空，目标序号必须是正安全整数；交互事件必须通过
+扩展后的项目版本 schema 与同一条 v2 日志的规范序列化、归约及历史前缀
+检查。不得并行维护一套交互 JSONL 或发明与现有记录不兼容的 envelope。
+
+### 完整状态投影
+
+日志回放从 `{status: {id: <目录 ULID>}, sequence: 0, interaction:
+{executionContextId: null, instructions: {}, instructionIdByIdempotencyKey:
+{}, pongs: {}}}` 开始。`status` 原样保留现有 v2 归约的 alias、language、
+abandoned 和三个准确 revision 等字段；`sequence` 是最后归约的日志序号。
+每条合法生命周期事件只迭代 `status`，每条合法交互事件只迭代 `interaction`，
+两者都推进同一个 `sequence`，返回完整的下一投影。生命周期阶段仍需结合
+本次观察的世界 revision 判断；交互投影不会修改或暗示批准、验收。
+
+`instructions[instructionId]` 保存 `instructionId`、`idempotencyKey`、
+原文 `instruction`、`executionContextId`、`status`（`queued`、
+`delivered`、`processing`、`responded`）、`statusSequence`（最近一次
+状态转移的日志序号）、可选 `responseId` 和证据引用。索引
+`instructionIdByIdempotencyKey[key]` 指向已接受的指令 ID。
+`pongs[responseId]` 保存 `responseId`、明确关联的 `instructionIds`、
+`outcome`、`summary`、`awaitingUpstream`、`stateSequence` 和证据引用；
+仅后续 `ping` 中序号匹配的 `acknowledges` 可关闭指定等待的响应。
+旧 `pong` 无法覆盖其他仍为 `queued`、`delivered` 或 `processing` 的指令；
+这些指令始终可从完整投影恢复。字典键按普通字符串处理，不允许特殊键
+改变对象原型或绕开唯一性。
+
+重放时先校验完整事件及连续 `sequence`，再校验引用的指令、上下文和
+`expectedStatusSequence` / `expectedStateSequence`；任一目标陈旧或缺失则
+拒绝整条事件，不局部归约。已经存在的 ID、去重键、无目标的转换及无法
+推进交互状态的事件必须拒绝。`ping` 可以附带旧响应确认，但不要求确认所有
+响应；未提交但有效的本地尾部仍可被回放与消费，Git 同步只约束跨设备共享。
+CLI 的输入形状、错误映射及 JSON Schema 在获批后写入实施契约，但不能改变
+这里明确的事件与投影语义。
+
+### CLI 子命令调整
+
+**需要调整。** 现有 `event replay <idea>` 继续读取本地日志、报告长度与摘要，
+但扩展为回放并展示完整 `status`、`sequence` 和 `interaction` 投影。
+现有 `event append`、`event revise` 及 `event recover` 继续服务于既有生命周期
+决策和日志恢复；不能直接以当前 `event append` 实现接收运行中的 `ping`：
+它在写入前要求刷新 primary、匹配 `--expected-primary` 并校验世界快照，
+Git 故障时会把交互也锁死。
+
+为交互新增本地入口 `interaction ping|deliver|process|pong <idea>
+--input <payload.json> --expected-length <bytes> --expected-digest <sha256>
+--audience agent`。四个操作分别生成上述四种类型的记录，输入只含相应完整
+payload，不允许输入 `sequence`、`type` 或未定义字段。提交者先用
+`event replay <idea> --audience agent` 取得准确日志长度、摘要、关联指令
+的当前状态及其序号；写入者在事务中重新检查字节前置条件、分配下一序号、
+校验项目版本 schema、完整回放以及被引用状态，原子追加到该 idea 唯一的
+`events.jsonl`。同一长度与摘要上的竞争只能有一方成功；重试若已持久化
+同一条请求，则返回原有结果而非制造新序号，其他冲突必须重新观察。
+成功回执分别给出新长度、摘要、序号和投影，不声称交付真实 session、
+已提交或已同步 primary。中断写入沿用同一受控事务与明确恢复路径。
+
+交互入口只需本地有效的项目版本与该 idea 状态，不把网络抓取、
+`--expected-primary`、commit 或 clean worktree 作为接收/送达/响应条件；
+读写不得修改其他 idea、未知文件或既有生命周期事实。诊断和交互可在
+Git 提交失败后继续，但不把其他脏文件标记为合法，也不绕开普通
+`whats-next`、`check`、历史前缀及 primary 同步的生命周期门槛。
+`whats-next` 须区分该 idea 可归约的未提交日志尾部与无效修改或无关脏文件，
+允许前者供交互消费，同时明确保留正常工作流的阻塞诊断。
+获批后的实施契约再指定实际选项解析、错误代码及帮助文案。
