@@ -96,12 +96,25 @@ export function nextRecipient(state: IdeaStateProjection): Sender {
 }
 
 export class InteractionTransitionError extends Error {
-  readonly code: "sequence-conflict" | "incomplete-event";
+  readonly code: "sequence-conflict" | "incomplete-event" | "abandoned";
 
   constructor(code: InteractionTransitionError["code"], message: string) {
     super(message);
     this.name = "InteractionTransitionError";
     this.code = code;
+  }
+}
+
+/**
+ * After 新增：完整归约器在处理任一 v3 事件前调用此检查；决定事件
+ * 仍需原有人工 gate。放弃期间只有 resume 可以写入，旧消息不交球。
+ */
+export function assertEventAllowed(
+  state: IdeaStateProjection,
+  type: ExistingEventType | InteractionEvent["type"],
+): void {
+  if (state.status.abandoned && type !== "resume") {
+    throw new InteractionTransitionError("abandoned", "放弃后仅能追加 resume。");
   }
 }
 
@@ -125,6 +138,7 @@ export function transitionInteraction(
       `事件序号必须是 ${state.sequence + 1}。`,
     );
   }
+  assertEventAllowed(state, event.type);
   if (typeof event.payload.message !== "string" || !event.payload.message.trim()) {
     throw new InteractionTransitionError("incomplete-event", "message 不能为空。");
   }
@@ -157,7 +171,8 @@ export function transitionInteraction(
  * 连续 pong 也以新 sequence/message 更新 lastPong。下一条 ping 不受
  * 旧 pong 影响。只有这两类事件更新 lastSignal；迁移后的业务事件（包括
  * 准确 revision 的批准/验收、放弃/恢复）都不交球。若上游完成决定后
- * 要把工作交给下游，必须另写 ping；已放弃状态先于路由阻止派发。
+ * 要把工作交给下游，必须另写 ping；放弃期间仅接受 resume，
+ * 即使球权仍指向下游也不能继续追加 ping/pong 或派发执行。
  * 消息内容是供人或 Agent 阅读的字符串，不解析结果类型。
  *
  * CLI 仍使用 event replay/append，不新增 interaction 命令组。
@@ -178,6 +193,8 @@ export function transitionInteraction(
  * 边界突破旧日志的字节前缀，立即重新启用 append-only 保护。
  * Git 历史旧提交仍按 v2 解释，迁移 commit 按 v2 -> v3 验证逐条
  * 等价；绝不重写 Git 历史、直接手工编辑 JSONL 或推断新的人工决定。
- * 无法验证的日志、并发 primary 变化或中断必须阻断并明确恢复；
+ * 若旧日志在 abandon 和 resume 之间存在其他事件，迁移必须阻断并
+ * 报告，不自动删除或重排历史。无法验证的日志、并发 primary 变化
+ * 或中断必须阻断并明确恢复；
  * 老版运行时不能误读 v3。普通命令不自动触发迁移。
  */
