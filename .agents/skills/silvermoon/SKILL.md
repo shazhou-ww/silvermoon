@@ -340,3 +340,15 @@ synchronize it to primary, and reobserve the resulting lifecycle state.
 
 Follow [adoption.md](./references/adoption.md) when creating or explicitly
 converting a repository to Silvermoon.
+
+Hosts integrating Copilot may use `silvermoon/agents/copilot` and
+`silvermoon/agents/project-runtime` as separate experimental package
+subpaths; see `docs/reference.md` in the Silvermoon source repository.
+Register a canonical credential-free project URL locally and route by that
+URL plus idea ID. Only the project's own Silvermoon process decides
+`whats-next` and appends interaction events. The adapter's delivery and
+activity streams are observations, never authoritative event history.
+An SDK send acknowledgment is not proof of processing. After a lost
+connection or uncertain send, reobserve the exact event log and session
+state; never resend, append a stale reply, or replace a bound session merely
+because a completion event was not observed.

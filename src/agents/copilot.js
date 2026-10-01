@@ -73,6 +73,7 @@ function failReplies(entry, reason) {
   for (const queue of entry.replies) queue.fail(entry.fault);
   entry.replies.clear();
   entry.lastMessage = undefined;
+  entry.toolNames.clear();
 }
 
 function onSessionEvent(entry, event) {
@@ -107,7 +108,14 @@ function onSessionEvent(entry, event) {
     failReplies(entry, "Copilot session shut down; replies may have been missed.");
   } else if (type === "tool.execution_start" || type === "tool.execution_complete") {
     if (type === "tool.execution_start") entry.lastMessage = undefined;
-    const base = { toolCallId: data.toolCallId, name: data.toolName ?? "unknown" };
+    if (type === "tool.execution_start" && data.toolName) {
+      entry.toolNames.set(data.toolCallId, data.toolName);
+    }
+    const base = {
+      toolCallId: data.toolCallId,
+      name: data.toolName ?? entry.toolNames.get(data.toolCallId) ?? "unknown",
+    };
+    if (type === "tool.execution_complete") entry.toolNames.delete(data.toolCallId);
     const state = type === "tool.execution_start" ? "started" : data.success ? "succeeded" : "failed";
     const detail = type === "tool.execution_start" ? data.arguments
       : data.success ? data.result : data.error;
@@ -185,12 +193,18 @@ export class CopilotAdapter {
     if (existing?.context?.cwd && existing.context.cwd !== worktreePath) {
       throw new Error("Copilot session is bound to a different worktree; explicit relocation is required.");
     }
-    const previouslyBound = await this.#registry.sessionBinding(identified, id, worktreePath);
+    const previouslyBound = await this.#registry.sessionBinding(identified, id, worktreePath, {
+      createIfMissing: !existing || existing.context?.cwd === worktreePath,
+    });
+    if (existing && !previouslyBound && existing.context?.cwd !== worktreePath) {
+      throw new Error("Copilot session workspace cannot be verified; explicit recovery is required.");
+    }
     if (previouslyBound && !existing) {
       throw new Error("The previously bound Copilot session is not listed; verify its state before explicit recovery.");
     }
     const entry = {
       observers: new Set(), replies: new Set(),
+      toolNames: new Map(),
       state: { type: "session", state: "unknown", reason: "No current execution status has been observed." },
       lastMessage: undefined, fault: undefined, release,
     };

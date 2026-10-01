@@ -119,7 +119,7 @@ export class LocalProjectRegistry {
     return worktreePath;
   }
 
-  async sessionBinding(route, sessionId, worktreePath) {
+  async sessionBinding(route, sessionId, worktreePath, { createIfMissing = true } = {}) {
     const { projectUrl, ideaId } = canonicalRoute(route);
     const file = join(this.#root, "sessions", hash(projectUrl), `${ideaId}.json`);
     await mkdir(dirname(file), { recursive: true });
@@ -136,6 +136,7 @@ export class LocalProjectRegistry {
       }
       return true;
     }
+    if (!createIfMissing) return false;
     await writeFile(file, `${JSON.stringify({ projectUrl, ideaId, sessionId, worktreePath })}\n`,
       { flag: "wx", mode: 0o600 });
     return false;

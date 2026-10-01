@@ -44,12 +44,15 @@ class FakeClient {
   sessions = new Map();
   creates = 0;
   resumes = 0;
+  omitContext = false;
 
-  async start() {}
+  async start() {
+    if (this.startError) throw this.startError;
+  }
 
   async listSessions() {
     return [...this.sessions.entries()].map(([sessionId, session]) => ({
-      sessionId, context: { cwd: session.worktreePath },
+      sessionId, ...(this.omitContext ? {} : { context: { cwd: session.worktreePath } }),
     }));
   }
 
@@ -76,9 +79,9 @@ async function fixture(fn) {
     const registry = {
       resolve: async () => worktreePath,
       acquire: async () => async () => {},
-      sessionBinding: async (_, sessionId) => {
+      sessionBinding: async (_, sessionId, __, { createIfMissing = true } = {}) => {
         const exists = bindings.has(sessionId);
-        bindings.add(sessionId);
+        if (createIfMissing) bindings.add(sessionId);
         return exists;
       },
     };
@@ -95,6 +98,14 @@ test("requires explicit permission handling and a valid route", async () => {
   await fixture(async ({ adapter, route }) => {
     await assert.rejects(adapter.start({ ...route, ideaId: "not-an-idea" }), TypeError);
     assert.equal((await adapter.capabilities()).observation, "activityDetails");
+  });
+});
+
+test("an authentication startup error is surfaced without creating a session", async () => {
+  await fixture(async ({ adapter, client, route }) => {
+    client.startError = new Error("Copilot authentication unavailable");
+    await assert.rejects(adapter.start(route), /authentication unavailable/);
+    assert.equal(client.creates, 0);
   });
 });
 
@@ -143,6 +154,23 @@ test("an ambiguous creation failure retains the binding until explicit recovery"
   });
 });
 
+test("an unbound existing session without workspace metadata is not adopted", async () => {
+  await fixture(async ({ adapter, client, registry, route }) => {
+    await adapter.start(route);
+    client.omitContext = true;
+    const unbound = new CopilotAdapter({
+      client,
+      registry: { ...registry, sessionBinding: async () => false },
+      onPermissionRequest: () => ({ kind: "deny" }),
+    });
+    await assert.rejects(unbound.start(route), /workspace cannot be verified/);
+    assert.equal(client.resumes, 0);
+    const trusted = new CopilotAdapter({ client, registry, onPermissionRequest: () => ({ kind: "deny" }) });
+    await trusted.start(route);
+    assert.equal(client.resumes, 1);
+  });
+});
+
 test("keeps process messages separate from the final idle reply", async () => {
   await fixture(async ({ adapter, client, route }) => {
     await adapter.start(route);
@@ -159,6 +187,10 @@ test("keeps process messages separate from the final idle reply", async () => {
     session.emit("tool.execution_start", { toolCallId: "a", toolName: "safe", arguments: { x: 1 } });
     assert.deepEqual((await nextWithin(observations)).value, {
       type: "toolDetails", toolCallId: "a", name: "safe", state: "started", input: '{"x":1}',
+    });
+    session.emit("tool.execution_complete", { toolCallId: "a", success: true, result: "done" });
+    assert.deepEqual((await nextWithin(observations)).value, {
+      type: "toolDetails", toolCallId: "a", name: "safe", state: "succeeded", output: "done",
     });
     session.emit("assistant.message", { content: "FINAL" });
     assert.equal((await nextWithin(observations)).value.text, "FINAL");

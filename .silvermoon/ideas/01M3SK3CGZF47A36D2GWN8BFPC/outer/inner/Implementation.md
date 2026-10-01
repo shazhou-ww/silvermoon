@@ -32,12 +32,31 @@
 旧的 idle 状态且阻止盲目重试。此测试不证明真实进程断线后的输出可恢复。
 受控实测命令
 `SILVERMOON_REAL_COPILOT=1 node --test test/integration/copilot-runtime-live.test.js`
-通过：在一次性 Git 项目中，拒绝全部工具权限，项目版本 CLI 按准确日志
+通过：在一次性 Git 项目中，拒绝外部工具权限，项目版本 CLI 按准确日志
 前态写入三次 `ping`，同一真实 Copilot session 前两轮各返回预期标识，
-之后关闭适配器并以同一注册表恢复该 session，第三轮也返回预期标识。
+之后关闭适配器并以同一注册表恢复该 session，第三轮返回正式回复；
+在线复测曾出现一次模型拒答、再次运行返回预期标识，不把固定文本视作
+SDK 的投递保证。
 项目版本 CLI 追加三次 `pong` 后回放六条有序消息；无 daemon，也未保存
-完整对话到本仓库。普通测试跳过在线用例。它不证明运行中 steering、
-断线恢复、Git 诊断或工具副作用去重。
+完整对话到本仓库。另一在线用例在唯一项目 URL 下，仅允许受控的
+`silvermoon_git_probe`：临时 pre-commit hook 确实阻止一次 Git commit；
+工具运行中第二条 `ping` 获 SDK 接收确认，随后 Agent 正式回复包含诊断
+标识；旧 `pong` 因过期前态被拒绝，工具输入/输出观察保留同一工具名。
+强制停止 SDK 进程后，下一条已写入项目日志的 `ping` 投递结果为
+`unknown`，没有自动重试或追加 `pong`。第三个在线用例验证单适配器
+两个独立项目 URL 的会话与事件互不串扰。普通测试跳过在线用例。
+
+能力状态（所有在线夹具均使用一次性 Git 项目和固定无私有内容的提示）：
+
+| 能力或故障 | 状态 | 证据与边界 |
+| --- | --- | --- |
+| 多 session、工作目录和重启恢复 | 实测通过 | 同一 adapter 隔离两个项目，关闭后恢复原 session 并得到第三轮正式回复；模型内容偶有拒答。 |
+| `immediate` 与运行中指令 | 实测通过 | 工具等待期间收到第二条指令，最终诊断回复可观察；接收仍非逐条处理保证。 |
+| `enqueue` 与 `immediate` 错过时机 | 部分实测 | 前期隔离 SDK 探针观察到排队；不能保证每次何时被处理。 |
+| 过程消息与工具输入输出 | 实测通过 | 自定义工具的开始和完成事件按 `toolCallId` 关联，正式回复只在 idle 给出。 |
+| 认证失败 | 未能确认 | 本机已有有效认证；不修改宿主凭据，假 SDK 故障注入仅验证错误传播。 |
+| 连接中断与进程退出 | 部分实测 | `forceStop` 后发送为未知且不重投；未能确认断线期间进行中的工作及临时事件可恢复。 |
+| 工具副作用去重和正式回复完整重放 | 未能确认 | SDK 不提供该保证；以准确事件前态和未知状态阻止盲目重执行。 |
 官方
 [steering/queueing 文档](https://github.com/github/copilot-sdk/blob/main/docs/features/steering-and-queueing.md)
 说明 `immediate` 可在时机错过时转排队，`send` 的消息 ID 仅证明接收；
@@ -84,7 +103,7 @@ projectUrl/ideaId 为 Copilot session 生成稳定身份；同一路由不并发
 已绑定的 session 若未出现在 SDK 列表或创建请求的结果不明，不会创建
 替代 session。确认旧 session 已失效且没有活跃 route owner 后才能显式
 忘记绑定；这不授权重投未确认的消息。单元测试覆盖缺席列表及不确定创建
-失败，真实断线后的 session 存活状态仍需进一步实测。
+失败；无工作区元数据且没有旧绑定的已列出 session 也拒绝认领。
 
 ### I-S04: 接入本地交互事件并验证恢复
 
@@ -94,12 +113,32 @@ projectUrl/ideaId 为 Copilot session 生成稳定身份；同一路由不并发
 断线与进程退出均需先重新观察，不能自动重复投递或扩大回复范围。
 Agent 求助和 Git 提交阻塞后追加诊断指令均在同一 session 验证。
 
+隔离在线 Git commit 测试确实执行受临时 hook 拦截的提交（HEAD 未变），
+在该受控工具挂起时追加诊断指令；项目版本回放保留两个 `ping`，过期
+`pong` 不写入，最终诊断 `pong` 在重新读取前态后写入。SDK 进程退出后
+保留待处理 `ping`，不凭适配器的 `unknown` 自动重投。此证明不覆盖
+真实生产 Git 故障的自动修复，也不宣称可重放断线期间的所有输出。
+
 ### I-S05: 完成受控验收和使用指引
 
 为协议、适配器、调用方及跨版本行为增加针对性测试；对真实 Copilot
 执行一次不依赖 daemon 的受控验收。更新对应文档及 skill，明确认证、
 权限、观察档次、恢复不确定性与不支持能力的处理，不宣称仅用 mock
 完成真实适配。
+
+受控验收位于 `test/integration/copilot-runtime-live.test.js`，默认跳过，
+须显式设置 `SILVERMOON_REAL_COPILOT=1`；公开用法和恢复限制见
+`docs/reference.md`，programmatic host 提醒纳入 canonical Silvermoon
+skill 并由 `pnpm sync:skills` 更新注册副本。
+
+2026-10-02 本候选验收命令与结果：
+
+- `node --test test/unit/copilot-adapter.test.js test/integration/project-registry.test.js test/integration/project-runtime.test.js`：17/17 通过。
+- `SILVERMOON_REAL_COPILOT=1 node --test test/integration/copilot-runtime-live.test.js`：3/3 通过；仅测试生成的 Git 项目，模型响应文本不作为 SDK 处理确认。
+- `pnpm check:sanity`：通过。
+- `pnpm check`：最终重跑通过（包含集成、包及安装后 E2E）；一次中间运行的既有 fixture 模板并发拷贝出现 `ENOENT`，随后 `node --test test/integration/whatsnext-setup.test.js` 12/12 通过且完整重跑通过。
+- `pnpm check:skills`、`pnpm exec tsc --noEmit --strict --module nodenext --moduleResolution nodenext --target es2022 --skipLibCheck src/agents/copilot.d.ts src/agents/project-runtime.d.ts`：通过。
+- `pnpm check:commit`、`node bin/silvermoon.js check --worktree --audience agent`、`node bin/silvermoon.js check --staged --audience agent`：通过（在 canonical skill 与注册副本一起 staged 后）。
 
 ## Acceptance criteria
 

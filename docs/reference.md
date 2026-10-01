@@ -181,6 +181,8 @@ JSON Schemas, trace versions, and repository file contracts keep their own
 documented compatibility rules. The package does not yet promise stable
 TypeScript declarations or a stable `1.0.0` JavaScript API.
 
+### Agent runtime integration
+
 The `silvermoon/agents/copilot` subpath exports `CopilotAdapter` and
 `LocalProjectRegistry` (with TypeScript declarations). This is a separate
 experimental Agent integration, not part of the root export. Register a
@@ -218,7 +220,9 @@ without `close()`, explicitly verify it stopped, then call
 owner, another host, or an unknown lock. It does not replay an uncertain send.
 The registry also persists the route's Copilot session identity before
 creation: a missing SDK listing or an ambiguous creation failure cannot
-silently spawn a replacement. Only after verifying that the old session is
+silently spawn a replacement. An SDK session listed without workspace metadata
+cannot be adopted without a matching pre-existing local binding. Only after
+verifying that the old session is
 truly lost and no route owner is active, call
 `registry.forgetSession(route, { confirmLost: true })` to permit a new session.
 This does not erase the old session, undo side effects, or authorize retrying
@@ -244,12 +248,16 @@ and the safe correlation of delivery and reply observations.
 For an isolated, opt-in live acceptance run (requires an authenticated
 Copilot CLI), use
 `SILVERMOON_REAL_COPILOT=1 node --test test/integration/copilot-runtime-live.test.js`.
-This creates and removes a disposable Git project and idea worktree, denies
-tool permissions, and checks two sequential `ping`/reply/`pong` handoffs in
-one session. It then restarts the adapter for a third handoff using the
-persisted session binding. Normal test runs skip the live case; it does not
-establish in-flight disconnect recovery, side-effect deduplication, or Git
-repair.
+The three cases use distinct disposable Git projects and deny unrelated tool
+permissions. They check two sequential `ping`/reply/`pong` handoffs and a
+third after adapter restart; a custom test-only tool with a rejecting Git
+pre-commit hook proves that a diagnostic ping reaches the running session
+without accepting a stale pong. Forcing the SDK process to stop leaves a
+subsequent ping pending instead of blindly resending it. A single adapter also
+isolates two projects. Normal test runs skip the live cases. In-flight
+disconnect recovery, actual production Git repair, and arbitrary tool
+side-effect deduplication are not guaranteed; uncertain work needs operator
+reconciliation.
 
 ## Public Commands
 

@@ -36,6 +36,7 @@ test("requires registration and persistently binds one idea worktree", async () 
     await releaseAgain();
     const first = await registry.resolve(route);
     assert.equal(await new LocalProjectRegistry({ root }).resolve(route), first);
+    assert.equal(await registry.sessionBinding(route, "unverified-session", first, { createIfMissing: false }), false);
     assert.equal(await registry.sessionBinding(route, "original-session", first), false);
     assert.equal(await new LocalProjectRegistry({ root }).sessionBinding(route, "original-session", first), true);
     await assert.rejects(registry.sessionBinding(route, "other-session", first), /binding changed/);
