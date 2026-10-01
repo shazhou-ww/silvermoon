@@ -99,17 +99,17 @@ implementation revision `0dbc1f0cc26965ce613fbf28d8dad624f3cdc767`；
 
 ### Deployment steps
 
-- [ ] **D-S01:** 固定部署候选与隔离边界
-- [ ] **D-S02:** 验证可安装交付与独立迁移
-- [ ] **D-S03:** 复验状态、恢复与历史规则并交付证据
-- [ ] **D-S04:** 显式迁移本仓库全部 idea 并集成边界
+- [x] **D-S01:** 固定部署候选与隔离边界
+- [x] **D-S02:** 验证可安装交付与独立迁移
+- [x] **D-S03:** 复验状态、恢复与历史规则并交付证据
+- [x] **D-S04:** 显式迁移本仓库全部 idea 并集成边界
 
 ### Deployment acceptance criteria
 
-- [ ] **D-AC01:** 安装包在隔离消费环境完成升级和受控写入
-- [ ] **D-AC02:** 故障与并发边界可复现
-- [ ] **D-AC03:** 证据同步且发布边界保持
-- [ ] **D-AC04:** 全量事实无损迁移且真实 primary 采用 v2
+- [x] **D-AC01:** 安装包在隔离消费环境完成升级和受控写入
+- [x] **D-AC02:** 故障与并发边界可复现
+- [x] **D-AC03:** 证据同步且发布边界保持
+- [x] **D-AC04:** 全量事实无损迁移且真实 primary 采用 v2
 
 用户在部署审阅时明确选择“是，更新部署契约并执行本仓库迁移”。
 这是本仓库全量迁移与 schema v2 切换的授权，不是部署验收。
@@ -158,3 +158,93 @@ Windows 进程恢复及人工处理恢复锁的限制仍按实施契约保留。
 
 以上勾选是部署工作与证明，不是用户验收；证据随本次 ledger 提交同步
 primary 并重新观察准确 revision 后，才请求部署验收。
+
+### 本仓库实际迁移执行证据
+
+用户明确授权后，修订部署契约先随
+`6e638f5514277f52bfca9dd28d2529b5163da380` 同步 primary；
+随后观察准确 deployment revision
+`b1ec4ccd5ff6c0e19342a089809b8c5041d60bda`，状态仍为 deploying。
+迁移固定使用该干净 source commit，包含并发加入 primary 的
+`dependency-update-evaluation` idea，没有丢弃其他 session 的工作。
+
+2026-10-01 在同一 Windows x64 / Node `v24.12.0` 环境执行：
+
+| 标准 | 命令或核对 | 实际结果 |
+| --- | --- | --- |
+| D-AC01 / D-AC02 | `node --test test/e2e/installed-package.test.js test/runtime/event-state.test.js` | 退出 0；安装包 E2E 与 14 个运行时场景共 15 项通过，0 失败、0 跳过，50350.654 ms。 |
+| D-AC04 | `node bin/migrate-v1-to-v2.js` | 只读计划包含下列 40 个 idea；未写入。 |
+| D-AC04 | `node bin/migrate-v1-to-v2.js --apply --expected-digest 9c33e812f444ee149aa09619a3d3c006731432106b3cabffc30aa05c187cd7b1` | 退出 0，`migrated`、`written: true`；生成 40 个日志、142 条事件，移除 40 个 status，项目切换为 v2。 |
+| D-AC04 | 再次运行 `node bin/migrate-v1-to-v2.js` | 退出 0，`already-v2`、`written: false`；全部日志及 config 字节不变，无 transaction、recovery、pending 或 prepared 残留。 |
+| D-AC04 | `node bin/silvermoon.js list-ideas --all --json` 的前后报告；逐一读取来源 commit 的 status 并与日志 replay 比较 | 40 份事实逐字段完全相等；inventory 完全相等：5 preparing、1 deploying、34 completed；所有世界和原 ledger 字节不变。 |
+| D-AC03 / D-AC04 | `node bin/silvermoon.js check --worktree --audience agent` 与 `check --staged --audience agent` | 均退出 0，准确 v1 基线下的完整迁移候选通过。 |
+| D-AC04 | `node bin/silvermoon.js check --commit f2eb8bbf1134a295a71bd07eaa3b4c81dcbd3ba5 --json` | 退出 0；独立迁移 commit 通过，随后以仍未变化的 source primary 普通 push。 |
+| D-AC03 / D-AC04 | `node bin/silvermoon.js check --remote --json` | 退出 0，固定 remote `f2eb8bbf1134a295a71bd07eaa3b4c81dcbd3ba5`，历史包含 40 个 migration 边界。使用 JSON 为读取完整四投影证据。 |
+| D-AC03 / D-AC04 | `pnpm check`、`pnpm check:commit` | 均退出 0；本仓库 v2 状态下 release checks 全部通过，`CHECK_TOTAL 56774ms`。原有 Windows symlink 特权跳过仍按既有规则，不冒充通过。 |
+
+来源：[v1 来源树](https://github.com/shazhou-ww/silvermoon/tree/6e638f5514277f52bfca9dd28d2529b5163da380/.silvermoon/ideas)。
+结果：[独立迁移提交及完整差异](https://github.com/shazhou-ww/silvermoon/commit/f2eb8bbf1134a295a71bd07eaa3b4c81dcbd3ba5)；
+该提交仅包含 config 和 40 组 status/events 替换，已确认可达刷新后的 primary。
+迁移后 `whats-next event-state-model --audience agent` 仍报告 deploying，
+同一 deployment revision，并改为指引受控 `deployment.accepted` 事件。
+inner tree 仍为 `0dbc1f0cc26965ce613fbf28d8dad624f3cdc767`。
+
+原始执行输出与前后 inventory 保存在本 session 的
+`event-real-deploy-scenarios.log`、`event-source-v2-release-check.log`、
+`event-migration-before.json`、`event-migration-after.json`、
+`event-source-migration-verified.json` 和 `event-migration-remote-report.json`。
+长期可复核证据是上述固定来源、结果 commit 和本页摘录。
+
+用户指出 `01M3939JHGGG1BWYXV2WXV3WPW` 没有 alias 事件后，核对其
+status 全部历史：创建时只有 id，之后仅追加三个决定，从未设置 alias。
+迁移前 36 个 idea 有 alias，36 条 `alias.updated` 均保留；另外 4 个
+本来无 alias，不从标题补造元数据。此次迁移没有新增人类决定。
+
+完整迁移 idea 清单：
+
+```text
+01M36QGPNTXEPP61DA4KP4AVG0
+01M38Y3FT4P3AEZNGV9R70ZBXQ
+01M3939JHGGG1BWYXV2WXV3WPW
+01M3954Y3F13T1CQT820SP73RN
+01M396DEC3R5B6M9KS3M2XSPTG
+01M397A1ME5Z7591N4RE4XMB6M
+01M397R8V3X3YNKVQ2E488N5BS
+01M39AGSWT0QN0WMGRZ4SG7NT0
+01M39BAGAKQTBKNWTVCMPWSN2E
+01M39CAEMMECFW02NX9Z6CTFYG
+01M3A014VQYW5NGGZBR1WNNEKZ
+01M3A1157K2Q2PGEQ6H3V9X6ZV
+01M3A1Y9BT5T6P6QTD3P9AXNT8
+01M3AT95KSJH5JWCYXXK8RZF5W
+01M3KFVY57Z43T15HS0TBFZG69
+01M3KG00VJ8AV81FG5CZSK4A5H
+01M3KN5BSDCV0S1D2Y2TV2JQPY
+01M3KZ4S2G05R6VNMY12CD25AQ
+01M3M7JR0H0QKMFJCR927NJSVZ
+01M3M9VG7YA6BMAMHX09SBA308
+01M3NC031WWGB85Y1QYS6PQBEW
+01M3NCEGB770WDDBDXVEHDRJHV
+01M3ND2G20ED0DRDS94VK1GY32
+01M3NDKZT9RTHDEN0JS053F1YB
+01M3NETHZ89CBHDJ1QSBGAJT4W
+01M3NM5KSVV303Z8T9P63Q2JZ8
+01M3P0ZVEK0HRE4RYNE3YS1SFJ
+01M3P6R99PBKNYCH3K1WBAT6YT
+01M3P74HC0NMFGGWAG9HX53ZR1
+01M3PESG74Y4B77DXJ46SYWB9T
+01M3PNPS4G9QBAQVJG0SBY8M1R
+01M3PW06ZTSWFN6CBRMX4JJABV
+01M3R5DJYGVFQYWA3WW61B6DEF
+01M3R65W3C3F3HGQFW12H92SV0
+01M3RD0HQRYNAFDT7EC6JJZGAN
+01M3SJ90WVJB56Z1PP72BPAHFZ
+01M3SJTKFRQ19DP0RPPJACKGMC
+01M3SJXTDXW54FFCSKSBJMMRBZ
+01M3SK3CGZF47A36D2GWN8BFPC
+01M3TRRV7K14MMVDPND0J5ANW4
+```
+
+本次升级只改持久状态表示与来源格式，生产代码和已验收世界不变，
+未访问主 checkout、未发布 npm。后续决定必须经项目 CLI 写入事件，
+不能继续编辑旧 status，也不能降级 config。部署验收仍等待用户明确决定。
