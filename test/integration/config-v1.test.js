@@ -110,7 +110,7 @@ test("rejects symlinked metadata roots and configuration files", async (context)
 
 test("rejects unsupported versions, unknown keys, and noncanonical order", async () => {
   const fixtures = [
-    `version: 4
+    `version: 3
 primaryRepository: https://example.com/owner/repository.git
 primaryBranch: main
 `,

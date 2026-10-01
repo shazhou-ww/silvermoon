@@ -13,7 +13,7 @@ import {
   ideaTemplates,
 } from "./idea-templates.js";
 import { isValidUlid, serializeIdeaStatus } from "./ideas.js";
-import { EVENT_RENAMES, eventsFromStatus, serializeIdeaEvents } from "./idea-events.js";
+import { eventsFromStatus, serializeIdeaEvents } from "./idea-events.js";
 import { canonicalizeLanguageTag } from "./language.js";
 import { IDEAS_ROOT, ideaPaths } from "./layout.js";
 import { observeSnapshot } from "./observation.js";
@@ -273,8 +273,7 @@ async function createScaffold({
         ? serializeIdeaEvents(eventsFromStatus({
           version: 1, id,
           ...(canonicalLanguage === undefined ? {} : { language: canonicalLanguage }),
-        }).map((event) => formatVersion === 3
-          ? { ...event, type: EVENT_RENAMES[event.type] } : event), { version: formatVersion })
+        }))
         : serializeIdeaStatus({
         version: 1,
         id,

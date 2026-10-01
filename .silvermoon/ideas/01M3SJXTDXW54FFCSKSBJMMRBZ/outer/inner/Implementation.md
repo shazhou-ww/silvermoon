@@ -45,6 +45,10 @@ payload、status 字段及人类 gate；两种交互消息只含非空 `message`
 schema 与 CLI 测试证实项目版本仍为 2，九种单词事件和原 payload
 通过严格校验，旧点分 type 不成为其他项目的公开输入；完整消息
 投影不伪造验收、清除目标或误认阻塞为完成。
+`test/contract/schema-v2-interaction.test.js`、
+`test/runtime/event-v2-interaction.test.js` 和
+`test/unit/idea-events.test.js` 覆盖公开格式与投影；
+`pnpm check` 已通过。
 
 ### I-AC02: 内部迁移等价且边界可恢复
 
@@ -52,15 +56,24 @@ schema 与 CLI 测试证实项目版本仍为 2，九种单词事件和原 paylo
 事件、并发 primary、前缀篡改及事务中断均有测试。历史审计能
 区分内部前后格式而不暴露 `schema/v3` 或 `version: 3`，迁移后
 健康前缀禁止修订。
+`test/runtime/migrate-internal-events.test.js` 覆盖计划摘要、逐条等价、
+空日志、外部仓库拒绝、并发和事务恢复。源仓库当前仍保留旧日志；
+实际执行显式迁移须另行确定时点，不能把测试视为已迁移。
 
 ### I-AC03: 本地消息不受 Git 故障锁死
 
 测试离线、未提交和连续 `pong` 场景；旧长度/摘要上遇新 `ping`
 时拒绝旧请求并要求重新观察。人类决定仍须准确 primary 和授权，
 `abandon` 后只能 `resume`。
+`test/runtime/event-v2-interaction.test.js` 和
+`test/runtime/event-state.test.js` 覆盖本地前态与决策约束。
 
 ### I-AC04: 修订实现通过仓库验证
 
 针对性测试、`pnpm check:commit`、`pnpm check`、Silvermoon
 `check --worktree` 和 `check --staged` 通过；同步的提交从
 刷新后的 primary 可达，没有自动发布或跨仓库旧格式迁移。
+当前候选的针对性测试共 30 项通过；`pnpm check:commit`、
+`pnpm check`、`pnpm pack:check`、`node bin/silvermoon.js check --worktree`
+及 `node bin/silvermoon.js check --staged` 均已通过。同步与实际迁移
+仍需分别验证，不提前宣称本项完成。

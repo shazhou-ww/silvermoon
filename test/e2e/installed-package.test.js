@@ -632,7 +632,7 @@ try {
   const observedEvents = JSON.parse(run(process.execPath, [eventEntrypoint, "event", "replay",
     id, "--root", eventConsumer, "--json"], bootstrap)).observation.receipt;
   const requestFile = join(temporaryRoot, "event-request.json");
-  await writeFile(requestFile, JSON.stringify({ type: "alias.updated", payload: { alias: "installed-events" } }));
+  await writeFile(requestFile, JSON.stringify({ type: "setAlias", payload: { alias: "installed-events" } }));
   const appended = JSON.parse(run(process.execPath, [eventEntrypoint, "event", "append", id,
     "--root", eventConsumer, "--input", requestFile,
     "--expected-length", String(observedEvents.length), "--expected-digest", observedEvents.digest,

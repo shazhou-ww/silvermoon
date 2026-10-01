@@ -100,7 +100,7 @@ validates preparing guidance from local `HEAD`. Invalid guidance leaves no
 creation path; valid guidance is attached only to the success report.
 
 For `create-idea`, `--language` normalizes any valid BCP 47 tag and writes it
-to v1 `status.yaml`, or a v2 `language.updated` event, as a persistent
+to v1 `status.yaml`, or a v2 `setLanguage` event, as a persistent
 content-language preference.
 Without the option, creation writes no language field and the idea dynamically
 inherits project, user, or `en-US` defaults. This is distinct from the

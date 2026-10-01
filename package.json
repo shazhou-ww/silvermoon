@@ -12,9 +12,11 @@
   },
   "files": [
     "bin",
+    "!bin/migrate-internal-events.js",
     "docs",
     "skills/silvermoon",
     "src",
+    "!src/migrate-internal-events.js",
     "LICENSE",
     "README.md",
     "README.zh-CN.md",

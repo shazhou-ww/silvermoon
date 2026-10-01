@@ -5,7 +5,6 @@ import { test } from "node:test";
 
 import { eventCommand } from "../../src/event-command.js";
 import { migrateEvents } from "../../src/migrate-events.js";
-import { migrateV2ToV3 } from "../../src/migrate-v3-events.js";
 import { createIdea } from "../../src/create-idea.js";
 import { checkRepository } from "../../src/index.js";
 import { parseIdeaEvents } from "../../src/idea-events.js";
@@ -19,11 +18,6 @@ async function fixture(t, options) {
   await migrateEvents({ root: repository.root, apply: true, expectedDigest: v2.digest });
   git(repository.root, "add", ".");
   git(repository.root, "commit", "-m", "Migrate to v2");
-  git(repository.root, "push", "origin", "HEAD:main");
-  const v3 = await migrateV2ToV3({ root: repository.root });
-  await migrateV2ToV3({ root: repository.root, apply: true, expectedDigest: v3.digest });
-  git(repository.root, "add", ".");
-  git(repository.root, "commit", "-m", "Migrate to v3");
   git(repository.root, "push", "origin", "HEAD:main");
   return repository;
 }
@@ -76,11 +70,11 @@ test("local ping/pong append works offline, preserves blockers and rejects stale
   });
   assert.equal(next.observation.receipt?.outcome, "candidate-written", JSON.stringify(next.observation));
   assert.equal((await checkRepository({ root, worktree: true })).observation.state, "check-unavailable");
-  assert.deepEqual(parseIdeaEvents(await readFile(join(root, ideaPaths(FIRST_ID).eventsPath)),
-    { version: 3 }).map(({ type }) => type), ["setAlias", "pong", "pong", "ping", "pong"]);
+  assert.deepEqual(parseIdeaEvents(await readFile(join(root, ideaPaths(FIRST_ID).eventsPath)))
+    .map(({ type }) => type), ["setAlias", "pong", "pong", "ping", "pong"]);
 });
 
-test("v3 business events retain primary gate, and new ideas use v3 records", async (t) => {
+test("v2 business events retain primary gate, and new ideas use final v2 records", async (t) => {
   const { root } = await fixture(t);
   const observed = await replay(root);
   const metadata = await eventCommand({
@@ -102,11 +96,11 @@ test("v3 business events retain primary gate, and new ideas use v3 records", asy
   git(root, "push", "origin", "HEAD:main");
   const created = await createIdea({ root, generateId: () => SECOND_ID, language: "zh-CN" });
   assert.equal(created.observation.state, "idea-created", JSON.stringify(created.observation));
-  assert.deepEqual(parseIdeaEvents(await readFile(join(root, ideaPaths(SECOND_ID).eventsPath)),
-    { version: 3 }).map(({ type }) => type), ["setLanguage"]);
+  assert.deepEqual(parseIdeaEvents(await readFile(join(root, ideaPaths(SECOND_ID).eventsPath)))
+    .map(({ type }) => type), ["setLanguage"]);
 });
 
-test("v3 replay and interaction accept a SHA-256 repository's revisions", async (t) => {
+test("v2 replay and interaction accept a SHA-256 repository's revisions", async (t) => {
   const { root } = await fixture(t, { objectFormat: "sha256" });
   const observed = await replay(root);
   const written = await eventCommand({

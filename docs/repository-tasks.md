@@ -60,7 +60,7 @@ canonical BCP 47 tag.
 worktree, index, branches, or named refs. Human approvals, implementation
 acceptance, deployment acceptance, and abandonment require an explicit decision.
 For a v1 project, record that decision in the idea's `status.yaml`.
-For a v2/v3 project, including this source repository after its explicitly
+For a v2 project, including this source repository after its explicitly
 authorized migration, use the controlled
 [event protocol](../skills/silvermoon/references/events.md). Developing v2
 alone does not authorize migration of a checkout.
@@ -127,7 +127,7 @@ branches.
   `silvermoon check --remote` for complete primary-history evidence.
 - Use `silvermoon check --staged` in pre-commit hooks: default `check` validates
   committed `HEAD`, not the pending index. `check` validates only the chosen
-  project's snapshot and v2/v3 primary event history, not repository
+  project's snapshot and v2 primary event history, not repository
   synchronization or idea navigation.
   Only exit code `0` permits the commit; `1` means invalid or unavailable and
   `2` means invalid usage. Its JSON uses all four projections; only

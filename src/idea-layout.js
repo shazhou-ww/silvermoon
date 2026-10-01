@@ -3,6 +3,7 @@ import { relative, resolve } from "node:path";
 
 import { deriveIdeaState, isValidUlid, parseIdeaStatus } from "./ideas.js";
 import { parseIdeaEvents, replayIdeaEvents } from "./idea-events.js";
+import { detectEventFormat } from "./event-history.js";
 import { inspectTreePaths, worktreeSnapshot } from "./git.js";
 import { IDEAS_ROOT, ideaPaths } from "./layout.js";
 
@@ -204,6 +205,22 @@ export async function inspectIdeaLayout({
       ideas: [],
     };
   }
+  let legacyEvents = false;
+  if (config?.version === 2) {
+    try {
+      legacyEvents = await detectEventFormat({ root: gitRoot, tree: resolvedSnapshotTree }) === "legacy";
+    } catch (caught) {
+      return {
+        diagnostics: [error(
+          "idea.events.format-invalid",
+          IDEAS_ROOT,
+          caught.message,
+          "Inspect the source repository's historical event format and preserve all logs.",
+        )],
+        ideas: [],
+      };
+    }
+  }
   for (const entry of entries) {
     const folderPath = resolve(ideasRoot, entry.name);
     const folderMetadata = await filesystem.lstat(folderPath);
@@ -240,7 +257,7 @@ export async function inspectIdeaLayout({
     }
 
     const paths = ideaPaths(entry.name);
-    const eventFormat = config?.version === 2 || config?.version === 3;
+    const eventFormat = config?.version === 2;
     const stateName = eventFormat ? "events.jsonl" : "status.yaml";
     const statePath = eventFormat ? paths.eventsPath : paths.statusPath;
     const children = (
@@ -308,7 +325,7 @@ export async function inspectIdeaLayout({
 
     let status;
     try {
-      const options = { objectIdLength: repositoryObjectIdLength, version: config?.version };
+      const options = { objectIdLength: repositoryObjectIdLength, legacy: legacyEvents };
       if (eventFormat) {
         const events = parseIdeaEvents(
           await filesystem.readFile(resolve(root, statePath)), options,
