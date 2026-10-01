@@ -99,12 +99,55 @@ implementation revision `0dbc1f0cc26965ce613fbf28d8dad624f3cdc767`；
 
 ### Deployment steps
 
-- [ ] **D-S01:** 固定部署候选与隔离边界
-- [ ] **D-S02:** 验证可安装交付与独立迁移
-- [ ] **D-S03:** 复验状态、恢复与历史规则并交付证据
+- [x] **D-S01:** 固定部署候选与隔离边界
+- [x] **D-S02:** 验证可安装交付与独立迁移
+- [x] **D-S03:** 复验状态、恢复与历史规则并交付证据
 
 ### Deployment acceptance criteria
 
-- [ ] **D-AC01:** 安装包在隔离消费环境完成升级和受控写入
-- [ ] **D-AC02:** 故障与并发边界可复现
-- [ ] **D-AC03:** 证据同步且发布边界保持
+- [x] **D-AC01:** 安装包在隔离消费环境完成升级和受控写入
+- [x] **D-AC02:** 故障与并发边界可复现
+- [x] **D-AC03:** 证据同步且发布边界保持
+
+### 部署执行证据
+
+2026-10-01，在本独立 worktree 的 Windows x64、Node `v24.12.0`
+环境执行。部署契约先随 commit
+`a7fbf9cdcba42b5c544a9e0455f75aae246b9a62` 同步真实 primary，
+随后 `whats-next event-state-model --audience agent` 报告 deploying，
+准确 deployment revision 为 `d8c62e0e136baa46a0f15d2fcbe4ef721639d5a0`。
+以下执行均针对该干净 commit，先固定契约再执行，没有事后改写验收标准。
+
+| 标准 | 实际命令与结果 | 证明入口 |
+| --- | --- | --- |
+| D-AC01 | `node --test test/e2e/installed-package.test.js`：退出 0；1 个套件文件通过，0 失败、0 跳过，耗时 40766.8144 ms；输出 `PACK_SMOKE_OK name=silvermoon version=0.3.0`。 | [安装包 E2E](../../../test/e2e/installed-package.test.js) 从本 checkout 打包安装，在 event-consumer 中执行计划、apply、check、提交并推送隔离 primary、replay、append；断言回执为 `candidate-written` 及日志包含新 alias。 |
+| D-AC02 | `node --test test/runtime/event-state.test.js`：退出 0；14 个场景全部通过，0 失败、0 跳过，耗时 48515.08 ms。 | [运行时场景](../../../test/runtime/event-state.test.js) 使用独立 Git/文件系统夹具和 CLI 子进程，覆盖下列分组。 |
+| D-AC03 | `node bin/silvermoon.js check --remote --audience agent`：退出 0；目标 `remote a7fbf9cdcba42b5c544a9e0455f75aae246b9a62`，结果通过。 | [部署契约](./outer/Deployment.md) 与本 ledger；证据提交只更新 ledger，保持已验证 deployment revision。 |
+
+运行时 14 个场景的通过范围：
+
+- 迁移前后 inventory 相等、四类 check 目标及重复迁移；
+  精确 CAS、重试、无操作不写入；准确世界、人工确认和生命周期次序。
+- 健康前缀不可改写、失败基线修复并恢复保护；v2 空日志创建及双权威拒绝；
+  迁移各阶段中断恢复与准确回滚。
+- 两个 CLI 进程争用同一位置；本地候选修订与 first-parent 安全集成；
+  其他 idea 失败不解锁健康前缀、格式失败不授予修复许可。
+- 世界观察不写日志、primary 移动拒绝旧写入；缺 tracking ref、shallow
+  缺父失败关闭且旧 v1 历史可读；事件写入中断恢复及 primary 移动后的回滚。
+- 迁移恢复保留未知字节；逐文件应用前再次检查来源，保留预检后的并发修改。
+
+安装包测试的临时消费仓库、bare primary、tarball 由其 `finally` 清理；
+运行时夹具由各场景 `t.after` 清理。原始输出保存在本 session 的
+`event-deploy-installed.log` 与 `event-deploy-runtime.log`，
+长期审阅依赖本页结果摘录及固定候选的可复现测试，不依赖临时目录仍存在。
+本次未创建新的线上服务，也未使用 daemon 或真实 Agent。
+
+边界复核：从实现源码 commit `211fc313d741ff77500f3634d07efac291bf02de`
+到部署候选，仅变更本 idea 的 Deployment、ledger 和独立实施验收事实。
+Git 读取的 inner tree 仍为 `0dbc1f0cc26965ce613fbf28d8dad624f3cdc767`；
+配置仍为 schema `1`，包仍为 `0.3.0`，所有依赖区均无 silvermoon 自依赖。
+没有修改生产交付、迁移真实 idea、发布 npm 或写入 deployment acceptance。
+Windows 进程恢复及人工处理恢复锁的限制仍按实施契约保留。
+
+以上勾选是部署工作与证明，不是用户验收；证据随本次 ledger 提交同步
+primary 并重新观察准确 revision 后，才请求部署验收。
