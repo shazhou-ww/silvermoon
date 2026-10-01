@@ -76,5 +76,7 @@ CLI 场景验证未提交交互消息的本地 replay/append，无新 `ping` 时
   v2 CLI 和历史回放不退化。
 - `pnpm check:commit`：通过；`pnpm check`：通过（包含单元、契约、
   集成、端到端、打包和 skill 检查）。
+- 实现提交 `2e817ae363a1dd6d3ccf53d337fb8cb93d24f172` 已通过普通
+  非 force 推送，可从刷新后的 `origin/main` 到达。
 - 本次交付只实现 v2→v3 显式迁移工具，没有对本仓库现行 v2 数据执行
   迁移，也没有发布 npm 包。
