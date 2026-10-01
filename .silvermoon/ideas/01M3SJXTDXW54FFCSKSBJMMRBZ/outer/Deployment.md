@@ -57,5 +57,8 @@ D-S03 的 remote check 通过并报告有效事件历史，`pnpm check`
 deployment revision 经再次验证且提交从刷新后的 primary 可达；
 不自动写入 `acceptOuter`，不发布 npm。
 已验收主体世界提交仍为 `14e9bdcb84a93bfa332e6c450a060c3f20e7e87d`；
-本轮未改主体世界或生产代码。证据候选尚需同步后重新观察与复验，
-不以当前文本推定部署验收。
+本轮未改主体世界或生产代码。证据提交
+`baf3079e99da36aebc20bff80dba960a0c9e06d5` 已同步 primary，
+在其部署 revision `b15d1ef830652b55317dd70c59075faedac1e439`
+再次执行 D-S02、D-S03 的全部命令，均通过且无跳过。
+同步后的最终 revision 仍须重新验证及明确人工验收。
