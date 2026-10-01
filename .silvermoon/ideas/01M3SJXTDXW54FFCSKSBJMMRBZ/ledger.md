@@ -4,11 +4,11 @@
 
 ### Implementation steps
 
-- [ ] **I-S01:** 待理想契约批准后细化事件类型与协议实施步骤
+- [ ] **I-S01:** 待批准后细化事件类型、状态迭代与协议实施步骤
 
 ### Implementation acceptance criteria
 
-- [ ] **I-AC01:** 待理想契约批准后细化实施验收标准
+- [ ] **I-AC01:** 待批准后细化完整归约与无操作拒绝的验收标准
 
 ## Deployment
 
