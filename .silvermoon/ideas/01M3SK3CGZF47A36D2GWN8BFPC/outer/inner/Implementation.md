@@ -58,6 +58,7 @@
 `whats-next` 或 `event replay/append`，校验基础报告形状并直接返回
 四投影与退出码（`1` 为结构化的无效/不可用报告）；校验命令、idea、
 事件操作与回执的基本形状，缺少安装或不支持的报告明确报错。
+故障注入覆盖缺少项目自身 CLI、无效 JSON、错误操作和异常进程退出。
 idea worktree 使用跟踪项目 primary 的专用分支，不以
 detached HEAD 绕过项目版本对 upstream 的检查。进程测试使用两个不同的
 项目入口验证分别派发；本仓库实际 CLI 在隔离 Git 项目中验证了

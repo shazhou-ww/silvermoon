@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rename, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
@@ -79,6 +79,9 @@ if (content?.payload?.message === "fail") process.exitCode = 1;
     await assert.rejects(runtime.appendInteraction(routes[0], {
       type: "acceptIdeal", message: "yes", expectedLength: 0, expectedDigest: "0".repeat(64),
     }), TypeError);
+    const entry = join(roots[1], "node_modules", "silvermoon", "bin", "silvermoon.js");
+    await rename(entry, `${entry}.missing`);
+    await assert.rejects(runtime.next(routes[1]), /runtime is missing/);
   } finally {
     await rm(base, { recursive: true, force: true });
   }
