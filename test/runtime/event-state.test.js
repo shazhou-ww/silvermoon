@@ -79,14 +79,14 @@ test("append uses exact CAS, reports retries and rejects no-op duplicates withou
   const observed = await replay(root);
   const request = {
     root, operation: "append", idea: FIRST_ID,
-    input: { type: "language.updated", payload: { language: "zh-CN" } },
+    input: { type: "setLanguage", payload: { language: "zh-CN" } },
     expectedLength: observed.length, expectedDigest: observed.digest, expectedPrimary: observed.baseline.commit,
   };
   const written = await eventCommand(request);
   assert.equal(written.observation.receipt?.outcome, "candidate-written", JSON.stringify(written));
   const source = await readFile(join(root, ideaPaths(FIRST_ID).eventsPath));
   assert.equal((await eventCommand(request)).observation.receipt.outcome, "already-present");
-  const conflict = await eventCommand({ ...request, input: { type: "alias.updated", payload: { alias: "different" } } });
+  const conflict = await eventCommand({ ...request, input: { type: "setAlias", payload: { alias: "different" } } });
   assert.equal(conflict.observation.state, "check-unavailable");
   assert.equal((await append(root, request.input)).observation.receipt.outcome, "no-state-change");
   assert.deepEqual(await readFile(join(root, ideaPaths(FIRST_ID).eventsPath)), source);
@@ -98,13 +98,13 @@ test("human decisions require exact synchronized world, explicit confirmation an
   publish(root, "Migrate");
   const paths = ideaPaths(FIRST_ID);
   const idealRevision = git(root, "rev-parse", `HEAD:${paths.idealPath}`);
-  const request = { type: "ideal.approved", payload: { idealRevision } };
+  const request = { type: "acceptIdeal", payload: { idealRevision } };
   assert.equal((await append(root, request)).observation.state, "check-unavailable");
   const accepted = await append(root, request, { confirmDecision: true });
   assert.equal(accepted.observation.receipt?.outcome, "candidate-written", JSON.stringify(accepted));
   await writeFile(join(root, paths.ideaDocumentPath), "# Changed world\n");
   const updated = git(root, "hash-object", "-w", join(root, paths.ideaDocumentPath));
-  assert.equal((await append(root, { type: "ideal.approved", payload: { idealRevision: updated } },
+  assert.equal((await append(root, { type: "acceptIdeal", payload: { idealRevision: updated } },
     { confirmDecision: true })).observation.state, "check-unavailable");
 });
 
@@ -114,9 +114,9 @@ test("normal primary prefix is immutable; a reduction-failed base can be repaire
   publish(root, "Migrate");
   const path = join(root, ideaPaths(FIRST_ID).eventsPath);
   const good = await readFile(path, "utf8");
-  await writeFile(path, serializeIdeaEvents([{ sequence: 1, type: "alias.updated", payload: { alias: "rewrite" } }]));
+  await writeFile(path, serializeIdeaEvents([{ sequence: 1, type: "setAlias", payload: { alias: "rewrite" } }]));
   assert.equal((await checkRepository({ root, worktree: true })).observation.state, "check-unavailable");
-  await writeFile(path, good + serializeIdeaEvents([{ sequence: 2, type: "alias.updated", payload: { alias: "fixture" } }]));
+  await writeFile(path, good + serializeIdeaEvents([{ sequence: 2, type: "setAlias", payload: { alias: "fixture" } }]));
   publish(root, "Deliberately broken primary reducer");
   await writeFile(path, good);
   const repaired = await checkRepository({ root, worktree: true });
@@ -181,7 +181,7 @@ test("two CLI processes cannot append different events at the same observed posi
   const cli = fileURLToPath(new URL("../../bin/silvermoon.js", import.meta.url));
   const requests = ["en", "zh-CN"].map((language, index) => ({
     file: join(base, `request-${index}.json`),
-    value: { type: "language.updated", payload: { language } },
+    value: { type: "setLanguage", payload: { language } },
   }));
   await Promise.all(requests.map(({ file, value }) => writeFile(file, JSON.stringify(value))));
   const results = await Promise.all(requests.map(({ file }) => new Promise((done, reject) => {
@@ -204,7 +204,7 @@ test("revise preserves primary and demands a first-parent-safe merge before inte
   await migrate(root);
   publish(root, "Migrate");
   git(root, "checkout", "-b", "candidate");
-  assert.equal((await append(root, { type: "language.updated", payload: { language: "en" } })).observation.receipt.outcome, "candidate-written");
+  assert.equal((await append(root, { type: "setLanguage", payload: { language: "en" } })).observation.receipt.outcome, "candidate-written");
   git(root, "add", ".");
   git(root, "commit", "-m", "First local candidate");
   const observed = await replay(root);
@@ -212,8 +212,8 @@ test("revise preserves primary and demands a first-parent-safe merge before inte
     root, operation: "revise", idea: FIRST_ID, ownedSuffix: true,
     expectedLength: observed.length, expectedDigest: observed.digest, expectedPrimary: observed.baseline.commit,
     input: [
-      { type: "alias.updated", payload: { alias: "fixture" } },
-      { type: "language.updated", payload: { language: "zh-CN" } },
+      { type: "setAlias", payload: { alias: "fixture" } },
+      { type: "setLanguage", payload: { language: "zh-CN" } },
     ],
   });
   assert.equal(revised.observation.receipt?.outcome, "candidate-written", JSON.stringify(revised));
@@ -236,7 +236,7 @@ test("a peer's failed reduction does not unlock a healthy prefix and format fail
   const secondPath = join(root, ideaPaths(SECOND_ID).eventsPath);
   const first = await readFile(firstPath, "utf8");
   const second = await readFile(secondPath, "utf8");
-  await writeFile(firstPath, first + serializeIdeaEvents([{ sequence: 2, type: "alias.updated", payload: { alias: "first" } }]));
+  await writeFile(firstPath, first + serializeIdeaEvents([{ sequence: 2, type: "setAlias", payload: { alias: "first" } }]));
   publish(root, "Break only first reduction");
   await writeFile(firstPath, first);
   await writeFile(secondPath, "");
@@ -258,7 +258,7 @@ test("world observation is read-only and primary movement invalidates a pending 
   publish(root, "Migrate");
   const paths = ideaPaths(FIRST_ID);
   const request = {
-    type: "ideal.approved", payload: { idealRevision: git(root, "rev-parse", `HEAD:${paths.idealPath}`) },
+    type: "acceptIdeal", payload: { idealRevision: git(root, "rev-parse", `HEAD:${paths.idealPath}`) },
   };
   await append(root, request, { confirmDecision: true });
   publish(root, "Approve ideal");
@@ -274,7 +274,7 @@ test("world observation is read-only and primary movement invalidates a pending 
   await writeFile(join(root, paths.ledgerPath), "# New continuation evidence\n");
   publish(root, "Advance primary");
   const stale = await eventCommand({
-    root, operation: "append", idea: FIRST_ID, input: { type: "language.updated", payload: { language: "en" } },
+    root, operation: "append", idea: FIRST_ID, input: { type: "setLanguage", payload: { language: "en" } },
     expectedLength: observed.length, expectedDigest: observed.digest, expectedPrimary: observed.baseline.commit,
   });
   assert.equal(stale.observation.state, "check-unavailable");
@@ -313,7 +313,7 @@ test("event process interruption recovers its exact record; moved primary requir
   const path = ideaPaths(FIRST_ID).eventsPath;
   const module = new URL("../../src/state-transaction.js", import.meta.url).href;
   const before = await readFile(join(root, path), "utf8");
-  const after = before + serializeIdeaEvents([{ sequence: 2, type: "language.updated", payload: { language: "en" } }]);
+  const after = before + serializeIdeaEvents([{ sequence: 2, type: "setLanguage", payload: { language: "en" } }]);
   const context = {
     id: FIRST_ID, primary: git(root, "rev-parse", "origin/main"),
     revisions: {

@@ -62,7 +62,7 @@ for those filters; the default is all active ideas.
 refs. `create-idea` requires the configured primary branch and upstream plus a
 clean worktree; it does not fetch or compare ancestry.
 
-`check` validates a project snapshot and, for v2/v3 projects, its event history
+`check` validates a project snapshot and, for v2 projects, its event history
 against primary. It does not navigate ideas or perform synchronization.
 Default `check` validates committed `HEAD`;
 `--worktree` validates the full candidate and `--staged` the index. Its JSON
@@ -142,14 +142,13 @@ in its selected snapshot but never returns their content.
 ### Create A New Idea
 
 `create-idea` creates only the scaffold: `Idea.md`, `Implementation.md`,
-`Deployment.md`, `ledger.md`, and either v1 `status.yaml` or v2/v3 `events.jsonl`.
+`Deployment.md`, `ledger.md`, and either v1 `status.yaml` or v2 `events.jsonl`.
 It never stages, commits,
 pushes, or records a decision. Preserve explicit creation intent through
 hygiene retries: retry `create-idea`, not bare `whats-next`.
 
 When creating a new idea, proactively assign a concise, unique alias: edit
-v1 `status.yaml`, or use `event append` with `alias.updated` (v2) or
-`setAlias` (v3).
+v1 `status.yaml`, or use v2 `event append` with `setAlias`.
 Use an alias supplied by the user, or derive one from the idea's
 goal. Do not leave the alias absent or ask for a name solely to choose one.
 
@@ -191,7 +190,7 @@ Each idea has three canonical entries:
 
 ```text
 .silvermoon/ideas/<ULID>/
-├── status.yaml (v1) or events.jsonl (v2/v3)
+├── status.yaml (v1) or events.jsonl (v2)
 ├── ledger.md
 └── outer/
     ├── Deployment.md
@@ -318,7 +317,7 @@ surface can resolve the link.
 Synchronization and links make review possible; neither constitutes a human
 decision.
 
-For v2/v3 projects, follow [events.md](./references/events.md): observe the exact
+For v2 projects, follow [events.md](./references/events.md): observe the exact
 log and primary, then use the project-version `event append` command after an
 explicit decision. Never hand-edit JSONL, infer authorization from a CLI flag,
 clear decisions, or append observations. `event revise` is only for reviewed

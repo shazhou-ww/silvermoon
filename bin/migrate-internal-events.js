@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 import { Command } from "commander";
-import { migrateV2ToV3 } from "../src/migrate-v3-events.js";
+import { migrateInternalEvents } from "../src/migrate-internal-events.js";
 
 const program = new Command()
-  .name("migrate-v2-to-v3")
-  .description("Explicit one-time event migration; defaults to a read-only plan")
+  .name("migrate-internal-events")
+  .description("Explicit one-time Silvermoon source event migration; defaults to a read-only plan")
   .option("--root <path>", "project root", process.cwd())
   .option("--apply", "apply the exact confirmed plan")
   .option("--expected-digest <sha256>", "digest returned by the read-only plan")
@@ -18,7 +18,7 @@ try {
   if ([options.apply, options.resume, options.rollback].filter(Boolean).length > 1) {
     throw new Error("Choose only one of --apply, --resume or --rollback.");
   }
-  console.log(JSON.stringify(await migrateV2ToV3(options), null, 2));
+  console.log(JSON.stringify(await migrateInternalEvents(options), null, 2));
 } catch (error) {
   console.error(`ERROR migration.failed: ${error.message}`);
   process.exitCode = 1;

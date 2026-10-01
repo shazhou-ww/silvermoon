@@ -95,7 +95,7 @@ async function inspectTree({
     userHome,
     version,
   });
-  const eventHistoryConfig = observed.config?.version >= 2 ? observed.config : null;
+  const eventHistoryConfig = observed.config?.version === 2 ? observed.config : null;
   if (observed.config?.version === 1) {
     const commits = runGit(gitRoot, [
       "log", "--first-parent", "--format=%H", version?.commit ?? "HEAD", "--", CONFIG_PATH,
@@ -103,7 +103,7 @@ async function inspectTree({
     if (!commits.ok) throw new Error("Cannot determine project format ancestry.");
     for (const previous of commits.stdout.split("\n").filter(Boolean)) {
       const previousConfig = await loadConfigSnapshot({ gitRoot, tree: previous });
-      if (previousConfig.config?.version < 2) continue;
+      if (previousConfig.config?.version !== 2) continue;
       observed.observation.problems.push({
         type: "idea.events.downgrade", summary: "A v2 event project cannot be downgraded to mutable v1 status.",
       });
@@ -392,15 +392,12 @@ export {
 } from "./ideas.js";
 export {
   IDEA_EVENT_TYPES,
-  EVENT_RENAMES,
   EVENT_PERMISSIONS,
-  V3_EVENT_TYPES,
   IdeaEventFormatError,
   checkEventChange,
   eventsFromStatus,
   initialEventState,
   parseIdeaEvents,
-  renameV2Events,
   reduceIdeaEvent,
   replayIdeaEvents,
   serializeIdeaEvent,

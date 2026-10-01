@@ -191,9 +191,9 @@ function lifecycleInstruction(idea, language, contentLanguage) {
   const name = ideaName(idea);
   if (idea.statusPath.endsWith("/events.jsonl")) {
     const action = {
-      preparing: ["ideal.approved", idea.idealRevision, idea.worlds.idealRevision.documentPath],
-      implementing: ["implementation.accepted", idea.implementationRevision, idea.worlds.implementationRevision.documentPath],
-      deploying: ["deployment.accepted", idea.deploymentRevision, idea.worlds.deploymentRevision.documentPath],
+      preparing: ["acceptIdeal", idea.idealRevision, idea.worlds.idealRevision.documentPath],
+      implementing: ["acceptInner", idea.implementationRevision, idea.worlds.implementationRevision.documentPath],
+      deploying: ["acceptOuter", idea.deploymentRevision, idea.worlds.deploymentRevision.documentPath],
     }[idea.state];
     return joinInstructions([
       action ? localize(language,
@@ -470,7 +470,7 @@ async function assessRepositoryReadinessInternal({
     };
   }
   const primary = fetched.result.commit;
-  if (observed.config.version >= 2) {
+  if (observed.config.version === 2) {
     try {
       await inspectEventHistory({ root, tree: head, commit: head, config: observed.config, primary, auditCandidate: true });
     } catch (caught) {
@@ -622,7 +622,7 @@ export async function whatsNext({
   }
 
   const selected = selectIdea(observed.layout.ideas, selector);
-  if (observed.config.version >= 2) {
+  if (observed.config.version === 2) {
     try {
       await inspectEventHistory({
         root: observed.observation.root,

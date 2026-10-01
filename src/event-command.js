@@ -14,14 +14,9 @@ import { ideaPaths } from "./layout.js";
 import { digest, recoverStateTransaction, stateBytes, stateTransaction } from "./state-transaction.js";
 
 const DECISIONS = {
-  "ideal.approved": ["idealRevision", "preparing"],
-  "implementation.accepted": ["implementationRevision", "implementing"],
-  "deployment.accepted": ["deploymentRevision", "deploying"],
-};
-const V3_DECISIONS = {
-  approveIdeal: DECISIONS["ideal.approved"],
-  acceptImplementation: DECISIONS["implementation.accepted"],
-  acceptDeployment: DECISIONS["deployment.accepted"],
+  acceptIdeal: ["idealRevision", "preparing"],
+  acceptInner: ["implementationRevision", "implementing"],
+  acceptOuter: ["deploymentRevision", "deploying"],
 };
 
 function parseRequest(input, sequence, options) {
@@ -71,8 +66,8 @@ async function resolveIdea(root, tree, config, selector) {
 }
 
 function assertHumanGate(event, idea, primaryWorlds, confirmed) {
-  const decision = DECISIONS[event.type] ?? V3_DECISIONS[event.type];
-  if (!decision && !["idea.abandoned", "idea.resumed", "abandon", "resume"].includes(event.type)) return;
+  const decision = DECISIONS[event.type];
+  if (!decision && !["abandon", "resume"].includes(event.type)) return;
   if (!confirmed) throw new Error("This event requires an explicit human decision; --confirm-decision asserts one, it does not create authorization.");
   if (!decision) return;
   const [revision, state] = decision;
@@ -152,12 +147,12 @@ export async function eventCommand({
             }
             const { tree } = worktreeSnapshot(root);
             const loaded = await loadConfigSnapshot({ gitRoot: root, tree });
-            if (![2, 3].includes(loaded.config?.version)) throw new Error("Event recovery requires the original event project.");
+            if (loaded.config?.version !== 2) throw new Error("Event recovery requires the original v2 project.");
             if (plan.context.localInteraction) {
               const file = plan.files[0];
               if (file.path !== ideaPaths(plan.context.id).eventsPath) throw new Error("Interaction recovery path mismatch.");
               const candidate = Buffer.from(file.after, "base64");
-              const eventOptions = { version: 3, objectIdLength: tree.length };
+              const eventOptions = { objectIdLength: tree.length };
               const result = replayIdeaEvents(plan.context.id,
                 parseIdeaEvents(candidate, eventOptions), eventOptions);
               if (!result.ok) throw new Error(`Invalid local interaction recovery: ${result.code}`);
@@ -186,14 +181,14 @@ export async function eventCommand({
       receipt = action.result;
     } else {
       const adoption = await inspectAdoption({ root });
-      if (adoption.findings.length || ![2, 3].includes(adoption.config?.version)) {
+      if (adoption.findings.length || adoption.config?.version !== 2) {
         throw new Error(adoption.problems.map((p) => p.summary).join("; ") || "Event commands require an explicitly initialized or migrated event project.");
       }
       root = adoption.root;
       const config = adoption.config;
       outputLanguage = resolveOutputLanguage({ content: config.preferredLanguage, override: language }).tag;
       const { tree } = worktreeSnapshot(root);
-      const options = { version: config.version, objectIdLength: tree.length };
+      const options = { objectIdLength: tree.length };
       const protectedPaths = [".silvermoon/ideas", ".silvermoon/config.yaml"];
       const protectedTree = worktreeSnapshot(root, { paths: protectedPaths }).tree;
       const id = await resolveIdea(root, tree, config, selector);
@@ -215,13 +210,12 @@ export async function eventCommand({
         try {
           baseline = localPrimary(root, config);
         } catch (cause) {
-          if (config.version !== 3) throw cause;
           baseline = { unavailable: cause.message };
         }
         receipt = { ...observation, outcome: "observed", format, reduction, baseline };
       } else {
         if (!["append", "revise"].includes(operation)) throw new Error(`Unknown event operation: ${operation}`);
-        if (config.version === 3 && operation === "append"
+        if (operation === "append"
           && (input?.type === "ping" || input?.type === "pong")) {
           if (expectedPrimary !== undefined) throw new Error("Local interaction append does not accept --expected-primary.");
           const action = await runtime.performAction({ type: "write-idea-events" },

@@ -16,7 +16,7 @@ Each idea is self-contained under one canonical uppercase ULID:
 |   `-- deploying.md
 `-- ideas/
     `-- 01M36QGPNTXEPP61DA4KP4AVZF/
-        |-- status.yaml (v1) or events.jsonl (v2/v3)
+        |-- status.yaml (v1) or events.jsonl (v2)
         |-- ledger.md
         `-- outer/
             |-- Deployment.md
@@ -80,7 +80,7 @@ Each world is an opaque Git tree:
 - `implementationRevision` identifies `inner/` and includes the Ideal World.
 - `deploymentRevision` identifies `outer/` and includes both nested worlds.
 
-`status.yaml` (v1), `events.jsonl` (v2/v3), and `ledger.md` are outside all three
+`status.yaml` (v1), `events.jsonl` (v2), and `ledger.md` are outside all three
 world trees. The repository
 object format in use determines revision shape. Silvermoon validates canonical
 revision shape, computes the current world trees, and compares those values to
@@ -146,36 +146,26 @@ State is derived in order:
 
 Project `version: 2` replaces mutable status with a required `events.jsonl`
 at each idea root. Identity comes from the directory and an empty log is
-valid. A strict seven-event union deterministically updates the old status
-facts; no observations, creation/import markers, or audit envelope are stored.
-The existing nested-world revisions and five lifecycle states are unchanged.
+valid. Its strict nine-event union updates the status facts and interaction
+projection; no observations, creation/import markers, or audit envelope are
+stored. The nested-world revisions and five lifecycle states are unchanged.
 
 Use `event replay`, `event append`, and `event revise`, never direct JSONL
-editing. Requests carry log byte length, SHA-256 and expected primary outside
-the business event. Canonical JSONL, no-op handling, human gates, concurrency,
+editing. Requests carry exact log byte length and SHA-256 outside the business event;
+lifecycle writes also require expected primary. Canonical JSONL, human gates, concurrency,
 conditional append-only history, and interrupted-write recovery are specified
 in the [event operations contract](../skills/silvermoon/references/events.md).
 That contract also documents the separate `bin/migrate-v1-to-v2.js` entrypoint.
 No command automatically migrates a v1 project.
 
-## Event State (v3)
-
-Project `version: 3` retains the single canonical `events.jsonl` and the
-same lifecycle facts. Its seven existing event types become `setAlias`,
-`setLanguage`, `approveIdeal`, `acceptImplementation`, `acceptDeployment`,
-`abandon`, and `resume`, with unchanged payloads. The new `ping` and `pong`
-events each carry only a nonempty string `message`. Replay exposes ordered
-messages and `lastSignal` without interpreting a response as task completion
-or removing older goals. After `abandon`, only `resume` is legal.
-
-`event replay` observes the complete local byte prefix. `event append` for
-`ping`/`pong` requires its exact length and SHA-256 but not primary/network;
-business events and human decisions retain the primary and revision gates.
-The CLI cannot authenticate upstream or downstream senders. Migration from v2
-is explicit, validates each record's rename and equivalent fact projection,
-and leaves historical v2 Git commits intact. See the
-[event operations contract](../skills/silvermoon/references/events.md) for
-the migration entrypoint, append-only history and interrupted-write recovery.
+V2's seven business types are `setAlias`, `setLanguage`, `acceptIdeal`,
+`acceptInner`, `acceptOuter`, `abandon`, and `resume`. The two interaction
+types, `ping` and `pong`, carry only a nonempty `message` string. Replay retains
+ordered messages and `lastSignal` without treating a reply as completion or
+removing older goals. After `abandon`, only `resume` is legal. Interaction
+appends need the local byte precondition but no primary fetch; decisions
+retain their primary and human revision gates. The CLI cannot authenticate
+upstream or downstream senders.
 
 ## Experimental JavaScript Package API
 

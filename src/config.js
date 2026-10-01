@@ -137,12 +137,12 @@ function parseConfigSource({ absolutePath, root, source }) {
       ));
     }
   }
-  if (Object.hasOwn(value, "version") && ![1, 2, 3].includes(value.version)) {
+  if (Object.hasOwn(value, "version") && ![1, 2].includes(value.version)) {
     diagnostics.push(configDiagnostic(
       "config.unsupported-version",
       `${CONFIG_PATH}#version`,
       `Unsupported Silvermoon version: ${String(value.version)}`,
-      "Use version: 1, 2, or 3; migrate existing projects explicitly.",
+      "Use version: 1 or 2; migrate existing v1 projects explicitly.",
     ));
   }
   if (

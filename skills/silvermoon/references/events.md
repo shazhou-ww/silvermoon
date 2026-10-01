@@ -1,6 +1,6 @@
 # Event-backed projects
 
-These rules apply when `.silvermoon/config.yaml` has `version: 2` or `version: 3`.
+These rules apply when `.silvermoon/config.yaml` has `version: 2`.
 V1 projects remain readable and use their existing canonical `status.yaml`.
 Never change the version alone or migrate a project implicitly.
 
@@ -13,22 +13,21 @@ without BOM, with LF and a final LF for nonempty logs. Do not let Git convert
 these bytes: add `**/events.jsonl -text` to the project's `.gitattributes`.
 
 Every record has a consecutive positive safe-integer `sequence` and `type`.
-In v2, only these seven business changes exist:
+V2 defines seven business changes and two interaction messages:
 
 | Type | Payload |
 | --- | --- |
-| `alias.updated` | `{"alias":"unique-name"}` or `{"alias":null}` |
-| `language.updated` | `{"language":"zh-CN"}` or `{"language":null}` |
-| `ideal.approved` | `{"idealRevision":"<exact world tree OID>"}` |
-| `implementation.accepted` | `{"implementationRevision":"<exact world tree OID>"}` |
-| `deployment.accepted` | `{"deploymentRevision":"<exact world tree OID>"}` |
-| `idea.abandoned` | No payload |
-| `idea.resumed` | No payload |
+| `setAlias` | `{"alias":"unique-name"}` or `{"alias":null}` |
+| `setLanguage` | `{"language":"zh-CN"}` or `{"language":null}` |
+| `acceptIdeal` | `{"idealRevision":"<exact world tree OID>"}` |
+| `acceptInner` | `{"implementationRevision":"<exact world tree OID>"}` |
+| `acceptOuter` | `{"deploymentRevision":"<exact world tree OID>"}` |
+| `abandon` | No payload |
+| `resume` | No payload |
+| `ping` | `{"message":"nonempty string"}` |
+| `pong` | `{"message":"nonempty string"}` |
 
-V3 renames those types, preserving each payload: `setAlias`, `setLanguage`,
-`approveIdeal`, `acceptImplementation`, `acceptDeployment`, `abandon`,
-`resume`. V3 also adds `ping` and `pong`, each with exactly
-`{"message":"nonempty string"}`. These messages occupy the same sequence
+Interaction messages occupy the same sequence
 and log as business events. Replay adds `interaction.messages` (ordered
 `sequence`, `type`, `message`) and `interaction.lastSignal` (`ping`, `pong`,
 or `null`). Only `ping` and `pong` change the last signal; neither represents
@@ -64,7 +63,7 @@ Use the exact ULID if invalid logs prevent alias resolution.
 Put a business request in a JSON file, without sequence, for example:
 
 ```json
-{"type":"alias.updated","payload":{"alias":"event-state-model"}}
+{"type":"setAlias","payload":{"alias":"event-state-model"}}
 ```
 
 For metadata and human decisions, bind the request to the observed log and
@@ -81,7 +80,7 @@ is an external write precondition, never event data. Cooperating writers
 cannot write the same position; unexpected external edits block recovery.
 Do not concurrently hand-edit a target while its CLI transaction runs.
 
-For v3 `ping`/`pong`, supply a request of the form
+For `ping`/`pong`, supply a request of the form
 `{"type":"pong","payload":{"message":"blocked"}}` to the same `event append`
 command, but pass only `--expected-length` and `--expected-digest` (no
 `--expected-primary`). The local write does not fetch, commit, or require a
@@ -103,7 +102,7 @@ requests; if the second fails, the first remains a completed local append.
 
 ## Check and revise
 
-V2/v3 `check` validates both the chosen snapshot and primary event history:
+V2 `check` validates both the chosen snapshot and primary event history:
 
 - Worktree/index candidates use a fixed local named-primary tracking commit;
   local checks never fetch or claim remote freshness.
@@ -167,29 +166,33 @@ Node on Windows provides no directory-fsync guarantee, so power-loss durability
 depends on the filesystem. Process-interruption recovery does not imply a
 hardware power-loss guarantee.
 
-## Explicit v2-to-v3 migration
+## Source checkout's internal format conversion
 
-Only after explicit project-upgrade authorization, run the standalone entrypoint
-from the running checkout:
+The Silvermoon source repository itself contains earlier, unpublished v2
+dot-separated event records. Its one-time internal conversion is not a public
+v2-to-v3 migration or a compatibility promise to other projects. Only in that
+source checkout, after explicitly scheduling the conversion, use the bundled
+standalone entrypoint:
 
 ```sh
-node bin/migrate-v2-to-v3.js --root <project>
-node bin/migrate-v2-to-v3.js --root <project> --apply --expected-digest <plan-digest>
+node bin/migrate-internal-events.js --root <source-checkout>
+node bin/migrate-internal-events.js --root <source-checkout> --apply --expected-digest <plan-digest>
 ```
 
-The read-only plan checks all v2 logs against the local primary tracking tip,
-per-record type renames,
-equivalent fact projections, and the v3 abandoned-window rule. Apply requires
-a fresh fetch and a clean committed source at that exact primary tip. The
-transaction switches every
-idea log and the config together; prior Git commits remain v2. Validate the
-candidate with `check --worktree` and `check --staged`, commit and synchronize
-normally. Do not manually rename JSONL types. After the original writer has
-stopped, an interrupted transaction can be completed or rolled back:
+The read-only plan checks all old logs against the named primary, exact type
+renames, equivalent fact projections, and the abandoned-window rule. Apply
+rechecks primary and requires a clean committed source. The recoverable
+transaction converts every source idea log and records an internal historical
+format boundary while leaving project `version: 2` unchanged. Prior Git
+commits remain readable as old format; subsequent records must satisfy the
+final public v2 schema and append-only history. This does not authorize an
+upgrade of another repository or an implicit migration. Validate, commit
+and synchronize normally; never hand-edit JSONL. For interrupted transactions,
+after confirming the original writer has stopped:
 
 ```sh
-node bin/migrate-v2-to-v3.js --root <project> --resume --confirm-stopped
-node bin/migrate-v2-to-v3.js --root <project> --rollback --confirm-stopped
+node bin/migrate-internal-events.js --root <source-checkout> --resume --confirm-stopped
+node bin/migrate-internal-events.js --root <source-checkout> --rollback --confirm-stopped
 ```
 
 ## Explicit v1-to-v2 migration
