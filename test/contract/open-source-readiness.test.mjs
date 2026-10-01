@@ -80,17 +80,6 @@ test("defines the exact active main ruleset contract", async () => {
     rules: [
       { type: "deletion" },
       { type: "non_fast_forward" },
-      {
-        type: "required_status_checks",
-        parameters: {
-          do_not_enforce_on_create: false,
-          required_status_checks: [{
-            context: "Required checks",
-            integration_id: 15368,
-          }],
-          strict_required_status_checks_policy: true,
-        },
-      },
     ],
   });
 });

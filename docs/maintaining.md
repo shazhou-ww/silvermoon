@@ -124,11 +124,8 @@ and proposes reviewable SHA/version updates; do not auto-merge those PRs.
 Review the upstream release and action ownership, then require the complete CI
 gate before merging.
 
-The branch ruleset depends only on the stable `Required checks` job name. That
-aggregate job fails unless package-risk selection, unit, contract, and
-integration jobs succeed, and it requires package validation to succeed when
-risk selection enables it. Keep this name and fail-closed behavior synchronized
-with `.github/rulesets/main.json`.
+The branch ruleset protects `main` against deletion and non-fast-forward
+updates. Keep its configuration synchronized with `.github/rulesets/main.json`.
 
 ## Documentation Ownership
 
