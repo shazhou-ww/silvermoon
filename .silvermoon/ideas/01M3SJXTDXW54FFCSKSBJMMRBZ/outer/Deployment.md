@@ -10,6 +10,9 @@
 先将本部署契约及 ledger 同步 primary 并重新观察稳定的 deployment
 revision，再运行验证。不修改已验收内层世界，不重复执行内部迁移，
 也不发布 npm；本项不证明真实 Agent session 的送达。
+契约已同步至 primary 提交
+`1d7e74fb03c2b8ee288079d94ea6d7cc5420c350`；同期部署 revision
+为 `77a61838f556109dfe7b9e7486783595618c4184`。
 
 ### D-S02: 验证隔离消费与交互边界
 
@@ -34,12 +37,18 @@ test/runtime/migrate-internal-events.test.js`，验证离线消息、旧前态�
 D-S02 两项命令均退出 0；安装包测试报告 `PACK_SMOKE_OK`，
 交互与迁移夹具无失败或跳过。以固定版本测试断言及实际结果
 证明本地读写和恢复边界，不宣称真实 session 已集成。
+在 macOS、Node `v26.7.0`、pnpm `11.22.0` 上执行 D-S02：
+安装包测试 1/1 通过、0 跳过并报告 `PACK_SMOKE_OK`；
+交互与迁移测试 14/14 通过、0 跳过。
 
 ### D-AC02: 真实 primary 保持可验证
 
 D-S03 的 remote check 通过并报告有效事件历史，`pnpm check`
 通过；迁移日志保持九种最终 v2 类型，旧提交可回放且无自动
 版本升级。以检查输出及同步提交证明。
+在上述提交执行 `node bin/silvermoon.js check --remote --audience agent`
+报告目标 `remote`、结果通过；`pnpm check` 退出 0，
+`pack:check`、integration、e2e 和 quick 各层均通过。
 
 ### D-AC03: 证据同步且发布边界不变
 
@@ -47,3 +56,6 @@ D-S03 的 remote check 通过并报告有效事件历史，`pnpm check`
 证据改变，已验收 implementation revision 不变。同步后的准确
 deployment revision 经再次验证且提交从刷新后的 primary 可达；
 不自动写入 `acceptOuter`，不发布 npm。
+已验收主体世界提交仍为 `14e9bdcb84a93bfa332e6c450a060c3f20e7e87d`；
+本轮未改主体世界或生产代码。证据候选尚需同步后重新观察与复验，
+不以当前文本推定部署验收。
