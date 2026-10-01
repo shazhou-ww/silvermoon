@@ -74,8 +74,8 @@ export type InteractionEvent = {
 };
 
 /**
- * After 的权限规则。upstream/downstream/both 仅约束谁可写入，
- * 不等同于球权；三个决策与放弃/恢复仍需单独的人类授权校验。
+ * After 的发送方约定，供未来可信运行时路由，不是无状态 CLI 的
+ * 身份认证规则，也不等同于球权。人工决定保留独立授权校验；
  * 旧日志不含发送者身份，回放不凭空断言历史记录由谁写入。
  */
 export const EVENT_PERMISSIONS = {
@@ -90,27 +90,13 @@ export const EVENT_PERMISSIONS = {
   pong: "downstream",
 } as const satisfies Record<ExistingEventType | InteractionEvent["type"], Permission>;
 
-/**
- * 角色必须来自可信调用边界；不能让输入文件或自报 CLI 参数充当身份。
- * 球在下游时仍允许上游连续 ping 或修改双方可写的 metadata。
- */
-export function assertSenderAllowed(
-  type: keyof typeof EVENT_PERMISSIONS,
-  sender: Sender,
-): void {
-  const permission: Permission = EVENT_PERMISSIONS[type];
-  if (permission !== "both" && permission !== sender) {
-    throw new Error(`${sender} 无权追加 ${type}。`);
-  }
-}
-
 /** 仅最后的 ping/pong 决定路由；其他事件不更改 lastSignal。 */
 export function nextRecipient(state: IdeaStateProjection): Sender {
   return state.interaction.lastSignal === "ping" ? "downstream" : "upstream";
 }
 
 export class InteractionTransitionError extends Error {
-  readonly code: "sequence-conflict" | "incomplete-event" | "no-state-change";
+  readonly code: "sequence-conflict" | "incomplete-event";
 
   constructor(code: InteractionTransitionError["code"], message: string) {
     super(message);
@@ -158,9 +144,6 @@ export function transitionInteraction(
   if (event.type !== "pong") {
     throw new InteractionTransitionError("incomplete-event", "未知交互事件。");
   }
-  if (state.interaction.unansweredPings.length === 0) {
-    throw new InteractionTransitionError("no-state-change", "没有未回应的 ping。");
-  }
   return {
     status: state.status,
     sequence: event.sequence,
@@ -170,20 +153,23 @@ export function transitionInteraction(
 
 /**
  * 只有两种状态变化：ping 在日志中新增一条未回应的消息；pong 回应
- * 前一完整投影中所有未回应的 ping，并清空该集合。下一条 ping 不受旧
- * pong 影响。只有这两类事件更新 lastSignal；迁移后的业务事件（包括
+ * 前一完整投影中所有未回应的 ping，并清空该集合；即使集合为空，
+ * 连续 pong 也以新 sequence/message 更新 lastPong。下一条 ping 不受
+ * 旧 pong 影响。只有这两类事件更新 lastSignal；迁移后的业务事件（包括
  * 准确 revision 的批准/验收、放弃/恢复）都不交球。若上游完成决定后
  * 要把工作交给下游，必须另写 ping；已放弃状态先于路由阻止派发。
  * 消息内容是供人或 Agent 阅读的字符串，不解析结果类型。
  *
  * CLI 仍使用 event replay/append，不新增 interaction 命令组。
  * append 的交互请求为 {type,payload:{message}}，CLI 分配 sequence；
- * 交互写入只绑定 replay 给出的准确本地日志长度、摘要和可信角色，
+ * 交互写入只绑定 replay 给出的准确本地日志长度和摘要，
  * 无须 fetch、--expected-primary、commit 或 clean worktree。乐观锁冲突后必须
  * 重新观察再提交 pong：不可把旧响应自动扩展到并发新增的 ping。
  * 仅在原前态后已写入准确相同的请求时，重试返回原结果；其余
  * 长度/摘要冲突必须重新观察，不能误认后来相同 message 为同一请求。
- * 生命周期决策仍要求准确 primary、世界 revision 和人类授权。
+ * CLI 不认证发送角色，也不因球权拒绝连续 ping/pong；未来可信
+ * 运行时按 EVENT_PERMISSIONS 路由。生命周期决策仍要求准确
+ * primary、世界 revision 和人类授权。
  *
  * 显式一次性 v2 -> v3 迁移：冻结并观察 primary，先验证每个 v2 日志
  * 可完整归约；逐条只改 type（EVENT_RENAMES），保持顺序、sequence、
