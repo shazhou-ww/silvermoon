@@ -3,7 +3,7 @@
  * Before: v2 events.jsonl 有七种点分事件；回放结果为
  *   { status: { id, ...原 status 字段 }, sequence }。
  * After: 显式版本迁移将七种既有事件改为单词 type，再新增 ping/pong；
- *   保留原 payload、sequence、status 语义，完整回放增加 interaction。
+ *   保留原 payload、sequence、status 语义，完整回放增加有序消息投影。
  *   不创建第二份权威，也不改写 Git 中已存在的旧提交。
  */
 
@@ -49,13 +49,13 @@ export interface StatusProjection {
 /** After 新增：日志序号就是消息的身份，不再另设消息 ID。 */
 export interface Message {
   readonly sequence: number;
+  readonly type: "ping" | "pong";
   readonly message: string;
 }
 
 /** After 新增；Before 不存在 interaction 投影。 */
 export interface InteractionProjection {
-  readonly unansweredPings: readonly Message[];
-  readonly lastPong?: Message;
+  readonly messages: readonly Message[];
   readonly lastSignal: "ping" | "pong" | null;
 }
 
@@ -123,7 +123,7 @@ export function createInitialIdeaState(ideaId: Ulid): IdeaStateProjection {
   return {
     status: { id: ideaId },
     sequence: 0,
-    interaction: { unansweredPings: [], lastSignal: null },
+    interaction: { messages: [], lastSignal: null },
   };
 }
 
@@ -143,33 +143,32 @@ export function transitionInteraction(
     throw new InteractionTransitionError("incomplete-event", "message 不能为空。");
   }
 
-  const current: Message = { sequence: event.sequence, message: event.payload.message };
-  if (event.type === "ping") {
-    return {
-      status: state.status,
-      sequence: event.sequence,
-      interaction: {
-        ...state.interaction,
-        unansweredPings: [...state.interaction.unansweredPings, current],
-        lastSignal: "ping",
-      },
-    };
-  }
-  if (event.type !== "pong") {
+  if (event.type !== "ping" && event.type !== "pong") {
     throw new InteractionTransitionError("incomplete-event", "未知交互事件。");
   }
+  const current: Message = {
+    sequence: event.sequence,
+    type: event.type,
+    message: event.payload.message,
+  };
   return {
     status: state.status,
     sequence: event.sequence,
-    interaction: { unansweredPings: [], lastPong: current, lastSignal: "pong" },
+    interaction: {
+      messages: [...state.interaction.messages, current],
+      lastSignal: event.type,
+    },
   };
 }
 
 /**
- * 只有两种状态变化：ping 在日志中新增一条未回应的消息；pong 回应
- * 前一完整投影中所有未回应的 ping，并清空该集合；即使集合为空，
- * 连续 pong 也以新 sequence/message 更新 lastPong。下一条 ping 不受
- * 旧 pong 影响。只有这两类事件更新 lastSignal；迁移后的业务事件（包括
+ * 不动点 1：任一事件 append 必须绑定作者观察过的完整日志长度和摘要；
+ * 先前有新事件则拒绝，绝不能自动换序号并解释为已观察新状态。
+ * 这个前态条件不等于 CLI 能验证发送者的主观阅读或身份。
+ * 不动点 2：ping 投递新目标或决定；pong 只陈述下游当前的阻塞。
+ * 两者各自追加有序消息，pong 不清除先前目标或宣称已完成工作，
+ * 连续 pong 也产生新的状态。只有这两类事件更新 lastSignal；
+ * 迁移后的业务事件（包括
  * 准确 revision 的批准/验收、放弃/恢复）都不交球。若上游完成决定后
  * 要把工作交给下游，必须另写 ping；放弃期间仅接受 resume，
  * 即使球权仍指向下游也不能继续追加 ping/pong 或派发执行。
