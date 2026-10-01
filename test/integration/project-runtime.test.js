@@ -118,3 +118,22 @@ test("real project CLI preserves exact interaction state across child processes"
   assert.equal(stale.exitCode, 1);
   assert.equal((await runtime.replay(route)).report.observation.receipt.length, after.report.observation.receipt.length);
 });
+
+test("the project CLI interprets legacy v1 schema without inventing event support", async (t) => {
+  const { base, root } = await createRepository();
+  t.after(() => rm(base, { recursive: true, force: true }));
+  await writeFile(join(root, "package.json"), JSON.stringify({ name: "consumer" }));
+  await mkdir(join(root, "node_modules"), { recursive: true });
+  await symlink(sourceRoot, join(root, "node_modules", "silvermoon"), "dir");
+  const registry = new LocalProjectRegistry({ root: join(base, "registry") });
+  await registry.register(PRIMARY_REPOSITORY, root);
+  const route = { projectUrl: PRIMARY_REPOSITORY, ideaId: FIRST_ID };
+  const runtime = new ProjectRuntime({ registry });
+  const selected = await runtime.next(route);
+  assert.equal(selected.exitCode, 0);
+  assert.equal(selected.report.observation.state, "idea-selected");
+  const unsupported = await runtime.replay(route);
+  assert.equal(unsupported.exitCode, 1);
+  assert.equal(unsupported.report.response.kind, "blocked");
+  assert.notEqual(unsupported.report.observation.state, "event-result");
+});

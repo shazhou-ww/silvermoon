@@ -221,6 +221,8 @@ event receipt are rejected rather than treated as successful capabilities.
 Silvermoon's lifecycle rules. `replay(route)` observes the local event log;
 `appendInteraction(route, { type, message, expectedLength, expectedDigest })`
 passes an exact-log-bound `ping` or `pong` to the project's event command.
+For a legacy v1 project, that event command returns a structured unavailable
+report (`exitCode: 1`); no v2 event support is inferred from `next(route)`.
 Unsupported CLI/report versions, missing installations, and process failures
 are explicit errors. The caller still owns the loop, decision authorization,
 and the safe correlation of delivery and reply observations.
