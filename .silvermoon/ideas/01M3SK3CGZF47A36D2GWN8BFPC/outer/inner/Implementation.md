@@ -18,7 +18,14 @@
 断开并恢复后相同 session ID 可继续返回预期文本；另一次测试在
 `assistant.turn_start` 后追加 `mode: "immediate"`，两条请求均收到确认，
 一次 Agent 回复采纳了后续指令。测试未开放工具权限，未接触仓库文件。
-这些结果仍不证明断线期间恢复执行、并发排队、工具观察和副作用去重。
+后续隔离 SDK 测试还验证了跨两个独立 Node 进程恢复同一 session ID、
+单客户端中两个独立工作区会话互不混淆、运行中的第二条消息可以排队至
+当前工具结束后处理，以及许可受控的自定义工具产生开始/完成事件。
+这仍不证明断线期间恢复执行、工具副作用去重或断线后完整重放输出。
+采用 projectUrl/ideaId 新路由的真实适配器测试还在一次性 Git 项目中验证：
+本机注册、独立 worktree、真实 Copilot session、一次 `queued` 后
+`unknown` 的投递观察及最终预期回复均成功；该项目与本仓库隔离，
+不授予工具权限，测试后清理。它不替代完整故障验收。
 官方
 [steering/queueing 文档](https://github.com/github/copilot-sdk/blob/main/docs/features/steering-and-queueing.md)
 说明 `immediate` 可在时机错过时转排队，`send` 的消息 ID 仅证明接收；
@@ -39,8 +46,10 @@
 
 在本仓库独立模块实现 [接口设计契约](./ideal/Agent-adapter.ts)，供未来每种
 Agent 单实例管理多个 route。为现有 JavaScript 运行时提供实际可导入的
-模块，并保留可供调用方检查的 TypeScript 类型契约。适配器持久保存
-worktree/idea 到真实 session 的映射；同一路由不并发开启第二执行者，
+模块，并保留可供调用方检查的 TypeScript 类型契约。调用方按
+projectUrl/ideaId 路由；本机项目注册表需显式注册 remote URL 对应
+的 Git 项目，适配器负责首次创建或定位该 idea 的 worktree，并按
+projectUrl/ideaId 为 Copilot session 生成稳定身份；同一路由不并发开启第二执行者，
 无法确认旧 session 状态时不暗中替换。`send`、`events`、`observe` 并行
 工作；`observe` 只宣称实测可提供的粒度。不能从 SDK 的接收确认推断
 `processed`，不确定时报告 `unknown`；处理权限、认证和退出错误。

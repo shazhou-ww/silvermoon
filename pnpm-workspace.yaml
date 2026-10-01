@@ -3,3 +3,12 @@ allowBuilds:
   unsafe-pointer: true
 minimumReleaseAgeExclude:
   - silvermoon@0.2.2
+  - '@github/copilot-sdk-darwin-arm64@1.0.16'
+  - '@github/copilot-sdk-darwin-x64@1.0.16'
+  - '@github/copilot-sdk-linux-arm64@1.0.16'
+  - '@github/copilot-sdk-linux-x64@1.0.16'
+  - '@github/copilot-sdk-linuxmusl-arm64@1.0.16'
+  - '@github/copilot-sdk-linuxmusl-x64@1.0.16'
+  - '@github/copilot-sdk-win32-arm64@1.0.16'
+  - '@github/copilot-sdk-win32-x64@1.0.16'
+  - '@github/copilot-sdk@1.0.16'

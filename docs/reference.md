@@ -181,6 +181,33 @@ JSON Schemas, trace versions, and repository file contracts keep their own
 documented compatibility rules. The package does not yet promise stable
 TypeScript declarations or a stable `1.0.0` JavaScript API.
 
+The `silvermoon/agents/copilot` subpath exports `CopilotAdapter` and
+`LocalProjectRegistry` (with TypeScript declarations). This is a separate
+experimental Agent integration, not part of the root export. Register a
+local Git project first with `registry.register(projectUrl, projectRoot)`,
+using its canonical credential-free HTTPS remote URL and a worktree root
+whose `.silvermoon/config.yaml` names that remote. Then construct
+`new CopilotAdapter({ registry, onPermissionRequest })`; callers must
+explicitly decide Copilot tool permissions rather than inheriting blanket
+approval. `start({ projectUrl, ideaId })` creates or reuses a detached
+worktree under the local registry and a durable Copilot session. `send`
+returns an asynchronous stream of delivery observations, while `events`
+returns only final Agent replies and `observe` returns session and activity
+observations. Call `close()` to release connections; it does not delete
+session history or worktrees.
+
+The SDK acknowledges *acceptance*, not per-message consumption. Consequently
+the adapter reports `queued` followed by `unknown`; it does not claim
+`processed` without evidence. A final reply is the last user-facing assistant
+message when Copilot reports idle, not each intermediate tool-loop message.
+Consumers must persist their own project event preconditions and avoid
+resending uncertain operations. Registration rejects unknown or conflicting
+local projects; the adapter does not infer a worktree from a route string.
+The registry excludes concurrent owners of the same route. If an owner exits
+without `close()`, explicitly verify it stopped, then call
+`registry.recover(route, { confirmStopped: true })`; recovery refuses a live
+owner, another host, or an unknown lock. It does not replay an uncertain send.
+
 ## Public Commands
 
 ```sh

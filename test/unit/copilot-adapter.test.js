@@ -1,0 +1,150 @@
+import assert from "node:assert/strict";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { test } from "node:test";
+
+import { CopilotAdapter } from "../../src/agents/copilot.js";
+
+const IDEA = "01M3SK3CGZF47A36D2GWN8BFPC";
+async function nextWithin(iterator) {
+  return Promise.race([
+    iterator.next(),
+    new Promise((_, reject) => setTimeout(() => reject(new Error("Missing observation")), 1000)),
+  ]);
+}
+
+class FakeSession {
+  #handlers = new Set();
+  messages = [];
+
+  constructor(sessionId) {
+    this.sessionId = sessionId;
+  }
+
+  on(handler) {
+    this.#handlers.add(handler);
+    return () => this.#handlers.delete(handler);
+  }
+
+  async send(options) {
+    this.messages.push(options);
+    return `message-${this.messages.length}`;
+  }
+
+  async disconnect() {}
+
+  emit(type, data = {}, agentId) {
+    for (const handler of this.#handlers) handler({ type, data, agentId });
+  }
+}
+
+class FakeClient {
+  sessions = new Map();
+  creates = 0;
+  resumes = 0;
+
+  async start() {}
+
+  async listSessions() {
+    return [...this.sessions.entries()].map(([sessionId, session]) => ({
+      sessionId, context: { cwd: session.worktreePath },
+    }));
+  }
+
+  async createSession(config) {
+    this.creates++;
+    const session = new FakeSession(config.sessionId);
+    session.worktreePath = config.workingDirectory;
+    this.sessions.set(config.sessionId, session);
+    return session;
+  }
+
+  async resumeSession(id) {
+    this.resumes++;
+    return this.sessions.get(id);
+  }
+}
+
+async function fixture(fn) {
+  const worktreePath = await mkdtemp(join(tmpdir(), "silvermoon-agent-"));
+  try {
+    const client = new FakeClient();
+    const registry = { resolve: async () => worktreePath, acquire: async () => async () => {} };
+    const adapter = new CopilotAdapter({ client, registry, onPermissionRequest: () => ({ kind: "deny" }) });
+    const route = { projectUrl: "https://github.com/example/project.git", ideaId: IDEA };
+    await fn({ adapter, client, registry, route });
+  } finally {
+    await rm(worktreePath, { recursive: true });
+  }
+}
+
+test("requires explicit permission handling and a valid route", async () => {
+  assert.throws(() => new CopilotAdapter(), /onPermissionRequest/);
+  await fixture(async ({ adapter, route }) => {
+    await assert.rejects(adapter.start({ ...route, ideaId: "not-an-idea" }), TypeError);
+    assert.equal((await adapter.capabilities()).observation, "activityDetails");
+  });
+});
+
+test("one adapter isolates routes and recovers the same persisted session", async () => {
+  await fixture(async ({ adapter, client, registry, route }) => {
+    const second = await mkdtemp(join(tmpdir(), "silvermoon-agent-"));
+    try {
+      await Promise.all([adapter.start(route), adapter.start(route)]);
+      assert.equal(client.creates, 1);
+      const other = { ...route, ideaId: "01M3SK3CGZF47A36D2GWN8BFPD" };
+      await adapter.start(other);
+      assert.equal(client.creates, 2);
+      const replacement = new CopilotAdapter({ client, registry, onPermissionRequest: () => ({ kind: "deny" }) });
+      await replacement.start(route);
+      assert.equal(client.resumes, 1);
+      assert.equal(client.creates, 2);
+      client.sessions.get([...client.sessions.keys()][0]).worktreePath = second;
+      const relocated = new CopilotAdapter({ client, registry, onPermissionRequest: () => ({ kind: "deny" }) });
+      await assert.rejects(relocated.start(route), /explicit relocation/);
+    } finally {
+      await rm(second, { recursive: true });
+    }
+  });
+});
+
+test("keeps process messages separate from the final idle reply", async () => {
+  await fixture(async ({ adapter, client, route }) => {
+    await adapter.start(route);
+    const session = [...client.sessions.values()][0];
+    const observations = adapter.observe(route)[Symbol.asyncIterator]();
+    const replies = adapter.events(route)[Symbol.asyncIterator]();
+    assert.equal((await nextWithin(observations)).value.state, "unknown");
+    const waiting = replies.next();
+    await new Promise((resolve) => setImmediate(resolve));
+    session.emit("assistant.turn_start");
+    assert.equal((await nextWithin(observations)).value.state, "running");
+    session.emit("assistant.message", { content: "Checking tools" });
+    assert.equal((await nextWithin(observations)).value.text, "Checking tools");
+    session.emit("tool.execution_start", { toolCallId: "a", toolName: "safe", arguments: { x: 1 } });
+    assert.deepEqual((await nextWithin(observations)).value, {
+      type: "toolDetails", toolCallId: "a", name: "safe", state: "started", input: '{"x":1}',
+    });
+    session.emit("assistant.message", { content: "FINAL" });
+    assert.equal((await nextWithin(observations)).value.text, "FINAL");
+    session.emit("session.idle");
+    assert.equal((await nextWithin(observations)).value.state, "idle");
+    assert.equal((await Promise.race([waiting, new Promise((_, reject) => setTimeout(() => reject(new Error("Missing reply")), 1000))])).value, "FINAL");
+    await observations.return();
+    await replies.return();
+  });
+});
+
+test("reports send acceptance without claiming per-message processing", async () => {
+  await fixture(async ({ adapter, client, route }) => {
+    await adapter.start(route);
+    const deliveries = [];
+    for await (const item of adapter.send(route, "new instruction")) deliveries.push(item);
+    assert.deepEqual(deliveries.map(({ state }) => state), ["queued", "unknown"]);
+    assert.equal([...client.sessions.values()][0].messages[0].mode, "immediate");
+    await assert.rejects(async () => {
+      for await (const item of adapter.send(route, " ")) void item;
+    }, TypeError);
+  });
+});
