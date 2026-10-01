@@ -53,10 +53,10 @@ export interface IdeaStateProjection {
   readonly interaction: InteractionProjection;
 }
 
-/** Before 的记录已有 sequence/type/payload；After 只新增以下两种 type。 */
+/** Before 的记录已有 sequence/type/payload；After 只新增单词 type。 */
 export type InteractionEvent = {
   readonly sequence: number;
-  readonly type: "interaction.ping" | "interaction.pong";
+  readonly type: "ping" | "pong";
   readonly payload: { readonly message: string };
 };
 
@@ -73,8 +73,8 @@ export const EVENT_PERMISSIONS = {
   "deployment.accepted": "upstream",
   "idea.abandoned": "upstream",
   "idea.resumed": "upstream",
-  "interaction.ping": "upstream",
-  "interaction.pong": "downstream",
+  ping: "upstream",
+  pong: "downstream",
 } as const satisfies Record<ExistingEventType | InteractionEvent["type"], Permission>;
 
 /**
@@ -131,7 +131,7 @@ export function transitionInteraction(
   }
 
   const current: Message = { sequence: event.sequence, message: event.payload.message };
-  if (event.type === "interaction.ping") {
+  if (event.type === "ping") {
     return {
       status: state.status,
       sequence: event.sequence,
@@ -142,7 +142,7 @@ export function transitionInteraction(
       },
     };
   }
-  if (event.type !== "interaction.pong") {
+  if (event.type !== "pong") {
     throw new InteractionTransitionError("incomplete-event", "未知交互事件。");
   }
   if (state.interaction.unansweredPings.length === 0) {

@@ -94,15 +94,15 @@ status 或 daemon 专用的第二份项目权威状态。
 Git 故障等内容由人或 Agent 解读，不定义 `outcome`、`summary` 或
 `evidence` 结构。没有未回应 `ping` 时不得追加无状态变化的 `pong`。
 
-消息流中只有 `interaction.ping` 和 `interaction.pong` 改变球权：最后的
+消息流中只有 `ping` 和 `pong` 改变球权：最后的
 `ping` 表示下一步面向下游，最后的 `pong` 表示下一步面向上游；没有这两类
 消息时从上游开始。批准、验收、放弃、恢复和 metadata 变更本身均不交球。
 获明确授权的上游可以先写入准确 revision 的决策事件，再追加单独的 `ping`
 交给下游；放弃仍阻止派发，恢复不自动派发。球在下游时上游仍能连续追加
 `ping`，并非严格交替。
 
-球权与发送权限是两回事：`interaction.ping`、三个批准/验收事件以及
-`idea.abandoned`、`idea.resumed` 只允许上游发；`interaction.pong` 只允许
+球权与发送权限是两回事：`ping`、三个批准/验收事件以及
+`idea.abandoned`、`idea.resumed` 只允许上游发；`pong` 只允许
 下游发；`alias.updated`、`language.updated` 双方都可以发。普通 metadata
 变更不改变球权，人类决策事件仍须独立通过准确 revision 与显式授权的 gate。
 追加入口必须从可信调用边界取得发送角色，不能从消息正文、事件自报角色
@@ -162,9 +162,11 @@ Git 故障等内容由人或 Agent 解读，不定义 `outcome`、`summary` 或
 [交互协议类型与状态转移](./Interaction-protocol.ts) 是本 Ideal World 的
 可执行式配套设计，随本世界 revision 一起审阅，不是仓库运行时代码或第四份
 契约。其 `Before/After` 注释区分现有生命周期事件与新增的两种交互
-事件，并列出各个既有事件的发送角色。`ping/pong` 的 payload 只含
-`message`，其余事件保留既有结构；相同日志的完整投影增加未回应消息
-与球权，不再增加 `ack`、指令 ID 或独立的 `interaction` 命令组。
+事件，并列出各个既有事件的发送角色。新增事件的 `type` 直接为 `ping`
+或 `pong`，payload 只含 `message`；其余事件保留既有结构。相同日志的
+完整投影增加未回应消息与球权，不再增加 `ack`、指令 ID 或独立的
+`interaction` 命令组。
+已有事件名曾写入持久日志，保持不变；不为命名简化重写历史。
 
 现有 `event replay/append` 需要扩展：交互追加只绑定本地日志长度、
 摘要和受信的调用角色，不以 primary fetch 或 commit 为前置条件。
