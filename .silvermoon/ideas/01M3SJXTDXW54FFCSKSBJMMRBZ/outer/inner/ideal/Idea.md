@@ -141,7 +141,8 @@ status 或 daemon 专用的第二份项目权威状态。
 - 独立 `.ts` 文件中的交互事件类型定义，供 CLI、状态投影和后续适配复用。
 - 每种权威事件的前置条件、完整 payload、状态迭代和无操作拒绝规则。
 - 现有 `event` 子命令对本地 `ping/pong` 事件的写入、回放及相应校验。
-- 一次性将既有事件名转换为单词 type 的受控版本迁移和历史等价校验。
+- 仅在 Silvermoon 自身源码仓库一次性转换既有点分事件名的内部迁移
+  及历史等价校验；对外保持 `version: 2`。
 - 运行中允许追加指令的规则，以及不丢失未完成指令的状态恢复。
 - 合法未提交事件的卫生检查边界和 Git 阻塞下的求助、诊断通道。
 - 协议文档、skill 指引和不依赖真实 Agent 的行为证明。
@@ -165,7 +166,8 @@ status 或 daemon 专用的第二份项目权威状态。
   `pong` 不能推断未送达或未执行，也不能在恢复时盲目重派。
 - 保留未知工作和并发 Git 历史，禁止用破坏性清理解决诊断阻塞。
 - 与其他前置项共同支撑 `0.4.0`；完成本项不单独触发 npm 发布。
-- 本次仅记录契约，不实现协议、不改 schema，也不记录批准或验收。
+- 已批准的旧实现 revision 不代表这次修订自动获批；新的理想世界
+  revision 仍须明确人工决定。本项不自动发布 npm 包或迁移其他项目。
 
 ## 实施时需细化
 
@@ -184,18 +186,23 @@ CLI 不自称能认证发送者；不得重新引入严格乒乓轮次、提交�
 完整投影增加有序消息与球权，不再增加 `ack`、指令 ID 或独立的
 `interaction` 命令组。
 既有七种事件按配套设计逐一重命名：`alias.updated` → `setAlias`、
-`language.updated` → `setLanguage`、`ideal.approved` → `approveIdeal`、
-`implementation.accepted` → `acceptImplementation`、
-`deployment.accepted` → `acceptDeployment`、`idea.abandoned` → `abandon`、
+`language.updated` → `setLanguage`、`ideal.approved` → `acceptIdeal`、
+`implementation.accepted` → `acceptInner`、
+`deployment.accepted` → `acceptOuter`、`idea.abandoned` → `abandon`、
 `idea.resumed` → `resume`。这里的“单词”指无点号的单个 type token。
 
-这不是允许直接修改受保护的 `events.jsonl`：项目当前为 v2，健康的
-primary 前缀禁止重写。实施时需先交付独立的、显式授权的 v2 → v3
-迁移入口及版本边界历史校验，保留所有旧 Git 提交，再以新提交将项目
-中全部 idea 的现有日志一次性转换、验证前后事实投影完全一致；迁移后
-继续强制 append-only。并发或校验失败要保留原有事实并阻断，不从迁移
-推断新的批准/验收。普通查询和追加不得自动迁移；本次只修订契约，
-不执行迁移，也不绕过当前项目版本的检查。
+这不是允许直接修改受保护的 `events.jsonl`：本仓库当前使用尚未正式
+发布的旧 v2 点分事件，健康的 primary 前缀禁止重写。最终公开契约
+仍为 `version: 2` 和 `schema/v2`，只描述新的九种单词事件；不创建
+`version: 3`、`schema/v3`，也不为其他旧 v2 仓库提供兼容迁移。
+Silvermoon 自身的一次性内部迁移入口应先校验冻结的 primary，再在
+可恢复事务中转换本仓库全部 idea 的旧日志并留下可审计的内部格式
+边界；保留旧 Git 提交，历史审计须依边界以旧格式回放先前提交，以
+最终 v2 格式回放其后提交，逐条验证转换只改 type、事实投影等价。
+无事件的日志也须能通过该边界判断所处格式。边界不是对外的 v3
+schema 或项目版本，迁移后立刻恢复字节 append-only 保护。并发或校验
+失败必须阻断且可明确恢复；不从迁移推断新的批准/验收，普通命令不
+自动迁移，不能手工编辑 JSONL。本次设计修订本身不执行迁移。
 
 现有 `event replay/append` 需要扩展：交互追加只绑定本地日志长度、
 摘要，不以 primary fetch 或 commit 为前置条件。

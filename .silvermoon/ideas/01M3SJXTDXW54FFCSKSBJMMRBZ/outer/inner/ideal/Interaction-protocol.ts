@@ -1,10 +1,11 @@
 /**
  * 理想世界的协议设计，不是当前运行时代码。
- * Before: v2 events.jsonl 有七种点分事件；回放结果为
+ * Before: 本仓库尚未正式发布的旧 v2 events.jsonl 有七种点分事件；回放结果为
  *   { status: { id, ...原 status 字段 }, sequence }。
- * After: 显式版本迁移将七种既有事件改为单词 type，再新增 ping/pong；
+ * After: 最终公开 version: 2/schema/v2 使用九种单词 type；
+ *   本仓库内部一次性迁移只更改七种旧 type，增加 ping/pong 能力；
  *   保留原 payload、sequence、status 语义，完整回放增加有序消息投影。
- *   不创建第二份权威，也不改写 Git 中已存在的旧提交。
+ *   不创建 schema/v3、第二份权威，也不改写 Git 中已存在的旧提交。
  */
 
 export type Ulid = string;
@@ -12,7 +13,7 @@ export type GitObjectId = string;
 export type Sender = "upstream" | "downstream";
 export type Permission = Sender | "both";
 
-/** Before: 已写入 v2 日志的事件名；迁移入口专用，不再接受为新写入请求。 */
+/** Before: 仅本仓库旧日志的点分 type；内部迁移专用，不是公开 v2 输入。 */
 export type LegacyEventType =
   | "alias.updated"
   | "language.updated"
@@ -22,13 +23,13 @@ export type LegacyEventType =
   | "idea.abandoned"
   | "idea.resumed";
 
-/** After: 每个 type 是一个不含分隔符的 token，payload 与旧事件完全相同。 */
+/** After: 公开 v2 的每个 type 是单词 token，旧事实的 payload 不变。 */
 export const EVENT_RENAMES = {
   "alias.updated": "setAlias",
   "language.updated": "setLanguage",
-  "ideal.approved": "approveIdeal",
-  "implementation.accepted": "acceptImplementation",
-  "deployment.accepted": "acceptDeployment",
+  "ideal.approved": "acceptIdeal",
+  "implementation.accepted": "acceptInner",
+  "deployment.accepted": "acceptOuter",
   "idea.abandoned": "abandon",
   "idea.resumed": "resume",
 } as const satisfies Record<LegacyEventType, string>;
@@ -74,16 +75,16 @@ export type InteractionEvent = {
 };
 
 /**
- * After 的发送方约定，供未来可信运行时路由，不是无状态 CLI 的
+ * 最终 v2 的发送方约定，供未来可信运行时路由，不是无状态 CLI 的
  * 身份认证规则，也不等同于球权。人工决定保留独立授权校验；
  * 旧日志不含发送者身份，回放不凭空断言历史记录由谁写入。
  */
 export const EVENT_PERMISSIONS = {
   setAlias: "both",
   setLanguage: "both",
-  approveIdeal: "upstream",
-  acceptImplementation: "upstream",
-  acceptDeployment: "upstream",
+  acceptIdeal: "upstream",
+  acceptInner: "upstream",
+  acceptOuter: "upstream",
   abandon: "upstream",
   resume: "upstream",
   ping: "upstream",
@@ -106,7 +107,7 @@ export class InteractionTransitionError extends Error {
 }
 
 /**
- * After 新增：完整归约器在处理任一 v3 事件前调用此检查；决定事件
+ * After 新增：完整归约器在处理任一最终 v2 事件前调用此检查；决定事件
  * 仍需原有人工 gate。放弃期间只有 resume 可以写入，旧消息不交球。
  */
 export function assertEventAllowed(
@@ -185,15 +186,17 @@ export function transitionInteraction(
  * 运行时按 EVENT_PERMISSIONS 路由。生命周期决策仍要求准确
  * primary、世界 revision 和人类授权。
  *
- * 显式一次性 v2 -> v3 迁移：冻结并观察 primary，先验证每个 v2 日志
- * 可完整归约；逐条只改 type（EVENT_RENAMES），保持顺序、sequence、
- * payload 和最终 status。用 v3 schema 与归约重验所有 idea 后，在
- * 同一可恢复事务中切换所有日志与项目版本；只允许经独立校验的版本
- * 边界突破旧日志的字节前缀，立即重新启用 append-only 保护。
- * Git 历史旧提交仍按 v2 解释，迁移 commit 按 v2 -> v3 验证逐条
- * 等价；绝不重写 Git 历史、直接手工编辑 JSONL 或推断新的人工决定。
+ * 显式一次性本仓库内部旧 v2 -> 最终 v2 格式迁移：冻结并观察 primary，
+ * 先验证每个旧日志可完整归约；逐条只改 type（EVENT_RENAMES），保持
+ * 顺序、sequence、payload 和最终 status。用最终 schema/v2 与归约
+ * 重验所有 idea 后，在同一可恢复事务中切换全部日志及可验证的内部
+ * 格式边界；不更改项目 version，也不创建对外 schema/v3。
+ * 边界须可识别空日志、只允许经独立校验的转换突破旧字节前缀，
+ * 立即重新启用 append-only 保护。Git 历史旧提交仍按旧格式解释，
+ * 迁移 commit 逐条验证 type 等价；绝不重写 Git 历史、直接手工
+ * 编辑 JSONL 或推断新的人工决定，其他项目不接受旧点分格式。
  * 若旧日志在 abandon 和 resume 之间存在其他事件，迁移必须阻断并
  * 报告，不自动删除或重排历史。无法验证的日志、并发 primary 变化
  * 或中断必须阻断并明确恢复；
- * 老版运行时不能误读 v3。普通命令不自动触发迁移。
+ * 老版运行时不能误读最终格式。普通命令不自动触发迁移。
  */

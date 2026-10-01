@@ -1,82 +1,66 @@
 # Implementation
 
+前一 implementation revision 的验收已记录；以下内容随理想世界的新
+命名和公开 v2 契约修订。先取得新 ideal revision 的明确批准，再完成
+本轮实施与重新验证，不能沿用旧验收。
+
 ## Steps
 
-### I-S01: 实现 v3 单词事件与完整投影
+### I-S01: 完成公开 v2 单词事件与完整投影
 
-扩展 `src/idea-events.js` 与 `schema/v3`，保持 v2 读取和原状态归约；
-在 v3 用 `setAlias`、`setLanguage`、`approveIdeal`、
-`acceptImplementation`、`acceptDeployment`、`abandon`、`resume`、
-`ping`、`pong`。两种消息的 payload 仅含非空 `message`。完整状态
-保留 `status`、连续 `sequence` 与有序消息投影；仅 `ping/pong`
-更新球权，`pong` 只陈述阻塞而不清除先前目标。`abandon` 之后只允许
-`resume`，其余事件各自按前态与业务规则校验，不要求严格交替。
+`schema/v2` 与项目 `version: 2` 保持唯一公开契约；九种事件为
+`setAlias`、`setLanguage`、`acceptIdeal`、`acceptInner`、
+`acceptOuter`、`abandon`、`resume`、`ping`、`pong`。保留旧事实
+payload、status 字段及人类 gate；两种交互消息只含非空 `message`，
+并增加有序消息投影和仅由 `ping/pong` 决定的球权。正常公开 v2
+命令不接受旧点分事件。
 
-### I-S02: 建立显式 v2 到 v3 的可恢复迁移
+### I-S02: 完成本仓库一次性内部格式迁移
 
-提供独立的只读计划与按准确摘要应用的迁移入口，不在普通命令中隐式
-升级。逐条只转换七种旧事件的 `type`，保持序号、payload 和旧事实
-投影；一次可恢复事务切换所有 idea 日志和项目配置。迁移前拒绝旧日志
-中放弃至恢复期间夹杂其他事件，校验历史版本边界与并发 primary；
-旧 Git 提交仍按 v2 解读，迁移后日志继续受 append-only 保护。
-本步骤交付迁移能力，不直接对本仓库执行迁移。
+只对 Silvermoon 自身现有旧点分日志提供独立、显式的内部迁移入口。
+以准确摘要计划和刷新后的 primary 为前态，在可恢复事务中仅重命名
+全部 idea 既有事件 type，保持序号、payload 和事实状态。建立能够
+识别空日志的内部历史边界，旧 Git 提交按旧格式回放，之后按最终
+`schema/v2` 回放并恢复 append-only；不新增公开版本或其他项目的
+旧格式兼容，不由普通命令触发迁移。
 
-### I-S03: 扩展本地事件 CLI 与导航边界
+### I-S03: 对接本地交互 CLI 和导航
 
-沿用 `event replay/append/revise/recover`，不新增并列的交互命令组。
-`replay` 返回完整投影及日志长度/摘要；v3 `ping/pong` 追加绑定已
-观察的准确本地字节前态，不要求 fetch、commit 或 primary；旧前态
-冲突不得重新编号。保留 lifecycle 人类 gate 的准确 revision、primary
-前提。无状态 CLI 不冒充发送者身份认证；未来可信运行时负责上游/下游
-路由。合法的本地未提交交互尾部可以被交互路径消费，不能豁免无关
-脏文件或常规 lifecycle 的同步要求。
+沿用 `event replay/append/revise/recover`；本地 `ping/pong` 写入
+绑定准确字节前态，不能被 fetch、commit 或 primary 故障锁死。
+生命周期决定仍需精确 revision、primary 和人工授权。无状态 CLI
+不认证发送方，未来可信运行时负责上游/下游路由。
 
-### I-S04: 验证兼容性与仓库交付
+### I-S04: 验证修订契约并交付
 
-用单元、集成、CLI 与迁移恢复场景证明 v2 回放兼容、v3 schema 与
-历史边界、并发竞争、连续 `ping/pong`、阻塞投影及放弃禁令；更新
-相关文档与 skill。运行仓库检查，按版本边界所需顺序提交并普通
-同步候选；不自动发布 npm。
+更新相关 schema、文档、skill、单元、集成和 CLI 测试，覆盖内部
+迁移恢复、版本边界、并发前态、放弃禁令及 v2 公开输入。验证本仓库
+旧数据的实际迁移前另行确认操作时点，不隐式执行。按仓库检查、
+单独提交和普通非 force 同步流程交付，不自动发布 npm。
 
 ## Acceptance criteria
 
-### I-AC01: 两版本的归约保持完整而无伪造决定
+### I-AC01: 最终 v2 只暴露九种事件
 
-在测试中逐条回放 v2 及 v3 日志，断言七种旧事实的投影保持一致、
-九种 v3 type 均有完整 schema；`ping/pong` 的不同序号消息按序保留，
-`pong` 不代表完成、不清除目标，也不产生批准/验收。
+schema 与 CLI 测试证实项目版本仍为 2，九种单词事件和原 payload
+通过严格校验，旧点分 type 不成为其他项目的公开输入；完整消息
+投影不伪造验收、清除目标或误认阻塞为完成。
 
-### I-AC02: 迁移边界可验证且可恢复
+### I-AC02: 内部迁移等价且边界可恢复
 
-对有效 v2 日志证明只改 type 且状态等价；对夹杂放弃期间事件、前缀
-篡改、并发 primary 变化与事务中断分别证明拒绝或明确恢复。`check`
-按历史版本审计迁移前后，禁止通过普通 `event revise` 绕过健康 primary
-的 append-only 保护。
+本仓库的旧日志逐条映射后事实状态等价；空日志、放弃期间旧违规
+事件、并发 primary、前缀篡改及事务中断均有测试。历史审计能
+区分内部前后格式而不暴露 `schema/v3` 或 `version: 3`，迁移后
+健康前缀禁止修订。
 
 ### I-AC03: 本地消息不受 Git 故障锁死
 
-CLI 场景验证未提交交互消息的本地 replay/append，无新 `ping` 时连续
-`pong` 可写；在旧长度/摘要上并发追加会冲突且不误清新目标。交互
-无需网络，生命周期决定仍须准确 primary 与人类 gate，`abandon`
-后除 `resume` 外所有事件被拒绝。
+测试离线、未提交和连续 `pong` 场景；旧长度/摘要上遇新 `ping`
+时拒绝旧请求并要求重新观察。人类决定仍须准确 primary 和授权，
+`abandon` 后只能 `resume`。
 
-### I-AC04: 项目交付通过仓库检查
+### I-AC04: 修订实现通过仓库验证
 
-针对性测试、`pnpm check:commit`、`pnpm check` 和 Silvermoon
-`check --worktree`、`check --staged` 通过；相关文档与 ledger 同步，
-提交可从刷新后的 primary 到达，不需要 npm 发布。
-
-## Verification
-
-- `node --test test/runtime/migrate-v3.test.js test/runtime/event-v3.test.js`：
-  通过（12 项），覆盖双版本迁移边界、恢复、并发前态及离线消息。
-- `node --test test/contract/schema-v3.test.js test/unit/idea-events.test.js`：
-  通过（8 项），覆盖九种事件 schema、投影和放弃禁令。
-- `node --test test/runtime/event-state.test.js`：通过（14 项），验证
-  v2 CLI 和历史回放不退化。
-- `pnpm check:commit`：通过；`pnpm check`：通过（包含单元、契约、
-  集成、端到端、打包和 skill 检查）。
-- 实现提交 `2e817ae363a1dd6d3ccf53d337fb8cb93d24f172` 已通过普通
-  非 force 推送，可从刷新后的 `origin/main` 到达。
-- 本次交付只实现 v2→v3 显式迁移工具，没有对本仓库现行 v2 数据执行
-  迁移，也没有发布 npm 包。
+针对性测试、`pnpm check:commit`、`pnpm check`、Silvermoon
+`check --worktree` 和 `check --staged` 通过；同步的提交从
+刷新后的 primary 可达，没有自动发布或跨仓库旧格式迁移。
