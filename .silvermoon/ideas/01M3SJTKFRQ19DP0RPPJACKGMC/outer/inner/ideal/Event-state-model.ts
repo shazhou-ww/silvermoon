@@ -63,43 +63,6 @@ type MetadataPatch =
   | { readonly alias: MetadataChange; readonly language?: MetadataChange }
   | { readonly alias?: MetadataChange; readonly language: MetadataChange };
 
-export interface EventPayloads {
-  "idea.created": {
-    readonly alias?: string;
-    readonly language?: string;
-  };
-  "idea.imported": {
-    readonly source: {
-      readonly version: 1;
-      readonly commit: GitOid;
-      readonly statusPath: string;
-      readonly statusBlob: GitOid;
-      readonly statusSha256: Sha256;
-    };
-    readonly status: StatusProjection;
-  };
-  "idea.metadata.updated": {
-    readonly changes: MetadataPatch;
-    readonly reason?: string;
-  };
-  "ideal.approved": DecisionContext & { readonly idealRevision: GitOid };
-  "implementation.accepted": DecisionContext & {
-    readonly implementationRevision: GitOid;
-  };
-  "deployment.accepted": DecisionContext & {
-    readonly deploymentRevision: GitOid;
-  };
-  "idea.abandoned": DecisionContext & { readonly reason: string };
-  "idea.resumed": DecisionContext & {
-    readonly target: FactReference & { readonly field: "abandoned" };
-  };
-  "decision.retracted": DecisionContext & {
-    readonly target: FactReference & { readonly field: DecisionField };
-    readonly expectedRevision: GitOid;
-    readonly reason: string;
-  };
-}
-
 export interface Envelope {
   readonly schemaVersion: 2;
   readonly eventId: Ulid;
@@ -114,12 +77,74 @@ export interface Envelope {
   };
 }
 
-export type IdeaEvent = {
-  [Type in keyof EventPayloads]: Envelope & {
-    readonly type: Type;
-    readonly payload: EventPayloads[Type];
-  };
-}[keyof EventPayloads];
+// 每个分支同时定义 type 和 payload，避免阅读时还原映射类型。
+export type IdeaEvent = Envelope & (
+  | {
+      readonly type: "idea.created";
+      readonly payload: {
+        readonly alias?: string;
+        readonly language?: string;
+      };
+    }
+  | {
+      readonly type: "idea.imported";
+      readonly payload: {
+        readonly source: {
+          readonly version: 1;
+          readonly commit: GitOid;
+          readonly statusPath: string;
+          readonly statusBlob: GitOid;
+          readonly statusSha256: Sha256;
+        };
+        readonly status: StatusProjection;
+      };
+    }
+  | {
+      readonly type: "idea.metadata.updated";
+      readonly payload: {
+        readonly changes: MetadataPatch;
+        readonly reason?: string;
+      };
+    }
+  | {
+      readonly type: "ideal.approved";
+      readonly payload: DecisionContext & {
+        readonly idealRevision: GitOid;
+      };
+    }
+  | {
+      readonly type: "implementation.accepted";
+      readonly payload: DecisionContext & {
+        readonly implementationRevision: GitOid;
+      };
+    }
+  | {
+      readonly type: "deployment.accepted";
+      readonly payload: DecisionContext & {
+        readonly deploymentRevision: GitOid;
+      };
+    }
+  | {
+      readonly type: "idea.abandoned";
+      readonly payload: DecisionContext & {
+        readonly reason: string;
+      };
+    }
+  | {
+      readonly type: "idea.resumed";
+      readonly payload: DecisionContext & {
+        readonly target: FactReference & { readonly field: "abandoned" };
+      };
+    }
+  | {
+      readonly type: "decision.retracted";
+      readonly payload: DecisionContext & {
+        readonly target: FactReference & { readonly field: DecisionField };
+        readonly expectedRevision: GitOid;
+        readonly reason: string;
+      };
+    }
+);
 
 // 解析/历史层提供准确规范行的摘要；reducer 不计算或信任调用者伪造的字节。
 export interface VerifiedRecord {

@@ -10,6 +10,8 @@
 - 用户要求以 TypeScript 具体定义事件和 reducer，已补充
   [Event-state-model.ts](./outer/inner/ideal/Event-state-model.ts)，仅为理想
   设计模型，包含九类事件、非空转换、前序检查、精确撤回与旧五态推演。
+- 按用户审阅反馈，事件类型改为显式 discriminated union，每个分支并列
+  展示 type 和 payload；移除 EventPayloads 映射间接层，归约行为不变。
 - 已明确的语义：原 status.yaml 状态推演不变；只读查询使用实际世界
   revision，不自动追加观察，也不以观察未归档为由新增导航门槛。
 - 用户后续明确：持久 event 必须完整、确定性改变旧 status 事实投影；
