@@ -4,7 +4,7 @@
 
 ### Implementation steps
 
-- [ ] **I-S01:** 待理想契约批准后细化实施步骤
+- [ ] **I-S01:** 待理想契约批准后细化事件类型与协议实施步骤
 
 ### Implementation acceptance criteria
 
