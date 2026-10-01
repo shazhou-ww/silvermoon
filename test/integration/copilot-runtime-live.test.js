@@ -47,7 +47,7 @@ test("real Copilot replies through the project-version interaction boundary", {
   replies = adapter.events(route)[Symbol.asyncIterator]();
 
   const messages = [];
-  for (const token of ["SILVERMOON_TEST_READY", "SILVERMOON_TEST_AGAIN"]) {
+  const round = async (token) => {
     const prompt = `Reply with exactly the text ${token}. Do not use tools.`;
     const original = (await runtime.replay(route)).report.observation.receipt;
     const ping = await runtime.appendInteraction(route, {
@@ -65,7 +65,15 @@ test("real Copilot replies through the project-version interaction boundary", {
     });
     assert.equal(pong.exitCode, 0);
     messages.push(prompt, reply);
-  }
+  };
+  await round("SILVERMOON_TEST_READY");
+  await round("SILVERMOON_TEST_AGAIN");
+  await replies.return();
+  await adapter.close();
+  adapter = new CopilotAdapter({ registry, onPermissionRequest: () => ({ kind: "deny" }) });
+  await adapter.start(route);
+  replies = adapter.events(route)[Symbol.asyncIterator]();
+  await round("SILVERMOON_TEST_RESUMED");
   const final = (await runtime.replay(route)).report.observation.receipt.reduction.state.interaction;
   assert.deepEqual(final.messages.map(({ message }) => message), messages);
   assert.equal(final.lastSignal, "pong");

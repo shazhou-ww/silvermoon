@@ -33,8 +33,9 @@
 受控实测命令
 `SILVERMOON_REAL_COPILOT=1 node --test test/integration/copilot-runtime-live.test.js`
 通过：在一次性 Git 项目中，拒绝全部工具权限，项目版本 CLI 按准确日志
-前态写入两次 `ping`，同一真实 Copilot session 两轮各返回预期标识，
-项目版本 CLI 追加两次 `pong` 后回放四条有序消息；无 daemon，也未保存
+前态写入三次 `ping`，同一真实 Copilot session 前两轮各返回预期标识，
+之后关闭适配器并以同一注册表恢复该 session，第三轮也返回预期标识。
+项目版本 CLI 追加三次 `pong` 后回放六条有序消息；无 daemon，也未保存
 完整对话到本仓库。普通测试跳过在线用例。它不证明运行中 steering、
 断线恢复、Git 诊断或工具副作用去重。
 官方

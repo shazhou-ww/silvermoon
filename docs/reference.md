@@ -246,8 +246,10 @@ Copilot CLI), use
 `SILVERMOON_REAL_COPILOT=1 node --test test/integration/copilot-runtime-live.test.js`.
 This creates and removes a disposable Git project and idea worktree, denies
 tool permissions, and checks two sequential `ping`/reply/`pong` handoffs in
-one session. Normal test runs skip the live case; it does not establish
-in-flight disconnect recovery, side-effect deduplication, or Git repair.
+one session. It then restarts the adapter for a third handoff using the
+persisted session binding. Normal test runs skip the live case; it does not
+establish in-flight disconnect recovery, side-effect deduplication, or Git
+repair.
 
 ## Public Commands
 
