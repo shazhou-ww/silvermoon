@@ -3,7 +3,13 @@ import { isDeepStrictEqual } from "node:util";
 import { loadConfigSnapshot } from "./config.js";
 import { EVENT_RENAMES, checkEventChange, eventsFromStatus, parseIdeaEvents, renameLegacyEvents, replayIdeaEvents, serializeIdeaEvents } from "./idea-events.js";
 import { isValidUlid, parseIdeaStatus } from "./ideas.js";
-import { inspectTreeLineage, readGitBlob, resolveCommit, runGit } from "./git.js";
+import {
+  inspectTreeLineage,
+  readGitBlob,
+  readGitBlobs,
+  resolveCommit,
+  runGit,
+} from "./git.js";
 import { CONFIG_PATH, IDEAS_ROOT, ideaPaths } from "./layout.js";
 
 export const SOURCE_REPOSITORY = "https://github.com/shazhou-ww/silvermoon.git";
@@ -47,7 +53,28 @@ async function snapshot(root, tree, overrides, commit, blobs) {
     .map(({ name }) => name.split("/")[2]);
   if (ids.some((id) => !isValidUlid(id))) throw new Error("Historical idea identity is invalid.");
   const sourceProject = loaded.config.primaryRepository === SOURCE_REPOSITORY;
-  const state = { version: loaded.config.version, entries, ids, sourceProject, overrides, commit, blobs };
+  const stateBlobs = blobs ?? new Map();
+  const stateFile = loaded.config.version === 2 ? "events.jsonl" : "status.yaml";
+  const stateObjects = entries
+    .filter(({ name, object, type }) =>
+      type === "blob"
+      && name.endsWith(`/${stateFile}`)
+      && !overrides?.has(name)
+      && !stateBlobs.has(object)
+    )
+    .map(({ object }) => object);
+  for (const [object, contents] of readGitBlobs(root, stateObjects)) {
+    stateBlobs.set(object, contents);
+  }
+  const state = {
+    version: loaded.config.version,
+    entries,
+    ids,
+    sourceProject,
+    overrides,
+    commit,
+    blobs: stateBlobs,
+  };
   if (state.version !== 2) return { ...state, format: null };
   const formats = new Set();
   for (const id of ids) {

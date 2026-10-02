@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 import { checkRepository } from "../../src/index.js";
 import { detectEventFormat } from "../../src/event-history.js";
 import { parseIdeaEvents, serializeIdeaEvents } from "../../src/idea-events.js";
-import { worktreeSnapshot } from "../../src/git.js";
+import { observeGitCommands, worktreeSnapshot } from "../../src/git.js";
 import { migrateInternalEvents } from "../../src/migrate-internal-events.js";
 import { ideaPaths } from "../../src/layout.js";
 import { whatsNext } from "../../src/whatsnext.js";
@@ -157,6 +157,34 @@ test("detector inherits source format for empty logs and rejects external dotted
   const original = await readFile(join(root, path));
   const overrides = new Map([[path, original]]);
   assert.equal(await detectEventFormat({ root, tree, overrides }), "legacy");
+});
+
+test("event format detection batches authoritative state blob reads", async (t) => {
+  const root = await fixture(t, {
+    final: true,
+    ideas: [
+      { id: FIRST_ID, status: { alias: "first" } },
+      { id: SECOND_ID, status: { alias: "second" } },
+    ],
+  });
+  const tree = worktreeSnapshot(root).tree;
+  const commands = [];
+
+  assert.equal(
+    await observeGitCommands(
+      (args) => commands.push(args),
+      () => detectEventFormat({ root, tree }),
+    ),
+    "final",
+  );
+  assert.equal(
+    commands.filter(([name, mode]) => name === "cat-file" && mode === "blob").length,
+    0,
+  );
+  assert.equal(
+    commands.filter(([name, mode]) => name === "cat-file" && mode === "--batch").length,
+    2,
+  );
 });
 
 test("external version 2 projects cannot use the internal legacy migration", async (t) => {
