@@ -77,7 +77,11 @@ test("runs fast layered validation in ordinary CI", async () => {
   assert.equal(step(contract, "Discover skills").run, "pnpm check:skills");
   assert.equal(step(contract, "Lint Markdown").run, "pnpm lint:markdown");
   assert.equal(step(contract, "Check whitespace").run, "pnpm check:diff");
-  assert.equal(step(contract, "Validate checked-out Silvermoon snapshot").run, "node bin/silvermoon.js check --commit HEAD --audience agent");
+  assert.equal(step(contract, "Check out repository").with["fetch-depth"], 0);
+  assert.equal(step(contract, "Validate checked-out Silvermoon snapshot").run,
+    "git remote set-url origin https://github.com/shazhou-ww/silvermoon.git\n"
+    + "git fetch --no-tags origin main\n"
+    + "node bin/silvermoon.js check --commit HEAD --audience agent\n");
 
   assert.equal(integration["runs-on"], "ubuntu-latest");
   assert.equal(step(integration, "Set up Node.js").with["node-version"], 24);

@@ -225,6 +225,25 @@ cursor snapshot 正文读取为 263/536 字节。Git racy-entry 判断会使有�
 I-S02/I-AC02 尚不勾选，等待实际跨平台 CI 的原生来源及读取成本证据，
 不是等待用户另行实施授权；没有记录 acceptInner。
 
+首轮跨平台 CI `37019192339`（准确候选 `9a24c3f`）失败，不能作为验收证据。
+Ubuntu integration、包/E2E 与两个 macOS matrix jobs 已通过；
+Windows unit 失败导致新增 native-source 测量步骤未执行。日志定位并修复：
+
+- Ubuntu/Windows 的多段恢复故障注入把整个大事务计划放进 `node -e` 参数，
+  触及 OS 单参数/命令行长度限制，child.status 为 null 而非预定退出码 77。
+  改由 stdin 传入准确原始计划，仍断言真实退出、中断点、resume/rollback 精确字节。
+- CI contract checkout 原为 shallow，且 actions checkout 的 origin URL 没有 `.git`，
+  与 configured primary 不完全匹配，`check --commit HEAD` 无法观察 primary tracking ref。
+  runner 现在取完整历史，在检查前把自身 origin 规范为准确 configured URL 并 fetch main；
+  不修改项目配置、目标 commit 或产品 readiness/history 规则。
+- Windows source fixture 的短/长路径表达不同，runtime guard 按字符串拒绝同一
+  物理 checkout。改用真实路径和平台路径关系检查；仍拒绝另一 checkout/runtime，
+  不加 self dependency、不降低 source-only 迁移保护。新增 physical alias 回归。
+
+`node --test test/runtime/adoption.test.js test/runtime/migrate-segmented-events.test.js test/runtime/segmented-events.test.js test/contract/ci.test.mjs`：
+24 项通过；`pnpm check:sanity` 与 `pnpm check` 通过。修复需同步后重新触发
+完整跨平台 CI，首轮失败仍明确保留，不能凭本机通过勾选相关验收项。
+
 ### I-AC03: 幂等与并发准确
 
 同一请求丢回执重试仅产生一个准确事件；不同请求同一前态不能冒认成功或互相覆盖。

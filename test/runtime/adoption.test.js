@@ -6,6 +6,8 @@ import {
   mkdtemp,
   readFile,
   rm,
+  symlink,
+  unlink,
   writeFile,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -335,6 +337,20 @@ test("source snapshots remain exempt without a self-dependency or matching versi
   await writeFile(join(snapshotRoot, "package.json"), JSON.stringify(manifest));
   const historical = await inspectNpmProject(snapshotRoot, sourceRoot);
   assert.deepEqual(historical.findings, []);
+});
+
+test("source runtime identity follows the physical checkout, not path spelling", async () => {
+  const sourceRoot = fileURLToPath(new URL("../..", import.meta.url));
+  const directory = await temporaryDirectory();
+  const alias = join(directory, "runtime-alias");
+  await symlink(sourceRoot, alias, "junction");
+  try {
+    const source = await inspectNpmProject(sourceRoot, alias);
+    assert.equal(source.sourceCheckout, true);
+    assert.deepEqual(source.findings, []);
+  } finally {
+    await unlink(alias);
+  }
 });
 
 test("another runtime directs source projects to their checkout, never a self-dependency", async () => {

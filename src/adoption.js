@@ -3,6 +3,7 @@ import {
   lstat,
   readFile,
   readdir,
+  realpath,
 } from "node:fs/promises";
 import { relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -305,7 +306,7 @@ export async function inspectNpmProject(
   );
   const findings = [];
   const sourceCheckout = isSilvermoonSourceProject(manifest);
-  if (sourceCheckout && resolve(repositoryRoot) !== resolve(packageRoot)) {
+  if (sourceCheckout && relative(await realpath(repositoryRoot), await realpath(packageRoot)) !== "") {
     findings.push({
       priority: 35,
       problem: {

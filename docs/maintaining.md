@@ -83,6 +83,13 @@ an explicit reason. Core jobs never use path filtering. Run
 `workflow_dispatch` executes the full CI set, and local `check:release` always
 executes package/E2E regardless of the diff.
 
+The CI snapshot check requires full history and a named remote matching the
+configured primary URL exactly. Its isolated runner normalizes `origin` to
+`https://github.com/shazhou-ww/silvermoon.git` and fetches `main` before checking
+the selected commit. A checkout action's default URL spelling or shallow
+history is not sufficient event-history evidence. This setup does not change
+the selected commit or the project's primary configuration.
+
 `check:skills:local` needs no external discovery tool.
 `check:skills:discover` runs `npx skills add . --list` and can use the network;
 `check:skills` runs both in order. Missing tools and failed external checks

@@ -151,10 +151,9 @@ test("interrupted multi-segment revision recovers despite a temporary gap in the
     };
     const module = new URL("../../src/state-transaction.js", import.meta.url).href;
     const child = spawnSync(process.execPath, ["--input-type=module", "-e", `
+      import { readFileSync } from "node:fs";
       import { stateTransaction } from ${JSON.stringify(module)};
-      const files = ${JSON.stringify(changes.map(({ path, before, after }) => ({
-        path, before: before?.toString("base64") ?? null, after: after?.toString("base64") ?? null,
-      })))}.map(({ path, before, after }) => ({
+      const files = JSON.parse(readFileSync(0, "utf8")).map(({ path, before, after }) => ({
         path, before: before === null ? null : Buffer.from(before, "base64"),
         after: after === null ? null : Buffer.from(after, "base64")
       }));
@@ -162,8 +161,13 @@ test("interrupted multi-segment revision recovers despite a temporary gap in the
         context: ${JSON.stringify(context)},
         afterStep: (step) => { if (step === ${JSON.stringify(`applied:${paths.eventsDirectory}/${segmentName(3)}`)}) process.exit(77); }
       });
-    `], { encoding: "utf8" });
-    assert.equal(child.status, 77, child.stderr);
+    `], {
+      encoding: "utf8",
+      input: JSON.stringify(changes.map(({ path, before, after }) => ({
+        path, before: before?.toString("base64") ?? null, after: after?.toString("base64") ?? null,
+      }))),
+    });
+    assert.equal(child.status, 77, child.error?.message ?? child.stderr);
     const result = await eventCommand({ root, operation: "recover", confirmStopped: true, rollback });
     assert.equal(result.observation.receipt?.outcome, rollback ? "rolled-back" : "recovered",
       JSON.stringify(result.observation));
