@@ -71,3 +71,17 @@ primary 的全部 41 个 idea 使用规范分段 V2，完整流格式与归约�
 通过外部 CI API、Git object 比较、`Verification.json` 与交接结果证明。
 世界契约和 ledger 的完成只记录 Agent 执行，不代替准确 deploymentRevision
 的人工接受。
+
+本契约同步到 `cb766eaeb48fae60cd25a920b3e34d20b3e14aae`、重观 revision
+`90a663c57a80a7dc8d5e8b8fec9864d60b6a5528` 后执行的只读断言全部通过，
+结果在 [Verification.json](./Verification.json)：41 条流、157 条现存事件；
+本 idea sequence 3、302 字节、准确已接受 Inner、无 acceptOuter；
+同 cursor 的增量查询为空，内部迁移 read-only 不写入。
+真实 index 原始字节与 Git status 前后未变；全部受验交付内容 OID 与准确
+成功 CI commit 一致。该 JSON 记录当时的 contract/source provenance，
+不把新增证据文件之后的世界 revision 冒充旧验证 revision。
+最终证据同步后再次只读核对 primary、受验 OID、接受事实和事件 HEAD，
+再向用户提供准确部署验收 revision；不修改 Inner、runtime 或其他 worktree。
+原 daemon 讨论 session 已收到只作通知的交接消息，明确说明可用 primary、
+受验 CI、实施已接受和部署尚待接受；未请求其自动修改工作区、同步未提交稿或
+实现 daemon。该通知不是 daemon 实施授权。

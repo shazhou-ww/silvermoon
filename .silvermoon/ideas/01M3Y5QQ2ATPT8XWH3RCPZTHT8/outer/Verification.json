@@ -1,0 +1,75 @@
+{
+  "version": 1,
+  "kind": "source-primary-deployment-verification",
+  "idea": "01M3Y5QQ2ATPT8XWH3RCPZTHT8",
+  "primaryCommit": "cb766eaeb48fae60cd25a920b3e34d20b3e14aae",
+  "contractRevision": "90a663c57a80a7dc8d5e8b8fec9864d60b6a5528",
+  "implementationAcceptedRevision": "879b991312941446f12c296cce16f6da95f9938e",
+  "idealRevision": "d98b9ac7a24917cd82ef82242ded57b435870188",
+  "projectVersion": 2,
+  "ideaStreams": 41,
+  "eventRecords": 157,
+  "selectedStream": {
+    "sequence": 3,
+    "length": 302,
+    "digest": "67d0d429b68032d0a481f99fa2ce65c1e93e9112",
+    "cursorEvents": 0,
+    "deploymentAccepted": false
+  },
+  "migration": {
+    "outcome": "already-segmented",
+    "written": false
+  },
+  "ci": {
+    "runId": 37021170347,
+    "commit": "96f84c0cb60e39cda724a595a56eec431226f54f",
+    "conclusion": "success",
+    "matrixJobs": 6,
+    "nativeStepSuccess": true,
+    "url": "https://github.com/shazhou-ww/silvermoon/actions/runs/37021170347"
+  },
+  "contentOids": {
+    "src": "96d210285ae8aafbfa0ddb6bc90670f61a4129f1",
+    "bin": "783cadb728112d6eaa6de0a7cfa1fa0c5ee46129",
+    "schema": "2fa0babd362743b8742d76e59640a0315491d30c",
+    "test": "495905fd743b56bf1215de384e19999d288817dd",
+    "skills": "8022ffa42f1946106bd48a872ccf0b304782d3c4",
+    ".agents/skills/silvermoon": "e0bceef25198f57133a09a9197f95c2c4d1eea0f",
+    "docs": "307b52f596ba04472e35598592eabee35925ee72",
+    "scripts": "640ec194e2749627ad69f96fad8b0e3443f929f3",
+    ".github/workflows": "7c46b97fd0877c15b5601cf1457bc13217c5668b",
+    "package.json": "b383cdfcdf5a42493265a35a6ab0a3f4bfb4ff3b",
+    "pnpm-lock.yaml": "ae4e4665fa12dd23525bd8e77150a8d84e648d65",
+    ".gitattributes": "109d3bef16f247092ec4636a02ce7a110c991fe4"
+  },
+  "commands": [
+    {
+      "command": "node bin/silvermoon.js whats-next segmented-event-streams --json",
+      "result": "idea-selected；状态 deploying"
+    },
+    {
+      "command": "node bin/silvermoon.js check --remote --json",
+      "result": "project-ready；退出 0"
+    },
+    {
+      "command": "node bin/silvermoon.js event replay 01M3Y5QQ2ATPT8XWH3RCPZTHT8 --json",
+      "result": "observed；格式规范，归约有效，sequence 3"
+    },
+    {
+      "command": "node bin/silvermoon.js event replay 01M3Y5QQ2ATPT8XWH3RCPZTHT8 --after-length 302 --after-digest 67d0d429b68032d0a481f99fa2ce65c1e93e9112 --json",
+      "result": "delta-observed；events 为空，length 和 digest 未变"
+    },
+    {
+      "command": "node bin/migrate-segmented-events.js --root /Users/weiwei/Code/silvermoon.worktrees/create-silvermoon-idea-session",
+      "result": "already-segmented；written 为 false"
+    },
+    {
+      "command": "gh run view 37021170347 --repo shazhou-ww/silvermoon --json status,conclusion,headSha,jobs,url",
+      "result": "completed；success，全部 jobs 与六个 native steps 均成功"
+    }
+  ],
+  "indexUnchanged": true,
+  "worktreeUnchanged": true,
+  "npmPublished": false,
+  "otherWorktreesTouched": false
+}
