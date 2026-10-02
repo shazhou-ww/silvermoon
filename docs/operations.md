@@ -91,8 +91,9 @@ Creation intent is distinct from active-idea selection. If hygiene blocks the
 command, perform only the reported remediation and retry `create-idea`; do not
 replace the request with selector-less navigation.
 
-Creation checks project readiness, then requires the configured primary branch
-and upstream plus a clean worktree. It does not fetch, compare ancestry, or
+Creation checks project readiness, then requires a local branch whose upstream
+identifies the configured primary repository and branch, plus a clean worktree.
+The local branch name is unrestricted. It does not fetch, compare ancestry, or
 require local HEAD to be aligned with the remote tip. Its preparation reports
 omit the active-idea inventory because existing work does not replace explicit
 creation intent. After preflight and before the first scaffold write, it

@@ -509,8 +509,9 @@ change set without prescribing a particular diff tool. Bare navigation
 never selects an idea: it always lists every active idea alongside the option
 to discuss and run `create-idea`.
 
-`create-idea` requires the configured primary branch and upstream plus a clean
-worktree, validates optional preparing guidance from the same local `HEAD`,
+`create-idea` requires a local branch whose upstream identifies the configured
+primary repository and branch, plus a clean worktree; the local branch name is
+unrestricted. It validates optional preparing guidance from the same local `HEAD`,
 then creates one canonical scaffold. It does not fetch, compare remote
 ancestry, or require local HEAD to match the remote tip. Its optional
 content-language choice accepts any canonical BCP 47 tag, is normalized before

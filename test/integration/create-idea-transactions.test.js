@@ -72,33 +72,87 @@ test("creates while local primary is ahead, behind, or diverged", async () => {
   }
 });
 
-test("[create-primary-branch] [create-primary-upstream] requires configured primary coordinates", async () => {
+test("[create-primary-branch] accepts a topic branch tracking configured primary without fetching", async () => {
   const repository = await fixture();
   git(repository.root, "checkout", "-b", "feature");
   git(repository.root, "branch", "--set-upstream-to=origin/main", "feature");
-
-  const branchMismatch = await createIdea({
-    generateId: () => createdId,
-    root: repository.root,
-    userHome: repository.base,
-  });
-  assert.equal(branchMismatch.observation.state, "repository-preparation-required");
-  assert.equal(
-    branchMismatch.observation.problems[0].type,
-    "primary-branch-mismatch",
+  const before = repositoryState(repository.root, repository.repository);
+  const commands = [];
+  const report = await observeGitCommands(
+    (args) => commands.push(args),
+    () => createIdea({
+      generateId: () => createdId,
+      root: repository.root,
+      userHome: repository.base,
+    }),
   );
-
-  git(repository.root, "checkout", "main");
-  git(repository.root, "branch", "--unset-upstream");
-  const upstreamMismatch = await createIdea({
-    generateId: () => createdId,
-    root: repository.root,
-    userHome: repository.base,
-  });
+  assert.equal(report.observation.state, "idea-created");
+  assert.deepEqual(repositoryState(repository.root, repository.repository), before);
   assert.equal(
-    upstreamMismatch.observation.problems[0].type,
-    "primary-upstream-mismatch",
+    commands.some(([name]) => name === "fetch" || name === "ls-remote"),
+    false,
   );
+  assert.equal(git(repository.root, "branch", "--show-current"), "feature");
+});
+
+test("[create-primary-upstream] rejects missing or incorrect upstream on a topic branch", async () => {
+  for (const mismatch of ["missing", "branch", "repository"]) {
+    const repository = await fixture();
+    git(repository.root, "checkout", "-b", "feature", "--no-track");
+    if (mismatch === "branch") {
+      git(repository.root, "branch", "other");
+      git(repository.root, "push", "origin", "other");
+      git(repository.root, "branch", "--set-upstream-to=origin/other", "feature");
+    } else if (mismatch === "repository") {
+      git(repository.root, "branch", "--set-upstream-to=origin/main", "feature");
+      git(repository.root, "remote", "set-url", "origin", join(repository.base, "wrong.git"));
+    }
+    const before = git(repository.root, "status", "--porcelain=v1", "--untracked-files=all");
+    const report = await createIdea({
+      generateId: () => createdId,
+      root: repository.root,
+      userHome: repository.base,
+    });
+    assert.equal(report.observation.state, "repository-preparation-required", mismatch);
+    assert.deepEqual(
+      report.observation.problems.map(({ type }) => type),
+      ["primary-upstream-mismatch"],
+      mismatch,
+    );
+    assert.equal(git(repository.root, "status", "--porcelain=v1", "--untracked-files=all"), before);
+    assert.deepEqual(await readdir(join(repository.root, ".silvermoon", "ideas")), [FIRST_ID]);
+  }
+});
+
+test("rejects detached HEAD and dirty topic branches without creating a scaffold", async () => {
+  for (const condition of ["detached", "untracked", "unstaged", "staged"]) {
+    const repository = await fixture();
+    git(repository.root, "checkout", "-b", "feature");
+    git(repository.root, "branch", "--set-upstream-to=origin/main", "feature");
+    if (condition === "detached") {
+      git(repository.root, "checkout", "--detach", "HEAD");
+    } else if (condition === "untracked") {
+      await writeFile(join(repository.root, "unknown.txt"), "preserve\n");
+    } else {
+      const trackedPath = ideaPaths(FIRST_ID).ideaDocumentPath;
+      await writeFile(join(repository.root, trackedPath), "# Changed fixture\n");
+      if (condition === "staged") git(repository.root, "add", trackedPath);
+    }
+    const before = git(repository.root, "status", "--porcelain=v1", "--untracked-files=all");
+    const report = await createIdea({
+      generateId: () => createdId,
+      root: repository.root,
+      userHome: repository.base,
+    });
+    assert.equal(report.observation.state, "repository-preparation-required", condition);
+    assert.deepEqual(
+      report.observation.problems.map(({ type }) => type),
+      [condition === "detached" ? "detached-head" : "worktree-changes"],
+      condition,
+    );
+    assert.equal(git(repository.root, "status", "--porcelain=v1", "--untracked-files=all"), before);
+    assert.deepEqual(await readdir(join(repository.root, ".silvermoon", "ideas")), [FIRST_ID]);
+  }
 });
 
 test("[partial-write-failure] cleans up operation-owned partial files", async () => {

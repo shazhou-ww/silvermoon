@@ -179,8 +179,9 @@ silvermoon create-idea
 silvermoon create-idea --language zh-cn
 ```
 
-The command requires the configured primary branch and upstream plus a clean
-local worktree. It does not fetch or require local HEAD to match the remote
+The command requires a local branch whose upstream identifies the configured
+primary repository and branch, plus a clean local worktree. The local branch
+name is unrestricted. It does not fetch or require local HEAD to match the remote
 tip. When those checks pass, it creates one untracked idea scaffold with
 `Idea.md`, `Implementation.md`, `Deployment.md`, `ledger.md`, and
 `status.yaml`. If valid preparing guidance exists, the success report includes

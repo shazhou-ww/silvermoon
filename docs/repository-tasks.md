@@ -41,7 +41,8 @@ consumer. All three apply the same project and complete idea-layout checks,
 but their repository readiness differs. `list-ideas` reads the valid local
 worktree snapshot without hygiene, branch, upstream, network, or ancestry
 checks. `whats-next` checks local hygiene and remote ancestry. `create-idea`
-requires the configured primary branch and upstream plus a clean worktree,
+requires a local branch whose upstream identifies the configured primary
+repository and branch, plus a clean worktree; the local branch name is unrestricted,
 without fetching or requiring HEAD to match the remote tip. If hygiene blocks
 explicit creation, perform only that blocking action and then retry
 `create-idea` so active-idea selection cannot replace the pending create

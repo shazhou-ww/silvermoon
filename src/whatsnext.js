@@ -264,7 +264,6 @@ function navigationInstruction(ideas, language) {
 async function assessRepositoryReadinessInternal({
   observed,
   runtime,
-  requirePrimaryBranch = false,
   recheckCommand = "silvermoon whats-next",
   root,
   synchronizePrimary = true,
@@ -371,21 +370,6 @@ async function assessRepositoryReadinessInternal({
       `保留当前工作，然后切换或创建 upstream 为 ${observed.config.primaryRepository}#${observed.config.primaryBranch} 的预期本地分支。`,
     ));
   } else {
-    if (requirePrimaryBranch && branch.branch !== observed.config.primaryBranch) {
-      localProblems.push({
-        type: "primary-branch-mismatch",
-        summary: localize(
-          language,
-          `Current branch is ${branch.branch}; expected configured primary branch ${observed.config.primaryBranch}.`,
-          `当前分支为 ${branch.branch}；预期为 configured primary branch ${observed.config.primaryBranch}。`,
-        ),
-      });
-      localSteps.push(localize(
-        language,
-        `Preserve current work, then switch to configured primary branch ${observed.config.primaryBranch}.`,
-        `保留当前工作，然后切换到 configured primary branch ${observed.config.primaryBranch}。`,
-      ));
-    }
     if (
       branch.repository !== observed.config.primaryRepository
       || branch.upstreamBranch !== observed.config.primaryBranch
@@ -568,7 +552,6 @@ export async function assessIdeaCreationReadiness(options) {
     {},
     () => assessRepositoryReadinessInternal({
       ...options,
-      requirePrimaryBranch: true,
       synchronizePrimary: false,
     }),
   );

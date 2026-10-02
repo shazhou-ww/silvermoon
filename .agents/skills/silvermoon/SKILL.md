@@ -59,8 +59,9 @@ upstream, network, or primary ancestry. It never fetches. Use its repeatable
 for those filters; the default is all active ideas.
 
 `whats-next` may fetch and inspect but never changes files, branches, index, or
-refs. `create-idea` requires the configured primary branch and upstream plus a
-clean worktree; it does not fetch or compare ancestry.
+refs. `create-idea` requires a local branch whose upstream identifies the
+configured primary repository and branch, plus a clean worktree. The local
+branch name is unrestricted; it does not fetch or compare ancestry.
 
 `check` validates a project snapshot and, for v2 projects, its event history
 against primary. It does not navigate ideas or perform synchronization.
