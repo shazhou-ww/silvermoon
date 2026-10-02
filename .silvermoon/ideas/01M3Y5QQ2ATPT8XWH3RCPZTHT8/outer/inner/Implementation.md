@@ -1,5 +1,11 @@
 # Implementation
 
+最终实施状态：代码候选 `96f84c0cb60e39cda724a595a56eec431226f54f` 的
+Ubuntu/Windows/macOS × Node 22/24 CI 已全部通过，原生增量成本证据已取得。
+下文保留各阶段不足、失败及修复记录；以 I-AC02/I-AC06 的最终证据为当前结论。
+实施 checklist 完成不是人工接受；仍等待准确 implementationRevision 的 acceptInner，
+不记录未经明确授权的接受事实。
+
 ## Steps
 
 ### I-S01: 收敛存储与提交协议
@@ -254,6 +260,28 @@ alias、SHA-256 和完整历史回执也通过。
 `node --test test/integration/incremental-append.test.js`：6 项通过；
 需在新候选的实际 Windows runner 再验证，第二轮不冒称全绿。
 
+最终跨平台证据：CI [37021170347](https://github.com/shazhou-ww/silvermoon/actions/runs/37021170347)
+准确绑定 commit `96f84c0cb60e39cda724a595a56eec431226f54f`，整体及 required gate
+均为 success。六个平台/Node matrix jobs、contracts、Ubuntu integration、
+package/E2E 全部通过；每个 matrix job 无条件执行 native Git/CLI 验证。
+Windows Node 22 与 24 的新增步骤各 16 项通过，无跳过读取成本测试。
+
+以下为真实 Windows 子进程测量值（字节），每项保留 <10000 且不读取 sealed
+正文的原断言；不是 timing、接口名称或仅本机模拟的证明：
+
+| Windows Node | 已有事件 | 历史字节 | interaction snapshot/runtime | cursor snapshot | metadata snapshot/runtime |
+| --- | --- | --- | --- | --- | --- |
+| 22 | 10001 | 607851 | 462 / 855 | 263 | 999 / 1252 |
+| 22 | 100001 | 6277853 | 676 / 874 | 268 | 1020 / 1280 |
+| 24 | 10001 | 607851 | 662 / 855 | 263 | 797 / 1252 |
+| 24 | 100001 | 6277853 | 676 / 874 | 268 | 1020 / 1280 |
+
+封存段正文不读取且完整流 HEAD 相等、canonical/alias/metadata 正常追加、
+cursor 无变化/增量/stale、SHA-256、伪造摘要和原生来源、恢复 mtime、
+并发来源变化与准确事务恢复均已覆盖。I-S02/I-AC02 现已完成。
+首次验证、来源/运行时变化、粗粒度时间、显式完整 replay/历史输出、审计与
+repair/migration/recovery 仍按明确边界重建/全量验证，不宣称它们常数时间。
+
 ### I-AC03: 幂等与并发准确
 
 同一请求丢回执重试仅产生一个准确事件；不同请求同一前态不能冒认成功或互相覆盖。
@@ -323,7 +351,7 @@ runtime、类型、文档与 skill 全部使用同一契约。以定向测试、
   安装包 E2E、精确包内容、Markdown 与 `check:skills` 均通过。
 - `node bin/silvermoon.js check --worktree --audience agent`：通过。
 
-I-AC02 未完成，不把测试全绿当作性能验收，不记录 acceptInner。
+该阶段 I-AC02 尚未完成；当时没有把测试全绿当作性能验收或记录 acceptInner。
 
 迁移后的真实源码 layout 又运行一次 `pnpm check`：全部通过，覆盖与上述相同。
 实施代码和 migration-only 两个 commit 均经 worktree/index/commit checks、
@@ -331,3 +359,10 @@ I-AC02 未完成，不把测试全绿当作性能验收，不记录 acceptInner�
 最后证据/ledger 候选仍按同一流程提交与同步。当前实质剩余为 I-S02/I-AC02：
 必须补足生产路径增量读取，不得以库内不可变 snapshot 的增量哈希代替该证明；
 I-S07 不勾选，不进入 acceptInner 人工门。
+
+最终交付证据：上述准确代码 commit 的全套跨平台 CI 已通过，性能要求有独立
+实际读取量证明，不是仅测试全绿。source migration 仍是单独可审计边界，
+V2/version、事件字段与已批准 Ideal 均未被改写；当前仍只有 setAlias 与
+acceptIdeal 两条状态事实，不存在 acceptInner/acceptOuter。
+最终证据与 ledger 仅作执行记录，经 worktree/index/precommit 检查、
+独立普通 commit/push 和 primary 可达性确认后提供准确 revision 的人工审阅索引。
