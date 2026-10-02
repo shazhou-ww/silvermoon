@@ -100,8 +100,33 @@ explicit error, never an automatic cursor reset. A cursor is not a checkpoint,
 session boundary, approval, append authorization, or successful SDK delivery.
 Full replay remains available and unchanged for initialization and audits.
 The query reuses sealed Git blob OIDs and reads only the boundary/suffix
-segments; worktree snapshot acquisition is a separate cost, not covered by
-that blob-read claim.
+segments. On POSIX, cursor queries and canonical-ULID interaction appends
+reuse a private copy of the current index's verified content OIDs. Precise
+ctime/mtime nanoseconds invalidate changed entries, including restored-mtime
+edits; sources are rechecked after snapshot acquisition. Assume-unchanged,
+skip-worktree, fsmonitor and weakened stat settings cannot conceal edits.
+Coarse timestamp entries and Windows retain full content verification.
+Other snapshot consumers keep their previous full-validation behavior.
+
+For canonical-ULID `ping`/`pong` appends, the project runtime may persist a
+disposable authenticated sealed-prefix projection under a worktree-specific
+Git-private `silvermoon-event-cache/` directory. It contains only reduced
+status, sequence and last signal, never messages or new facts. A local
+private key authenticates the runtime-produced summary; its context binds
+the idea, exact prefix Git digest and relevant runtime source identity.
+Cold or changed prefixes are rebuilt from canonical events, while a warm
+match reads only the tail. An unauthenticated or irregular cache is an
+explicit error, never a successful fallback or permission to append.
+The private key and derived files must never be committed or shared.
+These are not security guarantees against a local user who can replace
+both the runtime and its key.
+
+The authenticated projection is neither an independent state authority nor
+a human decision. Complete replay, metadata/human-gate validation, historical
+audits and recovery remain available and perform full validation. Alias-based
+interaction appends retain full alias/layout resolution. All appends still
+verify the complete folder HEAD before and after the recoverable transaction,
+and retries still require the exact record after their original prefix.
 Use the exact ULID if invalid logs prevent alias resolution.
 
 Put a business request in a JSON file, without sequence, for example:

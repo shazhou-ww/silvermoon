@@ -111,6 +111,7 @@ if (packed.status !== 0) {
     "src/domain.js",
     "src/event-command.js",
     "src/event-history.js",
+    "src/event-projection.js",
     "src/event-storage.js",
     "src/event-stream.js",
     "src/idea-events.js",

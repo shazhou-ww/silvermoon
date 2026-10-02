@@ -20,7 +20,7 @@
 - 单事件最多 1048576 字节，包含 LF，按 UTF-8 字节计而非字符数计；
   1000 条段上限与单记录上限共同约束资源，不截断超限消息。
 - `checkpoint.json`、`cursor.json`、`lock` 和 `.pending`/`.prepared` 文件不纳入 digest。
-  不写入或信任持久化状态 checkpoint；未知名称、不规则对象与非规范段序显式拒绝。
+  不信任未经来源验证的持久化状态 checkpoint；未知名称、不规则对象与非规范段序显式拒绝。
   目前 cursor 使用逻辑字节长度；对旧前态重试计算准确前缀的 folder digest。
 - 幂等身份沿用 idea 身份、准确前态长度/digest 与该前缀后的准确规范记录的组合。
   相同 HEAD 单独不构成幂等证据。不增加事件 envelope 或传输 request ID：
@@ -114,7 +114,7 @@ HEAD-only 路径不调用段正文读取；其对象表是内容来源，不信�
 不能把整个 stateless CLI 或冷启动宣称为常数时间。上述证明覆盖 HEAD 增量聚合，
 不把未验证的 checkpoint 当作全量归约结果的替代品。
 
-尚未满足：当前生产 `event append` 每次仍建立完整 worktree snapshot、
+在 `7cfd70a` 候选时尚未满足：生产 `event append` 每次仍建立完整 worktree snapshot、
 读取并归约完整逻辑流，且提交前后 live 完整性复核仍扫描历史。
 因此 O-02 的正常追加与重复读取成本要求尚不能据上述核心 hash 测量判定通过；
 I-S02 与 I-AC02 保持未完成，不能请求 acceptInner。后续必须在保持外部编辑检测、
@@ -139,6 +139,55 @@ cursor 查询候选验证：
 - `pnpm sync:skills`、`pnpm check:skills:local`：通过。
 - `pnpm check`：通过；173 项 unit/runtime、35 项 contract、141 项 integration、
   安装包 E2E、包内容、Markdown 与 skill 均通过。
+
+后续已接通 canonical-ULID interaction append 与 cursor query 的 POSIX 增量路径：
+
+- 仅这两个高频路径复用真实 index 的私有副本，不修改真实 index；其他 snapshot
+  消费者仍保持原先从 HEAD 构建和完整验证的行为。清除 assume-unchanged/
+  skip-worktree，不使用 fsmonitor 或弱化的 stat 设置。对 index 记录与实际
+  ctime/mtime 纳秒做精确复核，发生变化强制重新读取；构建之后复核来源，
+  并发变化显式拒绝。复制时保留 index 时间，不能绕过 Git 的 racy-entry 检查。
+- 不把 stat 值当作 folder digest；HEAD 仍是完整规范内容的 Git tree OID。
+  粗粒度时间条目和 Windows 回退到内容复核，不宣称该平台已获得同样读取成本。
+- runtime 对 sealed-prefix 的纯归约摘要写入 worktree-specific Git-private
+  `silvermoon-event-cache/`；摘要绑定 idea、准确 prefix Git digest 与相关 runtime
+  源码 identity，由本地 0600 key 做 HMAC-SHA-256 认证。目录和文件必须是
+  regular/private，不接受 symlink、无认证、错误来源或超大缓存。
+  key 原子发布，摘要先写私有临时文件再 rename；不提交 key/摘要，也不记录消息。
+  它们是可丢弃派生验证结果，不是新的事实、批准或独立状态 authority。
+  不承诺对能同时替换 runtime/key 的本机用户提供安全边界。
+- 首次验证或 prefix/runtime 变化仍从规范事件重建；warm append 读取最长
+  已认证 sealed-prefix summary 与尾段。保留现有准确 prefix/record 重试；
+  不同请求同一前态拒绝，writer 不自动刷新 HEAD 或重试旧意图。
+  事务前后验证完整 folder HEAD，恢复仍按原完整候选验证路径处理。
+- 真实子进程 CLI 测试分别使用 10001 与 100001 条事件（607851 与 6277853
+  历史字节）。warm append 的 snapshot content-filter 实际输入和 runtime
+  segment/Git-blob 实际读取各自均小于 **10000 字节**，且未读取任何封存段正文；
+  cursor query 同样只读尾段。测量包含事务 owned segment 的精确字节复核，
+  不是仅比较库内 hash 调用。总 metadata/table 工作仍为 O(文件/段数)，
+  不宣称完整 CLI 为常数时间，也不把首次验证或完整 replay 计入 warm 路径。
+
+上述改善不等于全部 I-AC02 已完成：alias interaction 仍需完整 alias/layout
+解析，metadata/human-gate writes、审计和恢复仍完整验证，Windows snapshot
+仍全量读取。这些剩余表面继续作为工程工作，不记录 blocked 或 acceptInner。
+
+本增量候选的验证（2026-10-02）：
+
+- `node --test test/integration/git.test.js test/integration/incremental-append.test.js test/runtime/segmented-events.test.js test/runtime/cursor-events.test.js test/integration/project-runtime.test.js`：
+  22 项通过；含 POSIX precise-source、真实跨进程成本、缓存伪造、SHA-256 sealed
+  prefix 篡改、幂等、跨段恢复和 runtime 行为。
+- `node --test test/integration/incremental-append.test.js`：3 项通过。
+- `pnpm check:sanity`：121 项通过。
+- `pnpm check`：通过，147 项 integration、173 项 unit/runtime、35 项 contract，
+  安装包 E2E、精确 pack、Markdown 和 skill checks 全部通过。
+- `pnpm sync:skills`、`pnpm check:skills:local`：通过。
+- `node bin/silvermoon.js check --worktree --audience agent`：通过。
+
+在最终 release-grade 并行运行中，10001/100001 事件的 warm append snapshot
+正文读取分别为 462/676 字节，runtime event 正文读取分别为 855/874 字节；
+cursor snapshot 正文读取为 263/536 字节。Git racy-entry 判断会使有界尾段
+读取次数变化，因此验收断言使用每项 <10000 字节且不读取 sealed body，
+不使用偶然的精确次数、计时或“整个进程零 I/O”作为阈值。
 
 ### I-AC03: 幂等与并发准确
 

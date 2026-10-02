@@ -4,7 +4,7 @@ import { inspectAdoption } from "./adoption.js";
 import { loadConfigSnapshot } from "./config.js";
 import { createCommandRun } from "./domain.js";
 import { inspectEventHistory, localPrimary } from "./event-history.js";
-import { IdeaEventFormatError, parseIdeaEvents, replayIdeaEvents, serializeIdeaEvents } from "./idea-events.js";
+import { IdeaEventFormatError, parseIdeaEvents, reduceIdeaEvent, replayIdeaEvents, serializeIdeaEvents } from "./idea-events.js";
 import { inspectIdeaLayout } from "./idea-layout.js";
 import { deriveIdeaState, isValidUlid } from "./ideas.js";
 import { fetchPrimary, inspectTreePaths, worktreeSnapshot } from "./git.js";
@@ -12,8 +12,9 @@ import { createGitSnapshotFileSystem } from "./git-snapshot.js";
 import { localize, resolveOutputLanguage } from "./language.js";
 import { ideaPaths } from "./layout.js";
 import { recoverStateTransaction, stateTransaction } from "./state-transaction.js";
-import { eventStorageChanges, readEventStorage, readRecoveryEventStorage, readEventDelta, storageDigest } from "./event-storage.js";
-import { EventStream } from "./event-stream.js";
+import { eventStorageChanges, readEventStorage, readRecoveryEventStorage, readEventDelta, snapshotEventFolderHead, storageDigest } from "./event-storage.js";
+import { EventStream, EVENTS_PER_SEGMENT, MAX_EVENT_BYTES, eventFolderDigest, gitContentDigest, segmentName } from "./event-stream.js";
+import { projectEventSnapshot } from "./event-projection.js";
 
 const DECISIONS = {
   acceptIdeal: ["idealRevision", "preparing"],
@@ -125,6 +126,57 @@ async function appendLocalInteraction({ root, id, paths, store, bytes, input, ex
   };
 }
 
+async function appendProjectedInteraction({ root, id, paths, filesystem, input, expectedLength, expectedDigest, options }) {
+  if (!Number.isSafeInteger(expectedLength) || expectedLength < 0
+    || !new RegExp(`^[0-9a-f]{${options.objectIdLength}}$`).test(expectedDigest ?? "")) {
+    throw new Error("Interaction writes require an exact observed length and folder digest.");
+  }
+  const before = await projectEventSnapshot(root, id, paths, options, filesystem);
+  if (before.length !== expectedLength || before.digest !== expectedDigest) {
+    const delta = await readEventDelta(root, paths, options, filesystem,
+      { length: expectedLength, digest: expectedDigest });
+    const first = delta.events[0];
+    if (first) {
+      const proposed = parseRequest(input, first.sequence, options);
+      if (serializeIdeaEvents([first], options) === serializeIdeaEvents([proposed], options)) {
+        return { id, outcome: "already-present", written: false,
+          length: before.length, digest: before.digest, sequence: before.state.sequence };
+      }
+    }
+    throw new Error("Stale log length or digest; do not renumber or replay the old request.");
+  }
+  const event = parseRequest(input, before.state.sequence + 1, options);
+  const record = Buffer.from(serializeIdeaEvents([event], options));
+  if (record.length > MAX_EVENT_BYTES) throw new Error(`Event exceeds ${MAX_EVENT_BYTES} bytes including LF.`);
+  const reduced = reduceIdeaEvent(before.state, event, options);
+  if (!reduced.ok) throw new Error(`Candidate reduction failed: ${reduced.code} at ${reduced.sequence}`);
+  const full = before.state.sequence % EVENTS_PER_SEGMENT === 0 && before.state.sequence !== 0;
+  const name = full ? segmentName(before.entries.length + 1) : before.tail.name.slice(paths.eventsDirectory.length + 1);
+  const bytes = full ? record : Buffer.concat([before.tail.bytes, record]);
+  const entries = before.entries.map((entry) => ({
+    name: entry.name.slice(paths.eventsDirectory.length + 1), object: entry.object,
+  }));
+  const next = { name, object: gitContentDigest("blob", bytes, options) };
+  if (full) entries.push(next);
+  else entries[entries.length - 1] = next;
+  const head = eventFolderDigest(entries, options);
+  const liveHead = () => snapshotEventFolderHead(root, paths, options,
+    createGitSnapshotFileSystem({ gitRoot: root, tree: worktreeSnapshot(root, { reuseIndex: true }).tree }));
+  await stateTransaction(root, "events", [{
+    path: `${paths.eventsDirectory}/${name}`, before: full ? null : before.tail.bytes, after: bytes,
+  }], {
+    context: { id, localInteraction: true, storage: "segmented", afterDigest: head },
+    validate: async () => {
+      if (await liveHead() !== before.digest) throw new Error("Complete event stream changed before interaction write.");
+    },
+    validateApplied: async () => {
+      if (await liveHead() !== head) throw new Error("Complete event stream changed during interaction commit.");
+    },
+  });
+  return { id, outcome: "candidate-written", written: true,
+    length: before.length + record.length, digest: head, sequence: reduced.state.sequence };
+}
+
 export async function eventCommand({
   operation, idea: selector, root = process.cwd(), input, language,
   expectedLength, expectedDigest, expectedPrimary,
@@ -209,7 +261,9 @@ export async function eventCommand({
       if (operation !== "replay" && (afterLength !== undefined || afterDigest !== undefined)) {
         throw new Error("Cursor options are only available for replay.");
       }
-      const { tree } = worktreeSnapshot(root, incremental ? { paths: [ideaPaths(selector).ideaPath] } : {});
+      const projectedInteraction = operation === "append" && isValidUlid(selector)
+        && ["ping", "pong"].includes(input?.type);
+      const { tree } = worktreeSnapshot(root, { reuseIndex: incremental || projectedInteraction });
       const options = {
         objectIdLength: tree.length,
         allowSingleFile: config.primaryRepository === "https://github.com/shazhou-ww/silvermoon.git",
@@ -220,6 +274,17 @@ export async function eventCommand({
           { length: afterLength, digest: afterDigest },
         ) };
         return runtime.complete({ state: "event-result", root, outputLanguage, problems: [], receipt });
+      }
+      const snapshot = createGitSnapshotFileSystem({ gitRoot: root, tree });
+      if (operation === "append" && isValidUlid(selector) && ["ping", "pong"].includes(input?.type)
+        && snapshot.snapshotEntry(ideaPaths(selector).eventsDirectory)) {
+        if (expectedPrimary !== undefined) throw new Error("Local interaction append does not accept --expected-primary.");
+        const action = await runtime.performAction({ type: "write-idea-events" }, () => appendProjectedInteraction({
+          root, id: selector, paths: ideaPaths(selector), filesystem: snapshot, input,
+          expectedLength, expectedDigest, options,
+        }), (cause) => ({ problem: { type: "event.write-failed", summary: cause.message } }));
+        if (action.status === "failure") throw new Error(action.problem.summary);
+        return runtime.complete({ state: "event-result", root, outputLanguage, problems: [], receipt: action.result });
       }
       const protectedPaths = [".silvermoon/ideas", ".silvermoon/config.yaml"];
       const protectedTree = worktreeSnapshot(root, { paths: protectedPaths }).tree;

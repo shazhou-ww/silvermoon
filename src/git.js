@@ -1,5 +1,5 @@
 import { mkdir, mkdtemp, rm } from "node:fs/promises";
-import { mkdtempSync, rmSync } from "node:fs";
+import { copyFileSync, lstatSync, mkdtempSync, rmSync, statSync, utimesSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -254,17 +254,91 @@ export function inspectTreePaths(root, tree, paths) {
   }));
 }
 
-export function worktreeSnapshot(root, { paths } = {}) {
+function preciseIndexSources(root, env) {
+  const output = requireGit(root, ["ls-files", "--stage", "--debug", "-z"],
+    "Cannot inspect cached snapshot sources", { env });
+  const sources = [];
+  const replacements = [];
+  let position = 0;
+  while (position < output.length) {
+    const end = output.indexOf("\0", position);
+    const entry = /^([0-7]{6}) ([0-9a-f]{40}|[0-9a-f]{64}) ([0-3])\t([\s\S]+)$/
+      .exec(output.slice(position, end));
+    const stats = /^  ctime: ([0-9]+):([0-9]+)\n  mtime: ([0-9]+):([0-9]+)\n  dev: [^\n]*\n  uid: [^\n]*\n  size: [0-9]+\tflags: [0-9a-f]+(?:\n|$)/
+      .exec(output.slice(end + 1));
+    if (end < 0 || !entry || !stats) throw new Error("Cannot parse cached snapshot source metadata.");
+    const path = join(root, entry[4]);
+    let metadata;
+    try { metadata = lstatSync(path, { bigint: true }); }
+    catch (cause) { if (cause.code !== "ENOENT") throw cause; }
+    const fingerprint = (value) => value
+      ? `${value.ctimeNs}:${value.mtimeNs}:${value.size}:${value.ino}:${value.dev}:${value.mode}`
+      : null;
+    sources.push({ path, fingerprint: fingerprint(metadata), inspect: fingerprint });
+    // Git may ignore subsecond ctime even when the index records it.
+    if (entry[3] === "0" && metadata
+      && (metadata.ctimeNs % 1000000000n === 0n
+        || metadata.ctimeNs !== BigInt(stats[1]) * 1000000000n + BigInt(stats[2])
+        || metadata.mtimeNs !== BigInt(stats[3]) * 1000000000n + BigInt(stats[4]))) {
+      replacements.push(`${entry[1]} ${entry[2]}\t${entry[4]}\0`);
+    }
+    position = end + 1 + stats[0].length;
+  }
+  if (replacements.length) {
+    requireGit(root, ["update-index", "-z", "--index-info"], "Cannot invalidate changed snapshot sources",
+      { env, input: replacements.join("") });
+  }
+  return sources;
+}
+
+export function worktreeSnapshot(root, { paths, reuseIndex = false } = {}) {
   const directory = mkdtempSync(join(tmpdir(), "silvermoon-index-"));
   const env = { ...process.env, GIT_INDEX_FILE: join(directory, "index") };
   try {
-    const populated = runGit(root, ["read-tree", "HEAD"], { env });
-    if (!populated.ok) {
-      requireGit(root, ["read-tree", "--empty"], "Cannot initialize snapshot index", { env });
+    let copied = false;
+    if (reuseIndex && paths === undefined && process.platform !== "win32") {
+      const index = requireGit(root, ["rev-parse", "--path-format=absolute", "--git-path", "index"],
+        "Cannot locate worktree index");
+      try {
+        const metadata = statSync(index);
+        copyFileSync(index, env.GIT_INDEX_FILE);
+        // A newer index timestamp would hide entries that Git considers racy.
+        utimesSync(env.GIT_INDEX_FILE, metadata.atime, metadata.mtime);
+        copied = true;
+      } catch (cause) {
+        if (cause.code !== "ENOENT") throw cause;
+      }
+    }
+    let sources;
+    if (copied) {
+      const tracked = requireGit(root, ["ls-files", "-z"], "Cannot inspect snapshot index", { env });
+      if (tracked) {
+        requireGit(root, ["update-index", "--no-assume-unchanged", "-z", "--stdin"],
+          "Cannot clear snapshot assume-unchanged flags", { env, input: tracked });
+        requireGit(root, ["update-index", "--no-skip-worktree", "-z", "--stdin"],
+          "Cannot clear snapshot skip-worktree flags", { env, input: tracked });
+      }
+      sources = preciseIndexSources(root, env);
+    } else {
+      const populated = runGit(root, ["read-tree", "HEAD"], { env });
+      if (!populated.ok) {
+        requireGit(root, ["read-tree", "--empty"], "Cannot initialize snapshot index", { env });
+      }
     }
     const add = ["add", "--all"];
     if (paths !== undefined) add.push("--", ...paths);
-    requireGit(root, add, "Cannot snapshot worktree", { env });
+    requireGit(root, copied ? [
+      "-c", "core.fsmonitor=false", "-c", "core.ignorestat=false",
+      "-c", "core.trustctime=true", "-c", "core.checkstat=default", ...add,
+    ] : add, "Cannot snapshot worktree", { env });
+    for (const source of sources ?? []) {
+      let metadata;
+      try { metadata = lstatSync(source.path, { bigint: true }); }
+      catch (cause) { if (cause.code !== "ENOENT") throw cause; }
+      if (source.inspect(metadata) !== source.fingerprint) {
+        throw new Error("Worktree source changed while taking its snapshot; preserve changes and reobserve.");
+      }
+    }
     return {
       tree: requireGit(root, ["write-tree"], "Cannot write worktree snapshot", { env }),
     };

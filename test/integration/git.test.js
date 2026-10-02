@@ -1,10 +1,12 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
+import { writeFileSync } from "node:fs";
 import {
   mkdir,
   mkdtemp,
   readFile,
   rm,
+  utimes,
   writeFile,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -196,4 +198,60 @@ test("reads one immutable worktree snapshot after concurrent filesystem changes"
     await readFile(join(root, "README.md"), "utf8"),
     "changed after snapshot\n",
   );
+});
+
+test("reused snapshot index does not inherit flags that conceal worktree edits", async () => {
+  const { root } = await createRepository();
+  for (const flag of ["assume-unchanged", "skip-worktree"]) {
+    git(root, "update-index", `--${flag}`, "README.md");
+    await writeFile(join(root, "README.md"), `${flag}\n`);
+    const index = git(root, "rev-parse", "--git-path", "index");
+    const before = await readFile(join(root, index));
+    const { tree } = worktreeSnapshot(root, { reuseIndex: true });
+    const filesystem = createGitSnapshotFileSystem({ gitRoot: root, tree });
+    assert.equal(await filesystem.readFile(join(root, "README.md"), "utf8"), `${flag}\n`);
+    assert.deepEqual(await readFile(join(root, index)), before);
+    git(root, "update-index", `--no-${flag}`, "README.md");
+  }
+});
+
+test("reused snapshot index avoids reading unchanged bodies and detects restored-mtime edits",
+  { skip: process.platform === "win32" ? "Windows snapshots retain full content verification." : false }, async () => {
+  const { root } = await createRepository();
+  const log = join(root, "filter-read.log");
+  const filter = join(root, "measure-filter.cjs");
+  await writeFile(filter, `
+const fs = require("node:fs");
+const bytes = fs.readFileSync(0);
+fs.appendFileSync(${JSON.stringify(log)}, String(bytes.length) + "\\n");
+fs.writeFileSync(1, bytes);
+`);
+  git(root, "config", "filter.measure.clean", `"${process.execPath}" "${filter}"`);
+  git(root, "config", "filter.measure.required", "true");
+  await writeFile(join(root, ".gitattributes"), "README.md -text filter=measure\n");
+  const path = join(root, "README.md");
+  const old = new Date("2000-01-01T00:00:00Z");
+  await utimes(path, old, old);
+  git(root, "add", "README.md", ".gitattributes");
+  await writeFile(log, "");
+  const first = worktreeSnapshot(root, { reuseIndex: true }).tree;
+  const second = worktreeSnapshot(root, { reuseIndex: true }).tree;
+  assert.equal(first, second);
+  assert.equal(await readFile(log, "utf8"), "");
+  await writeFile(path, "changed\n");
+  await utimes(path, old, old);
+  const changed = worktreeSnapshot(root, { reuseIndex: true }).tree;
+  assert.notEqual(changed, first);
+  assert.ok(Number((await readFile(log, "utf8")).trim().split("\n")[0]) > 0);
+  const filesystem = createGitSnapshotFileSystem({ gitRoot: root, tree: changed });
+  assert.equal(await filesystem.readFile(path, "utf8"), "changed\n");
+});
+
+test("precise snapshot verification rejects a source changed during index refresh",
+  { skip: process.platform === "win32" ? "Windows snapshots retain full content verification." : false }, async () => {
+  const { root } = await createRepository();
+  await observeGitCommands((args) => {
+    if (args.includes("add")) writeFileSync(join(root, "README.md"), "concurrent edit\n");
+  }, () => assert.throws(() => worktreeSnapshot(root, { reuseIndex: true }),
+    /source changed while taking its snapshot/));
 });

@@ -164,6 +164,14 @@ For repeated consumption, `event replay <ULID> --after-length <bytes>
 The `delta-observed` receipt is not a complete reduction or authorization;
 ordinary full replay is unchanged. The experimental project runtime exposes
 this additive query as `readSince(route, { length, digest })`.
+
+Canonical-ULID interaction appends use authenticated local sealed-prefix
+projections to avoid replaying sealed history on the warm path. These
+Git-private, runtime/source-bound files are disposable derived state, not
+event facts or authorization. POSIX incremental snapshot acquisition performs
+precise source checks; Windows and coarse timestamps retain full content
+verification. Full replay, metadata/human-gate checks and history audits are
+not advertised as constant-time operations.
 That contract also documents the separate `bin/migrate-v1-to-v2.js` entrypoint.
 No command automatically migrates a v1 project.
 
