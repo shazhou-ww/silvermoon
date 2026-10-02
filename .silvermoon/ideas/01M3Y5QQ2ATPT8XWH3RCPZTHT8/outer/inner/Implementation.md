@@ -153,7 +153,26 @@ V1 迁移及内部 V2 分段迁移的进程退出注入、primary 移动、未�
 已验证内部工具的只读计划、来源 runtime/repository/manifest、2001 条跨三段
 逐字节等价（包括既有 ideal 决策）、dirty/错误来源阻挡、重复调用和恢复/回滚。
 旧 dotted V2 内部转换及 V1 到 V2 suites 继续通过。内部工具明确排除在 npm 包之外。
-本源码 checkout 的实际转换及其 primary 边界证据在执行后补充，不以 fixture 代替。
+本源码 checkout 的实际转换及其 primary 边界证据如下，不以 fixture 代替。
+
+实际源仓转换已执行并普通同步：
+
+- 实施代码来源/primary：`488d25860c5ac352792d5884335f1ca7f7a9ab99`。
+- `node bin/migrate-segmented-events.js --root /Users/weiwei/Code/silvermoon.worktrees/create-silvermoon-idea-session`：只读计划成功，
+  plan digest 为 `a40649e840af1ea6dd497ea7e66ede50b77ba8666ef634e6c82f48c4f28db7c1`。
+- `node bin/migrate-segmented-events.js --root /Users/weiwei/Code/silvermoon.worktrees/create-silvermoon-idea-session --apply --expected-digest a40649e840af1ea6dd497ea7e66ede50b77ba8666ef634e6c82f48c4f28db7c1`：成功，41 条 idea 流同时转换；
+  156 条事件、16036 原始字节逐流与来源 commit 的旧文件完全相等，归约结果相同。
+  逐 idea 的完整 outer tree 和 ledger blob、项目 config blob 均与来源相同，仍为 V2。
+- 重复运行只读入口：`already-segmented`，`written: false`。
+- 独立 migration-only commit：`926ddd7ff8a2e958c1d38e77abcad927396070ca`；
+  Git 显示 41 个 100% rename、0 insertions、0 deletions。
+  未修改任何 world 或 ledger；其他工作区及原 daemon 讨论稿未操作。
+- `node bin/silvermoon.js check --worktree --audience agent`：通过。
+- `node bin/silvermoon.js check --staged --audience agent`：通过。
+- `node bin/silvermoon.js check --commit HEAD --audience agent`：通过。
+- `pnpm check:commit`：通过；普通 push 前核对 primary 为准确来源 commit。
+  push 后重观 implementing，`node bin/silvermoon.js check --remote --audience agent`
+  通过，迁移 commit 已在 primary。
 
 ### I-AC06: 全相关表面和交付验证一致
 
@@ -170,5 +189,11 @@ runtime、类型、文档与 skill 全部使用同一契约。以定向测试、
   安装包 E2E、精确包内容、Markdown 与 `check:skills` 均通过。
 - `node bin/silvermoon.js check --worktree --audience agent`：通过。
 
-实际内部迁移与最终提交/同步的验证记录需补充；I-AC02 未完成，
-不把测试全绿当作性能验收，不记录 acceptInner。
+I-AC02 未完成，不把测试全绿当作性能验收，不记录 acceptInner。
+
+迁移后的真实源码 layout 又运行一次 `pnpm check`：全部通过，覆盖与上述相同。
+实施代码和 migration-only 两个 commit 均经 worktree/index/commit checks、
+`pnpm check:commit` 及普通非强制同步，remote history check 通过。
+最后证据/ledger 候选仍按同一流程提交与同步。当前实质剩余为 I-S02/I-AC02：
+必须补足生产路径增量读取，不得以库内不可变 snapshot 的增量哈希代替该证明；
+I-S07 不勾选，不进入 acceptInner 人工门。
