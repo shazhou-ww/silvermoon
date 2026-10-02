@@ -64,7 +64,8 @@ Silvermoon 包内的设备级 daemon 子命令，完成跨项目持续调度与�
 ### 一个包中的设备级调度入口
 
 用户从 Silvermoon 的子命令启动长驻 daemon，不需要安装另一套 daemon 产品
-或独立命令。现有无状态 CLI 和 `whats-next` 仍可独立使用。
+或独立命令。现有无状态 CLI 和 `whats-next` 仍可独立使用。命令入口、配置覆盖、
+前台生命周期和退出语义见 [Daemon-CLI.md](./Daemon-CLI.md)。
 
 一台设备由一个 daemon 接收上游面向不同项目、各自单个 idea 的请求，路由到
 对应工作区和下游 session。无需每个项目维持一个常驻 daemon，也不把一个
