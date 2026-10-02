@@ -1,1 +1,2 @@
 {"sequence":1,"type":"setAlias","payload":{"alias":"segmented-event-streams"}}
+{"sequence":2,"type":"acceptIdeal","payload":{"idealRevision":"d98b9ac7a24917cd82ef82242ded57b435870188"}}
