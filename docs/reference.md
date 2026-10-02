@@ -16,7 +16,7 @@ Each idea is self-contained under one canonical uppercase ULID:
 |   `-- deploying.md
 `-- ideas/
     `-- 01M36QGPNTXEPP61DA4KP4AVZF/
-        |-- status.yaml (v1) or events.jsonl (v2)
+        |-- status.yaml (v1) or events/ (v2, 1000-record JSONL segments)
         |-- ledger.md
         `-- outer/
             |-- Deployment.md
@@ -80,7 +80,7 @@ Each world is an opaque Git tree:
 - `implementationRevision` identifies `inner/` and includes the Ideal World.
 - `deploymentRevision` identifies `outer/` and includes both nested worlds.
 
-`status.yaml` (v1), `events.jsonl` (v2), and `ledger.md` are outside all three
+`status.yaml` (v1), `events/` (v2), and `ledger.md` are outside all three
 world trees. The repository
 object format in use determines revision shape. Silvermoon validates canonical
 revision shape, computes the current world trees, and compares those values to
@@ -144,14 +144,17 @@ State is derived in order:
 
 ## Event State (v2)
 
-Project `version: 2` replaces mutable status with a required `events.jsonl`
-at each idea root. Identity comes from the directory and an empty log is
-valid. Its strict nine-event union updates the status facts and interaction
+Project `version: 2` replaces mutable status with a required `events/`
+folder at each idea root. Its consecutive 16-digit ordinal JSONL segments hold
+at most 1000 records, with full non-tail segments and an initially empty first
+segment. Sequence and logical sessions continue across segment boundaries.
+Its strict nine-event union updates the status facts and interaction
 projection; no observations, creation/import markers, or audit envelope are
 stored. The nested-world revisions and five lifecycle states are unchanged.
 
 Use `event replay`, `event append`, and `event revise`, never direct JSONL
-editing. Requests carry exact log byte length and SHA-256 outside the business event;
+editing. Requests carry exact logical byte length and the normalized events-folder
+Git tree digest outside the business event;
 lifecycle writes also require expected primary. Canonical JSONL, human gates, concurrency,
 conditional append-only history, and interrupted-write recovery are specified
 in the [event operations contract](../skills/silvermoon/references/events.md).
@@ -266,7 +269,7 @@ silvermoon list-ideas [--state <state>] [--all] [--query <text>] [--created-sinc
 silvermoon whats-next [idea] [--language <en|en-US|zh|zh-CN>] [--audience <human|agent>] [--trace <file.trace.jsonl>]
 silvermoon create-idea [--language <tag>] [--audience <human|agent>] [--trace <file.trace.jsonl>]
 silvermoon check [--remote | --commit <revision> | --staged | --worktree] [--language <en|en-US|zh|zh-CN>] [--audience <human|agent>] [--trace <file.trace.jsonl>]
-silvermoon event <replay|append|revise|recover> [idea] [--input <request.json>] [--expected-length <bytes>] [--expected-digest <sha256>] [--expected-primary <commit>] [--confirm-decision] [--owned-suffix] [--confirm-stopped] [--rollback] [--audience <human|agent>]
+silvermoon event <replay|append|revise|recover> [idea] [--input <request.json>] [--expected-length <bytes>] [--expected-digest <oid>] [--expected-primary <commit>] [--confirm-decision] [--owned-suffix] [--confirm-stopped] [--rollback] [--audience <human|agent>]
 ```
 
 Every valid invocation starts one ordered domain-message stream with

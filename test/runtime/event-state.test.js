@@ -315,7 +315,7 @@ test("event process interruption recovers its exact record; moved primary requir
   const before = await readFile(join(root, path), "utf8");
   const after = before + serializeIdeaEvents([{ sequence: 2, type: "setLanguage", payload: { language: "en" } }]);
   const context = {
-    id: FIRST_ID, primary: git(root, "rev-parse", "origin/main"),
+    id: FIRST_ID, storage: "segmented", primary: git(root, "rev-parse", "origin/main"),
     revisions: {
       idealRevision: git(root, "rev-parse", `HEAD:${ideaPaths(FIRST_ID).idealPath}`),
       implementationRevision: git(root, "rev-parse", `HEAD:${ideaPaths(FIRST_ID).innerPath}`),

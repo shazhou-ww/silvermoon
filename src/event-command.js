@@ -11,7 +11,9 @@ import { fetchPrimary, inspectTreePaths, worktreeSnapshot } from "./git.js";
 import { createGitSnapshotFileSystem } from "./git-snapshot.js";
 import { localize, resolveOutputLanguage } from "./language.js";
 import { ideaPaths } from "./layout.js";
-import { digest, recoverStateTransaction, stateBytes, stateTransaction } from "./state-transaction.js";
+import { recoverStateTransaction, stateTransaction } from "./state-transaction.js";
+import { eventStorageChanges, readEventStorage, readRecoveryEventStorage, storageDigest } from "./event-storage.js";
+import { EventStream } from "./event-stream.js";
 
 const DECISIONS = {
   acceptIdeal: ["idealRevision", "preparing"],
@@ -29,7 +31,8 @@ function parseRequest(input, sequence, options) {
   return parseIdeaEvents(serializeIdeaEvents([event], options), options)[0];
 }
 
-async function inspectCandidate(root, tree, config, path, bytes, { recovering = false } = {}) {
+async function inspectCandidate(root, tree, config, store, bytes, id, { recovering = false } = {}) {
+  const path = store.path;
   const filesystem = createGitSnapshotFileSystem({ gitRoot: root, tree });
   const pending = `${path}.pending`;
   if (recovering && filesystem.snapshotEntry(pending)) {
@@ -46,11 +49,10 @@ async function inspectCandidate(root, tree, config, path, bytes, { recovering = 
         : entries;
     };
   }
-  const read = filesystem.readFile;
-  filesystem.readFile = async (requested, encoding) => resolve(requested) === resolve(root, path)
-    ? encoding === undefined ? Buffer.from(bytes) : bytes.toString(encoding)
-    : read(requested, encoding);
-  const layout = await inspectIdeaLayout({ root, config, filesystem, snapshotTree: tree });
+  const layout = await inspectIdeaLayout({
+    root, config, filesystem, snapshotTree: tree,
+    eventOverrides: new Map([[id, { storage: store.storage, bytes }]]),
+  });
   if (layout.diagnostics.length) throw new Error(layout.diagnostics.map((d) => d.message).join("; "));
   return layout;
 }
@@ -77,12 +79,13 @@ function assertHumanGate(event, idea, primaryWorlds, confirmed) {
   }
 }
 
-async function appendLocalInteraction({ root, id, paths, bytes, input, expectedLength, expectedDigest, options }) {
-  if (!Number.isSafeInteger(expectedLength) || expectedLength < 0 || !/^[0-9a-f]{64}$/.test(expectedDigest ?? "")) {
+async function appendLocalInteraction({ root, id, paths, store, bytes, input, expectedLength, expectedDigest, options }) {
+  const head = (source) => storageDigest(store, source, options);
+  if (!Number.isSafeInteger(expectedLength) || expectedLength < 0 || !/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/.test(expectedDigest ?? "")) {
     throw new Error("Interaction writes require --expected-length and --expected-digest from event replay.");
   }
-  if (bytes.length !== expectedLength || digest(bytes) !== expectedDigest) {
-    if (bytes.length > expectedLength && digest(bytes.subarray(0, expectedLength)) === expectedDigest) {
+  if (bytes.length !== expectedLength || store.digest !== expectedDigest) {
+    if (bytes.length > expectedLength && head(bytes.subarray(0, expectedLength)) === expectedDigest) {
       const previous = replayIdeaEvents(id,
         parseIdeaEvents(bytes.subarray(0, expectedLength), options), options);
       if (previous.ok) {
@@ -93,7 +96,7 @@ async function appendLocalInteraction({ root, id, paths, bytes, input, expectedL
           const current = replayIdeaEvents(id, parseIdeaEvents(bytes, options), options);
           if (!current.ok) throw new Error(`Current log reduction failed: ${current.code}`);
           return { id, outcome: "already-present", written: false,
-            length: bytes.length, digest: digest(bytes), sequence: current.state.sequence };
+            length: bytes.length, digest: store.digest, sequence: current.state.sequence };
         }
       }
     }
@@ -105,16 +108,20 @@ async function appendLocalInteraction({ root, id, paths, bytes, input, expectedL
   const candidate = Buffer.concat([bytes, Buffer.from(serializeIdeaEvents([event], options))]);
   const after = replayIdeaEvents(id, parseIdeaEvents(candidate, options), options);
   if (!after.ok) throw new Error(`Candidate reduction failed: ${after.code} at ${after.sequence}`);
-  await stateTransaction(root, "events", [{ path: paths.eventsPath, before: bytes, after: candidate }], {
-    context: { id, localInteraction: true },
+  await stateTransaction(root, "events", eventStorageChanges(paths, store, candidate, options), {
+    context: { id, localInteraction: true, storage: store.storage, afterDigest: head(candidate) },
     validate: async () => {
-      const current = await stateBytes(root, paths.eventsPath);
-      if (current === null || !current.equals(bytes)) throw new Error("Log changed before local interaction write.");
+      const current = await readEventStorage(root, paths, options);
+      if (current.digest !== store.digest || !current.bytes.equals(bytes)) throw new Error("Log changed before local interaction write.");
+    },
+    validateApplied: async () => {
+      const current = await readEventStorage(root, paths, options);
+      if (current.digest !== head(candidate)) throw new Error("Complete stream changed during local interaction commit.");
     },
   });
   return {
     id, outcome: "candidate-written", written: true,
-    length: candidate.length, digest: digest(candidate), sequence: after.state.sequence,
+    length: candidate.length, digest: head(candidate), sequence: after.state.sequence,
   };
 }
 
@@ -141,18 +148,27 @@ export async function eventCommand({
         () => recoverStateTransaction(root, {
           rollback, confirmedStopped: confirmStopped, kind: "events",
           validate: async (plan) => {
-            if (plan.files.length !== 1 || !plan.context?.id
+            if (!plan.files.length || !plan.context?.id
               || (!plan.context.localInteraction && !plan.context.primary)) {
               throw new Error("Event recovery context is missing; preserve the plan.");
             }
             const { tree } = worktreeSnapshot(root);
             const loaded = await loadConfigSnapshot({ gitRoot: root, tree });
             if (loaded.config?.version !== 2) throw new Error("Event recovery requires the original v2 project.");
+            const paths = ideaPaths(plan.context.id);
+            const eventOptions = {
+              objectIdLength: tree.length,
+              allowSingleFile: loaded.config.primaryRepository === "https://github.com/shazhou-ww/silvermoon.git",
+            };
+            const store = await readRecoveryEventStorage(root, paths, eventOptions, plan.files);
+            if (store.storage !== plan.context.storage) throw new Error("Event recovery storage changed.");
+            const candidate = store.storage === "segmented"
+              ? EventStream.fromSegments(store.entries, eventOptions).bytes()
+              : store.bytes;
+            if (plan.context.afterDigest && storageDigest(store, candidate, eventOptions) !== plan.context.afterDigest) {
+              throw new Error("Event recovery candidate digest changed.");
+            }
             if (plan.context.localInteraction) {
-              const file = plan.files[0];
-              if (file.path !== ideaPaths(plan.context.id).eventsPath) throw new Error("Interaction recovery path mismatch.");
-              const candidate = Buffer.from(file.after, "base64");
-              const eventOptions = { objectIdLength: tree.length };
               const result = replayIdeaEvents(plan.context.id,
                 parseIdeaEvents(candidate, eventOptions), eventOptions);
               if (!result.ok) throw new Error(`Invalid local interaction recovery: ${result.code}`);
@@ -164,15 +180,13 @@ export async function eventCommand({
             if (fetched.status === "failure") throw new Error(fetched.problem.summary);
             const primary = fetched.result.commit;
             if (primary !== plan.context.primary) throw new Error("Primary moved; resume cannot replay this stale write. Roll back owned bytes, then reobserve.");
-            const file = plan.files[0];
-            const candidate = Buffer.from(file.after, "base64");
-            const layout = await inspectCandidate(root, tree, loaded.config, file.path, candidate, { recovering: true });
+            const layout = await inspectCandidate(root, tree, loaded.config, store, candidate, plan.context.id, { recovering: true });
             const idea = layout.ideas.find(({ id }) => id === plan.context.id);
             if (!idea || Object.keys(plan.context.revisions).some((key) => idea.revisions[key] !== plan.context.revisions[key])) {
               throw new Error("Worlds changed; obtain a fresh decision instead of resuming the stale write.");
             }
             await inspectEventHistory({
-              root, tree, config: loaded.config, primary, overrides: new Map([[file.path, candidate]]),
+              root, tree, config: loaded.config, primary, overrides: new Map([[store.path, candidate]]),
             });
           },
         }),
@@ -188,18 +202,24 @@ export async function eventCommand({
       const config = adoption.config;
       outputLanguage = resolveOutputLanguage({ content: config.preferredLanguage, override: language }).tag;
       const { tree } = worktreeSnapshot(root);
-      const options = { objectIdLength: tree.length };
+      const options = {
+        objectIdLength: tree.length,
+        allowSingleFile: config.primaryRepository === "https://github.com/shazhou-ww/silvermoon.git",
+      };
       const protectedPaths = [".silvermoon/ideas", ".silvermoon/config.yaml"];
       const protectedTree = worktreeSnapshot(root, { paths: protectedPaths }).tree;
       const id = await resolveIdea(root, tree, config, selector);
       const paths = ideaPaths(id);
-      const bytes = await stateBytes(root, paths.eventsPath);
-      if (bytes === null) throw new Error(`Missing ${paths.eventsPath}; it is not an empty log.`);
-      const observation = { id, length: bytes.length, digest: digest(bytes) };
+      const store = await readEventStorage(root, paths, options,
+        createGitSnapshotFileSystem({ gitRoot: root, tree }));
+      const { bytes } = store;
+      const head = (source) => storageDigest(store, source, options);
+      const observation = { id, length: bytes.length, digest: store.digest };
       if (operation === "replay") {
         let reduction = null;
         let format = { ok: true };
         try {
+          if (store.storage === "segmented") EventStream.fromSegments(store.entries, options);
           reduction = replayIdeaEvents(id, parseIdeaEvents(bytes, options), options);
         }
         catch (error) {
@@ -220,14 +240,14 @@ export async function eventCommand({
           if (expectedPrimary !== undefined) throw new Error("Local interaction append does not accept --expected-primary.");
           const action = await runtime.performAction({ type: "write-idea-events" },
             () => appendLocalInteraction({
-              root, id, paths, bytes, input, expectedLength, expectedDigest, options,
+              root, id, paths, store, bytes, input, expectedLength, expectedDigest, options,
             }),
             (cause) => ({ problem: { type: "event.write-failed", summary: cause.message } }));
           if (action.status === "failure") throw new Error(action.problem.summary);
           receipt = action.result;
         } else {
         if (!Number.isSafeInteger(expectedLength) || expectedLength < 0
-          || !/^[0-9a-f]{64}$/.test(expectedDigest ?? "")
+          || !/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/.test(expectedDigest ?? "")
           || !/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/.test(expectedPrimary ?? "")) {
           throw new Error("Writes require exact --expected-length, --expected-digest and --expected-primary from observation.");
         }
@@ -241,9 +261,9 @@ export async function eventCommand({
         const primary = await refreshPrimary();
         if (primary !== expectedPrimary) throw new Error("Primary moved; preserve the candidate, synchronize and reassess the request.");
         const prefix = bytes.subarray(0, expectedLength);
-        const matches = bytes.length === expectedLength && digest(bytes) === expectedDigest;
+        const matches = bytes.length === expectedLength && store.digest === expectedDigest;
         if (!matches) {
-          if (operation === "append" && bytes.length > expectedLength && digest(prefix) === expectedDigest) {
+          if (operation === "append" && bytes.length > expectedLength && head(prefix) === expectedDigest) {
             const before = replayIdeaEvents(id, parseIdeaEvents(prefix, options), options);
             if (before.ok) {
               const event = parseRequest(input, before.state.sequence + 1, options);
@@ -280,10 +300,10 @@ export async function eventCommand({
             } else throw new Error(`Candidate reduction failed: ${reduction.code} at ${reduction.sequence}`);
           }
           if (!receipt) {
-            const layout = await inspectCandidate(root, tree, config, paths.eventsPath, candidate);
+            const layout = await inspectCandidate(root, tree, config, store, candidate, id);
             const selected = layout.ideas.find((idea) => idea.id === id);
             const history = await inspectEventHistory({
-              root, tree, config, primary, overrides: new Map([[paths.eventsPath, candidate]]),
+              root, tree, config, primary, overrides: new Map([[store.path, candidate]]),
             });
             // Check each newly introduced decision against its preceding state, never its own result.
             const worlds = inspectTreePaths(root, primary, [paths.idealPath, paths.innerPath, paths.outerPath]);
@@ -316,19 +336,26 @@ export async function eventCommand({
               }, primaryWorlds, confirmDecision);
             }
             const action = await runtime.performAction({ type: "write-idea-events" }, async () => {
-              await stateTransaction(root, "events", [{ path: paths.eventsPath, before: bytes, after: candidate }], {
-                context: { id, primary, revisions: selected.revisions },
+              await stateTransaction(root, "events", eventStorageChanges(paths, store, candidate, options), {
+                context: { id, primary, revisions: selected.revisions, storage: store.storage, afterDigest: head(candidate) },
                 validate: async () => {
                   const live = await refreshPrimary();
                   if (live !== primary) throw new Error("Primary moved before write; recover the unwritten transaction, then reobserve.");
                   if (worktreeSnapshot(root, { paths: protectedPaths }).tree !== protectedTree) {
                     throw new Error("Worlds changed during validation.");
                   }
+                  const current = await readEventStorage(root, paths, options);
+                  if (current.digest !== store.digest) throw new Error("Complete event stream changed during validation.");
+                },
+                validateApplied: async () => {
+                  const current = await readEventStorage(root, paths, options);
+                  if (current.digest !== head(candidate)) throw new Error("Complete stream changed during event commit.");
+                  await inspectCandidate(root, worktreeSnapshot(root).tree, config, current, candidate, id);
                 },
               });
               return {
                 id, outcome: "candidate-written", written: true, primary,
-                length: candidate.length, digest: digest(candidate),
+                length: candidate.length, digest: head(candidate),
                 sequence: reduction.state.sequence, history,
               };
             }, (cause) => ({ problem: { type: "event.write-failed", summary: cause.message } }));

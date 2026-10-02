@@ -41,7 +41,7 @@ function decodeReport(output, command, operation, ideaId, exitCode) {
       && (report.observation.receipt?.id !== ideaId
         || typeof report.observation.receipt.outcome !== "string"
         || !Number.isSafeInteger(report.observation.receipt.length)
-        || !/^[a-f0-9]{64}$/.test(report.observation.receipt.digest ?? "")))) {
+        || !/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(report.observation.receipt.digest ?? "")))) {
     throw new Error(`Project runtime does not support report protocol ${PROTOCOL_VERSION} for ${command}.`);
   }
   return { protocolVersion: PROTOCOL_VERSION, exitCode, report };
@@ -94,7 +94,7 @@ export class ProjectRuntime {
       throw new TypeError("Only nonempty ping/pong messages can be appended through this boundary.");
     }
     if (!Number.isSafeInteger(expectedLength) || expectedLength < 0
-      || typeof expectedDigest !== "string" || !/^[a-f0-9]{64}$/.test(expectedDigest)) {
+      || typeof expectedDigest !== "string" || !/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(expectedDigest)) {
       throw new TypeError("The exact local log length and digest are required.");
     }
     const directory = await mkdtemp(join(tmpdir(), "silvermoon-interaction-"));

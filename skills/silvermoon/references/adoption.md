@@ -49,7 +49,7 @@ than installing a self-dependency.
 
 Existing v1 projects keep the following configuration and storage contract.
 New projects may explicitly choose `version: 2` with the
-[event storage and command rules](./events.md); create `events.jsonl` rather
+[event storage and command rules](./events.md); create the canonical `events/` folder rather
 than status YAML and configure a named-primary tracking ref before checking.
 Never convert an existing project by editing only its version.
 

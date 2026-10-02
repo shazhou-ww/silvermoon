@@ -21,6 +21,7 @@ export class ProjectRuntime {
     type: "ping" | "pong";
     message: string;
     expectedLength: number;
+    /** Canonical events-folder Git tree OID, using the project's object format. */
     expectedDigest: string;
   }): Promise<RuntimeResult>;
 }

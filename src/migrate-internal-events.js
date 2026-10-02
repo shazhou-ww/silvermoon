@@ -54,7 +54,7 @@ export async function migrateInternalEvents({
   const final = { objectIdLength: tree.length };
   const files = [];
   for (const id of ids) {
-    const path = ideaPaths(id).eventsPath;
+    const path = ideaPaths(id).legacyEventsPath;
     const before = await regularBytes(resolve(root, path));
     if (before === null) throw new Error(`Missing migration source: ${path}`);
     const oldEvents = parseIdeaEvents(before, legacy);

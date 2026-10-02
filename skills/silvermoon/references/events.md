@@ -6,11 +6,34 @@ Never change the version alone or migrate a project implicitly.
 
 ## Storage and state
 
-V2 replaces each idea's `status.yaml` with `events.jsonl`; never keep both.
-An empty file is the identity-only initial state, not a missing file.
+V2 replaces each idea's `status.yaml` with an `events/` folder; never keep both.
+Segments are named `0000000000000001.jsonl`, `0000000000000002.jsonl`, and so
+on, using consecutive 16-digit positive ordinals. Each holds at most **1000**
+records; every non-tail segment must be full. Full segments are sealed;
+append to the partial tail or create the next segment. An empty first segment
+is the identity-only initial state. Do not create an empty trailing segment
+after a full segment. Date boundaries never split a logical stream or session,
+and event sequences do not restart.
 Identity comes from the ULID directory. Events are canonical UTF-8 JSONL
 without BOM, with LF and a final LF for nonempty logs. Do not let Git convert
-these bytes: add `**/events.jsonl -text` to the project's `.gitattributes`.
+these bytes: add `**/events/*.jsonl -text -filter` to the project's `.gitattributes`.
+A record including LF is limited to 1048576 bytes; this is a byte limit, not
+a character limit. Oversized records are explicit errors, not truncated messages.
+
+The stream HEAD is the **events folder's** normalized Git tree digest, not
+the repository HEAD, a commit, the entire repository tree, one sequence, or
+the tail segment alone. Hash raw segment bytes as Git blobs and encode their
+ordered canonical names with fixed `100644` modes in a Git tree. Use the
+repository's SHA-1/SHA-256 object format, just like world revisions. Locks,
+`.pending`/`.prepared` temporary files, `checkpoint.json`, `cursor.json`,
+permissions and mtime are excluded; unknown or irregular entries are errors.
+Do not trust checkpoint/cursor contents as facts or authorization.
+
+Verified immutable snapshots reuse sealed blob digests and hash only the
+changed tail plus the segment table. Immutable Git snapshots can calculate
+the normalized folder digest from their object table without loading segment
+bodies. Full event replay, reduction validation and filesystem integrity audits
+still read history; do not describe these as constant-time operations.
 
 Every record has a consecutive positive safe-integer `sequence` and `type`.
 V2 defines seven business changes and two interaction messages:
@@ -54,7 +77,7 @@ checkout, replace `silvermoon` below with `node bin/silvermoon.js`.
 silvermoon event replay <idea> --audience agent
 ```
 
-The receipt gives exact byte `length`, SHA-256 `digest`, the reduction result,
+The receipt gives exact logical byte `length`, events-folder Git tree `digest`, the reduction result,
 and a local primary tracking commit explicitly marked **not fetched**.
 Refresh the configured named remote before relying on that baseline. A
 missing/ambiguous tracking ref blocks rather than choosing an arbitrary base.
@@ -70,12 +93,16 @@ For metadata and human decisions, bind the request to the observed log and
 primary:
 
 ```sh
-silvermoon event append <idea> --input request.json --expected-length <bytes> --expected-digest <sha256> --expected-primary <commit> --audience agent
+silvermoon event append <idea> --input request.json --expected-length <bytes> --expected-digest <oid> --expected-primary <commit> --audience agent
 ```
 
 The writer fetches primary, verifies the request, validates the entire project,
 acquires an exclusive project transaction, rechecks the source and world
-snapshot, refreshes primary again, and atomically replaces the log. The commit
+snapshot, refreshes primary again, and writes only changed segments through a
+recoverable transaction. Project commands block while the transaction exists;
+cross-segment writes have no successful receipt until the complete stream has
+been validated. Raw filesystem readers must honor this transaction boundary.
+The commit
 is an external write precondition, never event data. Cooperating writers
 cannot write the same position; unexpected external edits block recovery.
 Do not concurrently hand-edit a target while its CLI transaction runs.
@@ -96,7 +123,8 @@ review-and-synchronization human gate from the main skill.
 
 Receipts distinguish `candidate-written`, `already-present` and
 `no-state-change`; none means integrated into primary. Retries recognize the
-original prefix and exact record. A stale request with another record at that
+original prefix folder digest and exact record. Equal HEADs prove the same
+pre-state, not the same request. A stale request with another record at that
 position is a conflict, not permission to renumber. Two metadata edits are two
 requests; if the second fails, the first remains a completed local append.
 
@@ -121,7 +149,7 @@ unintegrated suffix. Save a JSON array of the complete desired business
 requests (without sequence), then run:
 
 ```sh
-silvermoon event revise <ULID> --input reviewed-requests.json --owned-suffix --expected-length <bytes> --expected-digest <sha256> --expected-primary <commit> --audience agent
+silvermoon event revise <ULID> --input reviewed-requests.json --owned-suffix --expected-length <bytes> --expected-digest <oid> --expected-primary <commit> --audience agent
 ```
 
 `--owned-suffix` asserts that the replacement has been reviewed and is yours
@@ -166,6 +194,26 @@ depends on the filesystem. Process-interruption recovery does not imply a
 hardware power-loss guarantee.
 
 ## Source checkout's internal format conversion
+
+The unpublished single-file V2 source state has a separate, source-only
+segmentation entrypoint. It preserves exact event bytes, order, payload,
+sequence, decisions and world content while keeping `version: 2`. It is not a
+public command or external-project compatibility promise:
+
+```sh
+node bin/migrate-segmented-events.js --root <source-checkout>
+node bin/migrate-segmented-events.js --root <source-checkout> --apply --expected-digest <plan-digest>
+node bin/migrate-segmented-events.js --root <source-checkout> --resume --confirm-stopped
+node bin/migrate-segmented-events.js --root <source-checkout> --rollback --confirm-stopped
+```
+
+Apply binds the exact clean source commit and fetched primary to the plan.
+Convert every idea together; mixed or dual storage, source changes, unknown
+bytes and primary movement block rather than fork or succeed partially.
+Historical single-file source commits remain readable. After the segmentation
+boundary, storage cannot revert to a single file. The tool never commits,
+pushes or records approval. Neither this tool nor the older internal format
+conversion entrypoint is included in the published package.
 
 The Silvermoon source repository itself contains earlier, unpublished v2
 dot-separated event records. Its one-time internal conversion is not a public

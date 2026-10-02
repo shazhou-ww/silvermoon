@@ -65,7 +65,7 @@ acceptance.
 
 ## Persistent State Events
 
-In v2 projects, each idea's minimal `events.jsonl` is its sole durable state
+In v2 projects, each idea's segmented `events/` folder is its sole durable state
 authority. Seven kinds change alias, language, the three revision facts, or
 abandonment. Replay is pure; observation of real world trees is still read-only
 and separate. No-op events are rejected. Healthy primary prefixes are immutable;

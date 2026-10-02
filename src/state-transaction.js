@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { hostname } from "node:os";
 import { dirname, resolve } from "node:path";
-import { link, lstat, open, readFile, rename, unlink } from "node:fs/promises";
+import { link, lstat, mkdir, open, readFile, readdir, rename, rmdir, unlink } from "node:fs/promises";
 
 import { isValidUlid } from "./ideas.js";
 
@@ -37,9 +37,12 @@ async function syncDirectory(path) {
 }
 
 function allowedPath(path) {
-  if (path === ".silvermoon/config.yaml") return true;
-  const match = /^\.silvermoon\/ideas\/([^/]+)\/(status\.yaml|events\.jsonl)$/.exec(path);
-  return match !== null && isValidUlid(match[1]);
+  if (path === ".silvermoon/config.yaml" || path === ".gitattributes") return true;
+  const match = /^\.silvermoon\/ideas\/([^/]+)\/(status\.yaml|events\.jsonl|events\/[0-9]{16}\.jsonl)$/.exec(path);
+  if (match === null || !isValidUlid(match[1])) return false;
+  if (!match[2].startsWith("events/")) return true;
+  const ordinal = Number(match[2].slice(7, -6));
+  return Number.isSafeInteger(ordinal) && ordinal > 0;
 }
 
 async function checkParents(root, path) {
@@ -74,6 +77,12 @@ function validatePlan(plan) {
     throw new Error("Invalid state transaction plan; preserve it for manual recovery.");
   }
   const paths = new Set();
+  if (plan.directories !== undefined && (!Array.isArray(plan.directories)
+    || new Set(plan.directories).size !== plan.directories.length
+    || plan.directories.some((path) => {
+      const match = /^\.silvermoon\/ideas\/([^/]+)\/events$/.exec(path);
+      return !match || !isValidUlid(match[1]);
+    }))) throw new Error("Unsafe transaction directories.");
   for (const file of plan.files) {
     if (!allowedPath(file.path) || paths.has(file.path)) throw new Error("Unsafe or repeated transaction path.");
     paths.add(file.path);
@@ -84,6 +93,21 @@ function validatePlan(plan) {
 
 async function applyPlan(root, plan, rollback, afterStep) {
   validatePlan(plan);
+  for (const directory of plan.directories ?? []) {
+    await checkParents(root, directory);
+    const path = resolve(root, directory);
+    try { await mkdir(path); }
+    catch (cause) {
+      if (cause.code !== "EEXIST") throw cause;
+      const info = await lstat(path);
+      if (!info.isDirectory() || info.isSymbolicLink()) throw new Error(`Irregular transaction directory: ${directory}`);
+    }
+    const allowed = new Set(plan.files.filter((file) => dirname(file.path) === directory)
+      .flatMap((file) => [file.path.slice(directory.length + 1), `${file.path.slice(directory.length + 1)}.pending`]));
+    for (const name of await readdir(path)) {
+      if (!allowed.has(name)) throw new Error(`Unknown transaction directory entry: ${directory}/${name}`);
+    }
+  }
   // Validate every current source before touching any of them.
   for (const file of plan.files) {
     await checkParents(root, file.path);
@@ -121,6 +145,18 @@ async function applyPlan(root, plan, rollback, afterStep) {
     await syncDirectory(dirname(path));
     await afterStep?.(`applied:${file.path}`);
   }
+  for (const file of plan.files) {
+    const expected = decode(rollback ? file.before : file.after);
+    if (!equal(await regularBytes(resolve(root, file.path)), expected)) {
+      throw new Error(`Transaction result changed: ${file.path}; preserve unknown bytes.`);
+    }
+  }
+  if (rollback) {
+    for (const directory of [...(plan.directories ?? [])].reverse()) {
+      await rmdir(resolve(root, directory));
+      await syncDirectory(dirname(resolve(root, directory)));
+    }
+  }
 }
 
 async function finish(root, expectedPlan) {
@@ -132,10 +168,13 @@ async function finish(root, expectedPlan) {
   await syncDirectory(dirname(path));
 }
 
-export async function stateTransaction(root, kind, files, { afterStep, validate, context } = {}) {
+export async function stateTransaction(root, kind, files, {
+  afterStep, validate, validateApplied, context, directories = [],
+} = {}) {
   const path = resolve(root, TRANSACTION_PATH);
   const plan = {
     kind, pid: process.pid, host: hostname(),
+    ...(directories.length ? { directories } : {}),
     ...(context === undefined ? {} : { context }),
     files: files.map(({ path, before, after }) => ({
       path, before: before === null ? null : Buffer.from(before).toString("base64"),
@@ -145,9 +184,17 @@ export async function stateTransaction(root, kind, files, { afterStep, validate,
   validatePlan(plan);
   await checkParents(root, ".silvermoon/config.yaml");
   for (const file of plan.files) {
-    await checkParents(root, file.path);
+    await checkParents(root, directories.includes(dirname(file.path)) ? dirname(file.path) : file.path);
     if (await regularBytes(resolve(root, `${file.path}.pending`)) !== null) {
       throw new Error(`Existing pending file at ${file.path}; preserve it and recover its original transaction.`);
+    }
+  }
+  for (const directory of directories) {
+    try {
+      await lstat(resolve(root, directory));
+      throw new Error(`Existing migration destination: ${directory}`);
+    } catch (cause) {
+      if (cause.code !== "ENOENT") throw cause;
     }
   }
   const prepared = `${path}.${randomUUID()}.prepared`;
@@ -163,7 +210,7 @@ export async function stateTransaction(root, kind, files, { afterStep, validate,
     await syncDirectory(dirname(path));
     // Before taking any effect the entire source must still equal the requested old state.
     for (const file of plan.files) {
-      await checkParents(root, file.path);
+      await checkParents(root, directories.includes(dirname(file.path)) ? dirname(file.path) : file.path);
       if (!equal(await regularBytes(resolve(root, file.path)), decode(file.before))) {
         throw new Error(`Stale transaction source: ${file.path}`);
       }
@@ -171,6 +218,7 @@ export async function stateTransaction(root, kind, files, { afterStep, validate,
     await validate?.();
     await afterStep?.("prepared");
     await applyPlan(root, plan, false, afterStep);
+    await validateApplied?.();
     await afterStep?.("applied");
     await finish(root, planSource);
   } catch (cause) {
@@ -182,7 +230,7 @@ export async function stateTransaction(root, kind, files, { afterStep, validate,
 }
 
 export async function recoverStateTransaction(root, {
-  rollback = false, confirmedStopped = false, kind, validate, validateRollback,
+  rollback = false, confirmedStopped = false, kind, validate, validateRollback, validateApplied,
 } = {}) {
   if (!confirmedStopped) throw new Error("Recovery requires explicit confirmation that the original writer has stopped.");
   const path = resolve(root, TRANSACTION_PATH);
@@ -215,6 +263,8 @@ export async function recoverStateTransaction(root, {
     if (!rollback) await validate?.(plan);
     else await validateRollback?.(plan);
     await applyPlan(root, plan, rollback);
+    if (!rollback) await validate?.(plan);
+    if (!rollback) await validateApplied?.(plan);
     await finish(root, bytes);
   } finally {
     await recovery.close();

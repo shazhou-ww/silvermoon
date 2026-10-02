@@ -143,7 +143,7 @@ in its selected snapshot but never returns their content.
 ### Create A New Idea
 
 `create-idea` creates only the scaffold: `Idea.md`, `Implementation.md`,
-`Deployment.md`, `ledger.md`, and either v1 `status.yaml` or v2 `events.jsonl`.
+`Deployment.md`, `ledger.md`, and either v1 `status.yaml` or a v2 `events/` folder.
 It never stages, commits,
 pushes, or records a decision. Preserve explicit creation intent through
 hygiene retries: retry `create-idea`, not bare `whats-next`.
@@ -191,7 +191,7 @@ Each idea has three canonical entries:
 
 ```text
 .silvermoon/ideas/<ULID>/
-├── status.yaml (v1) or events.jsonl (v2)
+├── status.yaml (v1) or events/ (v2, consecutive 1000-record JSONL segments)
 ├── ledger.md
 └── outer/
     ├── Deployment.md
@@ -211,7 +211,7 @@ In `Implementation.md` and `Deployment.md`, put plans under `## Steps` and
 outcomes under `## Acceptance criteria`. Use stable level-three IDs: `I-Sxx`,
 `I-ACxx`, `D-Sxx`, and `D-ACxx`. Each criterion states an observable outcome
 and how to prove it. Do not put checkboxes in world contracts. World content
-changes its world revision and containing revisions; `status.yaml`/`events.jsonl` and
+changes its world revision and containing revisions; `status.yaml`/`events/` and
 `ledger.md` are outside those trees.
 
 The required idea-root `ledger.md` is an execution checklist only, not

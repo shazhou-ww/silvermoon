@@ -184,7 +184,8 @@ primary repository and branch, plus a clean local worktree. The local branch
 name is unrestricted. It does not fetch or require local HEAD to match the remote
 tip. When those checks pass, it creates one untracked idea scaffold with
 `Idea.md`, `Implementation.md`, `Deployment.md`, `ledger.md`, and
-`status.yaml`. If valid preparing guidance exists, the success report includes
+v1 `status.yaml` or a v2 `events/` folder with its first segment.
+If valid preparing guidance exists, the success report includes
 its snapshot-bound content. Invalid preparing guidance stops before any
 scaffold path is written. The command never stages, commits, pushes, or records
 a human decision.

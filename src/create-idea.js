@@ -259,6 +259,7 @@ async function createScaffold({
 
     const directoryPaths = [
       paths.ideaPath,
+      ...(formatVersion >= 2 ? [paths.eventsDirectory] : []),
       paths.outerPath,
       paths.innerPath,
       paths.idealPath,

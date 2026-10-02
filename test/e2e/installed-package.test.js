@@ -638,7 +638,7 @@ try {
     "--expected-length", String(observedEvents.length), "--expected-digest", observedEvents.digest,
     "--expected-primary", observedEvents.baseline.commit, "--json"], bootstrap));
   assert.equal(appended.observation.receipt.outcome, "candidate-written");
-  assert.equal((await readFile(join(eventConsumer, paths.root, "events.jsonl"), "utf8")).includes("installed-events"), true);
+  assert.equal((await readFile(join(eventConsumer, paths.root, "events", "0000000000000001.jsonl"), "utf8")).includes("installed-events"), true);
   await writeFile(
     join(consumer, ".agents", "skills", "silvermoon", "SKILL.md"),
     "drift\n",

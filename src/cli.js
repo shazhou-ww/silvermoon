@@ -369,7 +369,7 @@ Examples:
         }
         return Number(value);
       })
-      .option("--expected-digest <sha256>", "observed exact log digest")
+      .option("--expected-digest <oid>", "observed canonical events-folder digest")
       .option("--expected-primary <commit>", "observed primary commit (never stored in events)")
       .option("--confirm-decision", "assert an explicit human decision for this exact request")
       .option("--owned-suffix", "confirm ownership and review of the candidate suffix being replaced")

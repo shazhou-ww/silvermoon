@@ -11,6 +11,8 @@ import {
   runGit,
 } from "./git.js";
 import { CONFIG_PATH, IDEAS_ROOT, ideaPaths } from "./layout.js";
+import { EventStream } from "./event-stream.js";
+import { isEventAuxiliary } from "./event-storage.js";
 
 export const SOURCE_REPOSITORY = "https://github.com/shazhou-ww/silvermoon.git";
 
@@ -58,7 +60,7 @@ async function snapshot(root, tree, overrides, commit, blobs) {
   const stateObjects = entries
     .filter(({ name, object, type }) =>
       type === "blob"
-      && name.endsWith(`/${stateFile}`)
+      && (name.endsWith(`/${stateFile}`) || (loaded.config.version === 2 && /\/events\/[0-9]{16}\.jsonl$/.test(name)))
       && !overrides?.has(name)
       && !stateBlobs.has(object)
     )
@@ -112,6 +114,28 @@ export async function detectEventFormat({ root, tree, overrides }) {
 }
 
 function source(root, state, id, name) {
+  const paths = ideaPaths(id);
+  if (name === "events.jsonl") {
+    if (state.overrides?.has(paths.eventsDirectory)) return state.overrides.get(paths.eventsDirectory);
+    const folder = state.entries.find(({ name }) => name === paths.eventsDirectory);
+    if (folder) {
+      if (folder.type !== "tree" || folder.mode !== "040000") throw new Error("Irregular historical event folder.");
+      if (state.entries.some(({ name }) => name === paths.legacyEventsPath)) {
+        throw new Error(`${id}: dual event authority in snapshot`);
+      }
+      const children = state.entries.filter(({ name }) => name.startsWith(`${paths.eventsDirectory}/`));
+      if (children.some(({ type, mode }) => type !== "blob" || !["100644", "100755"].includes(mode))) {
+        throw new Error("Irregular historical event entry.");
+      }
+      const segments = children.filter(({ name }) => !isEventAuxiliary(name.slice(paths.eventsDirectory.length + 1)));
+      const entries = segments.map((entry) => {
+        if (!["100644", "100755"].includes(entry.mode)) throw new Error("Irregular historical event segment.");
+        const bytes = state.blobs?.get(entry.object) ?? readGitBlob(root, entry.object);
+        return { name: entry.name.slice(paths.eventsDirectory.length + 1), bytes };
+      });
+      return EventStream.fromSegments(entries, { objectIdLength: folder.object.length }).bytes();
+    }
+  }
   const path = `${ideaPaths(id).ideaPath}/${name}`;
   if (state.overrides?.has(path)) return state.overrides.get(path);
   const entry = state.entries.find(({ name: entryName }) => entryName === path);
@@ -144,6 +168,19 @@ function transition(root, base, candidate, id, options) {
     return { id, mode: "migration", candidate: result };
   }
   const previous = source(root, base, id, "events.jsonl");
+  const directory = ideaPaths(id).eventsDirectory;
+  const wasSegmented = base.entries.some(({ name }) => name === directory);
+  const isSegmented = candidate.entries.some(({ name }) => name === directory);
+  if (wasSegmented && !isSegmented) throw new Error(`${id}: segmented events cannot return to a single-file log`);
+  if (!wasSegmented && isSegmented) {
+    if (!base.sourceProject || !candidate.sourceProject || !previous.equals(next)
+      || base.ids.length !== candidate.ids.length) {
+      throw new Error(`${id}: source-only segmentation must preserve the complete inventory and exact event bytes`);
+    }
+    const result = replayIdeaEvents(id, parseIdeaEvents(next, candidateOptions), candidateOptions);
+    if (!result.ok) throw new Error(`${id}: cannot segment an invalid event stream`);
+    return { id, mode: "migration-segmented", candidate: result };
+  }
   if (base.format === "legacy" && candidate.format === "final") {
     if (base.ids.length !== candidate.ids.length) {
       throw new Error("Legacy event migration must convert every existing idea without changing inventory.");
@@ -184,6 +221,15 @@ function noDeletion(base, candidate) {
   }
   if (base.version >= 2 && candidate.version < base.version) {
     throw new Error("An event project cannot be downgraded to an earlier version.");
+  }
+  if (base.version === 2 && base.ids.some((id) =>
+    !base.entries.some(({ name }) => name === ideaPaths(id).eventsDirectory))
+    && candidate.ids.some((id) =>
+      candidate.entries.some(({ name }) => name === ideaPaths(id).eventsDirectory))) {
+    if (candidate.ids.length !== base.ids.length || candidate.ids.some((id) =>
+      !candidate.entries.some(({ name }) => name === ideaPaths(id).eventsDirectory))) {
+      throw new Error("Segmentation boundary must convert every existing idea without changing inventory.");
+    }
   }
   if (base.format === "legacy" && candidate.format === "final"
     && (base.ids.length !== candidate.ids.length || base.ids.some((id) => !candidate.ids.includes(id)))) {

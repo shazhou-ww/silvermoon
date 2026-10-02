@@ -8,10 +8,31 @@
 满段封存，尾段追加，sequence 与逻辑 session 不因切文件改变。
 此参数在本实施契约记录，不改写已批准的 Ideal revision。
 
-实施前收敛 folder/segment 命名与编码、空流和满段表示、HEAD 增量聚合结构、
-单事件大小上限、事务提交点、checkpoint/cursor 校验、并发恢复与请求 identity。
-这些仍是待决设计，不因 ideal 批准被当作已确定，也不靠静默默认值落地。
-确认完整流内容覆盖、准确幂等与 stale 拒绝后，再完成本步骤。
+用户随后明确要求参考 world accepted digest 的算法，且只计算 events folder，
+不是 repository HEAD、commit 或完整 repository tree；并授权 Agent 收敛其余技术细节。
+本实施采用以下确定方案，不改写已批准的 Ideal：
+
+- 流目录为 idea 根的 `events/`；文件名是从 1 开始的 16 位补零 ordinal 加 `.jsonl`。
+  空流持有空的第一段；刚满段不预建空尾段。sequence 仍为全流连续的安全整数。
+- 对原始段字节使用 Git blob 编码，再对有序规范文件名、固定 mode `100644` 与
+  blob OID 使用 Git tree 编码。算法跟随仓库 object format，和 world revision 一样
+  支持 SHA-1/SHA-256；摘要长度随之为 40/64，不改变任何 world 的 accepted revision。
+- 单事件最多 1048576 字节，包含 LF，按 UTF-8 字节计而非字符数计；
+  1000 条段上限与单记录上限共同约束资源，不截断超限消息。
+- `checkpoint.json`、`cursor.json`、`lock` 和 `.pending`/`.prepared` 文件不纳入 digest。
+  不写入或信任持久化状态 checkpoint；未知名称、不规则对象与非规范段序显式拒绝。
+  目前 cursor 使用逻辑字节长度；对旧前态重试计算准确前缀的 folder digest。
+- 幂等身份沿用 idea 身份、准确前态长度/digest 与该前缀后的准确规范记录的组合。
+  相同 HEAD 单独不构成幂等证据。不增加事件 envelope 或传输 request ID：
+  相同前态下完全相同的规范请求表示同一逻辑提交；第二次独立提交应先重新观察，
+  不能由接收方自动刷新前态重试。原有 sequence 与 payload 保持不变。
+- 项目级 recoverable transaction 串行化协作 writer；单次正常追加只改尾段或创建一段。
+  多文件 revise/迁移期间，项目命令按 transaction barrier 阻挡；不承诺裸文件系统
+  观察者忽略该屏障时有多文件原子快照。成功回执在完整候选复核和 lock 释放后返回。
+  各文件先 fsync 再同目录 rename，POSIX 同步目录；Windows 不承诺目录 fsync，
+  进程中断恢复不等于已测试硬件掉电。
+- 分段前的单文件 V2 仅保留源仓内部转换和历史读取边界；外部 V2 当前 layout
+  不提供该兼容。V1 到 V2 的已发布独立迁移能力保留，并直接生成分段 V2 及 binary 属性。
 
 ### I-S02: 建立共享分段流模型
 
@@ -64,6 +85,9 @@ primary Git snapshot 与历史比较，以及相关公开/内部类型和 runtim
 每段最多 1000 条，正常追加不重写封存段，sequence 不归零。
 以真实存储边界测试和写入路径断言证明。
 
+已验证：0/1/999/1000/1001/2000/2001 的唯一表示、反序输入规范排序、
+1000→1001→1002 的真实 CLI 追加与全流 sequence、封存段原始字节和 mtime 不变。
+
 ### I-AC02: 完整流 HEAD 与可验证增量
 
 相同规范内容产生相同 HEAD；任意历史事件或段的删除、修改、插入或交换均可被检测。
@@ -71,17 +95,53 @@ primary Git snapshot 与历史比较，以及相关公开/内部类型和 runtim
 不改变规范摘要。以独立完整验证、增量结果对照和篡改测试证明。
 以实际读取范围与随历史增长的成本测量，证明正常追加与重复读取不总是全量扫描。
 
+已验证：在 SHA-1 与 SHA-256 的真实 Git 仓库，规范 digest 与 `tree:events`
+子目录 OID 相等且不等于整个 repository tree OID。不可变 Git snapshot 的
+HEAD-only 路径不调用段正文读取；其对象表是内容来源，不信任 OS 目录元数据。
+生产追加规划复用已验证段，仅生成变化段；缓存复制来源和记录，修改 Buffer 不会伪命中。
+
+通过 `node --test test/unit/event-stream.test.js test/integration/event-stream-digest.test.js`
+断言实际 hash 调用字节，而非计时代理。合成 SHA-1 满段流的增量追加测量如下：
+
+| 已有事件 | 已有正文字节 | 新 blob hash 字节 | tree table hash 字节 |
+| --- | --- | --- | --- |
+| 1000 | 58786 | 61 | 100 |
+| 10000 | 607788 | 63 | 550 |
+| 100000 | 6277790 | 65 | 5050 |
+
+平铺 Git tree table 的聚合仍为 O(段数)，但不重读/重哈希封存段正文。
+完整 replay 输出与归约、来源首次验证、历史检查和外部编辑完整性复核仍读取历史，
+不能把整个 stateless CLI 或冷启动宣称为常数时间。上述证明覆盖 HEAD 增量聚合，
+不把未验证的 checkpoint 当作全量归约结果的替代品。
+
+尚未满足：当前生产 `event append` 每次仍建立完整 worktree snapshot、
+读取并归约完整逻辑流，且提交前后 live 完整性复核仍扫描历史。
+因此 O-02 的正常追加与重复读取成本要求尚不能据上述核心 hash 测量判定通过；
+I-S02 与 I-AC02 保持未完成，不能请求 acceptInner。后续必须在保持外部编辑检测、
+准确前态和可恢复事务的前提下接通有来源证明的增量读取，并增加生产路径读取量测试。
+
 ### I-AC03: 幂等与并发准确
 
 同一请求丢回执重试仅产生一个准确事件；不同请求同一前态不能冒认成功或互相覆盖。
 跨段、后续追加、非法历史和 stale 均有准确结果与显式诊断。
 以真实并发和 runtime 边界测试证明接收方不自动刷新前态重试旧意图。
 
+已验证：不同 CLI 进程争用同一前态、同一请求丢回执重试、请求之后再有其他事件、
+跨段准确前缀、相同长度但历史正文变化、不同请求同一前态和 offline interaction。
+runtime 接受项目 Git object format 的摘要，不自行刷新或重试 stale 请求。
+
 ### I-AC04: 中断恢复保全未知工作
 
 每个事务阶段中断后可恢复或准确回滚；未知字节、活动 writer、来源变化或竞争恢复
 均阻挡，不丢工作、不产生半完成成功回执。以故障注入和真实文件系统测试证明，
 并明确测试覆盖的进程中断保证及未覆盖的硬件掉电保证。
+
+已验证：事务 prepared/applied 阶段、跨段新文件尚处 pending 时的恢复与回滚、
+V1 迁移及内部 V2 分段迁移的进程退出注入、primary 移动、未知字节与并发来源修改。
+自动化证据是进程中断测试，不是硬件掉电测试。
+另已验证：多段 revise 删除中间段后中断产生临时段表缺口，resume 能先从准确
+事务计划重建完整候选，再验证历史与应用；rollback 恢复原始全部段。
+内部迁移期间并发 world 编辑不会被覆盖，操作保留显式恢复屏障。
 
 ### I-AC05: 内部迁移等价且边界受控
 
@@ -90,9 +150,25 @@ primary Git snapshot 与历史比较，以及相关公开/内部类型和 runtim
 以迁移前后逐记录比较、归约对照、历史边界与故障测试证明。
 包内容和 CLI 测试证明没有新增对外迁移命令，既有 V1 迁移能力未被误删。
 
+已验证内部工具的只读计划、来源 runtime/repository/manifest、2001 条跨三段
+逐字节等价（包括既有 ideal 决策）、dirty/错误来源阻挡、重复调用和恢复/回滚。
+旧 dotted V2 内部转换及 V1 到 V2 suites 继续通过。内部工具明确排除在 npm 包之外。
+本源码 checkout 的实际转换及其 primary 边界证据在执行后补充，不以 fixture 代替。
+
 ### I-AC06: 全相关表面和交付验证一致
 
 schema/layout、脚手架、读取/回放、写入/历史验证、primary Git 比较、
 runtime、类型、文档与 skill 全部使用同一契约。以定向测试、类型检查、
 `pnpm check`、`pnpm check:skills`、metadata checks 和普通同步可达性证据证明。
 验证记录必须包含实际命令与结果，不把未实施步骤或仅生成的计划标作完成。
+
+2026-10-02 当前代码候选验证：
+
+- `node --test test/runtime/segmented-events.test.js`：4 项通过，含临时段表缺口恢复。
+- `pnpm check:sanity`：121 项通过。
+- `pnpm check`：通过；170 项 unit/runtime、35 项 contract、141 项 integration、
+  安装包 E2E、精确包内容、Markdown 与 `check:skills` 均通过。
+- `node bin/silvermoon.js check --worktree --audience agent`：通过。
+
+实际内部迁移与最终提交/同步的验证记录需补充；I-AC02 未完成，
+不把测试全绿当作性能验收，不记录 acceptInner。

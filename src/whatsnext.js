@@ -189,7 +189,7 @@ function lifecycleContentLanguageInstruction(contentLanguage, language) {
 
 function lifecycleInstruction(idea, language, contentLanguage) {
   const name = ideaName(idea);
-  if (idea.statusPath.endsWith("/events.jsonl")) {
+  if (idea.statusPath.endsWith("/events") || idea.statusPath.endsWith("/events.jsonl")) {
     const action = {
       preparing: ["acceptIdeal", idea.idealRevision, idea.worlds.idealRevision.documentPath],
       implementing: ["acceptInner", idea.implementationRevision, idea.worlds.implementationRevision.documentPath],
@@ -197,8 +197,8 @@ function lifecycleInstruction(idea, language, contentLanguage) {
     }[idea.state];
     return joinInstructions([
       action ? localize(language,
-        `Continue ${name} in ${action[2]} and ${idea.ledgerPath}. Synchronize the candidate to primary before requesting the explicit human decision for ${action[0]} at exact revision ${action[1]}. Then use silvermoon event replay ${idea.id} --audience agent and silvermoon event append with its exact log length, digest and refreshed primary. Never edit events.jsonl directly.`,
-        `在 ${action[2]} 和 ${idea.ledgerPath} 继续 ${name}。先同步候选到 primary，再请求针对准确 revision ${action[1]} 的 ${action[0]} 人工决定。之后用 silvermoon event replay ${idea.id} --audience agent 观察，并通过 silvermoon event append 绑定准确日志长度、摘要和刷新后的 primary 写入；不要直接编辑 events.jsonl。`)
+        `Continue ${name} in ${action[2]} and ${idea.ledgerPath}. Synchronize the candidate to primary before requesting the explicit human decision for ${action[0]} at exact revision ${action[1]}. Then use silvermoon event replay ${idea.id} --audience agent and silvermoon event append with its exact stream length, folder digest and refreshed primary. Never edit event segments directly.`,
+        `在 ${action[2]} 和 ${idea.ledgerPath} 继续 ${name}。先同步候选到 primary，再请求针对准确 revision ${action[1]} 的 ${action[0]} 人工决定。之后用 silvermoon event replay ${idea.id} --audience agent 观察，并通过 silvermoon event append 绑定准确流长度、folder digest 和刷新后的 primary 写入；不要直接编辑事件分段。`)
         : localize(language,
           `Review ${name} (${idea.state}); preserve decisions. Resume only through idea.resumed after an explicit human decision; revise world content for changed requirements.`,
           `复查 ${name}（${idea.state}），保留已有决定。只有明确人工决定才通过 idea.resumed 恢复；需求变化应修改对应世界内容。`),

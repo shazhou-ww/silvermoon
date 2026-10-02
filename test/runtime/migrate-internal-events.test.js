@@ -30,7 +30,7 @@ async function fixture(t, {
   for (const { id, status } of ideas) {
     const paths = ideaPaths(id);
     await rm(join(root, paths.statusPath));
-    await writeFile(join(root, paths.eventsPath), serializeIdeaEvents(
+    await writeFile(join(root, paths.legacyEventsPath), serializeIdeaEvents(
       status.alias ? [{
         sequence: 1, type: final ? "setAlias" : "alias.updated", payload: { alias: status.alias },
       }] : [],
@@ -49,7 +49,7 @@ function publish(root, message) {
 
 test("internal migration plans without writes and preserves legacy records across the boundary", async (t) => {
   const root = await fixture(t);
-  const path = join(root, ideaPaths(FIRST_ID).eventsPath);
+  const path = join(root, ideaPaths(FIRST_ID).legacyEventsPath);
   const events = [
     ...parseIdeaEvents(await readFile(path), { legacy: true }),
     { sequence: 2, type: "language.updated", payload: { language: "en" } },
@@ -104,9 +104,9 @@ test("migration converts all ideas including empty logs and rejects partial conv
   const plan = await migrateInternalEvents({ root });
   assert.deepEqual(new Set(plan.ideas), new Set([FIRST_ID, SECOND_ID]));
   await migrateInternalEvents({ root, apply: true, expectedDigest: plan.digest });
-  assert.equal(await readFile(join(root, ideaPaths(SECOND_ID).eventsPath), "utf8"), "");
+  assert.equal(await readFile(join(root, ideaPaths(SECOND_ID).legacyEventsPath), "utf8"), "");
   assert.equal((await checkRepository({ root, worktree: true })).observation.state, "project-ready");
-  await writeFile(join(root, ideaPaths(FIRST_ID).eventsPath), serializeIdeaEvents([
+  await writeFile(join(root, ideaPaths(FIRST_ID).legacyEventsPath), serializeIdeaEvents([
     { sequence: 1, type: "setAlias", payload: { alias: "rewritten" } },
   ]));
   publish(root, "Invalid conversion");
@@ -133,7 +133,7 @@ test("navigation reports a checkout behind the migration before comparing event 
 
 test("migration rejects invalid abandoned windows and empty-only ambiguous boundaries", async (t) => {
   const root = await fixture(t);
-  const path = join(root, ideaPaths(FIRST_ID).eventsPath);
+  const path = join(root, ideaPaths(FIRST_ID).legacyEventsPath);
   await writeFile(path, serializeIdeaEvents([
     ...parseIdeaEvents(await readFile(path), { legacy: true }),
     { sequence: 2, type: "idea.abandoned" },
@@ -149,7 +149,7 @@ test("migration rejects invalid abandoned windows and empty-only ambiguous bound
 
 test("detector inherits source format for empty logs and rejects external dotted logs", async (t) => {
   const root = await fixture(t);
-  const path = ideaPaths(FIRST_ID).eventsPath;
+  const path = ideaPaths(FIRST_ID).legacyEventsPath;
   const tree = worktreeSnapshot(root).tree;
   assert.equal(await detectEventFormat({ root, tree }), "legacy");
   await writeFile(join(root, path), "");
@@ -195,7 +195,7 @@ test("external version 2 projects cannot use the internal legacy migration", asy
   await writeFile(join(root, ".silvermoon/config.yaml"),
     "version: 2\nprimaryRepository: https://example.test/owner/repository.git\nprimaryBranch: main\n");
   await rm(join(root, path.statusPath));
-  await writeFile(join(root, path.eventsPath), serializeIdeaEvents([
+  await writeFile(join(root, path.legacyEventsPath), serializeIdeaEvents([
     { sequence: 1, type: "alias.updated", payload: { alias: "fixture" } },
   ], { legacy: true }));
   publish(root, "External dotted events are not compatible");
@@ -219,7 +219,7 @@ test("internal migration requires clean fetched primary and the exact plan diges
 
 test("ordinary migration checks current state while explicit commit check detects a past rewrite", async (t) => {
   const root = await fixture(t);
-  const path = join(root, ideaPaths(FIRST_ID).eventsPath);
+  const path = join(root, ideaPaths(FIRST_ID).legacyEventsPath);
   const original = await readFile(path);
   await writeFile(path, serializeIdeaEvents([
     { sequence: 1, type: "alias.updated", payload: { alias: "rewritten" } },
@@ -239,7 +239,7 @@ test("final history refuses rewrites and repair after a failed reducer", async (
   const plan = await migrateInternalEvents({ root });
   await migrateInternalEvents({ root, apply: true, expectedDigest: plan.digest });
   publish(root, "Convert internal events");
-  const path = join(root, ideaPaths(FIRST_ID).eventsPath);
+  const path = join(root, ideaPaths(FIRST_ID).legacyEventsPath);
   const original = await readFile(path, "utf8");
   await writeFile(path, serializeIdeaEvents([
     { sequence: 1, type: "setAlias", payload: { alias: "rewritten" } },
@@ -256,7 +256,7 @@ test("final history refuses rewrites and repair after a failed reducer", async (
 
 test("source projects created directly with final v2 retain ordinary failed-reducer repair", async (t) => {
   const root = await fixture(t, { final: true });
-  const path = join(root, ideaPaths(FIRST_ID).eventsPath);
+  const path = join(root, ideaPaths(FIRST_ID).legacyEventsPath);
   const before = await readFile(path, "utf8");
   await writeFile(path, before + serializeIdeaEvents([
     { sequence: 2, type: "setAlias", payload: { alias: "fixture" } },
@@ -279,7 +279,7 @@ test("standalone command and interrupted transaction recover or roll back exact 
     const plan = JSON.parse(planned.stdout);
     assert.equal(plan.outcome, "migration-planned");
     assert.match(run("--apply").stderr, /plan changed/);
-    const path = join(root, ideaPaths(FIRST_ID).eventsPath);
+    const path = join(root, ideaPaths(FIRST_ID).legacyEventsPath);
     const before = await readFile(path);
     const child = spawnSync(process.execPath, ["--input-type=module", "-e", `
       import { migrateInternalEvents } from ${JSON.stringify(module)};
@@ -307,7 +307,7 @@ test("standalone command and interrupted transaction recover or roll back exact 
 test("interrupted migration refuses resume after primary moves but allows rollback", async (t) => {
   const root = await fixture(t);
   const plan = await migrateInternalEvents({ root });
-  const path = join(root, ideaPaths(FIRST_ID).eventsPath);
+  const path = join(root, ideaPaths(FIRST_ID).legacyEventsPath);
   const before = await readFile(path);
   const module = new URL("../../src/migrate-internal-events.js", import.meta.url).href;
   const child = spawnSync(process.execPath, ["--input-type=module", "-e", `
