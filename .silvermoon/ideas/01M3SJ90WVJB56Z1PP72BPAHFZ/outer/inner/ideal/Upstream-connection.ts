@@ -105,7 +105,7 @@ export type DaemonMessage =
       readonly reason?: string;
     }
   | {
-      /** Actual project interaction facts, replayable by route and event sequence. */
+      /** Actual project interaction facts, resumable by route and event sequence. */
       readonly type: "interaction";
       readonly target: IdeaRoute;
       readonly eventSequence: number;
