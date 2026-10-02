@@ -1,16 +1,18 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
 import {
   mkdir,
   mkdtemp,
   readFile,
+  readdir,
   rm,
   utimes,
   writeFile,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { afterEach, test } from "node:test";
 
@@ -215,8 +217,7 @@ test("reused snapshot index does not inherit flags that conceal worktree edits",
   }
 });
 
-test("reused snapshot index avoids reading unchanged bodies and detects restored-mtime edits",
-  { skip: process.platform === "win32" ? "Windows snapshots retain full content verification." : false }, async () => {
+test("reused snapshot index avoids reading unchanged bodies and detects restored-mtime edits", async () => {
   const { root } = await createRepository();
   const log = join(root, "filter-read.log");
   const filter = join(root, "measure-filter.cjs");
@@ -233,6 +234,7 @@ fs.writeFileSync(1, bytes);
   const old = new Date("2000-01-01T00:00:00Z");
   await utimes(path, old, old);
   git(root, "add", "README.md", ".gitattributes");
+  worktreeSnapshot(root, { reuseIndex: true });
   await writeFile(log, "");
   const first = worktreeSnapshot(root, { reuseIndex: true }).tree;
   const second = worktreeSnapshot(root, { reuseIndex: true }).tree;
@@ -247,11 +249,46 @@ fs.writeFileSync(1, bytes);
   assert.equal(await filesystem.readFile(path, "utf8"), "changed\n");
 });
 
-test("precise snapshot verification rejects a source changed during index refresh",
-  { skip: process.platform === "win32" ? "Windows snapshots retain full content verification." : false }, async () => {
+test("precise snapshot verification rejects a source changed during index refresh", async () => {
   const { root } = await createRepository();
   await observeGitCommands((args) => {
     if (args.includes("add")) writeFileSync(join(root, "README.md"), "concurrent edit\n");
   }, () => assert.throws(() => worktreeSnapshot(root, { reuseIndex: true }),
     /source changed while taking its snapshot/));
+});
+
+test("authenticated native timestamps invalidate restored-mtime edits even without matching Git ctime semantics", async () => {
+  const { root } = await createRepository();
+  const old = new Date(0);
+  const path = join(root, "README.md");
+  await utimes(path, old, old);
+  git(root, "add", "README.md");
+  const index = git(root, "rev-parse", "--git-path", "index");
+  const original = await readFile(join(root, index));
+  const first = worktreeSnapshot(root, { reuseIndex: true, authenticateSources: true }).tree;
+  assert.equal(worktreeSnapshot(root, { reuseIndex: true, authenticateSources: true }).tree, first);
+  await writeFile(path, "changed\n");
+  await utimes(path, old, old);
+  const changed = worktreeSnapshot(root, { reuseIndex: true, authenticateSources: true }).tree;
+  assert.notEqual(changed, first);
+  assert.deepEqual(await readFile(join(root, index)), original);
+});
+
+test("unauthenticated native source records cannot conceal worktree edits", async () => {
+  const { root } = await createRepository();
+  worktreeSnapshot(root, { reuseIndex: true, authenticateSources: true });
+  const canonicalRoot = resolve(git(root, "rev-parse", "--show-toplevel"));
+  const worktree = createHash("sha256").update(canonicalRoot).digest("hex");
+  const directory = git(root, "rev-parse", "--path-format=absolute", "--git-path", `silvermoon-event-cache/${worktree}`);
+  const name = (await readdir(directory)).find((name) => name.endsWith(".json"));
+  const path = join(directory, name);
+  const record = JSON.parse(await readFile(path, "utf8"));
+  const payload = JSON.parse(record.payload);
+  payload.state[0].fingerprint = "forged";
+  record.payload = JSON.stringify(payload);
+  await writeFile(path, JSON.stringify(record));
+  await writeFile(join(root, "README.md"), "concurrent\n");
+  assert.throws(() => worktreeSnapshot(root, { reuseIndex: true, authenticateSources: true }),
+    /Unauthenticated derived event cache/);
+  assert.equal(await readFile(join(root, "README.md"), "utf8"), "concurrent\n");
 });

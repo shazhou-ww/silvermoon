@@ -2,10 +2,11 @@ import { lstat, readFile, readdir } from "node:fs/promises";
 import { relative, resolve } from "node:path";
 
 import { deriveIdeaState, isValidUlid, parseIdeaStatus } from "./ideas.js";
-import { parseIdeaEvents, replayIdeaEvents } from "./idea-events.js";
+import { parseIdeaEvents, reduceIdeaEvent, replayIdeaEvents } from "./idea-events.js";
 import { detectEventFormat } from "./event-history.js";
 import { readEventStorage } from "./event-storage.js";
 import { EventStream } from "./event-stream.js";
+import { projectEventSnapshot } from "./event-projection.js";
 import { inspectTreePaths, worktreeSnapshot } from "./git.js";
 import { IDEAS_ROOT, ideaPaths } from "./layout.js";
 
@@ -124,6 +125,8 @@ export async function inspectIdeaLayout({
   gitRoot = root,
   snapshotTree,
   eventOverrides,
+  projectedEvents = false,
+  projectedRequests,
 }) {
   const diagnostics = [];
   const ideasRoot = resolve(root, IDEAS_ROOT);
@@ -209,7 +212,10 @@ export async function inspectIdeaLayout({
     };
   }
   let legacyEvents = false;
-  if (config?.version === 2) {
+  const useProjections = config?.version === 2 && projectedEvents && !eventOverrides
+    && typeof filesystem.snapshotEntry === "function"
+    && [...ideaIds].every((id) => filesystem.snapshotEntry(ideaPaths(id).eventsDirectory)?.type === "tree");
+  if (config?.version === 2 && !useProjections) {
     try {
       const overrides = eventOverrides && new Map([...eventOverrides].map(([id, store]) => [
         store.storage === "segmented" ? ideaPaths(id).eventsDirectory : ideaPaths(id).legacyEventsPath,
@@ -335,7 +341,13 @@ export async function inspectIdeaLayout({
     let status;
     try {
       const options = { objectIdLength: repositoryObjectIdLength, legacy: legacyEvents };
-      if (eventFormat) {
+      if (eventFormat && useProjections) {
+        const projected = await projectEventSnapshot(gitRoot, entry.name, paths, options, filesystem);
+        const request = projectedRequests?.get(entry.name);
+        const reduced = request ? reduceIdeaEvent(projected.state, request, options) : null;
+        if (reduced && !reduced.ok) throw new Error(`Event ${reduced.sequence}: ${reduced.code}`);
+        status = { version: 1, ...(reduced?.state ?? projected.state).status };
+      } else if (eventFormat) {
         const store = eventOverrides?.get(entry.name) ?? await readEventStorage(root, paths, {
           ...options, allowSingleFile: config.primaryRepository === "https://github.com/shazhou-ww/silvermoon.git",
         }, filesystem);

@@ -1,10 +1,12 @@
 import { mkdir, mkdtemp, rm } from "node:fs/promises";
-import { copyFileSync, lstatSync, mkdtempSync, rmSync, statSync, utimesSync } from "node:fs";
+import { copyFileSync, lstatSync, mkdtempSync, readFileSync, rmSync, statSync, utimesSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 
 import { runSubprocess } from "./subprocess.js";
 import { traceAsync } from "./trace.js";
+import { openDerivedCache } from "./derived-cache.js";
 
 let commandObserver = null;
 
@@ -254,7 +256,27 @@ export function inspectTreePaths(root, tree, paths) {
   }));
 }
 
-function preciseIndexSources(root, env) {
+function nativeSourceCache(root) {
+  const canonicalRoot = resolve(requireGit(root, ["rev-parse", "--show-toplevel"], "Cannot resolve native source root"));
+  const worktree = createHash("sha256").update(canonicalRoot).digest("hex");
+  const directory = requireGit(root, ["rev-parse", "--path-format=absolute", "--git-path", `silvermoon-event-cache/${worktree}`],
+    "Cannot locate native source cache");
+  const cache = openDerivedCache(directory);
+  const context = JSON.stringify({
+    kind: "native-index-sources", root: canonicalRoot,
+    runtime: createHash("sha256").update(JSON.stringify(["git.js", "derived-cache.js"]
+      .map((name) => createHash("sha256").update(readFileSync(new URL(name, import.meta.url))).digest("hex")))).digest("hex"),
+  });
+  const state = cache.read(context);
+  if (state !== null && !Array.isArray(state)) throw new Error("Invalid authenticated native source record.");
+  return { cache, context, records: new Map((state ?? []).map((entry) => [entry.path, entry])) };
+}
+
+function sourceFingerprint(value) {
+  return value ? `${value.ctimeNs}:${value.mtimeNs}:${value.size}:${value.ino}:${value.dev}:${value.mode}` : null;
+}
+
+function preciseIndexSources(root, env, native) {
   const output = requireGit(root, ["ls-files", "--stage", "--debug", "-z"],
     "Cannot inspect cached snapshot sources", { env });
   const sources = [];
@@ -271,15 +293,16 @@ function preciseIndexSources(root, env) {
     let metadata;
     try { metadata = lstatSync(path, { bigint: true }); }
     catch (cause) { if (cause.code !== "ENOENT") throw cause; }
-    const fingerprint = (value) => value
-      ? `${value.ctimeNs}:${value.mtimeNs}:${value.size}:${value.ino}:${value.dev}:${value.mode}`
-      : null;
-    sources.push({ path, fingerprint: fingerprint(metadata), inspect: fingerprint });
+    const fingerprint = sourceFingerprint(metadata);
+    sources.push({ path, fingerprint });
+    const record = native?.records.get(entry[4]);
+    const nativeMatch = record?.object === entry[2] && record?.mode === entry[1] && record?.fingerprint === fingerprint;
     // Git may ignore subsecond ctime even when the index records it.
     if (entry[3] === "0" && metadata
       && (metadata.ctimeNs % 1000000000n === 0n
-        || metadata.ctimeNs !== BigInt(stats[1]) * 1000000000n + BigInt(stats[2])
-        || metadata.mtimeNs !== BigInt(stats[3]) * 1000000000n + BigInt(stats[4]))) {
+        || (native ? !nativeMatch
+          : metadata.ctimeNs !== BigInt(stats[1]) * 1000000000n + BigInt(stats[2])
+            || metadata.mtimeNs !== BigInt(stats[3]) * 1000000000n + BigInt(stats[4])))) {
       replacements.push(`${entry[1]} ${entry[2]}\t${entry[4]}\0`);
     }
     position = end + 1 + stats[0].length;
@@ -291,12 +314,14 @@ function preciseIndexSources(root, env) {
   return sources;
 }
 
-export function worktreeSnapshot(root, { paths, reuseIndex = false } = {}) {
+export function worktreeSnapshot(root, {
+  paths, reuseIndex = false, authenticateSources = process.platform === "win32",
+} = {}) {
   const directory = mkdtempSync(join(tmpdir(), "silvermoon-index-"));
   const env = { ...process.env, GIT_INDEX_FILE: join(directory, "index") };
   try {
     let copied = false;
-    if (reuseIndex && paths === undefined && process.platform !== "win32") {
+    if (reuseIndex && paths === undefined) {
       const index = requireGit(root, ["rev-parse", "--path-format=absolute", "--git-path", "index"],
         "Cannot locate worktree index");
       try {
@@ -310,6 +335,7 @@ export function worktreeSnapshot(root, { paths, reuseIndex = false } = {}) {
       }
     }
     let sources;
+    let native;
     if (copied) {
       const tracked = requireGit(root, ["ls-files", "-z"], "Cannot inspect snapshot index", { env });
       if (tracked) {
@@ -318,7 +344,8 @@ export function worktreeSnapshot(root, { paths, reuseIndex = false } = {}) {
         requireGit(root, ["update-index", "--no-skip-worktree", "-z", "--stdin"],
           "Cannot clear snapshot skip-worktree flags", { env, input: tracked });
       }
-      sources = preciseIndexSources(root, env);
+      native = authenticateSources ? nativeSourceCache(root) : null;
+      sources = preciseIndexSources(root, env, native);
     } else {
       const populated = runGit(root, ["read-tree", "HEAD"], { env });
       if (!populated.ok) {
@@ -335,9 +362,21 @@ export function worktreeSnapshot(root, { paths, reuseIndex = false } = {}) {
       let metadata;
       try { metadata = lstatSync(source.path, { bigint: true }); }
       catch (cause) { if (cause.code !== "ENOENT") throw cause; }
-      if (source.inspect(metadata) !== source.fingerprint) {
+      if (sourceFingerprint(metadata) !== source.fingerprint) {
         throw new Error("Worktree source changed while taking its snapshot; preserve changes and reobserve.");
       }
+    }
+    if (native) {
+      const verified = new Map(sources.map((source) => [source.path, source.fingerprint]));
+      const output = requireGit(root, ["ls-files", "--stage", "-z"], "Cannot bind native source objects", { env });
+      const records = output.split("\0").filter(Boolean).flatMap((line) => {
+        const entry = /^([0-7]{6}) ([0-9a-f]{40}|[0-9a-f]{64}) ([0-3])\t([\s\S]+)$/.exec(line);
+        if (!entry) throw new Error("Cannot parse native source object table.");
+        const fingerprint = verified.get(join(root, entry[4]));
+        return entry[3] === "0" && fingerprint
+          ? [{ path: entry[4], mode: entry[1], object: entry[2], fingerprint }] : [];
+      });
+      native.cache.write(native.context, records);
     }
     return {
       tree: requireGit(root, ["write-tree"], "Cannot write worktree snapshot", { env }),

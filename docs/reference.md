@@ -168,10 +168,13 @@ this additive query as `readSince(route, { length, digest })`.
 Canonical-ULID interaction appends use authenticated local sealed-prefix
 projections to avoid replaying sealed history on the warm path. These
 Git-private, runtime/source-bound files are disposable derived state, not
-event facts or authorization. POSIX incremental snapshot acquisition performs
-precise source checks; Windows and coarse timestamps retain full content
-verification. Full replay, metadata/human-gate checks and history audits are
-not advertised as constant-time operations.
+event facts or authorization. Incremental snapshot acquisition performs precise source checks; Windows
+authenticates native ChangeTime-to-OID bindings because Git uses CreationTime.
+Coarse timestamps and missing source records force content verification.
+Default metadata append receipts contain exact historical validation summaries;
+`--full-history` preserves complete historical reduction output. Alias and
+metadata paths retain layout, prefix and explicit human-gate checks.
+Full replay and history audits are not advertised as constant-time operations.
 That contract also documents the separate `bin/migrate-v1-to-v2.js` entrypoint.
 No command automatically migrates a v1 project.
 
@@ -283,7 +286,7 @@ silvermoon list-ideas [--state <state>] [--all] [--query <text>] [--created-sinc
 silvermoon whats-next [idea] [--language <en|en-US|zh|zh-CN>] [--audience <human|agent>] [--trace <file.trace.jsonl>]
 silvermoon create-idea [--language <tag>] [--audience <human|agent>] [--trace <file.trace.jsonl>]
 silvermoon check [--remote | --commit <revision> | --staged | --worktree] [--language <en|en-US|zh|zh-CN>] [--audience <human|agent>] [--trace <file.trace.jsonl>]
-silvermoon event <replay|append|revise|recover> [idea] [--input <request.json>] [--after-length <bytes>] [--after-digest <oid>] [--expected-length <bytes>] [--expected-digest <oid>] [--expected-primary <commit>] [--confirm-decision] [--owned-suffix] [--confirm-stopped] [--rollback] [--audience <human|agent>]
+silvermoon event <replay|append|revise|recover> [idea] [--input <request.json>] [--after-length <bytes>] [--after-digest <oid>] [--full-history] [--expected-length <bytes>] [--expected-digest <oid>] [--expected-primary <commit>] [--confirm-decision] [--owned-suffix] [--confirm-stopped] [--rollback] [--audience <human|agent>]
 ```
 
 Every valid invocation starts one ordered domain-message stream with

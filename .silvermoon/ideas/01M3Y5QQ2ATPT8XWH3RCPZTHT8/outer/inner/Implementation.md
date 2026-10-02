@@ -189,6 +189,42 @@ cursor snapshot 正文读取为 263/536 字节。Git racy-entry 判断会使有�
 读取次数变化，因此验收断言使用每项 <10000 字节且不读取 sealed body，
 不使用偶然的精确次数、计时或“整个进程零 I/O”作为阈值。
 
+后续候选已覆盖 alias 与 metadata 默认追加路径，Windows 原生来源算法已实施：
+
+- alias interaction 通过同一 authenticated projection 解析全部 idea 的状态，
+  同时保留完整 layout、world regularity、ULID 和 alias 唯一性检查；不按缓存
+  alias 任意选择 owner。重复 alias 测试确认未写入任何候选记录。
+- 用户明确允许 metadata 默认成功回执使用准确来源绑定的历史验证摘要，
+  并保留显式完整历史输出。新增 `--full-history` 保留原 `base/candidate.state`
+  及其完整消息数组；默认 `history.detail: "summary"` 给出准确 base/candidate
+  length、folder digest 与 sequence。完整 replay 和审计不变。
+- 默认 metadata 仍校验项目全部当前投影与准确 primary prefix，合法初始化和
+  append-only 规则不变；新增事件只按单事件纯 reducer 验证。批准门依然比对准确
+  当前世界、primary world、原前态生命周期与 `--confirm-decision`，
+  不由 summary 授权，不刷新 stale 意图。版本/存储转换与明确 reduction-failed
+  primary 使用原完整边界检查，回执标明 `detail: "full"` 及回退原因；
+  format/cache 错误不能授权 repair。
+- Git-private HMAC 文件处理提取到共享 `derived-cache.js`，避免 Windows 来源绑定
+  与投影各自实现认证。Windows 用 runtime/root 绑定的已认证原生 stat→Git OID
+  记录，不把 Node ChangeTime 与 Git CreationTime 混为一谈；无记录、原生 stat/
+  OID 不符或粗粒度时间时强制重新读正文，构建前后精确来源复核仍保留。
+  在本机可强制走该原生来源算法，恢复 mtime 编辑及伪造来源记录测试已通过。
+  Windows 上私有数据继承 Git-private 目录 ACL；POSIX 显式要求 0700/0600。
+- CI 的 Node 22/24 × Ubuntu/Windows/macOS 矩阵新增无条件 native incremental
+  Git/CLI 测试步骤，实际 Windows runner 的读取量证明尚待运行结果。
+- 本机 `node --test test/integration/git.test.js test/integration/incremental-append.test.js test/runtime/event-state.test.js`：
+  29 项通过（随后补充 native-source tampering 单项并经完整 release 验证）。
+  `node --test test/integration/git.test.js`：10 项通过。
+- `pnpm check:sanity`：121 项通过；`pnpm sync:skills` 与
+  `pnpm check:skills:local`：通过。
+- `pnpm check`：通过；152 项 integration（149 passed、3 个既有平台跳过），
+  173 项 unit/runtime、35 项 contract、E2E/pack/Markdown/skill 均通过。
+  metadata 在 10001/100001 事件的真实 CLI 子进程中，warm snapshot 与 runtime
+  event bytes 每项均 <10000，且不加载 sealed body；完整历史选项另有回归测试。
+
+I-S02/I-AC02 尚不勾选，等待实际跨平台 CI 的原生来源及读取成本证据，
+不是等待用户另行实施授权；没有记录 acceptInner。
+
 ### I-AC03: 幂等与并发准确
 
 同一请求丢回执重试仅产生一个准确事件；不同请求同一前态不能冒认成功或互相覆盖。

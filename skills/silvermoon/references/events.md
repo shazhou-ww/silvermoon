@@ -105,7 +105,10 @@ reuse a private copy of the current index's verified content OIDs. Precise
 ctime/mtime nanoseconds invalidate changed entries, including restored-mtime
 edits; sources are rechecked after snapshot acquisition. Assume-unchanged,
 skip-worktree, fsmonitor and weakened stat settings cannot conceal edits.
-Coarse timestamp entries and Windows retain full content verification.
+Coarse timestamp entries retain full content verification. Windows uses
+authenticated native ChangeTime records bound to the corresponding Git OID
+and runtime instead of comparing Node ChangeTime with Git CreationTime;
+missing or changed records force content verification.
 Other snapshot consumers keep their previous full-validation behavior.
 
 For canonical-ULID `ping`/`pong` appends, the project runtime may persist a
@@ -122,9 +125,17 @@ These are not security guarantees against a local user who can replace
 both the runtime and its key.
 
 The authenticated projection is neither an independent state authority nor
-a human decision. Complete replay, metadata/human-gate validation, historical
-audits and recovery remain available and perform full validation. Alias-based
-interaction appends retain full alias/layout resolution. All appends still
+a human decision. Complete replay, historical audits, migration/repair boundaries
+and recovery remain available and perform full validation. Alias interaction
+appends retain complete alias/layout resolution with authenticated projections.
+Default segmented V2 metadata append receipts use `history.detail: "summary"`
+with exact base/candidate lengths, folder digests and sequences, not complete
+message arrays. They validate every project's current projection and the exact
+immutable primary prefix; lifecycle gates still require the exact synchronized
+world and explicit human decision. Use `--full-history` on append to retain the
+complete historical reduction receipt. Version/storage transitions and
+definitely reduction-failed primary repair use the existing complete checks.
+No format error, cache failure or unknown source enables repair. All appends still
 verify the complete folder HEAD before and after the recoverable transaction,
 and retries still require the exact record after their original prefix.
 Use the exact ULID if invalid logs prevent alias resolution.

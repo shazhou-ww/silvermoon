@@ -78,6 +78,9 @@ jobs:
       - name: Run unit tests
         run: pnpm test:unit
 
+      - name: Verify native incremental event sources
+        run: node --test test/integration/git.test.js test/integration/incremental-append.test.js
+
   contract:
     name: Repository contracts
     runs-on: ubuntu-latest

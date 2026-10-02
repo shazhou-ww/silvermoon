@@ -377,6 +377,7 @@ Examples:
         return Number(value);
       })
       .option("--after-digest <oid>", "exact observed prefix folder digest for incremental replay")
+      .option("--full-history", "include complete historical reductions in an append receipt instead of the default summary")
       .option("--expected-primary <commit>", "observed primary commit (never stored in events)")
       .option("--confirm-decision", "assert an explicit human decision for this exact request")
       .option("--owned-suffix", "confirm ownership and review of the candidate suffix being replaced")
@@ -390,6 +391,7 @@ Examples:
       || (["replay", "recover"].includes(operation) && options.input)
       || (operation !== "recover" && (options.rollback || options.confirmStopped))
       || (operation !== "revise" && options.ownedSuffix)
+      || (operation !== "append" && options.fullHistory)
       || ((options.afterLength !== undefined || options.afterDigest !== undefined)
         && (operation !== "replay" || options.afterLength === undefined || options.afterDigest === undefined))
       || (["replay", "recover"].includes(operation) && [

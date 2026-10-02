@@ -3,7 +3,7 @@ import { basename, dirname, resolve } from "node:path";
 import { inspectAdoption } from "./adoption.js";
 import { loadConfigSnapshot } from "./config.js";
 import { createCommandRun } from "./domain.js";
-import { inspectEventHistory, localPrimary } from "./event-history.js";
+import { inspectEventHistory, inspectProjectedEventHistory, localPrimary } from "./event-history.js";
 import { IdeaEventFormatError, parseIdeaEvents, reduceIdeaEvent, replayIdeaEvents, serializeIdeaEvents } from "./idea-events.js";
 import { inspectIdeaLayout } from "./idea-layout.js";
 import { deriveIdeaState, isValidUlid } from "./ideas.js";
@@ -58,10 +58,10 @@ async function inspectCandidate(root, tree, config, store, bytes, id, { recoveri
   return layout;
 }
 
-async function resolveIdea(root, tree, config, selector) {
+async function resolveIdea(root, tree, config, selector, options = {}) {
   // A canonical identity remains usable for repairing an invalid current projection.
   if (isValidUlid(selector)) return selector;
-  const layout = await inspectIdeaLayout({ root, config, snapshotTree: tree });
+  const layout = await inspectIdeaLayout({ root, config, snapshotTree: tree, ...options });
   if (layout.diagnostics.length) throw new Error("Use the exact idea ULID while repairing an invalid layout.");
   const idea = layout.ideas.find(({ alias }) => alias === selector);
   if (!idea) throw new Error(`Unknown idea selector: ${selector}`);
@@ -146,10 +146,18 @@ async function appendProjectedInteraction({ root, id, paths, filesystem, input, 
     throw new Error("Stale log length or digest; do not renumber or replay the old request.");
   }
   const event = parseRequest(input, before.state.sequence + 1, options);
+  const planned = planProjectedAppend(before, paths, event, options);
+  if (!planned.reduction.ok) throw new Error(`Candidate reduction failed: ${planned.reduction.code} at ${planned.reduction.sequence}`);
+  await writeProjectedAppend(root, id, paths, before, planned, options, { localInteraction: true });
+  return { id, outcome: "candidate-written", written: true,
+    length: before.length + planned.record.length, digest: planned.digest, sequence: planned.reduction.state.sequence };
+}
+
+function planProjectedAppend(before, paths, event, options) {
   const record = Buffer.from(serializeIdeaEvents([event], options));
   if (record.length > MAX_EVENT_BYTES) throw new Error(`Event exceeds ${MAX_EVENT_BYTES} bytes including LF.`);
-  const reduced = reduceIdeaEvent(before.state, event, options);
-  if (!reduced.ok) throw new Error(`Candidate reduction failed: ${reduced.code} at ${reduced.sequence}`);
+  const reduction = reduceIdeaEvent(before.state, event, options);
+  if (!reduction.ok) return { record, reduction };
   const full = before.state.sequence % EVENTS_PER_SEGMENT === 0 && before.state.sequence !== 0;
   const name = full ? segmentName(before.entries.length + 1) : before.tail.name.slice(paths.eventsDirectory.length + 1);
   const bytes = full ? record : Buffer.concat([before.tail.bytes, record]);
@@ -159,28 +167,120 @@ async function appendProjectedInteraction({ root, id, paths, filesystem, input, 
   const next = { name, object: gitContentDigest("blob", bytes, options) };
   if (full) entries.push(next);
   else entries[entries.length - 1] = next;
-  const head = eventFolderDigest(entries, options);
+  return { record, reduction, digest: eventFolderDigest(entries, options), files: [{
+    path: `${paths.eventsDirectory}/${name}`, before: full ? null : before.tail.bytes, after: bytes,
+  }] };
+}
+
+async function writeProjectedAppend(root, id, paths, before, planned, options, context, { validate, validateApplied } = {}) {
   const liveHead = () => snapshotEventFolderHead(root, paths, options,
     createGitSnapshotFileSystem({ gitRoot: root, tree: worktreeSnapshot(root, { reuseIndex: true }).tree }));
-  await stateTransaction(root, "events", [{
-    path: `${paths.eventsDirectory}/${name}`, before: full ? null : before.tail.bytes, after: bytes,
-  }], {
-    context: { id, localInteraction: true, storage: "segmented", afterDigest: head },
+  await stateTransaction(root, "events", planned.files, {
+    context: { id, storage: "segmented", afterDigest: planned.digest, ...context },
     validate: async () => {
-      if (await liveHead() !== before.digest) throw new Error("Complete event stream changed before interaction write.");
+      if (await liveHead() !== before.digest) throw new Error("Complete event stream changed before write.");
+      await validate?.();
     },
     validateApplied: async () => {
-      if (await liveHead() !== head) throw new Error("Complete event stream changed during interaction commit.");
+      if (await liveHead() !== planned.digest) throw new Error("Complete event stream changed during commit.");
+      await validateApplied?.();
     },
   });
-  return { id, outcome: "candidate-written", written: true,
-    length: before.length + record.length, digest: head, sequence: reduced.state.sequence };
+}
+
+async function appendProjectedMetadata({
+  root, id, paths, filesystem, tree, config, input, expectedLength, expectedDigest,
+  expectedPrimary, confirmDecision, options, runtime,
+}) {
+  if (!Number.isSafeInteger(expectedLength) || expectedLength < 0
+    || !new RegExp(`^[0-9a-f]{${options.objectIdLength}}$`).test(expectedDigest ?? "")
+    || !new RegExp(`^[0-9a-f]{${options.objectIdLength}}$`).test(expectedPrimary ?? "")) {
+    throw new Error("Writes require exact observed length, folder digest and primary.");
+  }
+  const refreshPrimary = async () => {
+    const action = await runtime.performAction({ type: "fetch-primary" },
+      () => ({ commit: fetchPrimary(root, config) }),
+      (cause) => ({ problem: { type: "primary-fetch-failed", summary: cause.message } }));
+    if (action.status === "failure") throw new Error(action.problem.summary);
+    return action.result.commit;
+  };
+  const primary = await refreshPrimary();
+  if (primary !== expectedPrimary) throw new Error("Primary moved; preserve the candidate, synchronize and reassess the request.");
+  const before = await projectEventSnapshot(root, id, paths, options, filesystem);
+  if (before.length !== expectedLength || before.digest !== expectedDigest) {
+    const delta = await readEventDelta(root, paths, options, filesystem, { length: expectedLength, digest: expectedDigest });
+    if (delta.events[0]) {
+      const event = parseRequest(input, delta.events[0].sequence, options);
+      if (serializeIdeaEvents([event], options) === serializeIdeaEvents([delta.events[0]], options)) {
+        return { supported: true, receipt: { id, outcome: "already-present", written: false,
+          length: before.length, digest: before.digest, sequence: before.state.sequence, primary } };
+      }
+    }
+    throw new Error("Stale log length or digest; do not renumber or replay the old request.");
+  }
+  const event = parseRequest(input, before.state.sequence + 1, options);
+  const planned = planProjectedAppend(before, paths, event, options);
+  if (!planned.reduction.ok) {
+    if (planned.reduction.code !== "no-state-change") throw new Error(`Candidate reduction failed: ${planned.reduction.code}`);
+    return { supported: true, receipt: { id, outcome: "no-state-change", written: false,
+      length: before.length, digest: before.digest, primary } };
+  }
+  const layout = await inspectIdeaLayout({
+    root, config, filesystem, snapshotTree: tree, projectedEvents: true,
+    projectedRequests: new Map([[id, event]]),
+  });
+  if (layout.diagnostics.length) throw new Error(layout.diagnostics.map((item) => item.message).join("; "));
+  const selected = layout.ideas.find((idea) => idea.id === id);
+  const history = await inspectProjectedEventHistory({ root, tree, primary });
+  if (!history.supported) return history;
+  const worlds = inspectTreePaths(root, primary, [paths.idealPath, paths.innerPath, paths.outerPath]);
+  assertHumanGate(event, {
+    ...selected, state: deriveIdeaState(selected.revisions, { version: 1, ...before.state.status }),
+  }, {
+    idealRevision: worlds.get(paths.idealPath)?.object,
+    implementationRevision: worlds.get(paths.innerPath)?.object,
+    deploymentRevision: worlds.get(paths.outerPath)?.object,
+  }, confirmDecision);
+  const protectedPaths = [".silvermoon/ideas", ".silvermoon/config.yaml"];
+  const protectedSignature = JSON.stringify([...inspectTreePaths(root, tree, protectedPaths)]);
+  const action = await runtime.performAction({ type: "write-idea-events" }, async () => {
+    await writeProjectedAppend(root, id, paths, before, planned, options,
+      { primary, revisions: selected.revisions }, {
+        validate: async () => {
+          if (await refreshPrimary() !== primary) throw new Error("Primary moved before write; recover the unwritten transaction, then reobserve.");
+          const live = worktreeSnapshot(root, { reuseIndex: true }).tree;
+          if (JSON.stringify([...inspectTreePaths(root, live, protectedPaths)]) !== protectedSignature) {
+            throw new Error("Worlds or project state changed during validation.");
+          }
+        },
+        validateApplied: async () => {
+          const live = worktreeSnapshot(root, { reuseIndex: true }).tree;
+          const current = await inspectIdeaLayout({
+            root, config, snapshotTree: live, projectedEvents: true,
+            filesystem: createGitSnapshotFileSystem({ gitRoot: root, tree: live }),
+          });
+          if (current.diagnostics.length) throw new Error(current.diagnostics.map((item) => item.message).join("; "));
+          const idea = current.ideas.find((item) => item.id === id);
+          if (!idea || Object.keys(selected.revisions).some((key) => idea.revisions[key] !== selected.revisions[key])) {
+            throw new Error("Worlds changed during event commit.");
+          }
+        },
+      });
+    const result = history.results.find((item) => item.id === id);
+    result.candidate = { length: before.length + planned.record.length, digest: planned.digest,
+      sequence: planned.reduction.state.sequence };
+    return { id, outcome: "candidate-written", written: true, primary,
+      length: result.candidate.length, digest: planned.digest, sequence: planned.reduction.state.sequence, history };
+  }, (cause) => ({ problem: { type: "event.write-failed", summary: cause.message } }));
+  if (action.status === "failure") throw new Error(action.problem.summary);
+  return { supported: true, receipt: action.result };
 }
 
 export async function eventCommand({
   operation, idea: selector, root = process.cwd(), input, language,
   expectedLength, expectedDigest, expectedPrimary,
   afterLength, afterDigest,
+  fullHistory = false,
   confirmDecision = false, ownedSuffix = false, confirmStopped = false, rollback = false,
 } = {}) {
   root = resolve(root);
@@ -261,9 +361,10 @@ export async function eventCommand({
       if (operation !== "replay" && (afterLength !== undefined || afterDigest !== undefined)) {
         throw new Error("Cursor options are only available for replay.");
       }
-      const projectedInteraction = operation === "append" && isValidUlid(selector)
-        && ["ping", "pong"].includes(input?.type);
-      const { tree } = worktreeSnapshot(root, { reuseIndex: incremental || projectedInteraction });
+      if (fullHistory && operation !== "append") throw new Error("Full history output is only available for append.");
+      const projectedInteraction = operation === "append" && ["ping", "pong"].includes(input?.type);
+      const projectedMetadata = operation === "append" && !projectedInteraction && !fullHistory;
+      const { tree } = worktreeSnapshot(root, { reuseIndex: incremental || projectedInteraction || projectedMetadata });
       const options = {
         objectIdLength: tree.length,
         allowSingleFile: config.primaryRepository === "https://github.com/shazhou-ww/silvermoon.git",
@@ -276,15 +377,31 @@ export async function eventCommand({
         return runtime.complete({ state: "event-result", root, outputLanguage, problems: [], receipt });
       }
       const snapshot = createGitSnapshotFileSystem({ gitRoot: root, tree });
-      if (operation === "append" && isValidUlid(selector) && ["ping", "pong"].includes(input?.type)
-        && snapshot.snapshotEntry(ideaPaths(selector).eventsDirectory)) {
+      let fullHistoryReason = fullHistory ? "explicit-full-history" : null;
+      const projectedId = projectedInteraction
+        ? await resolveIdea(root, tree, config, selector, { projectedEvents: true, filesystem: snapshot })
+        : null;
+      if (projectedId && snapshot.snapshotEntry(ideaPaths(projectedId).eventsDirectory)) {
         if (expectedPrimary !== undefined) throw new Error("Local interaction append does not accept --expected-primary.");
         const action = await runtime.performAction({ type: "write-idea-events" }, () => appendProjectedInteraction({
-          root, id: selector, paths: ideaPaths(selector), filesystem: snapshot, input,
+          root, id: projectedId, paths: ideaPaths(projectedId), filesystem: snapshot, input,
           expectedLength, expectedDigest, options,
         }), (cause) => ({ problem: { type: "event.write-failed", summary: cause.message } }));
         if (action.status === "failure") throw new Error(action.problem.summary);
         return runtime.complete({ state: "event-result", root, outputLanguage, problems: [], receipt: action.result });
+      }
+      if (projectedMetadata) {
+        const id = await resolveIdea(root, tree, config, selector, { projectedEvents: true, filesystem: snapshot });
+        if (snapshot.snapshotEntry(ideaPaths(id).eventsDirectory)) {
+          const result = await appendProjectedMetadata({
+            root, id, paths: ideaPaths(id), filesystem: snapshot, tree, config, input,
+            expectedLength, expectedDigest, expectedPrimary, confirmDecision, options, runtime,
+          });
+          if (result.supported) {
+            return runtime.complete({ state: "event-result", root, outputLanguage, problems: [], receipt: result.receipt });
+          }
+          fullHistoryReason = result.reason;
+        }
       }
       const protectedPaths = [".silvermoon/ideas", ".silvermoon/config.yaml"];
       const protectedTree = worktreeSnapshot(root, { paths: protectedPaths }).tree;
@@ -385,6 +502,8 @@ export async function eventCommand({
             const history = await inspectEventHistory({
               root, tree, config, primary, overrides: new Map([[store.path, candidate]]),
             });
+            history.detail = "full";
+            if (fullHistoryReason) history.reason = fullHistoryReason;
             // Check each newly introduced decision against its preceding state, never its own result.
             const worlds = inspectTreePaths(root, primary, [paths.idealPath, paths.innerPath, paths.outerPath]);
             const primaryWorlds = {

@@ -12,7 +12,9 @@ import {
 } from "./git.js";
 import { CONFIG_PATH, IDEAS_ROOT, ideaPaths } from "./layout.js";
 import { EventStream } from "./event-stream.js";
-import { isEventAuxiliary } from "./event-storage.js";
+import { isEventAuxiliary, snapshotEventPrefix } from "./event-storage.js";
+import { createGitSnapshotFileSystem } from "./git-snapshot.js";
+import { projectEventSnapshot, ProjectedReductionError } from "./event-projection.js";
 
 export const SOURCE_REPOSITORY = "https://github.com/shazhou-ww/silvermoon.git";
 
@@ -276,6 +278,51 @@ export async function inspectEventHistory(options) {
     cause.eventBaseline = baseline;
     throw cause;
   }
+}
+
+export async function inspectProjectedEventHistory({ root, tree, primary }) {
+  const loaded = await loadConfigSnapshot({ gitRoot: root, tree: primary });
+  if (!loaded.config) throw new Error(`Invalid primary configuration: ${loaded.diagnostics.map((item) => item.message).join("; ")}`);
+  if (loaded.config.version !== 2) return { supported: false, reason: "version-transition" };
+  const baseline = createGitSnapshotFileSystem({ gitRoot: root, tree: primary });
+  const candidate = createGitSnapshotFileSystem({ gitRoot: root, tree });
+  const inventory = (filesystem) => filesystem.snapshotEntries(IDEAS_ROOT)
+    .filter(({ type }) => type === "tree").map(({ name }) => name.slice(IDEAS_ROOT.length + 1));
+  const previousIds = inventory(baseline);
+  const ids = inventory(candidate);
+  if ([...previousIds, ...ids].some((id) => !isValidUlid(id))) throw new Error("Historical idea identity is invalid.");
+  if (previousIds.some((id) => !ids.includes(id))) throw new Error("Removing an integrated idea is not an event repair.");
+  if (previousIds.some((id) => baseline.snapshotEntry(ideaPaths(id).eventsDirectory)?.type !== "tree")
+    || ids.some((id) => candidate.snapshotEntry(ideaPaths(id).eventsDirectory)?.type !== "tree")) {
+    return { supported: false, reason: "storage-transition" };
+  }
+  const options = { objectIdLength: primary.length };
+  const results = [];
+  const summarize = (projected) => ({
+    length: projected.length, digest: projected.digest, sequence: projected.state.sequence,
+  });
+  for (const id of ids) {
+    const paths = ideaPaths(id);
+    const next = await projectEventSnapshot(root, id, paths, options, candidate);
+    if (!previousIds.includes(id)) {
+      results.push({ id, mode: "initialization", candidate: summarize(next) });
+      continue;
+    }
+    let previous;
+    try { previous = await projectEventSnapshot(root, id, paths, options, baseline); }
+    catch (cause) {
+      if (!(cause instanceof ProjectedReductionError)) throw cause;
+      return { supported: false, reason: "primary-reduction-failed", id, reduction: cause.result };
+    }
+    if (await snapshotEventPrefix(root, paths, options, candidate, previous.length) !== previous.digest) {
+      throw new Error(`${id}: not-append-only (append)`);
+    }
+    results.push({ id, mode: "append", base: summarize(previous), candidate: summarize(next) });
+  }
+  return {
+    supported: true, valid: true, detail: "summary", target: "candidate",
+    baseline: { commit: primary, source: "fetched-primary", ref: null }, results,
+  };
 }
 
 async function inspectBoundHistory({

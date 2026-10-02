@@ -109,6 +109,7 @@ if (packed.status !== 0) {
     "src/create-idea.js",
     "src/dialogue.js",
     "src/domain.js",
+    "src/derived-cache.js",
     "src/event-command.js",
     "src/event-history.js",
     "src/event-projection.js",

@@ -181,6 +181,31 @@ export async function readEventDelta(root, paths, options, filesystem, cursor) {
   };
 }
 
+export async function snapshotEventPrefix(root, paths, options, filesystem, length) {
+  if (!Number.isSafeInteger(length) || length < 0) throw new Error("Prefix length must be a nonnegative safe integer.");
+  await snapshotEventFolderHead(root, paths, options, filesystem);
+  const entries = filesystem.snapshotEntries(paths.eventsDirectory)
+    .filter(({ name }) => !isEventAuxiliary(name.slice(paths.eventsDirectory.length + 1)))
+    .sort((left, right) => left.name < right.name ? -1 : left.name > right.name ? 1 : 0);
+  const prefix = [];
+  let remaining = length;
+  for (const entry of entries) {
+    if (!Number.isSafeInteger(entry.size) || entry.size < 0) throw new Error("Invalid prefix segment size.");
+    if (remaining === 0) break;
+    const name = entry.name.slice(paths.eventsDirectory.length + 1);
+    if (remaining >= entry.size) {
+      prefix.push({ name, object: entry.object });
+      remaining -= entry.size;
+    } else {
+      const bytes = await filesystem.snapshotFile(entry.name);
+      prefix.push({ name, object: gitContentDigest("blob", bytes.subarray(0, remaining), options) });
+      remaining = 0;
+    }
+  }
+  if (remaining !== 0) throw new Error("Primary event prefix was shortened; preserve the candidate.");
+  return prefix.length ? eventFolderDigest(prefix, options) : EventStream.fromBytes(Buffer.alloc(0), options).digest;
+}
+
 function verifiedStore(store, options) {
   const cached = verifiedSnapshots.get(store);
   if (cached?.objectIdLength === options.objectIdLength && cached.bytes.equals(store.bytes)) return cached.snapshot;
