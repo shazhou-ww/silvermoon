@@ -244,6 +244,16 @@ Windows unit 失败导致新增 native-source 测量步骤未执行。日志定�
 24 项通过；`pnpm check:sanity` 与 `pnpm check` 通过。修复需同步后重新触发
 完整跨平台 CI，首轮失败仍明确保留，不能凭本机通过勾选相关验收项。
 
+第二轮 `37020254928`（候选 `b1d2dfd`）已验证上述三类修复：
+contracts、Ubuntu integration、package/E2E、所有平台 Node 22/24 unit/runtime
+均通过；Windows 两个版本的 native source 防篡改、恢复 mtime、并发复核、
+alias、SHA-256 和完整历史回执也通过。
+剩余失败是读取量测试探针的 Windows `--import` 参数使用了 drive path，
+被 ESM loader 当成 `c:` 协议而拒绝，尚未执行两项成本断言。
+现统一用 `pathToFileURL(probe).href`，不跳过原生测试、不放宽 <10000 字节阈值。
+`node --test test/integration/incremental-append.test.js`：6 项通过；
+需在新候选的实际 Windows runner 再验证，第二轮不冒称全绿。
+
 ### I-AC03: 幂等与并发准确
 
 同一请求丢回执重试仅产生一个准确事件；不同请求同一前态不能冒认成功或互相覆盖。

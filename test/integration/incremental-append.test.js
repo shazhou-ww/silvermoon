@@ -4,7 +4,7 @@ import { spawnSync } from "node:child_process";
 import { mkdir, readFile, readdir, rm, utimes, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { test } from "node:test";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { eventCommand } from "../../src/event-command.js";
 import { EventStream } from "../../src/event-stream.js";
@@ -84,7 +84,7 @@ syncBuiltinESMExports();
 }
 
 function append(root, request, cursor, probe, extra = []) {
-  const child = spawnSync(process.execPath, [...(probe ? ["--import", probe] : []), entry, "event", "append", FIRST_ID,
+  const child = spawnSync(process.execPath, [...(probe ? ["--import", pathToFileURL(probe).href] : []), entry, "event", "append", FIRST_ID,
     "--input", request, "--expected-length", String(cursor.length),
     "--expected-digest", cursor.digest, ...extra, "--json"], { cwd: root, encoding: "utf8" });
   assert.equal(child.status, 0, child.stderr || child.stdout);
