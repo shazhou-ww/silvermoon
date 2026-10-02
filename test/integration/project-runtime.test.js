@@ -128,6 +128,15 @@ test("real project CLI preserves exact interaction state across child processes"
   assert.equal((await runtime.appendInteraction(route, request)).report.observation.receipt.outcome, "already-present");
   const after = await runtime.replay(route);
   assert.equal(after.report.observation.receipt.reduction.state.interaction.lastSignal, "ping");
+  const delta = await runtime.readSince(route, before);
+  assert.equal(delta.exitCode, 0);
+  assert.equal(delta.report.observation.receipt.outcome, "delta-observed");
+  assert.deepEqual(delta.report.observation.receipt.events, [{
+    sequence: 2, type: "ping", payload: { message: "diagnose Git" },
+  }]);
+  const unchanged = await runtime.readSince(route, delta.report.observation.receipt);
+  assert.deepEqual(unchanged.report.observation.receipt.events, []);
+  await assert.rejects(runtime.readSince(route, { length: -1, digest: before.digest }), TypeError);
   const stale = await runtime.appendInteraction(route, { ...request, type: "pong", message: "old answer" });
   assert.equal(stale.exitCode, 1);
   assert.equal((await runtime.replay(route)).report.observation.receipt.length, after.report.observation.receipt.length);

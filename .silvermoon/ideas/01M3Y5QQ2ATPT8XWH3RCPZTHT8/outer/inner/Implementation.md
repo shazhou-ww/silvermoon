@@ -120,6 +120,26 @@ HEAD-only 路径不调用段正文读取；其对象表是内容来源，不信�
 I-S02 与 I-AC02 保持未完成，不能请求 acceptInner。后续必须在保持外部编辑检测、
 准确前态和可恢复事务的前提下接通有来源证明的增量读取，并增加生产路径读取量测试。
 
+用户已明确允许新增 cursor 增量查询，同时保留完整 replay。cursor 是消费者已经
+成功处理的准确前缀 `{ length, digest }`，不是 session、checkpoint 状态或授权。
+新增 `event replay <ULID> --after-length <bytes> --after-digest <oid>` 和
+runtime `readSince`，只返回准确前缀之后的事件；未变返回空数组，stale 明确拒绝。
+`delta-observed` 不提供完整 reduction，也不声称整个历史有效；不得用于绕过追加
+的归约验证。此查询避免加载已封存前缀的 Git blob 正文，但尚未证明 snapshot
+获取和生产追加的端到端成本，不能据此勾选 I-AC02。
+
+cursor 查询候选验证：
+
+- `node --test test/runtime/cursor-events.test.js test/runtime/event-state.test.js test/integration/project-runtime.test.js`：
+  21 项通过。包括跨段增量、无变化、段内 cursor、事件字节边界、空流、
+  历史篡改 stale、CLI 参数拒绝、真实子进程 runtime 和既有 metadata/human gate。
+- 生产查询的 Git blob 命令观察确认不读取已封存前缀正文；此证据不包括
+  `git add` 建立 worktree snapshot 时的文件读取，不能冒充总 I/O 测量。
+- `pnpm check:sanity`：121 项通过。
+- `pnpm sync:skills`、`pnpm check:skills:local`：通过。
+- `pnpm check`：通过；173 项 unit/runtime、35 项 contract、141 项 integration、
+  安装包 E2E、包内容、Markdown 与 skill 均通过。
+
 ### I-AC03: 幂等与并发准确
 
 同一请求丢回执重试仅产生一个准确事件；不同请求同一前态不能冒认成功或互相覆盖。

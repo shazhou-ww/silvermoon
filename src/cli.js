@@ -370,6 +370,13 @@ Examples:
         return Number(value);
       })
       .option("--expected-digest <oid>", "observed canonical events-folder digest")
+      .option("--after-length <bytes>", "return only events after this observed byte cursor", (value) => {
+        if (!/^(0|[1-9][0-9]*)$/.test(value) || !Number.isSafeInteger(Number(value))) {
+          throw new InvalidArgumentError("after length must be a nonnegative safe integer");
+        }
+        return Number(value);
+      })
+      .option("--after-digest <oid>", "exact observed prefix folder digest for incremental replay")
       .option("--expected-primary <commit>", "observed primary commit (never stored in events)")
       .option("--confirm-decision", "assert an explicit human decision for this exact request")
       .option("--owned-suffix", "confirm ownership and review of the candidate suffix being replaced")
@@ -383,6 +390,8 @@ Examples:
       || (["replay", "recover"].includes(operation) && options.input)
       || (operation !== "recover" && (options.rollback || options.confirmStopped))
       || (operation !== "revise" && options.ownedSuffix)
+      || ((options.afterLength !== undefined || options.afterDigest !== undefined)
+        && (operation !== "replay" || options.afterLength === undefined || options.afterDigest === undefined))
       || (["replay", "recover"].includes(operation) && [
         options.expectedLength, options.expectedDigest, options.expectedPrimary, options.confirmDecision,
       ].some((value) => value !== undefined))) {

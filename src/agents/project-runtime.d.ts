@@ -17,6 +17,7 @@ export class ProjectRuntime {
   constructor(options?: { registry?: LocalProjectRegistry });
   next(route: IdeaRoute): Promise<RuntimeResult>;
   replay(route: IdeaRoute): Promise<RuntimeResult>;
+  readSince(route: IdeaRoute, cursor: { length: number; digest: string }): Promise<RuntimeResult>;
   appendInteraction(route: IdeaRoute, request: {
     type: "ping" | "pong";
     message: string;

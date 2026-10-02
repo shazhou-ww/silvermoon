@@ -158,6 +158,12 @@ Git tree digest outside the business event;
 lifecycle writes also require expected primary. Canonical JSONL, human gates, concurrency,
 conditional append-only history, and interrupted-write recovery are specified
 in the [event operations contract](../skills/silvermoon/references/events.md).
+
+For repeated consumption, `event replay <ULID> --after-length <bytes>
+--after-digest <oid>` returns only the events after an exactly matched cursor.
+The `delta-observed` receipt is not a complete reduction or authorization;
+ordinary full replay is unchanged. The experimental project runtime exposes
+this additive query as `readSince(route, { length, digest })`.
 That contract also documents the separate `bin/migrate-v1-to-v2.js` entrypoint.
 No command automatically migrates a v1 project.
 
@@ -269,7 +275,7 @@ silvermoon list-ideas [--state <state>] [--all] [--query <text>] [--created-sinc
 silvermoon whats-next [idea] [--language <en|en-US|zh|zh-CN>] [--audience <human|agent>] [--trace <file.trace.jsonl>]
 silvermoon create-idea [--language <tag>] [--audience <human|agent>] [--trace <file.trace.jsonl>]
 silvermoon check [--remote | --commit <revision> | --staged | --worktree] [--language <en|en-US|zh|zh-CN>] [--audience <human|agent>] [--trace <file.trace.jsonl>]
-silvermoon event <replay|append|revise|recover> [idea] [--input <request.json>] [--expected-length <bytes>] [--expected-digest <oid>] [--expected-primary <commit>] [--confirm-decision] [--owned-suffix] [--confirm-stopped] [--rollback] [--audience <human|agent>]
+silvermoon event <replay|append|revise|recover> [idea] [--input <request.json>] [--after-length <bytes>] [--after-digest <oid>] [--expected-length <bytes>] [--expected-digest <oid>] [--expected-primary <commit>] [--confirm-decision] [--owned-suffix] [--confirm-stopped] [--rollback] [--audience <human|agent>]
 ```
 
 Every valid invocation starts one ordered domain-message stream with

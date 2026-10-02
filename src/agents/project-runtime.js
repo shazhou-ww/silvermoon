@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { promisify } from "node:util";
 
 import { canonicalRoute, LocalProjectRegistry } from "./project-registry.js";
+import { validateIdeaEvent } from "../idea-events.js";
 
 const execute = promisify(execFile);
 const PROTOCOL_VERSION = 1;
@@ -87,6 +88,32 @@ export class ProjectRuntime {
 
   async replay(route) {
     return this.#run(route, "event", ["replay", canonicalRoute(route).ideaId]);
+  }
+
+  async readSince(route, { length, digest }) {
+    if (!Number.isSafeInteger(length) || length < 0
+      || !/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(digest ?? "")) {
+      throw new TypeError("Incremental replay requires an exact length and folder digest cursor.");
+    }
+    const result = await this.#run(route, "event", [
+      "replay", canonicalRoute(route).ideaId,
+      "--after-length", String(length), "--after-digest", digest,
+    ]);
+    if (result.exitCode === 0) {
+      const receipt = result.report.observation.receipt;
+      if (receipt.outcome !== "delta-observed" || !Array.isArray(receipt.events)
+        || !Number.isSafeInteger(receipt.sequence) || receipt.sequence < 0
+        || receipt.length < length || receipt.after?.length !== length || receipt.after?.digest !== digest) {
+        throw new Error("Project runtime returned an invalid incremental replay receipt.");
+      }
+      for (const event of receipt.events) validateIdeaEvent(event, { objectIdLength: receipt.digest.length });
+      if (receipt.events.some((event, index) =>
+        index > 0 && event.sequence !== receipt.events[index - 1].sequence + 1)
+        || (receipt.events.length && receipt.events.at(-1).sequence !== receipt.sequence)) {
+        throw new Error("Project runtime returned inconsistent incremental event sequences.");
+      }
+    }
+    return result;
   }
 
   async appendInteraction(route, { type, message, expectedLength, expectedDigest }) {

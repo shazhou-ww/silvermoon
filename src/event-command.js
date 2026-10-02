@@ -12,7 +12,7 @@ import { createGitSnapshotFileSystem } from "./git-snapshot.js";
 import { localize, resolveOutputLanguage } from "./language.js";
 import { ideaPaths } from "./layout.js";
 import { recoverStateTransaction, stateTransaction } from "./state-transaction.js";
-import { eventStorageChanges, readEventStorage, readRecoveryEventStorage, storageDigest } from "./event-storage.js";
+import { eventStorageChanges, readEventStorage, readRecoveryEventStorage, readEventDelta, storageDigest } from "./event-storage.js";
 import { EventStream } from "./event-stream.js";
 
 const DECISIONS = {
@@ -128,6 +128,7 @@ async function appendLocalInteraction({ root, id, paths, store, bytes, input, ex
 export async function eventCommand({
   operation, idea: selector, root = process.cwd(), input, language,
   expectedLength, expectedDigest, expectedPrimary,
+  afterLength, afterDigest,
   confirmDecision = false, ownedSuffix = false, confirmStopped = false, rollback = false,
 } = {}) {
   root = resolve(root);
@@ -201,11 +202,25 @@ export async function eventCommand({
       root = adoption.root;
       const config = adoption.config;
       outputLanguage = resolveOutputLanguage({ content: config.preferredLanguage, override: language }).tag;
-      const { tree } = worktreeSnapshot(root);
+      const incremental = operation === "replay" && (afterLength !== undefined || afterDigest !== undefined);
+      if (incremental && !isValidUlid(selector)) {
+        throw new Error("Incremental replay requires the canonical idea ULID; resolve an alias with full replay first.");
+      }
+      if (operation !== "replay" && (afterLength !== undefined || afterDigest !== undefined)) {
+        throw new Error("Cursor options are only available for replay.");
+      }
+      const { tree } = worktreeSnapshot(root, incremental ? { paths: [ideaPaths(selector).ideaPath] } : {});
       const options = {
         objectIdLength: tree.length,
         allowSingleFile: config.primaryRepository === "https://github.com/shazhou-ww/silvermoon.git",
       };
+      if (incremental) {
+        receipt = { id: selector, ...await readEventDelta(
+          root, ideaPaths(selector), options, createGitSnapshotFileSystem({ gitRoot: root, tree }),
+          { length: afterLength, digest: afterDigest },
+        ) };
+        return runtime.complete({ state: "event-result", root, outputLanguage, problems: [], receipt });
+      }
       const protectedPaths = [".silvermoon/ideas", ".silvermoon/config.yaml"];
       const protectedTree = worktreeSnapshot(root, { paths: protectedPaths }).tree;
       const id = await resolveIdea(root, tree, config, selector);

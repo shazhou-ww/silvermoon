@@ -81,6 +81,27 @@ The receipt gives exact logical byte `length`, events-folder Git tree `digest`, 
 and a local primary tracking commit explicitly marked **not fetched**.
 Refresh the configured named remote before relying on that baseline. A
 missing/ambiguous tracking ref blocks rather than choosing an arbitrary base.
+
+After a full replay, consumers may use its exact `{ length, digest }` cursor
+to query only subsequent events:
+
+```sh
+silvermoon event replay <ULID> --after-length <bytes> --after-digest <oid> --audience agent
+```
+
+This additive query requires the canonical ULID and both cursor fields.
+`delta-observed` returns the ordered `events`, current `length`, `digest` and
+`sequence`, and the original cursor in `after`. It intentionally returns no
+complete `reduction` or whole-history validity assertion. The consumer must
+already have processed the cursor's prefix; advance its saved cursor only
+after processing the returned events successfully. No new events means an
+empty array. A changed/deleted prefix or a non-record byte boundary is an
+explicit error, never an automatic cursor reset. A cursor is not a checkpoint,
+session boundary, approval, append authorization, or successful SDK delivery.
+Full replay remains available and unchanged for initialization and audits.
+The query reuses sealed Git blob OIDs and reads only the boundary/suffix
+segments; worktree snapshot acquisition is a separate cost, not covered by
+that blob-read claim.
 Use the exact ULID if invalid logs prevent alias resolution.
 
 Put a business request in a JSON file, without sequence, for example:
