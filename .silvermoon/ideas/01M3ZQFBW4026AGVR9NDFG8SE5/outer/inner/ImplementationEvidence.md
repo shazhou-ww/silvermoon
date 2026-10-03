@@ -104,7 +104,10 @@ symbol，不新增运行时依赖。`pnpm check:pure` 覆盖 144 个标注函数
 | `pnpm pack:check` | 通过；准确打包文件 89 个 |
 | `pnpm check` | 通过；完整 7 个 release-grade gate 全部通过 |
 | `node bin/silvermoon.js check --worktree --audience agent` | 通过；当前 worktree 候选元数据有效 |
+| `pnpm check:commit` | 通过；worktree 测试、契约、烟测、纯度、Markdown、skill、差异及 staged 元数据 gate 全部通过 |
 | `git diff --check` | 通过 |
+| `git diff --cached --check` | 通过 |
+| `git diff --quiet` | 通过；提交前 worktree 与 index 对齐，无未暂存修改 |
 
 完整 `pnpm check` 中各 gate：
 
@@ -127,5 +130,17 @@ Ubuntu/Windows/macOS 与 Node 22/24 matrix 保留；这些外部或平台证据�
 
 ## 提交与同步
 
-当前文档记录已执行的代码验证。提交前 worktree/staged 对齐验证、普通 Git 同步
-及最终准确版本观察将在候选同步后补充；此处暂不声明人工验收已经发生。
+代码与实施契约候选
+[`2d8df5a431f7ca5c56292ea8203a3b58fe6a6888`](https://github.com/shazhou-ww/silvermoon/commit/2d8df5a431f7ca5c56292ea8203a3b58fe6a6888)
+已通过普通非强制 push 同步到 primary。刷新 origin/main 后确认该提交可达，
+重新观察仍为 implementing，内容语言为 zh-CN，已批准 idealRevision 未改变。
+
+提交前已对齐 worktree 与 index，运行完整 release check、worktree 检查和
+`pnpm check:commit`；其 staged gate 验证准确暂存元数据，不将其冒充暂存代码
+测试。首轮提交前检查发现两处文件末尾空行，修正格式后重跑提交前及完整
+release 检查，全部通过。
+
+本证据收尾与 ledger 完成项只改变 idea 文档，不改变上述已验证的源码、测试、
+依赖清单、包文件清单或维护文档。最终准确 implementationRevision 与 primary
+提交以这份收尾候选同步后的最新 whats-next 为准；人工验收须针对该准确版本。
+没有记录 acceptInner，没有开始 deployment，也没有将 ledger 勾选当成人工决定。
