@@ -7,8 +7,8 @@ import { fileURLToPath } from "node:url";
 
 import Ajv2020 from "ajv/dist/2020.js";
 
-import { runCli } from "../../src/cli.js";
-import { ideaPaths } from "../../src/layout.js";
+import { runCli } from "../../src/cli/cli.js";
+import { ideaPaths } from "../../src/project/rules/layout.js";
 import { createRepository, FIRST_ID, git } from "../helpers/repository.js";
 
 const repositoryRoot = fileURLToPath(new URL("../..", import.meta.url));

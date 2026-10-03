@@ -4,8 +4,8 @@ import { mkdir, open, readFile, realpath, unlink, writeFile } from "node:fs/prom
 import { homedir, hostname } from "node:os";
 import { dirname, join, resolve } from "node:path";
 
-import { loadConfig } from "../config.js";
-import { canonicalRepository } from "../repository.js";
+import { loadConfig } from "../project/index.js";
+import { canonicalRepository } from "../project/rules/index.js";
 
 const IDEA_ID = /^[0-9A-HJKMNP-TV-Z]{26}$/i;
 

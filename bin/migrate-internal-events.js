@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { Command } from "commander";
-import { migrateInternalEvents } from "../src/migrate-internal-events.js";
+import { migrateInternalEvents } from "../src/application/migrations/internal-events.js";
 
 const program = new Command()
   .name("migrate-internal-events")

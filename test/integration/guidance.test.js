@@ -8,13 +8,13 @@ import {
   inspectAllGuidance,
   inspectPhaseGuidance,
   MAX_PHASE_GUIDANCE_BYTES,
-} from "../../src/guidance.js";
-import { observeGitCommands, worktreeSnapshot } from "../../src/git.js";
+} from "../../src/project/guidance.js";
+import { observeGitCommands, worktreeSnapshot } from "../../src/repository/git.js";
 import {
   GUIDANCE_ROOT,
   phaseGuidancePath,
-} from "../../src/layout.js";
-import { withTraceFile } from "../../src/trace.js";
+} from "../../src/project/rules/layout.js";
+import { withTraceFile } from "../../src/command/trace/trace.js";
 import { git } from "../helpers/repository.js";
 
 const temporaryDirectories = [];

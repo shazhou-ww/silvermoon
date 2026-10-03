@@ -5,10 +5,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, test } from "node:test";
 
-import { observeGitCommands } from "../../src/git.js";
-import { inspectIdeaLayout } from "../../src/idea-layout.js";
-import { serializeIdeaStatus } from "../../src/ideas.js";
-import { ideaPaths } from "../../src/layout.js";
+import { observeGitCommands } from "../../src/repository/git.js";
+import { inspectIdeaLayout } from "../../src/application/observation/idea-layout.js";
+import { serializeIdeaStatus } from "../../src/idea/rules/status.js";
+import { ideaPaths } from "../../src/project/rules/layout.js";
 
 const temporaryDirectories = [];
 const id = "01M36QGPNTXEPP61DA4KP4AVZF";

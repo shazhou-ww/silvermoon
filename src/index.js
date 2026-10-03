@@ -1,4 +1,4 @@
-export { checkRepository } from "./check-repository.js";
+export { checkRepository } from "./application/index.js";
 
 export {
   ACTIVE_IDEA_STATES,
@@ -8,7 +8,7 @@ export {
   parseIdeaStatus,
   serializeIdeaStatus,
   validateIdeaStatus,
-} from "./ideas.js";
+} from "./idea/rules/index.js";
 export {
   IDEA_EVENT_TYPES,
   EVENT_PERMISSIONS,
@@ -22,21 +22,21 @@ export {
   serializeIdeaEvent,
   serializeIdeaEvents,
   validateIdeaEvent,
-} from "./idea-events.js";
-export { eventCommand } from "./event-command.js";
+} from "./events/rules/index.js";
+export { eventCommand } from "./application/index.js";
 export {
   extractIdeaTitle,
   ideaCreatedAt,
   ideaInventoryItem,
   normalizeIdeaQuery,
   queryIdeaInventory,
-} from "./idea-query.js";
-export { listIdeas } from "./list-ideas.js";
-export { createIdea, generateUlid } from "./create-idea.js";
+} from "./idea/index.js";
+export { listIdeas } from "./application/index.js";
+export { createIdea, generateUlid } from "./application/index.js";
 export {
   inspectAdoption,
   SILVERMOON_VERSION,
-} from "./adoption.js";
+} from "./project/index.js";
 export {
   CommandRun,
   DOMAIN_MESSAGE_SCHEMA_VERSION,
@@ -49,10 +49,10 @@ export {
   projectReport,
   reduceObservation,
   replayObservation,
-} from "./domain.js";
+} from "./command/index.js";
 export {
   renderResponse,
   respond,
-} from "./response.js";
-export { TRACE_SCHEMA_VERSION } from "./trace.js";
-export { whatsNext } from "./whatsnext.js";
+} from "./presentation/index.js";
+export { TRACE_SCHEMA_VERSION } from "./command/trace/index.js";
+export { whatsNext } from "./application/index.js";

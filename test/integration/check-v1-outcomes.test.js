@@ -4,19 +4,19 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterEach, test } from "node:test";
 
-import { observeGitCommands } from "../../src/git.js";
+import { observeGitCommands } from "../../src/repository/git.js";
 import { checkRepository } from "../../src/index.js";
-import { withTraceFile } from "../../src/trace.js";
+import { withTraceFile } from "../../src/command/trace/trace.js";
 import {
   REPOSITORY_SKILL_PATH,
   SILVERMOON_VERSION,
-} from "../../src/adoption.js";
-import { serializeIdeaStatus } from "../../src/ideas.js";
+} from "../../src/project/adoption.js";
+import { serializeIdeaStatus } from "../../src/idea/rules/status.js";
 import {
   GUIDANCE_ROOT,
   ideaPaths,
   phaseGuidancePath,
-} from "../../src/layout.js";
+} from "../../src/project/rules/layout.js";
 import {
   FIRST_ID,
   git,

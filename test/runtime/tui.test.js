@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { PassThrough, Writable } from "node:stream";
 import { test } from "node:test";
 
-import { renderTuiMarkdown } from "../../src/tui.js";
+import { renderTuiMarkdown } from "../../src/presentation/tui/tui.js";
 
 test("Windows native TUI feed preserves Chinese and box-drawing characters", {
   skip: process.platform !== "win32",

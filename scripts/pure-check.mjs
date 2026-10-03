@@ -5,14 +5,22 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import ts from "typescript";
 
 export const RULE_MODULES = Object.freeze([
-  "command-rules.js", "response-projection.js", "markdown.js", "instructions.js",
-  "readiness-policy.js", "observation-projection.js", "event-policy.js",
-  "event-digest.js", "scaffold-plan.js", "ulid.js",
-  "config-policy.js", "adoption-policy.js", "guidance-policy.js",
+  "command/rules/observation.js", "response/projection.js", "presentation/rules/markdown.js",
+  "response/instructions.js", "application/rules/readiness.js", "response/observation.js",
+  "events/rules/policy.js", "events/rules/digest.js", "idea/scaffold-plan.js",
+  "idea/rules/ulid.js", "project/rules/config.js", "project/rules/adoption.js",
+  "project/rules/guidance.js", "idea/rules/query.js",
+]);
+const RULE_ENTRYPOINTS = new Set([
+  "command/rules/index.js", "response/index.js", "presentation/rules/index.js",
+  "application/rules/index.js", "events/rules/index.js", "idea/rules/index.js",
+  "project/rules/index.js",
 ]);
 const RULE_DEPENDENCIES = new Set([
-  ...RULE_MODULES, "dialogue.js", "language.js", "ideas.js", "idea-events.js",
-  "idea-query.js", "idea-templates.js", "layout.js", "yaml.js", "repository.js",
+  ...RULE_MODULES, ...RULE_ENTRYPOINTS, "response/dialogue.js",
+  "project/rules/language.js", "idea/rules/status.js", "events/rules/grammar.js",
+  "idea/rules/templates.js", "project/rules/layout.js", "project/rules/yaml.js",
+  "project/rules/repository.js",
 ]);
 const EXTERNAL_FUNCTIONS = new Map([
   ["node:crypto", new Set(["createHash"])],
@@ -69,6 +77,10 @@ function rootIdentifier(node) {
   if (ts.isPropertyAccessExpression(node) || ts.isElementAccessExpression(node)
     || ts.isParenthesizedExpression(node)) return rootIdentifier(node.expression);
   return undefined;
+}
+
+function matchesCoordinate(path, coordinate) {
+  return path.replaceAll("\\", "/").endsWith(`/${coordinate}`);
 }
 
 export function inspectPureSources(sources, { ruleModules = RULE_MODULES } = {}) {
@@ -176,12 +188,14 @@ export function inspectPureSources(sources, { ruleModules = RULE_MODULES } = {})
       const { line } = module.tree.getLineAndCharacterOfPosition(node.getStart(module.tree));
       problems.push({ path, line: line + 1, message });
     };
-    if (ruleModules.includes(path.split(/[\\/]/).at(-1))) {
+    if (ruleModules.some((coordinate) => matchesCoordinate(path, coordinate))
+      || [...RULE_ENTRYPOINTS].some((coordinate) => matchesCoordinate(path, coordinate))) {
       for (const node of module.tree.statements) {
-        if (!ts.isImportDeclaration(node) || !node.moduleSpecifier) continue;
+        if ((!ts.isImportDeclaration(node) && !ts.isExportDeclaration(node)) || !node.moduleSpecifier) continue;
         const target = node.moduleSpecifier.text;
         if (target.startsWith(".")) {
-          if (!RULE_DEPENDENCIES.has(target.split("/").at(-1))) {
+          const resolved = resolve(dirname(path), target);
+          if (![...RULE_DEPENDENCIES].some((coordinate) => matchesCoordinate(resolved, coordinate))) {
             report(node, `Pure rule module depends on non-rule module ${target}`);
           }
         } else {

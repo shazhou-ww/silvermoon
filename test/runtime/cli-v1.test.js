@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { runCli } from "../../src/cli.js";
+import { runCli } from "../../src/cli/cli.js";
 
 function capture() {
   const logs = [];

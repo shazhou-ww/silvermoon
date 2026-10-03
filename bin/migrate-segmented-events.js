@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { Command } from "commander";
-import { migrateSegmentedEvents } from "../src/migrate-segmented-events.js";
+import { migrateSegmentedEvents } from "../src/application/migrations/segmented-events.js";
 
 const program = new Command()
   .name("migrate-segmented-events")

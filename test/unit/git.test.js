@@ -5,7 +5,7 @@ import {
   parseRepositoryStatus,
   parseWorktreeChanges,
   sanitizeGitMessage,
-} from "../../src/git.js";
+} from "../../src/repository/git.js";
 
 test("redacts credentials and sensitive query values from Git messages", () => {
   const message = [

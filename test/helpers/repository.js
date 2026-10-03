@@ -6,8 +6,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-import { serializeIdeaStatus } from "../../src/ideas.js";
-import { ideaPaths } from "../../src/layout.js";
+import { serializeIdeaStatus } from "../../src/idea/rules/status.js";
+import { ideaPaths } from "../../src/project/rules/layout.js";
 
 export const PRIMARY_REPOSITORY =
   "https://example.test/owner/repository.git";

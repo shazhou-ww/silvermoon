@@ -20,7 +20,7 @@ import {
   inspectNpmProject,
   REPOSITORY_SKILL_PATH,
   SILVERMOON_VERSION,
-} from "../../src/adoption.js";
+} from "../../src/project/adoption.js";
 
 const temporaryDirectories = [];
 const canonicalSkill = new URL("../../skills/silvermoon", import.meta.url);

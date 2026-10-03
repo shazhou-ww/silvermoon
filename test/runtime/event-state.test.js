@@ -6,13 +6,13 @@ import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 import { pathToFileURL } from "node:url";
 
-import { eventCommand } from "../../src/event-command.js";
-import { migrateEvents } from "../../src/migrate-events.js";
+import { eventCommand } from "../../src/application/event.js";
+import { migrateEvents } from "../../src/application/migrations/v1.js";
 import { checkRepository } from "../../src/index.js";
-import { createIdea } from "../../src/create-idea.js";
-import { listIdeas } from "../../src/list-ideas.js";
-import { serializeIdeaEvents } from "../../src/idea-events.js";
-import { ideaPaths } from "../../src/layout.js";
+import { createIdea } from "../../src/application/create.js";
+import { listIdeas } from "../../src/application/list.js";
+import { serializeIdeaEvents } from "../../src/events/rules/grammar.js";
+import { ideaPaths } from "../../src/project/rules/layout.js";
 import { createRepository, FIRST_ID, SECOND_ID, git } from "../helpers/repository.js";
 
 async function fixture(t, options) {
@@ -141,7 +141,7 @@ test("v2 creation writes an empty authoritative log and rejects legacy dual auth
 });
 
 test("migration recovers prepared files and partial switches, or rolls back exact original bytes", async (t) => {
-  const module = new URL("../../src/migrate-events.js", import.meta.url).href;
+  const module = new URL("../../src/application/migrations/v1.js", import.meta.url).href;
   for (const [stage, rollback] of [
     ["prepared", false],
     [`prepared:${ideaPaths(FIRST_ID).eventsPath}`, false],
@@ -311,7 +311,7 @@ test("event process interruption recovers its exact record; moved primary requir
   await migrate(root);
   publish(root, "Migrate");
   const path = ideaPaths(FIRST_ID).eventsPath;
-  const module = new URL("../../src/state-transaction.js", import.meta.url).href;
+  const module = new URL("../../src/repository/state-transaction.js", import.meta.url).href;
   const before = await readFile(join(root, path), "utf8");
   const after = before + serializeIdeaEvents([{ sequence: 2, type: "setLanguage", payload: { language: "en" } }]);
   const context = {
@@ -355,7 +355,7 @@ test("event process interruption recovers its exact record; moved primary requir
 
 test("migration recovery refuses unknown changed bytes without overwriting them", async (t) => {
   const { root } = await fixture(t);
-  const module = new URL("../../src/migrate-events.js", import.meta.url).href;
+  const module = new URL("../../src/application/migrations/v1.js", import.meta.url).href;
   const plan = await migrateEvents({ root });
   const child = spawnSync(process.execPath, ["--input-type=module", "-e", `
     import { migrateEvents } from ${JSON.stringify(module)};

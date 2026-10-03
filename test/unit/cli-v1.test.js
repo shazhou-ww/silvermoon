@@ -7,8 +7,8 @@ import {
   render,
   runCli,
   selectOutputRenderer,
-} from "../../src/cli.js";
-import { CommandRun } from "../../src/domain.js";
+} from "../../src/cli/cli.js";
+import { CommandRun } from "../../src/command/index.js";
 
 function capture() {
   const logs = [];

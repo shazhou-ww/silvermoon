@@ -7,7 +7,7 @@ import {
   ideaInventoryItem,
   normalizeIdeaQuery,
   queryIdeaInventory,
-} from "../../src/idea-query.js";
+} from "../../src/idea/index.js";
 
 const ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
 

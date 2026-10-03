@@ -112,7 +112,7 @@ test("recognizes a bound arrow function marker and a pure named re-export", () =
 
 test("rule boundaries reject I/O imports and missing annotations", () => {
   const result = inspectPureSources(new Map([
-    ["/fixture/readiness-policy.js", `
+    ["/fixture/application/rules/readiness.js", `
       import { readFile } from "node:fs/promises";
       import { command } from "./cli.js";
       function unmarked() { return 1; }

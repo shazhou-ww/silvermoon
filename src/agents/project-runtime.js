@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { promisify } from "node:util";
 
 import { canonicalRoute, LocalProjectRegistry } from "./project-registry.js";
-import { validateIdeaEvent } from "../idea-events.js";
+import { validateIdeaEvent } from "../events/rules/index.js";
 
 const execute = promisify(execFile);
 const PROTOCOL_VERSION = 1;

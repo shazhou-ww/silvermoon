@@ -9,7 +9,7 @@ const head = "b".repeat(40);
 test("only known idea metadata can avoid package validation", () => {
   assert.equal(packageRisk([idea]).required, false);
   for (const path of [
-    "src/cli.js", "schema/v1/config.schema.json", "assets/logo.svg",
+    "src/cli/cli.js", "schema/v1/config.schema.json", "assets/logo.svg",
     "README.md", "docs/maintaining.md", "package.json", "pnpm-lock.yaml",
     "package-lock.json", ".npmrc", "bin/silvermoon.js", "skills/silvermoon/SKILL.md",
     ".agents/skills/silvermoon/SKILL.md", "test/helpers/repository.js",

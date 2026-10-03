@@ -4,14 +4,14 @@ import { chmod, lstat, readFile, rm, utimes, writeFile } from "node:fs/promises"
 import { join } from "node:path";
 import { test } from "node:test";
 
-import { eventCommand } from "../../src/event-command.js";
-import { EventStream, segmentName } from "../../src/event-stream.js";
-import { eventStorageChanges, readEventStorage } from "../../src/event-storage.js";
-import { inspectIdeaLayout } from "../../src/idea-layout.js";
-import { serializeIdeaEvents } from "../../src/idea-events.js";
-import { migrateEvents } from "../../src/migrate-events.js";
+import { eventCommand } from "../../src/application/event.js";
+import { EventStream, segmentName } from "../../src/events/stream.js";
+import { eventStorageChanges, readEventStorage } from "../../src/events/storage.js";
+import { inspectIdeaLayout } from "../../src/application/observation/idea-layout.js";
+import { serializeIdeaEvents } from "../../src/events/rules/grammar.js";
+import { migrateEvents } from "../../src/application/migrations/v1.js";
 import { checkRepository } from "../../src/index.js";
-import { ideaPaths } from "../../src/layout.js";
+import { ideaPaths } from "../../src/project/rules/layout.js";
 import { createRepository, FIRST_ID, git } from "../helpers/repository.js";
 
 async function fixture(t) {
@@ -105,7 +105,7 @@ test("cross-segment interruption resumes or rolls back without resetting sequenc
         id: FIRST_ID, localInteraction: true, storage: "segmented",
         afterDigest: EventStream.fromBytes(Buffer.concat([source, record]), { objectIdLength: 40 }).digest,
       };
-      const module = new URL("../../src/state-transaction.js", import.meta.url).href;
+      const module = new URL("../../src/repository/state-transaction.js", import.meta.url).href;
       const child = spawnSync(process.execPath, ["--input-type=module", "-e", `
         import { stateTransaction } from ${JSON.stringify(module)};
         await stateTransaction(${JSON.stringify(root)}, "events", [{
@@ -149,7 +149,7 @@ test("interrupted multi-segment revision recovers despite a temporary gap in the
       revisions: layout.ideas.find(({ id }) => id === FIRST_ID).revisions,
       afterDigest: EventStream.fromBytes(candidate, options).digest,
     };
-    const module = new URL("../../src/state-transaction.js", import.meta.url).href;
+    const module = new URL("../../src/repository/state-transaction.js", import.meta.url).href;
     const child = spawnSync(process.execPath, ["--input-type=module", "-e", `
       import { readFileSync } from "node:fs";
       import { stateTransaction } from ${JSON.stringify(module)};

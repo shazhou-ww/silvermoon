@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { CommandRun } from "../../src/domain.js";
-import { renderResponse } from "../../src/response.js";
+import { CommandRun } from "../../src/command/index.js";
+import { renderResponse } from "../../src/presentation/render.js";
 
 test("keeps guidance content in response and renders it as isolated data", () => {
   const content = [

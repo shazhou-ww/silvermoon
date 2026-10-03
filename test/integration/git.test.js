@@ -25,8 +25,8 @@ import {
   worktreeSnapshot,
   withTemporaryTree,
   withTemporaryWorktree,
-} from "../../src/git.js";
-import { createGitSnapshotFileSystem } from "../../src/git-snapshot.js";
+} from "../../src/repository/git.js";
+import { createGitSnapshotFileSystem } from "../../src/repository/git-snapshot.js";
 
 const temporaryDirectories = [];
 const repository = "https://example.test/owner/repository.git";

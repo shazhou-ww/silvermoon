@@ -3,12 +3,12 @@ import { readFile, rename, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { test } from "node:test";
 
-import { eventCommand } from "../../src/event-command.js";
-import { migrateEvents } from "../../src/migrate-events.js";
-import { createIdea } from "../../src/create-idea.js";
+import { eventCommand } from "../../src/application/event.js";
+import { migrateEvents } from "../../src/application/migrations/v1.js";
+import { createIdea } from "../../src/application/create.js";
 import { checkRepository } from "../../src/index.js";
-import { parseIdeaEvents } from "../../src/idea-events.js";
-import { ideaPaths } from "../../src/layout.js";
+import { parseIdeaEvents } from "../../src/events/rules/grammar.js";
+import { ideaPaths } from "../../src/project/rules/layout.js";
 import { createRepository, FIRST_ID, SECOND_ID, git } from "../helpers/repository.js";
 
 async function fixture(t, options) {

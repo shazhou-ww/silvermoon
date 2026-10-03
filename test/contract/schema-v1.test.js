@@ -4,9 +4,9 @@ import { test } from "node:test";
 
 import Ajv2020 from "ajv/dist/2020.js";
 
-import { createCommandRun } from "../../src/domain.js";
-import { isValidUlid } from "../../src/ideas.js";
-import { validRepository } from "../../src/repository.js";
+import { createCommandRun } from "../../src/command/index.js";
+import { isValidUlid } from "../../src/idea/rules/status.js";
+import { validRepository } from "../../src/project/rules/repository.js";
 
 async function readSchema(name) {
   return JSON.parse(

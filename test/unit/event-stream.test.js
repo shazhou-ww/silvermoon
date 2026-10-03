@@ -3,9 +3,9 @@ import { test } from "node:test";
 
 import {
   EVENTS_PER_SEGMENT, EventStream, MAX_EVENT_BYTES, segmentName,
-} from "../../src/event-stream.js";
-import { serializeIdeaEvents } from "../../src/idea-events.js";
-import { eventStorageChanges, storageDigest } from "../../src/event-storage.js";
+} from "../../src/events/stream.js";
+import { serializeIdeaEvents } from "../../src/events/rules/grammar.js";
+import { eventStorageChanges, storageDigest } from "../../src/events/storage.js";
 
 const options = { objectIdLength: 40 };
 const event = (sequence, message = String(sequence)) => ({

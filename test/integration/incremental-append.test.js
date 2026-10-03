@@ -6,12 +6,12 @@ import { join, resolve } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-import { eventCommand } from "../../src/event-command.js";
-import { EventStream } from "../../src/event-stream.js";
-import { observeGitCommands } from "../../src/git.js";
-import { serializeIdeaEvents } from "../../src/idea-events.js";
-import { ideaPaths } from "../../src/layout.js";
-import { migrateEvents } from "../../src/migrate-events.js";
+import { eventCommand } from "../../src/application/event.js";
+import { EventStream } from "../../src/events/stream.js";
+import { observeGitCommands } from "../../src/repository/git.js";
+import { serializeIdeaEvents } from "../../src/events/rules/grammar.js";
+import { ideaPaths } from "../../src/project/rules/layout.js";
+import { migrateEvents } from "../../src/application/migrations/v1.js";
 import { createRepository, FIRST_ID, SECOND_ID, git, writeIdea } from "../helpers/repository.js";
 
 const entry = fileURLToPath(new URL("../../bin/silvermoon.js", import.meta.url));

@@ -9,7 +9,7 @@ import { CopilotClient } from "@github/copilot-sdk";
 
 import { CopilotAdapter, LocalProjectRegistry } from "../../src/agents/copilot.js";
 import { ProjectRuntime } from "../../src/agents/project-runtime.js";
-import { migrateEvents } from "../../src/migrate-events.js";
+import { migrateEvents } from "../../src/application/migrations/v1.js";
 import { createRepository, FIRST_ID, git, PRIMARY_REPOSITORY } from "../helpers/repository.js";
 
 const sourceRoot = fileURLToPath(new URL("../..", import.meta.url));

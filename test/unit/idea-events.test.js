@@ -5,8 +5,8 @@ import {
   EVENT_PERMISSIONS, EVENT_RENAMES, IDEA_EVENT_TYPES,
   checkEventChange, eventsFromStatus, initialEventState, parseIdeaEvents,
   reduceIdeaEvent, replayIdeaEvents, serializeIdeaEvents,
-} from "../../src/idea-events.js";
-import { deriveIdeaState } from "../../src/ideas.js";
+} from "../../src/events/rules/grammar.js";
+import { deriveIdeaState } from "../../src/idea/rules/status.js";
 
 const id = "01M3SJTKFRQ19DP0RPPJACKGMC";
 const revisions = {

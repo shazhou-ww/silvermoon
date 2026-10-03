@@ -12,13 +12,13 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterEach, test } from "node:test";
 
-import { runCli } from "../../src/cli.js";
-import { observeGitCommands } from "../../src/git.js";
-import { readIdeaInventoryItem } from "../../src/idea-metadata.js";
-import { serializeIdeaStatus } from "../../src/ideas.js";
-import { listIdeas } from "../../src/list-ideas.js";
-import { ideaPaths } from "../../src/layout.js";
-import { withTraceFile } from "../../src/trace.js";
+import { runCli } from "../../src/cli/cli.js";
+import { observeGitCommands } from "../../src/repository/git.js";
+import { readIdeaInventoryItem } from "../../src/application/observation/idea-metadata.js";
+import { serializeIdeaStatus } from "../../src/idea/rules/status.js";
+import { listIdeas } from "../../src/application/list.js";
+import { ideaPaths } from "../../src/project/rules/layout.js";
+import { withTraceFile } from "../../src/command/trace/trace.js";
 import {
   createRepository,
   git,

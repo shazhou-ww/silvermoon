@@ -10,7 +10,7 @@ import {
   projectActions,
   projectReport,
   reduceObservation,
-} from "../../src/domain.js";
+} from "../../src/command/index.js";
 
 const INTENTION = {
   command: "whats-next",

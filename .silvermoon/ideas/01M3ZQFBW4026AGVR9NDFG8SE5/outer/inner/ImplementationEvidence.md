@@ -1,6 +1,9 @@
 # CLI 职责重构实施验证证据
 
 本文件服务于 [Implementation](./Implementation.md)，不构成额外契约或人工验收。
+本文件记录上一轮已验收的职责拆分结果；目录搬迁后的链接只用于当前导航，
+不把新路径当作旧候选的准确内容。新目录候选的验证与限制另见
+[模块目录验证证据](./ModuleOrganizationEvidence.md)。
 已批准的 [Idea](./ideal/Idea.md) 与 [函数式设计](./ideal/FunctionalDesign.md) 保持不变。
 实施基线为 `aa15bac8cbe3e4bf306d698343f0a9dfe06306d4`；
 批准的 idealRevision 为 `7352fc3a3a42640ed873d0f22e75cc4e3450be14`。
@@ -14,38 +17,38 @@
 | 职责 | 落地模块与关键函数 |
 | --- | --- |
 | 公共组装 | [index.js](../../../../../src/index.js) 仅有受控 export；公共符号与 Agent 子路径不变 |
-| CLI 适配 | [cli.js](../../../../../src/cli.js) 保留参数、输入、trace、输出选择、退出码及 TUI 懒加载；检查直接调用内部检查模块 |
-| 检查用例 | [check-repository.js](../../../../../src/check-repository.js) 的 checkRepositoryUseCase；兼容包装 checkRepository |
-| 查询用例 | [list-ideas.js](../../../../../src/list-ideas.js) 的 listIdeasUseCase；兼容包装 listIdeas |
-| 纯查询规则 | [idea-query.js](../../../../../src/idea-query.js) 的 normalizeIdeaQueryCore、queryIdeaInventoryCore 显式接收枚举事实；公共包装保持既有枚举导出与默认值语义 |
-| 导航用例 | [whatsnext.js](../../../../../src/whatsnext.js) 的 whatsNextUseCase；兼容包装 whatsNext |
-| 创建用例 | [create-idea.js](../../../../../src/create-idea.js) 的 createIdeaUseCase；兼容包装 createIdea 与 generateUlid |
-| 事件用例 | [event-command.js](../../../../../src/event-command.js) 的 eventCommandUseCase；兼容包装 eventCommand |
-| 共享 readiness | [repository-readiness.js](../../../../../src/repository-readiness.js) 的 assessRepositoryReadinessWith 与既有 readiness 包装；事实读取、fetch、提交关系与历史观察显式编排 |
-| 纯 readiness 规则 | [readiness-policy.js](../../../../../src/readiness-policy.js) 的 evaluateLocalReadiness、evaluatePrimaryRelation |
-| 纯指令组织 | [instructions.js](../../../../../src/instructions.js) 的项目、guidance、生命周期及卫生重试指令；保留原命令意图、selector 与语言 |
-| 观察投影 | [observation-projection.js](../../../../../src/observation-projection.js) 的 projectObservation、incompleteObservation、unavailableObservation、repositoryProblemObservation；读取仍在 [observation.js](../../../../../src/observation.js) |
-| 命令纯规则 | [command-rules.js](../../../../../src/command-rules.js) 的 reduceObservation、replayObservation、projectReport、响应 metadata 与不变量 |
-| 命令副作用运行时 | [command-runtime.js](../../../../../src/command-runtime.js) 的 createCommandRun、driveCommand 与 CommandRun 兼容适配 |
-| 命令兼容入口 | [domain.js](../../../../../src/domain.js) 保留既有规则与运行时导出，不混入实现 |
-| 结构化 response | [response-projection.js](../../../../../src/response-projection.js) 的 respond；只从 intention 与最终内部 observation 生成响应 |
-| 纯 Markdown 展示 | [markdown.js](../../../../../src/markdown.js) 的 renderMarkdownResponse；显式接收 now 与 dateFacts |
-| 展示兼容包装 | [response.js](../../../../../src/response.js) 的 renderResponse 保留默认时钟和本地时区日期行为；重新导出 respond |
-| 事件纯策略与规划 | [event-policy.js](../../../../../src/event-policy.js) 的 parseRequest、assertHumanGate、planProjectedAppend、planFullEventChange、assertIntroducedDecisions |
-| 完整 replay | [event-replay.js](../../../../../src/event-replay.js) 的 replayStoredEvents；格式、归约与本地未 fetch baseline 保持不同信息 |
-| 事件候选观察 | [event-observation.js](../../../../../src/event-observation.js) 的 inspectCandidate、resolveIdea；保留准确 ULID 修复路径和未知 pending 字节保护 |
-| 增量与本地事件写入 | [event-write.js](../../../../../src/event-write.js) 的 appendLocalInteraction、appendProjectedInteraction、appendProjectedMetadata、writeProjectedAppend |
-| 完整事件写入 | [event-full-write.js](../../../../../src/event-full-write.js) 的 writeFullEvents；完整历史、授权修订、精确重试与事务验证 |
-| 事件恢复 | [event-recovery.js](../../../../../src/event-recovery.js) 的 recoverEvents；保留原 writer、准确 primary、世界版本和字节校验 |
-| 纯事件 digest | [event-digest.js](../../../../../src/event-digest.js) 的 segmentName、gitContentDigest、eventFolderBytes、eventFolderDigest；保留 Git SHA-1/SHA-256 |
-| 事件流兼容 | [event-stream.js](../../../../../src/event-stream.js) 保留 EventStream、分段与 onHash 观察语义，调用纯 digest 核心 |
-| 认证投影 | [event-projection.js](../../../../../src/event-projection.js) 的 runtime identity 纳入抽出的 event-digest 实现，避免未来摘要代码变化沿用旧缓存 |
-| 纯脚手架规划 | [scaffold-plan.js](../../../../../src/scaffold-plan.js) 的 buildIdeaScaffold；输入包含准确 id、格式版本及内容语言 |
-| 脚手架写入与清理 | [idea-scaffold.js](../../../../../src/idea-scaffold.js) 保留 ID 竞争、独占创建与操作所有权清理，独立于状态事务 |
-| 纯 ULID 编码 | [ulid.js](../../../../../src/ulid.js) 的 encodeUlid；默认时钟与随机字节只在兼容包装获取 |
-| 配置规则与读取 | [config-policy.js](../../../../../src/config-policy.js) 的 parseConfigSource、serializeConfig、validPrimaryBranch；[config.js](../../../../../src/config.js) 保留本地和 Git 快照读取 |
-| 接入策略与资源观察 | [adoption-policy.js](../../../../../src/adoption-policy.js) 的 evaluateNpmAdoption 与安装／skill 指令；[adoption.js](../../../../../src/adoption.js) 保留资源定位、实际版本、manifest 和 skill 读取 |
-| guidance 规则与读取 | [guidance-policy.js](../../../../../src/guidance-policy.js) 的 inspectContent 与诊断规则；[guidance.js](../../../../../src/guidance.js) 保留 Git／文件读取及快照 provenance |
+| CLI 适配 | [cli.js](../../../../../src/cli/cli.js) 保留参数、输入、trace、输出选择、退出码及 TUI 懒加载；检查直接调用内部检查模块 |
+| 检查用例 | [check-repository.js](../../../../../src/application/check.js) 的 checkRepositoryUseCase；兼容包装 checkRepository |
+| 查询用例 | [list-ideas.js](../../../../../src/application/list.js) 的 listIdeasUseCase；兼容包装 listIdeas |
+| 纯查询规则 | [idea-query.js](../../../../../src/idea/rules/query.js) 的 normalizeIdeaQueryCore、queryIdeaInventoryCore 显式接收枚举事实；公共包装保持既有枚举导出与默认值语义 |
+| 导航用例 | [whatsnext.js](../../../../../src/application/next.js) 的 whatsNextUseCase；兼容包装 whatsNext |
+| 创建用例 | [create-idea.js](../../../../../src/application/create.js) 的 createIdeaUseCase；兼容包装 createIdea 与 generateUlid |
+| 事件用例 | [event-command.js](../../../../../src/application/event.js) 的 eventCommandUseCase；兼容包装 eventCommand |
+| 共享 readiness | [repository-readiness.js](../../../../../src/application/observation/readiness.js) 的 assessRepositoryReadinessWith 与既有 readiness 包装；事实读取、fetch、提交关系与历史观察显式编排 |
+| 纯 readiness 规则 | [readiness-policy.js](../../../../../src/application/rules/readiness.js) 的 evaluateLocalReadiness、evaluatePrimaryRelation |
+| 纯指令组织 | [instructions.js](../../../../../src/response/instructions.js) 的项目、guidance、生命周期及卫生重试指令；保留原命令意图、selector 与语言 |
+| 观察投影 | [observation-projection.js](../../../../../src/response/observation.js) 的 projectObservation、incompleteObservation、unavailableObservation、repositoryProblemObservation；读取仍在 [observation.js](../../../../../src/application/observation/snapshot.js) |
+| 命令纯规则 | [command-rules.js](../../../../../src/command/rules/observation.js) 的 reduceObservation、replayObservation、projectReport、响应 metadata 与不变量 |
+| 命令副作用运行时 | [command-runtime.js](../../../../../src/command/runtime.js) 的 createCommandRun、driveCommand 与 CommandRun 兼容适配 |
+| 命令兼容入口 | [domain.js](../../../../../src/command/index.js) 保留既有规则与运行时导出，不混入实现 |
+| 结构化 response | [response-projection.js](../../../../../src/response/projection.js) 的 respond；只从 intention 与最终内部 observation 生成响应 |
+| 纯 Markdown 展示 | [markdown.js](../../../../../src/presentation/rules/markdown.js) 的 renderMarkdownResponse；显式接收 now 与 dateFacts |
+| 展示兼容包装 | [response.js](../../../../../src/presentation/render.js) 的 renderResponse 保留默认时钟和本地时区日期行为；重新导出 respond |
+| 事件纯策略与规划 | [event-policy.js](../../../../../src/events/rules/policy.js) 的 parseRequest、assertHumanGate、planProjectedAppend、planFullEventChange、assertIntroducedDecisions |
+| 完整 replay | [event-replay.js](../../../../../src/application/events/replay.js) 的 replayStoredEvents；格式、归约与本地未 fetch baseline 保持不同信息 |
+| 事件候选观察 | [event-observation.js](../../../../../src/application/observation/event-candidate.js) 的 inspectCandidate、resolveIdea；保留准确 ULID 修复路径和未知 pending 字节保护 |
+| 增量与本地事件写入 | [event-write.js](../../../../../src/application/events/write.js) 的 appendLocalInteraction、appendProjectedInteraction、appendProjectedMetadata、writeProjectedAppend |
+| 完整事件写入 | [event-full-write.js](../../../../../src/application/events/full-write.js) 的 writeFullEvents；完整历史、授权修订、精确重试与事务验证 |
+| 事件恢复 | [event-recovery.js](../../../../../src/application/events/recovery.js) 的 recoverEvents；保留原 writer、准确 primary、世界版本和字节校验 |
+| 纯事件 digest | [event-digest.js](../../../../../src/events/rules/digest.js) 的 segmentName、gitContentDigest、eventFolderBytes、eventFolderDigest；保留 Git SHA-1/SHA-256 |
+| 事件流兼容 | [event-stream.js](../../../../../src/events/stream.js) 保留 EventStream、分段与 onHash 观察语义，调用纯 digest 核心 |
+| 认证投影 | [event-projection.js](../../../../../src/events/projection.js) 的 runtime identity 纳入抽出的 event-digest 实现，避免未来摘要代码变化沿用旧缓存 |
+| 纯脚手架规划 | [scaffold-plan.js](../../../../../src/idea/scaffold-plan.js) 的 buildIdeaScaffold；输入包含准确 id、格式版本及内容语言 |
+| 脚手架写入与清理 | [idea-scaffold.js](../../../../../src/application/scaffold/writer.js) 保留 ID 竞争、独占创建与操作所有权清理，独立于状态事务 |
+| 纯 ULID 编码 | [ulid.js](../../../../../src/idea/rules/ulid.js) 的 encodeUlid；默认时钟与随机字节只在兼容包装获取 |
+| 配置规则与读取 | [config-policy.js](../../../../../src/project/rules/config.js) 的 parseConfigSource、serializeConfig、validPrimaryBranch；[config.js](../../../../../src/project/config.js) 保留本地和 Git 快照读取 |
+| 接入策略与资源观察 | [adoption-policy.js](../../../../../src/project/rules/adoption.js) 的 evaluateNpmAdoption 与安装／skill 指令；[adoption.js](../../../../../src/project/adoption.js) 保留资源定位、实际版本、manifest 和 skill 读取 |
+| guidance 规则与读取 | [guidance-policy.js](../../../../../src/project/rules/guidance.js) 的 inspectContent 与诊断规则；[guidance.js](../../../../../src/project/guidance.js) 保留 Git／文件读取及快照 provenance |
 
 Git、快照 reader、事件存储、派生缓存和状态事务继续使用既有基础设施，没有
 新增存储权威、格式迁移、授权规则、产品命令、Agent 会话功能或 npm 发布。

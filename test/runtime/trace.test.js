@@ -9,8 +9,8 @@ import {
   traceSync,
   TRACE_SCHEMA_VERSION,
   withTraceFile,
-} from "../../src/trace.js";
-import { CommandRun } from "../../src/domain.js";
+} from "../../src/command/trace/trace.js";
+import { CommandRun } from "../../src/command/index.js";
 
 const temporaryDirectories = [];
 

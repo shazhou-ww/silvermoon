@@ -9,7 +9,7 @@ import {
   OUTPUT_LANGUAGES,
   resolveLanguage,
   resolveOutputLanguage,
-} from "../../src/language.js";
+} from "../../src/project/rules/language.js";
 
 test("canonicalizes valid BCP 47 language tags", () => {
   assert.equal(canonicalizeLanguageTag("zh-cn"), "zh-CN");

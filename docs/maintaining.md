@@ -68,6 +68,21 @@ when splitting mixed-cost files; never disable the sanity guard to admit them.
 
 ### Functional boundaries and pure functions
 
+The [source module index](../src/README.md) describes the physical boundaries.
+Every source directory has a concise responsibility README and an `index.js`
+containing only explicit named exports. Keep assembly and initialization in
+implementation files, never in an index.
+
+Import concrete siblings within a directory. Across directory boundaries, use
+the destination's public index, including dedicated rule/trace/TUI sub-entrypoints.
+Do not import a directory's own index from its implementation files.
+Pure callers must not load a mixed runtime facade, and the presentation facade
+must not eagerly load TUI or the Copilot SDK.
+
+Moving files also requires updating package-resource URLs, authenticated cache
+source coordinates, source tools, declarations, strict package contents and tests.
+Keep source-only migration tools out of installed facades and package contents.
+
 Keep public export assembly in `src/index.js` and preserve the existing command
 and Agent package entrypoints. Internal use cases receive narrow sets of function
 ports; they must not call another command, import the public barrel, or depend

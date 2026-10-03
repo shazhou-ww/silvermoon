@@ -9,6 +9,7 @@
 组织基线。保留既有包公共 API、Agent 子路径与源码 CLI 入口，内部按职责模块
 目录组织。具体接口以行为等价和依赖检查为准，不照搬草案中的每个函数名。
 职责映射、验证结果与限制见 [实施验证证据](./ImplementationEvidence.md)。
+目录组织的当前验证见 [模块目录验证证据](./ModuleOrganizationEvidence.md)。
 目录调整是在现有 idea 中追加的实施要求，保留先前 acceptInner 事实；更改本契约
 会产生新的 implementationRevision，需要重新验证和准确版本验收，不清除旧决定。
 

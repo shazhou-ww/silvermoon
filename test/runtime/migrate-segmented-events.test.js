@@ -5,9 +5,9 @@ import { join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-import { readEventStorage } from "../../src/event-storage.js";
-import { serializeIdeaEvents } from "../../src/idea-events.js";
-import { ideaPaths } from "../../src/layout.js";
+import { readEventStorage } from "../../src/events/storage.js";
+import { serializeIdeaEvents } from "../../src/events/rules/grammar.js";
+import { ideaPaths } from "../../src/project/rules/layout.js";
 import { createRepository, FIRST_ID, git } from "../helpers/repository.js";
 
 const SOURCE = "https://github.com/shazhou-ww/silvermoon.git";
@@ -41,7 +41,7 @@ async function fixture(t) {
   git(root, "add", ".");
   git(root, "commit", "-m", "Unpublished source V2 fixture");
   git(root, "push", "origin", "HEAD:main");
-  const { migrateSegmentedEvents } = await import(pathToFileURL(join(root, "src/migrate-segmented-events.js")));
+  const { migrateSegmentedEvents } = await import(pathToFileURL(join(root, "src/application/migrations/segmented-events.js")));
   const { checkRepository } = await import(pathToFileURL(join(root, "src/index.js")));
   return { ...repository, source, paths, migrateSegmentedEvents, checkRepository };
 }
@@ -96,7 +96,7 @@ test("migration preserves concurrent world edits and leaves an explicit recovery
 test("interrupted segmentation resumes or rolls back only exact operation-owned files", async (t) => {
   for (const rollback of [false, true]) {
     const { root, source, paths, migrateSegmentedEvents } = await fixture(t);
-    const module = pathToFileURL(join(root, "src/migrate-segmented-events.js")).href;
+    const module = pathToFileURL(join(root, "src/application/migrations/segmented-events.js")).href;
     const plan = await migrateSegmentedEvents({ root });
     const child = spawnSync(process.execPath, ["--input-type=module", "-e", `
       import { migrateSegmentedEvents } from ${JSON.stringify(module)};

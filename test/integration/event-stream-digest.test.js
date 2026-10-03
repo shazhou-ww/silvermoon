@@ -4,11 +4,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 
-import { EventStream } from "../../src/event-stream.js";
-import { serializeIdeaEvents } from "../../src/idea-events.js";
+import { EventStream } from "../../src/events/stream.js";
+import { serializeIdeaEvents } from "../../src/events/rules/grammar.js";
 import { git } from "../helpers/repository.js";
-import { createGitSnapshotFileSystem } from "../../src/git-snapshot.js";
-import { snapshotEventFolderHead } from "../../src/event-storage.js";
+import { createGitSnapshotFileSystem } from "../../src/repository/git-snapshot.js";
+import { snapshotEventFolderHead } from "../../src/events/storage.js";
 
 test("events-folder digest equals its Git subtree OID in SHA-1 and SHA-256 repositories", async () => {
   for (const format of ["sha1", "sha256"]) {

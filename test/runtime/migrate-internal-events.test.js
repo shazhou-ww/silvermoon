@@ -6,12 +6,12 @@ import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 
 import { checkRepository } from "../../src/index.js";
-import { detectEventFormat } from "../../src/event-history.js";
-import { parseIdeaEvents, serializeIdeaEvents } from "../../src/idea-events.js";
-import { observeGitCommands, worktreeSnapshot } from "../../src/git.js";
-import { migrateInternalEvents } from "../../src/migrate-internal-events.js";
-import { ideaPaths } from "../../src/layout.js";
-import { whatsNext } from "../../src/whatsnext.js";
+import { detectEventFormat } from "../../src/events/history.js";
+import { parseIdeaEvents, serializeIdeaEvents } from "../../src/events/rules/grammar.js";
+import { observeGitCommands, worktreeSnapshot } from "../../src/repository/git.js";
+import { migrateInternalEvents } from "../../src/application/migrations/internal-events.js";
+import { ideaPaths } from "../../src/project/rules/layout.js";
+import { whatsNext } from "../../src/application/next.js";
 import { createRepository, FIRST_ID, SECOND_ID, git } from "../helpers/repository.js";
 
 const SOURCE_REPOSITORY = "https://github.com/shazhou-ww/silvermoon.git";
@@ -270,7 +270,7 @@ test("source projects created directly with final v2 retain ordinary failed-redu
 
 test("standalone command and interrupted transaction recover or roll back exact bytes", async (t) => {
   const cli = fileURLToPath(new URL("../../bin/migrate-internal-events.js", import.meta.url));
-  const module = new URL("../../src/migrate-internal-events.js", import.meta.url).href;
+  const module = new URL("../../src/application/migrations/internal-events.js", import.meta.url).href;
   for (const rollback of [true, false]) {
     const root = await fixture(t);
     const run = (...args) => spawnSync(process.execPath, [cli, "--root", root, ...args], { encoding: "utf8" });
@@ -309,7 +309,7 @@ test("interrupted migration refuses resume after primary moves but allows rollba
   const plan = await migrateInternalEvents({ root });
   const path = join(root, ideaPaths(FIRST_ID).legacyEventsPath);
   const before = await readFile(path);
-  const module = new URL("../../src/migrate-internal-events.js", import.meta.url).href;
+  const module = new URL("../../src/application/migrations/internal-events.js", import.meta.url).href;
   const child = spawnSync(process.execPath, ["--input-type=module", "-e", `
     import { migrateInternalEvents } from ${JSON.stringify(module)};
     await migrateInternalEvents({

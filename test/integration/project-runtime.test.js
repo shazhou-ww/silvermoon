@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 
 import { ProjectRuntime } from "../../src/agents/project-runtime.js";
 import { LocalProjectRegistry } from "../../src/agents/project-registry.js";
-import { migrateEvents } from "../../src/migrate-events.js";
+import { migrateEvents } from "../../src/application/migrations/v1.js";
 import { createRepository, FIRST_ID, git, PRIMARY_REPOSITORY } from "../helpers/repository.js";
 
 const ROUTE = { projectUrl: "https://github.com/example/project.git", ideaId: "01M3SK3CGZF47A36D2GWN8BFPC" };

@@ -5,7 +5,7 @@ import {
   dependencyInstallCommands,
   renderDependencyCommand,
   SILVERMOON_VERSION,
-} from "../../src/adoption.js";
+} from "../../src/project/adoption.js";
 
 test("generates structured manager-specific root dependency commands", () => {
   assert.deepEqual(

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { validBranchName } from "../../src/repository.js";
+import { validBranchName } from "../../src/project/rules/repository.js";
 
 test("branch validation rejects non-string values without invoking Git", () => {
   for (const value of [null, undefined, 0, false, {}, []]) {

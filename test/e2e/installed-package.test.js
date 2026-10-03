@@ -329,7 +329,7 @@ try {
       [
         "--input-type=module",
         "-e",
-        "import { renderTuiMarkdown } from './node_modules/silvermoon/src/tui.js'; console.log(typeof renderTuiMarkdown);",
+        "import { renderTuiMarkdown } from './node_modules/silvermoon/src/presentation/tui/index.js'; console.log(typeof renderTuiMarkdown);",
       ],
       consumer,
     ),
