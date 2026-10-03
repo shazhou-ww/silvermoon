@@ -57,7 +57,10 @@ checkout 的源码入口；未安装自身发布包，没有新依赖或版本�
 | `pnpm test:e2e` | 通过，隔离打包安装烟测成功，含公开 TUI 模块入口及公共／Agent 子路径 |
 | `pnpm check` | 通过，全部 7 个 release-grade gate 完成 |
 | `node bin/silvermoon.js check --worktree --audience agent` | 通过，当前候选元数据有效且 source runtime 资源定位正确 |
+| `pnpm check:commit` | 通过，worktree 测试、契约、烟测、纯度、文档、skill、差异和准确 staged 元数据检查均通过 |
 | `git diff --check` | 通过 |
+| `git diff --quiet` | 通过，提交前 worktree 与 index 对齐 |
+| `git diff --cached --check` | 通过 |
 
 完整检查中，unit/runtime 195 项：191 通过、4 个 Windows TUI 用例按原条件
 跳过；contract 42 项全部通过；integration 152 项：149 通过、3 个真实 Copilot
@@ -72,6 +75,15 @@ Markdown、纯度和本地／外部 skill discovery 均通过，无失败或取�
 
 ## 提交与同步
 
-提交前 worktree/staged 对齐验证、普通 Git 同步和新准确版本观察仍将在候选
-同步后补充。当前不声明本轮目录候选已获准确版本验收，旧 acceptInner 事实
-仍然保留。Ideal World 未修改，目录组织更改本身不代表批准或验收。
+目录与 README 代码候选
+[`76166abb0a2a4813fce95d13f7c87db231623eb2`](https://github.com/shazhou-ww/silvermoon/commit/76166abb0a2a4813fce95d13f7c87db231623eb2)
+已通过普通非强制 push 同步 primary。刷新 origin/main 后确认可达，重新观察
+仍为 implementing，内容语言为 zh-CN，已批准 idealRevision 未变化。
+
+提交前已对齐 worktree 与 index，worktree、提交前检查及准确 staged 元数据
+检查均通过；metadata gate 不冒充暂存代码测试。本证据收尾和 ledger 只修改
+idea 文档，不改变已验证的源码、README、测试、包清单或维护文档。
+最终准确 implementationRevision 以收尾同步后的最新 whats-next 为准。
+
+本轮目录候选尚未获得准确版本验收，旧 acceptInner 事实仍然保留。
+Ideal World 未修改，目录组织更改本身不代表批准或验收；未进入 deployment。
