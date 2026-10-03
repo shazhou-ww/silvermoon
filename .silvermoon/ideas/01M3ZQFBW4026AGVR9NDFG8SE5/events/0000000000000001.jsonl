@@ -1,2 +1,3 @@
 {"sequence":1,"type":"setAlias","payload":{"alias":"cli-responsibility-refactor"}}
 {"sequence":2,"type":"acceptIdeal","payload":{"idealRevision":"7352fc3a3a42640ed873d0f22e75cc4e3450be14"}}
+{"sequence":3,"type":"acceptInner","payload":{"implementationRevision":"67a5220069034f52b434522282c47c30a103b362"}}
