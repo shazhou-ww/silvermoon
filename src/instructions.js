@@ -1,0 +1,247 @@
+import { diagnosticInstruction, localize } from "./dialogue.js";
+
+export const CHANGE_SAMPLE_ITEM_LIMIT = 12;
+export const CHANGE_SAMPLE_BYTE_LIMIT = 768;
+
+/** @pure */
+export function ideaName(idea) {
+  return idea.alias ?? idea.id;
+}
+
+/** @pure */
+export function command(root, value) {
+  return `\`${value.replace("<root>", root)}\``;
+}
+
+/** @pure */
+export function joinInstructions(lines) {
+  return lines.filter(Boolean).join("\n");
+}
+
+/** @pure */
+export function formatInstructionSteps(steps) {
+  return steps.length === 1
+    ? steps
+    : steps.map((step, index) => `${index + 1}. ${step}`);
+}
+
+/** @pure */
+export function projectInstructions(
+  observed,
+  root,
+  language,
+  recheckCommand = "silvermoon whats-next",
+) {
+  return joinInstructions([
+    ...formatInstructionSteps(observed.findings.map(({ instruction }) => instruction)),
+    localize(
+      language,
+      `After completing the applicable steps, run ${command(root, recheckCommand)} again.`,
+      `完成适用步骤后，再运行 ${command(root, recheckCommand)}。`,
+    ),
+  ]);
+}
+
+/** @pure */
+export function phaseGuidanceInstructions(
+  diagnostics,
+  root,
+  language,
+  recheckCommand,
+) {
+  return joinInstructions([
+    ...formatInstructionSteps(
+      diagnostics.map((diagnostic) =>
+        diagnosticInstruction(diagnostic, language)
+      ),
+    ),
+    localize(
+      language,
+      `After repairing the current phase guidance, run ${command(root, recheckCommand)} again.`,
+      `修复当前阶段 guidance 后，再运行 ${command(root, recheckCommand)}。`,
+    ),
+  ]);
+}
+
+/** @pure */
+export function sampleChanges(changes) {
+  const entries = [
+    ...changes.conflicted.map(({ path }) => `conflicted:${path}`),
+    ...changes.staged.map(({ path }) => `staged:${path}`),
+    ...changes.unstaged.map(({ path }) => `unstaged:${path}`),
+    ...changes.untracked.map(({ path }) => `untracked:${path}`),
+  ];
+  const samples = [];
+  let bytes = 0;
+  for (const entry of entries) {
+    if (samples.length >= CHANGE_SAMPLE_ITEM_LIMIT) break;
+    const nextBytes = Buffer.byteLength(
+      samples.length === 0 ? entry : `, ${entry}`,
+      "utf8",
+    );
+    if (bytes + nextBytes > CHANGE_SAMPLE_BYTE_LIMIT) break;
+    samples.push(entry);
+    bytes += nextBytes;
+  }
+  return {
+    counts: {
+      conflicted: changes.conflicted.length,
+      staged: changes.staged.length,
+      unstaged: changes.unstaged.length,
+      untracked: changes.untracked.length,
+    },
+    omitted: entries.length - samples.length,
+    samples,
+  };
+}
+
+/** @pure */
+export function summarizeWorktreeChanges(changes, language = "en-US") {
+  const summary = sampleChanges(changes);
+  const labels = {
+    conflicted: localize(language, "conflicted", "冲突"),
+    staged: localize(language, "staged", "已暂存"),
+    unstaged: localize(language, "unstaged", "未暂存"),
+    untracked: localize(language, "untracked", "未跟踪"),
+  };
+  const counts = Object.entries(summary.counts)
+    .map(([kind, count]) => `${labels[kind]}=${count}`)
+    .join(localize(language, ", ", "，"));
+  const samples = summary.samples.length === 0
+    ? localize(language, "none", "无")
+    : summary.samples.join(localize(language, ", ", "，"));
+  return localize(
+    language,
+    `${counts}; samples=[${samples}]; omitted=${summary.omitted}`,
+    `${counts}；样例=[${samples}]；省略=${summary.omitted}`,
+  );
+}
+
+/** @pure */
+export function worktreeInstructionSteps(changes, language) {
+  const lines = [];
+  if (changes.conflicted.length > 0) {
+    lines.push(localize(
+      language,
+      "Inspect every conflicted path and its contents, then resolve the conflicts without discarding either side.",
+      "检查全部冲突路径及其内容，再在不丢弃任一方内容的前提下解决冲突。",
+    ));
+  }
+  const hasOrdinaryChanges =
+    changes.staged.length > 0
+    || changes.unstaged.length > 0
+    || changes.untracked.length > 0;
+  if (hasOrdinaryChanges) {
+    lines.push(localize(
+      language,
+      "Inspect all staged, unstaged, and untracked paths and their changes, not just the samples above. Preserve unknown work, then commit, isolate, or explicitly discard each change.",
+      "检查全部 staged、unstaged 和 untracked 路径及其修改内容，不要只依据上述样例。保留未知工作，再逐项提交、隔离，或在获得明确授权后放弃。",
+    ));
+  }
+  return lines;
+}
+
+/** @pure */
+export function localRepositoryInstructions(root, steps, language, recheckCommand) {
+  return joinInstructions([
+    ...formatInstructionSteps(steps),
+    localize(
+      language,
+      `After completing every applicable step, run ${command(root, recheckCommand)} again.`,
+      `完成全部适用步骤后，再运行 ${command(root, recheckCommand)}。`,
+    ),
+  ]);
+}
+
+/** @pure */
+export function selectIdea(ideas, selector) {
+  if (selector === undefined) return null;
+  return ideas.find(({ id }) => id === selector)
+    ?? ideas.find(({ alias }) => alias === selector)
+    ?? null;
+}
+
+/** @pure */
+export function lifecycleContentLanguageInstruction(contentLanguage, language) {
+  return localize(
+    language,
+    `Use ${contentLanguage} for natural-language content in the current world, its supporting files, and the ledger. Preserve canonical headings, stable IDs, paths, and machine fields.`,
+    `在当前世界、同世界辅助文件和 ledger 的自然语言内容中使用 ${contentLanguage}。保留 canonical 标题、稳定 ID、路径和机器字段。`,
+  );
+}
+
+/** @pure */
+export function lifecycleInstruction(idea, language, contentLanguage) {
+  const name = ideaName(idea);
+  if (idea.statusPath.endsWith("/events") || idea.statusPath.endsWith("/events.jsonl")) {
+    const action = {
+      preparing: ["acceptIdeal", idea.idealRevision, idea.worlds.idealRevision.documentPath],
+      implementing: ["acceptInner", idea.implementationRevision, idea.worlds.implementationRevision.documentPath],
+      deploying: ["acceptOuter", idea.deploymentRevision, idea.worlds.deploymentRevision.documentPath],
+    }[idea.state];
+    return joinInstructions([
+      action ? localize(language,
+        `Continue ${name} in ${action[2]} and ${idea.ledgerPath}. Synchronize the candidate to primary before requesting the explicit human decision for ${action[0]} at exact revision ${action[1]}. Then use silvermoon event replay ${idea.id} --audience agent and silvermoon event append with its exact stream length, folder digest and refreshed primary. Never edit event segments directly.`,
+        `在 ${action[2]} 和 ${idea.ledgerPath} 继续 ${name}。先同步候选到 primary，再请求针对准确 revision ${action[1]} 的 ${action[0]} 人工决定。之后用 silvermoon event replay ${idea.id} --audience agent 观察，并通过 silvermoon event append 绑定准确流长度、folder digest 和刷新后的 primary 写入；不要直接编辑事件分段。`)
+        : localize(language,
+          `Review ${name} (${idea.state}); preserve decisions. Resume only through idea.resumed after an explicit human decision; revise world content for changed requirements.`,
+          `复查 ${name}（${idea.state}），保留已有决定。只有明确人工决定才通过 idea.resumed 恢复；需求变化应修改对应世界内容。`),
+      lifecycleContentLanguageInstruction(contentLanguage, language),
+    ]);
+  }
+  if (idea.state === "preparing") {
+    return joinInstructions([localize(
+      language,
+      `Continue idea ${name} in ${idea.worlds.idealRevision.documentPath} and ${idea.ledgerPath}. Preserve the other worlds. When the Ideal World is ready, ask the user to approve exact revision ${idea.idealRevision}; only after explicit approval write it to approvedRevision in ${idea.statusPath}.`,
+      `继续在 ${idea.worlds.idealRevision.documentPath} 和 ${idea.ledgerPath} 推进 idea ${name}，并保留其他世界。理想契约就绪后，请用户明确批准精确 revision ${idea.idealRevision}；只有获得明确批准后，才将其写入 ${idea.statusPath} 的 approvedRevision。`,
+    ), lifecycleContentLanguageInstruction(contentLanguage, language)]);
+  }
+  if (idea.state === "implementing") {
+    return joinInstructions([localize(
+      language,
+      `Continue idea ${name} in ${idea.worlds.implementationRevision.documentPath}, its supporting files under ${idea.worlds.implementationRevision.path}, and ${idea.ledgerPath}. Do not change ${idea.worlds.idealRevision.path} unless the Ideal World must change. After all implementation evidence is published, ask the user to accept exact revision ${idea.implementationRevision}; only then write it to implementationAcceptedRevision in ${idea.statusPath}.`,
+      `继续在 ${idea.worlds.implementationRevision.documentPath}、${idea.worlds.implementationRevision.path} 下的辅助文件和 ${idea.ledgerPath} 推进 idea ${name}。除非理想契约确实需要变化，否则不要修改 ${idea.worlds.idealRevision.path}。全部实现证据发布后，请用户明确验收精确 revision ${idea.implementationRevision}；只有获得明确验收后，才将其写入 ${idea.statusPath} 的 implementationAcceptedRevision。`,
+    ), lifecycleContentLanguageInstruction(contentLanguage, language)]);
+  }
+  if (idea.state === "deploying") {
+    return joinInstructions([localize(
+      language,
+      `Continue idea ${name} from ${idea.worlds.deploymentRevision.documentPath}, its supporting files under ${idea.worlds.deploymentRevision.path}, and ${idea.ledgerPath}. Preserve nested worlds. After external evidence is complete and published, ask the user to accept exact revision ${idea.deploymentRevision}; only then write it to deploymentAcceptedRevision in ${idea.statusPath}.`,
+      `从 ${idea.worlds.deploymentRevision.documentPath}、${idea.worlds.deploymentRevision.path} 下的辅助文件和 ${idea.ledgerPath} 继续推进 idea ${name}，并保留内层世界。外部证据完成且发布后，请用户明确验收精确 revision ${idea.deploymentRevision}；只有获得明确验收后，才将其写入 ${idea.statusPath} 的 deploymentAcceptedRevision。`,
+    ), lifecycleContentLanguageInstruction(contentLanguage, language)]);
+  }
+  if (idea.state === "abandoned") {
+    return localize(
+      language,
+      `Review abandoned idea ${name} at ${idea.relativePath}. Keep abandoned: true in ${idea.statusPath}, remove it only after an explicit decision to resume, or discuss a different goal and run silvermoon create-idea.`,
+      `复查位于 ${idea.relativePath} 的已放弃 idea ${name}。保持 ${idea.statusPath} 中的 abandoned: true；只有明确决定恢复时才移除它，或者讨论另一个目标并运行 silvermoon create-idea。`,
+    );
+  }
+  return localize(
+    language,
+    `Review completed idea ${name} at ${idea.relativePath}. If its definition must change, revise the existing idea; otherwise discuss a new goal and run silvermoon create-idea.`,
+    `复查位于 ${idea.relativePath} 的已完成 idea ${name}。若其定义需要变化则修订现有 idea；否则讨论新目标并运行 silvermoon create-idea。`,
+  );
+}
+
+/** @pure */
+export function navigationInstruction(ideas, language) {
+  const hasActiveIdea = ideas.some(({ state }) =>
+    state === "preparing" || state === "implementing" || state === "deploying"
+  );
+  return joinInstructions([
+    localize(
+      language,
+      "Choose explicitly whether to continue an active idea or create a new one.",
+      "请明确选择继续一个 active idea，或创建一个新 idea。",
+    ),
+    hasActiveIdea
+      ? null
+      : localize(language, "No active ideas are available.", "当前没有 active idea。"),
+    localize(
+      language,
+      "To continue, run `silvermoon whats-next <ULID-or-alias>`. To start something else, discuss the goal and run `silvermoon create-idea`.",
+      "如需继续，运行 `silvermoon whats-next <ULID-or-alias>`；如需开始其他工作，先讨论目标，再运行 `silvermoon create-idea`。",
+    ),
+  ]);
+}

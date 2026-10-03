@@ -39,6 +39,7 @@
     "check:commit": "node scripts/run-checks.mjs --tier commit",
     "check:release": "node scripts/run-checks.mjs --tier release",
     "check:syntax": "node --check bin/silvermoon.js",
+    "check:pure": "node scripts/pure-check.mjs",
     "check:staged": "node bin/silvermoon.js check --staged --audience agent",
     "check:diff": "git diff --check && git diff --cached --check",
     "check:quick": "node --check bin/silvermoon.js && npm test",

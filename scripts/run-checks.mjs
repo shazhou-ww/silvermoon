@@ -5,6 +5,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 export const CHECK_SCRIPTS = Object.freeze([
   "lint:markdown",
+  "check:pure",
   "check:quick",
   "test:integration",
   "pack:check",
@@ -13,7 +14,7 @@ export const CHECK_SCRIPTS = Object.freeze([
 ]);
 
 export const CHECK_TIERS = Object.freeze({
-  sanity: Object.freeze(["check:syntax", "test:sanity"]),
+  sanity: Object.freeze(["check:syntax", "check:pure", "test:sanity"]),
   commit: Object.freeze([
     "check:sanity",
     "test:contract",

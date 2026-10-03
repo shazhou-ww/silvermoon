@@ -9,58 +9,10 @@ import {
 import { inspectAllGuidance } from "./guidance.js";
 import { inspectIdeaLayout } from "./idea-layout.js";
 import { resolveLanguage, resolveOutputLanguage } from "./language.js";
+import { projectObservation } from "./observation-projection.js";
 import { traceAsync } from "./trace.js";
 import { loadUserConfig } from "./user-config.js";
-
-function projectObservation({
-  configuration,
-  ideas,
-  outputLanguage,
-  problems,
-  root,
-  version,
-}) {
-  if (version === undefined) {
-    return {
-      state: "project-setup-required",
-      observedThrough: "root",
-      root,
-      outputLanguage,
-      problems,
-    };
-  }
-  if (configuration === undefined) {
-    return {
-      state: "project-setup-required",
-      observedThrough: "version",
-      root,
-      version,
-      outputLanguage,
-      problems,
-    };
-  }
-  if (ideas === undefined) {
-    return {
-      state: "project-setup-required",
-      observedThrough: "configuration",
-      root,
-      version,
-      configuration,
-      outputLanguage,
-      problems,
-    };
-  }
-  return {
-    state: "project-setup-required",
-    observedThrough: "ideas",
-    root,
-    version,
-    configuration,
-    ideas,
-    outputLanguage,
-    problems,
-  };
-}
+export { incompleteObservation, repositoryProblemObservation, unavailableObservation } from "./observation-projection.js";
 
 function localizeFinding(finding, language) {
   if (finding.sourceDiagnostic) {
@@ -85,47 +37,6 @@ function localizeFinding(finding, language) {
       finding.instruction,
       `处理 ${finding.problem.type}：${finding.instruction}`,
     ),
-  };
-}
-
-export function incompleteObservation({
-  configuration,
-  ideas,
-  outputLanguage,
-  problem,
-  root,
-  version,
-}) {
-  return projectObservation({
-    configuration,
-    ideas,
-    outputLanguage,
-    problems: [problem],
-    root,
-    version,
-  });
-}
-
-export function unavailableObservation({
-  outputLanguage,
-  root,
-  version,
-  problem,
-}) {
-  return {
-    state: "check-unavailable",
-    root,
-    version,
-    outputLanguage,
-    problems: [problem],
-  };
-}
-
-export function repositoryProblemObservation(observation, problems) {
-  return {
-    ...observation,
-    state: "repository-sync-required",
-    problems,
   };
 }
 

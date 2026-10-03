@@ -6,6 +6,7 @@ import {
 
 const ACTIVE_STATES = new Set(ACTIVE_IDEA_STATES);
 
+/** @pure */
 export function diagnosticProblem(diagnostic, language = "en-US") {
   const location = diagnostic.path ? ` (${diagnostic.path})` : "";
   return {
@@ -20,6 +21,7 @@ export function diagnosticProblem(diagnostic, language = "en-US") {
   };
 }
 
+/** @pure */
 export function diagnosticInstruction(diagnostic, language = "en-US") {
   return localize(
     language,
@@ -45,6 +47,7 @@ export function summarizeIdeas(ideas) {
   return { counts, activeIdeas };
 }
 
+/** @pure */
 export function resolvedConfiguration(config, preferredLanguage) {
   return {
     primaryRepository: config.primaryRepository,
@@ -53,6 +56,7 @@ export function resolvedConfiguration(config, preferredLanguage) {
   };
 }
 
+/** @pure */
 export function dialogueReadyObservation(observation, state, details = {}) {
   const { root, version, configuration, outputLanguage, problems } = observation;
   return {

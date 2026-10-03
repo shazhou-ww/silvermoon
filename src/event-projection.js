@@ -20,7 +20,7 @@ export class ProjectedReductionError extends Error {
 
 async function identity() {
   runtimeIdentity ??= Promise.all([
-    "event-projection.js", "idea-events.js", "event-stream.js", "ideas.js",
+    "event-projection.js", "idea-events.js", "event-stream.js", "event-digest.js", "ideas.js",
     "event-storage.js", "git.js", "git-snapshot.js", "idea-layout.js", "derived-cache.js",
   ]
     .map((name) => readFile(new URL(name, import.meta.url))))

@@ -46,6 +46,7 @@ test("runs fast layered validation in ordinary CI", async () => {
   assert.equal(manifest.scripts["check:skills:discover"], "npx skills add . --list");
   assert.deepEqual(CHECK_SCRIPTS, [
     "lint:markdown",
+    "check:pure",
     "check:quick",
     "test:integration",
     "pack:check",

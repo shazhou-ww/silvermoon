@@ -218,6 +218,7 @@ const CHINESE_LEDGER_TEMPLATE = `# Ledger
 - [ ] **D-AC01:** 标准标题
 `;
 
+/** @pure */
 export function ideaTemplates(contentLanguage) {
   const normalized = contentLanguage.toLowerCase();
   if (normalized === "zh" || normalized.startsWith("zh-")) {

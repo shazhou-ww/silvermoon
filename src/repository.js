@@ -5,6 +5,7 @@ const ENCODED_SEPARATOR = /%(?:2f|5c)/i;
 const CANONICAL_HOST = /^(?:[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?|\[[0-9a-f:.]+\])$/;
 const INVALID_BRANCH_CHARACTER = /[\u0000-\u0020\u007f~^:?*\[\\]/;
 
+/** @pure */
 export function canonicalRepository(value) {
   if (
     typeof value !== "string" ||
@@ -42,16 +43,19 @@ export function canonicalRepository(value) {
   return parsed.href;
 }
 
+/** @pure */
 export function validRepository(value) {
   return canonicalRepository(value) !== null;
 }
 
+/** @pure */
 export function repositoryNamespace(value) {
   const canonical = canonicalRepository(value);
   if (!canonical) throw new Error(`Invalid repository URL: ${String(value)}`);
   return createHash("sha256").update(canonical).digest("hex");
 }
 
+/** @pure */
 export function validBranchName(value) {
   if (
     typeof value !== "string" ||
@@ -77,6 +81,7 @@ export function validBranchName(value) {
   return structurallyValid;
 }
 
+/** @pure */
 export function effectiveSourceRepository(config, record) {
   return record.sourceRepository ?? config.primaryRepository;
 }

@@ -29,14 +29,17 @@ const REVISION_KEYS = [
   "deploymentAcceptedRevision",
 ];
 
+/** @pure */
 function ideaStatusError(message) {
   return new Error(`Invalid idea status: ${message}`);
 }
 
+/** @pure */
 function isMapping(value) {
   return value !== null && !Array.isArray(value) && typeof value === "object";
 }
 
+/** @pure */
 function isValidAlias(value) {
   return (
     typeof value === "string" &&
@@ -47,10 +50,12 @@ function isValidAlias(value) {
   );
 }
 
+/** @pure */
 export function isValidUlid(value) {
   return typeof value === "string" && ULID.test(value);
 }
 
+/** @pure */
 export function validateIdeaStatus(value, { objectIdLength } = {}) {
   if (!isMapping(value)) throw ideaStatusError("document must be a mapping");
   for (const key of Object.keys(value)) {
@@ -92,6 +97,7 @@ export function validateIdeaStatus(value, { objectIdLength } = {}) {
   return value;
 }
 
+/** @pure */
 export function serializeIdeaStatus(value, options) {
   validateIdeaStatus(value, options);
   const canonical = {
@@ -107,6 +113,7 @@ export function serializeIdeaStatus(value, options) {
   return stringifyCanonicalYaml(canonical);
 }
 
+/** @pure */
 export function parseIdeaStatus(source, options) {
   const normalizedSource = source.replaceAll("\r\n", "\n");
   let value;
@@ -122,6 +129,7 @@ export function parseIdeaStatus(source, options) {
   return value;
 }
 
+/** @pure */
 export function deriveIdeaState(revisions, status) {
   if (revisions === null || Array.isArray(revisions) || typeof revisions !== "object") {
     throw ideaStatusError("revisions must be a mapping");

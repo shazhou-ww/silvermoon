@@ -22,6 +22,7 @@ export const LEGACY_EVENT_TYPES = Object.freeze([
   ...Object.keys(LEGACY_FIELDS), "idea.abandoned", "idea.resumed",
 ]);
 export const IDEA_EVENT_TYPES = Object.freeze([...Object.values(EVENT_RENAMES), "ping", "pong"]);
+/** @pure */
 export function renameLegacyEvents(events) {
   return events.map((event) => {
     const type = EVENT_RENAMES[event.type];
@@ -52,6 +53,7 @@ export class IdeaEventFormatError extends Error {
   }
 }
 
+/** @pure */
 function keys(value, expected, label) {
   if (
     value === null || typeof value !== "object" || Array.isArray(value)
@@ -60,6 +62,7 @@ function keys(value, expected, label) {
   ) throw new IdeaEventFormatError(`${label} requires exactly ${expected.join(", ")}`);
 }
 
+/** @pure */
 export function validateIdeaEvent(event, options) {
   const legacy = options?.legacy === true;
   if (!(legacy ? LEGACY_EVENT_TYPES : IDEA_EVENT_TYPES).includes(event?.type)) {
@@ -91,6 +94,7 @@ export function validateIdeaEvent(event, options) {
   return event;
 }
 
+/** @pure */
 export function serializeIdeaEvent(event, options) {
   validateIdeaEvent(event, options);
   const value = { sequence: event.sequence, type: event.type };
@@ -100,11 +104,13 @@ export function serializeIdeaEvent(event, options) {
   return JSON.stringify(value);
 }
 
+/** @pure */
 export function serializeIdeaEvents(events, options) {
   if (!Array.isArray(events)) throw new IdeaEventFormatError("events must be an array");
   return events.map((event) => `${serializeIdeaEvent(event, options)}\n`).join("");
 }
 
+/** @pure */
 export function parseIdeaEvents(source, options) {
   let text;
   try {
@@ -129,6 +135,7 @@ export function parseIdeaEvents(source, options) {
   });
 }
 
+/** @pure */
 export function initialEventState(ideaId, options) {
   if (!isValidUlid(ideaId)) throw new IdeaEventFormatError("invalid idea identity");
   return options?.legacy
@@ -136,6 +143,7 @@ export function initialEventState(ideaId, options) {
     : { status: { id: ideaId }, sequence: 0, interaction: { messages: [], lastSignal: null } };
 }
 
+/** @pure */
 export function reduceIdeaEvent(before, event, options) {
   validateIdeaEvent(event, options);
   const reject = (code) => ({ ok: false, code, sequence: event.sequence });
@@ -171,6 +179,7 @@ export function reduceIdeaEvent(before, event, options) {
     : { status, sequence: event.sequence, interaction: before.interaction } };
 }
 
+/** @pure */
 export function replayIdeaEvents(ideaId, events, options) {
   let state = initialEventState(ideaId, options);
   for (const event of events) {
@@ -182,6 +191,7 @@ export function replayIdeaEvents(ideaId, events, options) {
 }
 
 // The migration order is a representation order, not a reconstructed chronology.
+/** @pure */
 export function eventsFromStatus(status, options) {
   validateIdeaStatus(status, options);
   const events = [];
@@ -196,6 +206,7 @@ export function eventsFromStatus(status, options) {
   return events;
 }
 
+/** @pure */
 export function checkEventChange(ideaId, baseSource, candidateSource, options) {
   // Format errors deliberately do not become reduction failures or repair permission.
   function inspect(source, stage) {

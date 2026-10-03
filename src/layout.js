@@ -11,6 +11,7 @@ export const GUIDANCE_PHASES = Object.freeze(
   Object.keys(PHASE_GUIDANCE_PATHS),
 );
 
+/** @pure */
 export function phaseGuidancePath(phase) {
   const path = PHASE_GUIDANCE_PATHS[phase];
   if (path === undefined) {
@@ -19,6 +20,7 @@ export function phaseGuidancePath(phase) {
   return path;
 }
 
+/** @pure */
 export function ideaPaths(id) {
   const ideaPath = `${IDEAS_ROOT}/${id}`;
   const outerPath = `${ideaPath}/outer`;

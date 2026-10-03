@@ -3,14 +3,17 @@ export const OUTPUT_LANGUAGES = Object.freeze(["en-US", "zh-CN"]);
 
 const OUTPUT_LANGUAGE_SET = new Set(OUTPUT_LANGUAGES);
 
+/** @pure */
 export function isChinese(language) {
   return language?.toLowerCase().startsWith("zh") ?? false;
 }
 
+/** @pure */
 export function localize(language, english, chinese) {
   return isChinese(language) ? chinese : english;
 }
 
+/** @pure */
 export function canonicalizeLanguageTag(value) {
   if (typeof value !== "string" || value.length === 0 || value.trim() !== value) {
     throw new Error("language tag must be a non-empty trimmed string");
@@ -24,6 +27,7 @@ export function canonicalizeLanguageTag(value) {
   }
 }
 
+/** @pure */
 export function isCanonicalLanguageTag(value) {
   try {
     return canonicalizeLanguageTag(value) === value;
@@ -32,6 +36,7 @@ export function isCanonicalLanguageTag(value) {
   }
 }
 
+/** @pure */
 export function canonicalizeOutputLanguage(value) {
   let canonical;
   try {
@@ -54,6 +59,7 @@ export function canonicalizeOutputLanguage(value) {
   return canonical;
 }
 
+/** @pure */
 export function resolveLanguage({ idea, project, global } = {}) {
   if (idea !== undefined) return { tag: idea, source: "idea" };
   if (project !== undefined) return { tag: project, source: "project" };
@@ -61,6 +67,7 @@ export function resolveLanguage({ idea, project, global } = {}) {
   return { tag: DEFAULT_LANGUAGE, source: "default" };
 }
 
+/** @pure */
 export function resolveOutputLanguage({ content, override } = {}) {
   if (override !== undefined) {
     return {

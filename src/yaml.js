@@ -1,5 +1,6 @@
 import { isAlias, isMap, parseDocument, stringify, visit } from "yaml";
 
+/** @pure */
 function unsupportedFeature(document) {
   if (document.commentBefore || document.comment) return true;
   if (document.directives?.docStart || document.directives?.docEnd) return true;
@@ -37,6 +38,7 @@ function unsupportedFeature(document) {
   return unsupported;
 }
 
+/** @pure */
 export function parseStrictYaml(source) {
   const document = parseDocument(source, {
     maxAliasCount: 0,
@@ -56,6 +58,7 @@ export function parseStrictYaml(source) {
   return document.toJS({ maxAliasCount: 0 });
 }
 
+/** @pure */
 export function stringifyCanonicalYaml(value) {
   return stringify(value, {
     defaultKeyType: "PLAIN",

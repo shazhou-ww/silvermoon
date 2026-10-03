@@ -17,7 +17,8 @@ import {
 test("selects exact scenario sets without changing release compatibility", async () => {
   assert.equal(selectChecks([]), CHECK_SCRIPTS);
   assert.equal(selectChecks(["--tier", "release"]), CHECK_SCRIPTS);
-  assert.deepEqual(selectChecks(["--tier", "sanity"]), ["check:syntax", "test:sanity"]);
+  assert.deepEqual(selectChecks(["--tier", "sanity"]), ["check:syntax", "check:pure", "test:sanity"]);
+  assert.ok(CHECK_SCRIPTS.includes("check:pure"));
   assert.deepEqual(selectChecks(["--tier", "commit"]), [
     "check:sanity", "test:contract", "lint:markdown", "check:skills:local",
     "test:smoke", "check:staged", "check:diff",

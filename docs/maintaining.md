@@ -29,6 +29,7 @@ Use the smallest check that covers a change:
 ```sh
 pnpm sync:skills       # refresh the generated universal skill copy
 pnpm check:sanity      # offline pure logic and lightweight contracts
+pnpm check:pure        # JSDoc @pure constraints and functional-core imports
 pnpm check:commit      # worktree tests plus staged metadata validation
 pnpm lint:markdown     # Markdown lint (contract tests check links)
 pnpm test              # complete unit/runtime and repository contracts
@@ -44,7 +45,7 @@ pnpm check:skills      # local consistency and external skill discovery
 
 | Scenario | Responsibility |
 | --- | --- |
-| Edit / Agent iteration | `check:sanity`: CLI syntax, pure unit tests, schema and API contracts; add change-specific tests |
+| Edit / Agent iteration | `check:sanity`: CLI syntax, @pure checks, pure unit tests, schema and API contracts; add change-specific tests |
 | Before commit | `check:commit`: sanity, local contracts and Markdown, skill consistency, Git/CLI smoke, whitespace, staged Silvermoon metadata |
 | Ordinary CI | Triggered on pull request, daily scheduled run, or manual dispatch. Unconditional sanity then complete unit/runtime on Ubuntu/Windows/macOS, Node 22/24; complete contracts and integration, static checks and skill discovery |
 | Before delivery / release | `check` or `check:release`: every release-grade gate including package contents, installed-package E2E and external discovery |
@@ -64,6 +65,42 @@ sanity I/O boundary: it intentionally permits runtime tests. Tests that call
 real Git, even only to compare pure logic with Git's behavior, belong in
 `test/runtime`, not `test/unit`. Keep their assertions and platform coverage
 when splitting mixed-cost files; never disable the sanity guard to admit them.
+
+### Functional boundaries and pure functions
+
+Keep public export assembly in `src/index.js` and preserve the existing command
+and Agent package entrypoints. Internal use cases receive narrow sets of function
+ports; they must not call another command, import the public barrel, or depend
+on CLI/presentation. Shared repository readiness belongs outside navigation.
+
+Use JSDoc `@pure` on verified functions, retaining ordinary business names:
+
+```js
+/** @pure */
+export function selectIdea(ideas, selector) {
+  return ideas.find(({ id }) => id === selector) ?? null;
+}
+```
+
+Pure functions do not mutate their inputs or shared state, access real I/O,
+read implicit time/randomness/environment, or invoke unconfirmed effects.
+Locally owned data may be mutated. Injecting a reader or callback does not make
+a function pure. Keep `@pure` separate from bundler `@__PURE__` annotations.
+
+`pnpm check:pure` uses the existing TypeScript AST and lexical symbols to check
+annotations, rule-module dependencies, known external state, calls/callbacks,
+and direct or borrowed-alias mutations. Reviewed external functions and
+standard-library methods are explicitly listed in `scripts/pure-check.mjs`.
+Do not add an entire package or arbitrary method to bypass a failure.
+The checker also runs in sanity and release checks; contract tests check the
+full source dependency graph and application boundaries.
+
+This is a constraint checker, not a proof of arbitrary JavaScript purity:
+dynamic object types, reflective access, runtime monkey-patching, third-party
+internals and complex alias flows still require review. Pair it with the sanity
+I/O guard, immutable-input tests and behavioral tests. The Markdown core takes
+explicit time and local calendar facts; the public renderer alone reads the
+default clock/timezone, preserving existing local-date behavior.
 
 `check:commit` always prints its scope: tests validate the **worktree**, while
 `silvermoon check --staged` validates **staged Silvermoon metadata only**.

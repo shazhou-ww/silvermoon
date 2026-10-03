@@ -1,4 +1,4 @@
-import { createCommandRun } from "./domain.js";
+import { createCommandRun } from "./command-runtime.js";
 import {
   ideaInventoryItem,
   normalizeIdeaQuery,
@@ -108,7 +108,9 @@ async function queryObservedInventory({
   );
 }
 
-export async function listIdeas({
+const LISTIDEAS_PORTS = Object.freeze({ createCommandRun, observeSnapshot });
+
+export async function listIdeasUseCase({
   all,
   createdBefore,
   createdSince,
@@ -120,7 +122,8 @@ export async function listIdeas({
   sort,
   states,
   userHome,
-} = {}) {
+} = {}, ports = LISTIDEAS_PORTS) {
+  const { createCommandRun, observeSnapshot } = ports;
   const canonicalLanguage = language === undefined
     ? undefined
     : canonicalizeOutputLanguage(language);
@@ -193,4 +196,8 @@ export async function listIdeas({
     summary: inventory.summary,
     ideas: inventory.ideas,
   }, {}, { factType: "ideas.listed" });
+}
+
+export async function listIdeas(options = {}) {
+  return listIdeasUseCase(options);
 }

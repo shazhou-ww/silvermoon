@@ -12,7 +12,7 @@ import {
 } from "./language.js";
 import { normalizeIdeaQuery } from "./idea-query.js";
 import { listIdeas } from "./list-ideas.js";
-import { checkRepository } from "./index.js";
+import { checkRepository } from "./check-repository.js";
 import { createIdea } from "./create-idea.js";
 import { eventCommand } from "./event-command.js";
 import { renderResponse } from "./response.js";

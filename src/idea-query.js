@@ -12,13 +12,19 @@ const RFC3339 =
   /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?(Z|[+-](\d{2}):(\d{2}))$/;
 const CROCKFORD_BASE32 = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
 
+/** @pure */
 function usageError(message) {
   const error = new Error(message);
   error.exitCode = 2;
   return error;
 }
 
-function normalizeStates(states, all) {
+/** @pure */
+function normalizeStates(states, all, {
+  ideaStates: IDEA_STATES,
+  activeStates: ACTIVE_IDEA_STATES,
+  queryStates: QUERY_STATES,
+}) {
   if (all !== undefined && typeof all !== "boolean") {
     throw usageError("all must be a boolean");
   }
@@ -46,6 +52,7 @@ function normalizeStates(states, all) {
   return IDEA_STATES.filter((state) => selected.has(state));
 }
 
+/** @pure */
 function normalizeQueryText(query) {
   if (query === undefined || query === null) return null;
   if (typeof query !== "string" || query.trim().length === 0) {
@@ -54,6 +61,7 @@ function normalizeQueryText(query) {
   return query.trim();
 }
 
+/** @pure */
 function normalizeTimestamp(value, name) {
   if (value === undefined || value === null) return null;
   if (typeof value !== "string") {
@@ -96,6 +104,7 @@ function normalizeTimestamp(value, name) {
   return new Date(timestamp).toISOString();
 }
 
+/** @pure */
 function normalizeSort(sort) {
   const value = sort ?? "newest";
   if (typeof value !== "string" || !SORTS.has(value)) {
@@ -104,6 +113,7 @@ function normalizeSort(sort) {
   return value;
 }
 
+/** @pure */
 function normalizeLimit(limit) {
   if (limit === undefined || limit === null) return null;
   const value = typeof limit === "number"
@@ -117,7 +127,8 @@ function normalizeLimit(limit) {
   return value;
 }
 
-export function normalizeIdeaQuery({
+/** @pure */
+export function normalizeIdeaQueryCore({
   all,
   createdBefore,
   createdSince,
@@ -125,9 +136,9 @@ export function normalizeIdeaQuery({
   query,
   sort,
   states,
-} = {}) {
+} = {}, facts) {
   const normalized = {
-    states: normalizeStates(states, all),
+    states: normalizeStates(states, all, facts),
     query: normalizeQueryText(query),
     createdSince: normalizeTimestamp(createdSince, "createdSince"),
     createdBefore: normalizeTimestamp(createdBefore, "createdBefore"),
@@ -144,6 +155,7 @@ export function normalizeIdeaQuery({
   return normalized;
 }
 
+/** @pure */
 export function ideaCreatedAt(id) {
   if (!isValidUlid(id)) throw new Error(`Cannot decode invalid idea ULID: ${id}`);
   let timestamp = 0;
@@ -153,12 +165,14 @@ export function ideaCreatedAt(id) {
   return new Date(timestamp).toISOString();
 }
 
+/** @pure */
 function markdownText(node) {
   if (node.type === "text" || node.type === "inlineCode") return node.value;
   if (node.type === "image") return node.alt ?? "";
   return (node.children ?? []).map(markdownText).join("");
 }
 
+/** @pure */
 export function extractIdeaTitle(source) {
   if (typeof source !== "string") {
     throw new TypeError("Idea document source must be a string");
@@ -171,6 +185,7 @@ export function extractIdeaTitle(source) {
   return title.length === 0 ? undefined : title;
 }
 
+/** @pure */
 export function ideaInventoryItem(idea, title) {
   const item = {
     id: idea.id,
@@ -182,12 +197,14 @@ export function ideaInventoryItem(idea, title) {
   return item;
 }
 
+/** @pure */
 function compareText(left, right) {
   return left < right ? -1 : left > right ? 1 : 0;
 }
 
-export function queryIdeaInventory(items, input) {
-  const query = normalizeIdeaQuery(input);
+/** @pure */
+export function queryIdeaInventoryCore(items, input, facts) {
+  const query = normalizeIdeaQueryCore(input, facts);
   const states = new Set(query.states);
   const needle = query.query?.toLowerCase();
   const createdSince = query.createdSince === null
@@ -212,7 +229,7 @@ export function queryIdeaInventory(items, input) {
   });
   const direction = query.sort === "newest" ? -1 : 1;
   filtered.sort((left, right) => direction * compareText(left.id, right.id));
-  const counts = Object.fromEntries(IDEA_STATES.map((state) => [state, 0]));
+  const counts = Object.fromEntries(facts.ideaStates.map((state) => [state, 0]));
   for (const idea of filtered) counts[idea.state] += 1;
   const ideas = query.limit === null
     ? filtered
@@ -227,4 +244,20 @@ export function queryIdeaInventory(items, input) {
     },
     ideas,
   };
+}
+
+function queryStateFacts() {
+  return {
+    ideaStates: [...IDEA_STATES],
+    activeStates: [...ACTIVE_IDEA_STATES],
+    queryStates: new Set(QUERY_STATES),
+  };
+}
+
+export function normalizeIdeaQuery(input = {}) {
+  return normalizeIdeaQueryCore(input, queryStateFacts());
+}
+
+export function queryIdeaInventory(items, input) {
+  return queryIdeaInventoryCore(items, input, queryStateFacts());
 }
