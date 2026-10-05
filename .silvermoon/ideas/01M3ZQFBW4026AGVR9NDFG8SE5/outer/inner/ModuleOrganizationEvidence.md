@@ -214,3 +214,8 @@ npx／junction 路径共用同一判定。`bin/silvermoon.js` 已规范化为纯
 | `pnpm test:e2e` | 通过；本地 tarball 的两个 npm exec 命令均有输出且入口字节不变 |
 | `git ls-files --eol bin/silvermoon.js` | `i/lf w/lf attr/text eol=lf` |
 | `pnpm check` | 通过，全部 7 个 release-grade gate 完成 |
+
+修复提交 `140f3f58c41efe939c9e083b8e3a8f57f744d48a` 已通过普通非强制 push
+同步 `origin/main`，刷新后确认 primary 包含该提交。worktree、staged metadata、
+`pnpm check:commit` 和完整 release-grade check 均针对该代码候选通过；最终准确
+implementationRevision 以本证据收尾提交同步后的最新 `whats-next` 为准。
