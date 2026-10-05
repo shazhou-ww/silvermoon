@@ -17,7 +17,7 @@ daemon 的生产路径不得调用 `event replay`。发现此类调用需求时�
 项目 V2 事件流由 [segmented-event-streams](../../../../01M3Y5QQ2ATPT8XWH3RCPZTHT8/outer/inner/ideal/Idea.md)
 定义为 `events/` folder、每段至多 1000 条。其准确 head/cursor 是逻辑字节长度
 与完整规范 folder digest；sequence 不是内容 HEAD。daemon 不直接读写该目录，
-而通过目标项目版本的权威运行时边界操作。
+而通过 HEADQUARTER Silvermoon 按目标 repository schema 建立的权威运行时边界操作。
 
 ## 生产交互
 
