@@ -9,26 +9,50 @@
 daemon 的生产路径不得调用 `event replay`。发现此类调用需求时，应先识别真正
 缺少的能力，而不是把调试命令固化为跨进程依赖。
 
+设备治理由 Agent SDK 持久 session 承载，不建立治理 event stream，也不调用
+项目 CLI replay 还原治理对话。upstream 保留未确认治理请求并以稳定 requestId
+重投；daemon 保存 session binding 和轻量去重/投递回执。详见
+[Governance-sessions.md](./Governance-sessions.md)。
+
+项目 V2 事件流由 [segmented-event-streams](../../../../01M3Y5QQ2ATPT8XWH3RCPZTHT8/outer/inner/ideal/Idea.md)
+定义为 `events/` folder、每段至多 1000 条。其准确 head/cursor 是逻辑字节长度
+与完整规范 folder digest；sequence 不是内容 HEAD。daemon 不直接读写该目录，
+而通过目标项目版本的权威运行时边界操作。
+
 ## 生产交互
 
-正常的上游指令投递遵循以下顺序：
+针对 idea event stream 的上游输入携带它所依据的准确 stream HEAD。设备治理输入
+不携带治理 HEAD，而由 upstream 按稳定 requestId 保留和重投。idea 输入处理遵循
+以下顺序：
 
-1. daemon 使用已观察的日志头构造新交互事件。
-2. daemon 直接请求项目版本 Silvermoon 乐观追加该事件，不先发送 `reply`，
-   也不先执行 `event replay`。
-3. 追加成功后，以项目事件序号确认持久接收；送达、处理和 `pong` 继续作为
-   独立事实观察。
-4. 只有追加被乐观锁拒绝时，daemon 才刷新权威日志头和当前投影并协调冲突。
-5. 若等价事件已存在，则按幂等结果处理；若指令仍适用，则基于新日志头重试；
-   若出现语义冲突，则显式交还，不盲目覆盖或循环重试。
+1. daemon 将输入的 `expectedHead` 原样交给对应 idea 流权威追加接口。
+2. 权威接口原子地比较 `{ length, folderDigest }` 并追加规范事件。正常路径不先
+   查询状态，也不先执行 `event replay`。
+3. 若准确前缀之后已存在完全相同的规范事件，可确认幂等命中并返回原位置；
+   相同 HEAD 本身不代表相同消息。返回 sequence 供排序，folder HEAD 供内容身份。
+4. 若 expected HEAD 已陈旧且不能证明完全相同的事件已记录，返回 `stale` 与可用的
+   当前 HEAD，直接交还上游。daemon 不刷新 HEAD 后替原输入重试，也不为该输入
+   生成/投递下游工作；此前已合法开始的工作继续。
+5. appended/idempotent 确认之后，Silvermoon 再按当前投影生成 handoff，daemon
+   才将新 instruction 投递给 recipient。输入和生成的 instruction 不一一对应。
+
+HEAD 是已交付分段事件流定义的长度 + folder digest；digest 覆盖全部规范 segment，
+不只是 tail 或 sequence。未知追加结果通过观察同一准确前缀及其后规范事件解决；
+不得用正文相似或换 HEAD 的重试猜测幂等。旧 `pong` 不能自动扩大成对新 `ping`
+的回复。事件幂等命中也不证明 Agent instruction 未投递，不能触发自动重发。
 
 生产协议应直接提供所需能力：
 
-- 以 expected head 乐观追加事件；
-- 读取当前权威投影和日志头；
-- 从持久游标之后订阅或读取增量事件；
+- 以 `{ expectedLength, expectedFolderDigest }` 乐观追加事件；
+- 读取当前权威投影与准确 folder HEAD；
+- 按 `{ afterLength, afterFolderDigest }` 从持久游标继续读取增量事件；
 - 返回可区分 stale head、幂等命中和语义冲突的结构化结果；
 - 在连接丢失或发送结果不确定时重新观察事实，而不是猜测成功或重复副作用。
+
+前置实现提供了 cursor 增量 replay CLI，但它仍位于 `event replay` 诊断命令下。
+daemon 生产路径不得启动该 CLI 子进程；项目 runtime 必须暴露满足同一 prefix
+校验语义的生产 `readSince` 能力或专用 runtime 操作。不得因已有 cursor 参数就
+把诊断命令改作生产接口。
 
 ## 恢复边界
 
@@ -36,7 +60,16 @@ daemon 重启或重连时，从持久消费游标、当前项目投影、增量�
 状态恢复。恢复的目标是重建 daemon 的调度观察，不是让 daemon 重新归约全部历史，
 更不是重新执行历史副作用。
 
-如果恢复流程认为必须调用 `event replay`，应暂停实现并重新审视：
+idea projection 的 snapshot `{ length, digest }` cursor 和持久消费 cursor 之后的
+增量流必须衔接一致；重复事件按准确流位置处理，游标失效或缺口须显式报告与协调，
+不静默漏掉事件或退回生产 replay。session 存在或 idle 不等于旧指令未执行；缺失的正式回复也不能
+被假定可重放。启动前尚无已观察 head 时先初始化观察，不伪造 head 发起追加。
+
+治理 session 恢复依赖 Agent SDK 的持久 session、upstream 未确认请求重投和本地
+requestId receipts，不依赖 event replay。若实现声称治理对话恢复需要治理 event
+stream，应先证明 Agent session/upstream 协议不足以提供所需保证。
+
+如果 idea 恢复流程认为必须调用 `event replay`，应暂停实现并重新审视：
 
 - 是否缺少读取当前 projection 的运行时操作；
 - 是否缺少按 cursor 继续消费事件的能力；
