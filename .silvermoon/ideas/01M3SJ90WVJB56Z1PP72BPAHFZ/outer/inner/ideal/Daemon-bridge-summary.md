@@ -2,13 +2,13 @@
 
 ## 目标
 
-一个常驻 daemon 连接上游，调用设备上的 Agent，并通过设备 HEADQUARTER 统一提供的
-Silvermoon runtime 处理各项目 idea。daemon 是投递与恢复桥梁，不是另一套项目状态机。
+一个常驻 daemon 连接上游，调用设备上的 Agent，并通过各项目自己的 Silvermoon
+运行时处理 idea。daemon 是投递与恢复桥梁，不是另一套项目状态机。
 
 ```text
 上游 ⇄ daemon ⇄ Agent
                  │
-       HEADQUARTER Silvermoon
+          项目版 Silvermoon
 ```
 
 ## 三个职责
@@ -17,9 +17,8 @@ Silvermoon runtime 处理各项目 idea。daemon 是投递与恢复桥梁，不�
   观察结果，不解释项目生命周期。
 - **设备治理 session**：每台设备唯一，由 Agent SDK 持久化。它负责设备维护以及
   其他项目的接入、clone、onboarding 和 idea 管理。治理对话不另存为事件流。
-- **HEADQUARTER Silvermoon 与 idea Agent**：设备统一 binary 按目标 repository
-  声明的 schema 决定 idea 的下一步并写入 lifecycle events；idea Agent 执行生成的
-  instruction。canonical skill 同样由 HEADQUARTER 提供。
+- **项目 Silvermoon 与 idea Agent**：项目版 Silvermoon 决定 idea 的下一步并写入
+  lifecycle events；idea Agent 执行生成的 instruction。
 
 ## 设备与项目
 
@@ -46,9 +45,6 @@ World 就是这台设备。需要持续、可审阅或可重复的维护工作�
 - 治理对话由 Agent SDK session 保存；项目状态由各自的 V2 idea event streams 保存。
   每段最多 1000 条。daemon 不复制治理 transcript，也不通过 `event replay` CLI
   查询生产状态。
-- managed repository 不安装自己的 Silvermoon binary 或 skill；跨项目兼容边界是
-  显式 schema。新 binary 支持声明范围内的旧 schema 并建议升级最新 schema，但普通
-  daemon 操作不静默迁移 repository。
 
 ## 不做什么
 

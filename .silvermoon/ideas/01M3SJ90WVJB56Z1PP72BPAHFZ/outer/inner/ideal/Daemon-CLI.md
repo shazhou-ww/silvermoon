@@ -70,8 +70,7 @@ daemon 全局配置与项目配置是独立的配置类型：
 - daemon 配置描述设备身份、连接端点、托管根目录和下游适配器，
   由 daemon 校验和解释；动态项目登记单独维护；
 - 项目 `.silvermoon/config.yaml` 描述项目自己的 primary、schema 等规则，
-  由 HEADQUARTER Silvermoon binary 按其声明的 schema 校验和解释，daemon 不复制
-  这些字段或覆盖项目语义；
+  仍由项目版本 Silvermoon 校验和解释，daemon 不复制这些字段或覆盖项目语义；
 - 既有用户 `~/.config/silvermoon/config.yaml` 保留语言偏好用途，不在其中加入
   daemon 字段。daemon 配置无效不应影响普通项目 CLI。
 
@@ -177,7 +176,4 @@ session 状态，不调用 `event replay`。
   endpoint 由所选配置决定，日志格式固定；
 - `replay` 或“从头重放”：不是 daemon 的生产恢复接口；
 - 通过 CLI 直接发送 `ping` 或伪造 `pong`：消息经认证的上游协议进入；
-- managed repository 自带 Silvermoon binary 或 skill：设备统一使用 HEADQUARTER
-  安装的版本，repository 只声明 schema 并保存项目事实；
-- 普通 daemon 操作静默升级 schema：新 binary 兼容受支持旧 schema 并建议升级，
-  迁移必须通过显式、可验证的 repository 变更完成。
+- 全局 Silvermoon 版本替代项目版本：每个项目仍由自己的运行时解释和追加事件。

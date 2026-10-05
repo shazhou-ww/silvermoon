@@ -13,20 +13,19 @@ Silvermoon 包内的设备级 daemon 子命令，完成跨项目持续调度与�
 ## 背景
 
 当前 Agent 同时承担沟通、调度和具体执行，循环行为过度依赖 Agent 的临场
-判断。2026-09-30 至 2026-10-05 的讨论确定了角色拆分、设备级 daemon、
-HEADQUARTER 统一运行时、schema 兼容边界和本地事件驱动的方向；随后将三个
-可独立验收的基础项拆出。
+判断。2026-09-30 至 2026-10-01 的讨论确定了角色拆分、设备级 daemon、
+项目版本隔离和本地事件驱动的方向；随后将三个可独立验收的基础项拆出。
 
 期望的职责关系是：
 
 ```text
 人 <-> 上游沟通者 Agent <-> Silvermoon daemon <-> 下游执行者 Agent
                                   |
-                       HEADQUARTER Silvermoon
+                         项目版本 Silvermoon
 ```
 
-上游理解意图并取得人类决策，下游执行工作并求助，HEADQUARTER 提供的
-Silvermoon 判断下一步，设备 daemon 落实持续调度。该协调是上下游执行之间的桥梁，
+上游理解意图并取得人类决策，下游执行工作并求助，项目版本 Silvermoon
+判断下一步，设备 daemon 落实持续调度。该协调是上下游执行之间的桥梁，
 不是另一套基于 primary 的跨设备任务系统。
 
 ## 前置 idea 与责任边界
@@ -61,9 +60,7 @@ event stream；治理输入可靠性由 upstream requestId 重投与 daemon rece
 ### 项目运行时与 Copilot 适配
 
 [project-agent-runtime](../../../../01M3SK3CGZF47A36D2GWN8BFPC/outer/inner/ideal/Idea.md)
-负责进程隔离协议、项目语义自治及 Copilot CLI 的真实 session 能力。这里的
-“项目运行时”能力由设备 HEADQUARTER 安装的 Silvermoon binary 提供，并针对所选
-repository 的 schema 执行；不要求每个 managed repository 安装自己的 binary。
+负责进程隔离协议、项目语义自治及 Copilot CLI 的真实 session 能力。
 能力验证可在该项获准后与前两项并行开展，最终验收依赖真实事件与交互协议，
 不依赖常驻 daemon。
 
@@ -91,19 +88,11 @@ repository 的 schema 执行；不要求每个 managed repository 安装自己�
 这台设备上的真实效果。无需每个项目维持治理 session 或常驻 daemon；一个 idea
 的指令也不隐式扩展成跨项目复合任务。
 
-daemon 与 Agent 统一使用设备 HEADQUARTER 安装的 Silvermoon binary 和 canonical
-skill，不推荐或要求 managed repository 安装自己的 Silvermoon package、binary
-或 skill 副本。repository 只持久化项目配置、contracts、events 及显式 schema
-version；HEADQUARTER runtime 针对目标 repository 的 schema 解释并操作这些事实。
+daemon 使用前置运行时协议调用各项目独立版本，不要求包版本或 schema
+相同、相互兼容或同步升级。协议不支持或运行时不可用时明确报告，
+不静默代用全局版本的解释逻辑。
 
-binary 版本不是跨 repository 的兼容边界，schema 才是。一个 repository 候选中的
-配置、contracts 和 events 必须符合其声明的同一 schema；不同 repository 可暂时
-处于不同的受支持 schema version。新 Silvermoon binary 必须向后兼容其声明支持的
-旧 schema，并明确建议将旧 schema 升级到当前最新版本；迁移必须是显式、可验证的
-repository 变更，不能在 daemon 读取、路由或追加时静默发生。遇到更新于当前 binary
-或已不受支持的 schema 时明确报告并停止该项目操作，不猜测、不降级解释。
-
-HEADQUARTER runtime 决定正常流程的下一步、继续或交还；daemon 执行结构化结果，
+项目版本决定正常流程的下一步、继续或交还；daemon 执行结构化结果，
 管理本机调度、会话路由及运行故障，不维护第二套生命周期状态机。
 不同项目和工作区不能串线；同一 idea 不因新消息到达就另起并行执行者。
 
@@ -161,8 +150,7 @@ Agent transcript 提供治理上下文，不替代 idea lifecycle events，也�
 
 ### 项目运行时的生产协议
 
-daemon 使用已观察的 authoritative head 直接向 HEADQUARTER Silvermoon runtime
-中为目标 repository schema 建立的项目边界
+daemon 使用已观察的 authoritative head 直接向目标 idea 的项目版本 Silvermoon
 发起 expected-head optimistic append，不在每次正常追加前查询状态，更不调用
 `silvermoon event replay`。head 来自初始化观察、追加回执或增量事件；daemon
 保存 head 和消费位置是调度元数据，不意味着自行解释项目生命周期。治理 session
@@ -203,7 +191,7 @@ idea 发送结果不确定时，通过当前 projection/head、增量事件和�
 ### 不中断交互的确定性循环
 
 取下一步、执行、重新观察和交还由 Silvermoon 的 harness 组织，不再由下游
-Agent 独自决定整个 `whats-next` 循环。每轮按目标 repository 的 schema 与项目规则推进，
+Agent 独自决定整个 `whats-next` 循环。每轮按项目版本规则推进，
 遇到求助或运行故障明确交还，不以无进展的无限重试代替处理。
 
 上游随时可以追加 `ping`，包括下游运行期间；不得重新引入“先停止并确认”
@@ -246,7 +234,7 @@ session。idea 正常追加不预先调用查询或 `event replay`。生产恢�
 当前 projection 与 cursor 增量读取；调试 replay 不成为生产协议。详细边界见
 [Replay-boundary.md](./Replay-boundary.md)。
 
-daemon、HEADQUARTER Silvermoon runtime 与下游 Agent 的交互顺序见
+daemon、项目版本 Silvermoon 与下游 Agent 的交互顺序见
 [端到端时序图](./Daemon-runtime-sequence.md)。该图用于表达责任边界和
 恢复分支；尚未由前置实现提供的 daemon 动作映射及投递恢复事实仍需实施阶段细化。
 
@@ -269,10 +257,7 @@ daemon 重启、崩溃或重新连接后，结合本地事件和真实 session �
 ### 可独立验收的端到端集成
 
 在同一设备上通过一个 daemon 连接多个项目和真实 Copilot session，证明
-HEADQUARTER runtime 按各 repository 声明的受支持 schema 解释流程、消息按 idea
-和工作区正确路由、持续循环能够继续和求助。验收同时证明 managed repository
-无需安装自身 Silvermoon binary 或 skill，旧 schema 可由新 binary 正确处理并收到
-升级建议，而 schema 迁移不会在普通 daemon 操作中静默发生。
+项目版本独立解释流程、消息按 idea 和工作区正确路由、持续循环能够继续和求助。
 同时证明运行中追加指令、Git 阻塞诊断以及 daemon 重启不会丢失待处理指令，
 也不会静默重复不确定的执行。
 
@@ -288,15 +273,14 @@ HEADQUARTER runtime 按各 repository 声明的受支持 schema 解释流程、�
 - 设备/项目长期治理 session、独立治理交互流及固定条数分段。
 - daemon root 隔离、动态项目登记、稳定 projectKey 与显式 URL 迁移。
 - daemon 运行故障和重启恢复，以及与真实 session 状态的协调。
-- 端到端协作场景、相应帮助、文档和由 HEADQUARTER 提供的 canonical skill。
+- 端到端协作场景、相应帮助、文档和 skill。
 - 以 `0.4.0` 为目标的整体交付准备；真实发布仍遵循独立授权流程。
 
 ### 范围外
 
 - 复制前置项的事件模型、迁移、交互协议和 Agent 适配器；集成所需的生产接口
   与治理路由扩展属于范围内，但须明确兼容边界，不宣称前置实现已具备它们。
-- 独立 daemon 产品、每项目常驻 daemon、每项目安装 Silvermoon binary/skill，
-  或强制所有 repository 同步迁移 schema。
+- 独立 daemon 产品、每项目常驻 daemon 或强制同步项目版本。
 - 跨设备锁、中心任务协调服务或独立于 Git primary 的共享事实权威。
 - 完整执行日志、全部 Agent 产品适配、聊天 UI 或操作系统服务安装器。
 - 严格轮次锁、自动人类决策或把前置 idea 的完成直接当成本项验收。
@@ -304,11 +288,9 @@ HEADQUARTER runtime 按各 repository 声明的受支持 schema 解释流程、�
 
 ## 约束
 
-- 项目 facts 与声明的 schema 持有正常流程语义，HEADQUARTER runtime 负责解释；
-  daemon 只使用结构化调度协议，不复制流程规则。
-- 项目事件的校验和追加归 HEADQUARTER Silvermoon 针对目标 repository schema
-  暴露的权威生产接口；daemon 不直接
-  修改事件流目录。生产路径不调用 `event replay` 子命令；HEADQUARTER runtime 可通过其
+- 项目版本持有正常流程规则，daemon 只使用结构化调度协议；两者进程隔离。
+- 项目事件的校验和追加归项目版本 Silvermoon 的权威生产接口；daemon 不直接
+  修改事件流目录。生产路径不调用 `event replay` 子命令；项目版本可通过其
   受支持的 CLI/运行时边界执行追加。Silvermoon 内部复用 reducer/projector，
   不以 CLI 子进程调用自己。
 - `event replay` 不属于 daemon 的生产协议；若生产路径需要调用它，先审视缺失的

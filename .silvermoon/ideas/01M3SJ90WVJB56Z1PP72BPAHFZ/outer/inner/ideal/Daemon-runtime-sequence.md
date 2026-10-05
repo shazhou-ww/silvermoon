@@ -1,7 +1,7 @@
 # daemon 与项目运行时交互时序
 
 本图描述 daemon 的目标编排方式，不代表设备级 daemon 已实现。图中只保留四个
-进程级主体：上游、daemon、HEADQUARTER Silvermoon runtime、下游 Agent。项目注册、worktree
+进程级主体：上游、daemon、项目版本 Silvermoon、下游 Agent。项目注册、worktree
 解析、运行时适配器和网络中继均视为各自进程内部的实现细节。
 
 本图的上游路由为 `{ scope: "idea", projectUrl, ideaId }`；
@@ -29,7 +29,7 @@ sequenceDiagram
     autonumber
     actor Upstream as 上游
     participant Daemon as Silvermoon daemon
-    participant Silvermoon as HEADQUARTER Silvermoon
+    participant Silvermoon as 项目版本 Silvermoon
     participant Downstream as 下游 Agent
 
     Upstream->>Daemon: 投递 ping：idea route、expectedHead(length,digest)、message、requestId
@@ -149,7 +149,7 @@ sequenceDiagram
     autonumber
     actor Upstream as 上游
     participant Daemon as Silvermoon daemon
-    participant Silvermoon as HEADQUARTER Silvermoon
+    participant Silvermoon as 项目版本 Silvermoon
     participant Agent as 下游 Agent
 
     Upstream->>Daemon: 治理请求：device/project route、稳定 requestId、操作指令
@@ -182,7 +182,7 @@ sequenceDiagram
             Daemon->>Silvermoon: 请求项目级创建指引：明确创建意图及对应项目
             Silvermoon-->>Daemon: 返回项目级 instruction 或结构化阻塞；具体生产接口待定义
             Daemon->>Agent: 将创建指引交回唯一治理 session，不伪造 ideaId
-            Agent-->>Daemon: 返回经 HEADQUARTER runtime 按项目 schema 验证的真实 ideaId、持久结果与证据，或创建结果未知
+            Agent-->>Daemon: 返回经项目版本验证的真实 ideaId、持久结果与证据，或创建结果未知
             Note over Daemon: 仅确认创建后登记 idea worktree/session 并交接；未知时观察，不重复创建。
             Note over Daemon,Silvermoon: 治理结果不隐式批准或推进 idea；推进仍须按 idea V2 stream 记录 ping。
             opt 创建已验证、推进已授权、idea ping 已记录且交接允许
@@ -205,7 +205,7 @@ sequenceDiagram
 ## 前置能力与本图边界
 
 - [project-agent-runtime](../../../../01M3SK3CGZF47A36D2GWN8BFPC/outer/inner/Implementation.md)
-  已提供项目执行边界、准确前态交互追加，以及按 `projectUrl + ideaId` 定位项目
+  已提供项目版本隔离、准确前态交互追加，以及按 `projectUrl + ideaId` 定位项目
   和 worktree 的注册表。既有 `ProjectRuntime.replay` 是前置实现的接口，不是
   本图认可的 daemon 生产接口；生产整合须补足权威 projection/head、增量 cursor
   与结构化冲突协调能力。图中的操作名和新回执字段都是目标协议，并非已交付能力。
