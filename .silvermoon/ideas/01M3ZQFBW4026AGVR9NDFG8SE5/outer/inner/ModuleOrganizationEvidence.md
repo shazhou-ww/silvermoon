@@ -178,3 +178,17 @@ Windows 与安装态验证也可完整执行。
 | `pnpm pack:check` | 通过；严格白名单包含 177 个准确文件 |
 | `pnpm check:skills:local` | 通过；canonical 与 registered skill 一致 |
 | `pnpm check` | 通过；全部 7 个 release-grade gate 完成 |
+
+## 提交与同步
+
+三层实现提交 `8e5691f68ec543b003c0a927089e3127202b9070` 及 CLI executable
+mode 修复提交 `1b8c023f6331c93123764e7773d686fe26ac8759` 已通过普通非强制
+Git 集成最新 primary。合并提交
+`e50706ee1fefdd6352477d0c049335ea18dd1010` 已 push 至 `origin/main`，
+刷新后确认 `origin/main` 包含该提交。合并只引入并保留并发 daemon idea 文档，
+没有改写或丢弃并发历史。
+
+提交前 worktree 与 index 对齐；`node bin/silvermoon.js check --worktree
+--audience agent`、准确 staged metadata 检查和 `pnpm check:commit` 均通过。
+提交及合并后的 HEAD metadata 检查也通过。最终准确 implementationRevision
+以本证据收尾提交同步 primary 后的最新 `whats-next` 为准。
