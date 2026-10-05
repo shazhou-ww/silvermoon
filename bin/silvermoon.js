@@ -1,7 +1,7 @@
 #!/usr/bin/env node
+import { readFileSync, realpathSync } from "node:fs";
 import { resolve } from "node:path";
-import { pathToFileURL } from "node:url";
-import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import {
   Command,
   CommanderError,
@@ -424,7 +424,24 @@ export async function runCli(args, io = console, runtime = {}) {
   return program.getOptionValue("resultCode") ?? 0;
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
+export function isMain(
+  importMetaUrl,
+  argv = process.argv,
+  { platform = process.platform, realpath = realpathSync.native } = {},
+) {
+  if (!argv[1]) return false;
+  const canonical = (path) => {
+    try {
+      path = realpath(resolve(path));
+    } catch {
+      path = resolve(path);
+    }
+    return platform === "win32" ? path.toLowerCase() : path;
+  };
+  return canonical(fileURLToPath(importMetaUrl)) === canonical(argv[1]);
+}
+
+if (isMain(import.meta.url)) {
   const bootstrapStartedAt = process.hrtime.bigint();
   process.exitCode = await runCli(
     process.argv.slice(2),

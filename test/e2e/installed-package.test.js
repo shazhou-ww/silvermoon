@@ -93,8 +93,28 @@ try {
     ),
   );
   assert.equal(installedManifest.name, "silvermoon");
+  const installedEntry = join(
+    bootstrap,
+    "node_modules",
+    "silvermoon",
+    "bin",
+    "silvermoon.js",
+  );
+  const installedEntryBefore = await readFile(installedEntry);
+  for (const args of [
+    ["list-ideas", "--root", packageRoot, "--json"],
+    ["whats-next", "cli-responsibility-refactor", "--root", packageRoot, "--json"],
+  ]) {
+    const result = npmResult(["exec", "--", "silvermoon", ...args], bootstrap);
+    assert.ok([0, 1].includes(result.status),
+      result.stderr || result.error?.message);
+    assert.notEqual(result.stdout.trim(), "", `npm exec produced no output for ${args[0]}`);
+    assert.equal(JSON.parse(result.stdout).observation.problems[0].type,
+      "source-checkout-runtime-required");
+  }
+  assert.deepEqual(await readFile(installedEntry), installedEntryBefore);
   const sourceObservation = spawnSync(process.execPath, [
-    join(bootstrap, "node_modules", "silvermoon", "bin", "silvermoon.js"),
+    installedEntry,
     "list-ideas", "--root", packageRoot, "--json",
   ], { cwd: bootstrap, encoding: "utf8", timeout: 120_000, windowsHide: true });
   assert.equal(sourceObservation.status, 1, sourceObservation.stderr);

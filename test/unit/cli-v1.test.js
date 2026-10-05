@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { fileURLToPath } from "node:url";
 
 import {
   createProgram,
+  isMain,
   normalizeTraceFileName,
   render,
   runCli,
@@ -29,6 +31,16 @@ function terminal(stdinIsTTY = false, stdoutIsTTY = false) {
     stdout: { isTTY: stdoutIsTTY },
   };
 }
+
+test("recognizes direct and Windows shim-resolved CLI entry paths", () => {
+  const moduleUrl = new URL("../../bin/silvermoon.js", import.meta.url);
+  const modulePath = fileURLToPath(moduleUrl);
+  assert.equal(isMain(moduleUrl.href, ["node", modulePath]), true);
+  assert.equal(isMain(moduleUrl.href, ["node", "C:\\npx\\silvermoon.js"], {
+    platform: "win32",
+    realpath: () => modulePath.toUpperCase(),
+  }), true);
+});
 
 function navigationObservation(outputLanguage = "en-US") {
   return {

@@ -192,3 +192,25 @@ Git 集成最新 primary。合并提交
 --audience agent`、准确 staged metadata 检查和 `pnpm check:commit` 均通过。
 提交及合并后的 HEAD metadata 检查也通过。最终准确 implementationRevision
 以本证据收尾提交同步 primary 后的最新 `whats-next` 为准。
+
+## Windows npm exec／npx 入口修复
+
+实施验收 review 发现 Windows 上 `npx silvermoon list-ideas` 与 `whats-next`
+可能无输出，并在运行后把 `bin/silvermoon.js` 显示为 worktree 修改。前者来自
+入口仅比较未解析的 `import.meta.url` 与 `process.argv[1]`，npm shim／junction
+路径可能指向同一文件但字符串不同；后者来自该文件工作区历史上残留的 mixed
+LF／CRLF 字节，npm 触碰 mtime 后 Git 重新检查并显示伪修改，clean-filter hash
+实际仍与 HEAD 相同。
+
+入口主模块判定现先 realpath 两端，并在 Windows 做大小写规范化；直接路径和
+npx／junction 路径共用同一判定。`bin/silvermoon.js` 已规范化为纯 LF，保持
+`.gitattributes` 的 `eol=lf`。安装态 E2E 从本地 tarball 安装后通过真实
+`npm exec -- silvermoon` 分别运行 `list-ideas` 与 `whats-next`，断言两者均输出
+结构化报告，并确认安装入口执行前后字节完全一致。
+
+| 实际命令 | 结果 |
+| --- | --- |
+| `node --test test/unit/cli-v1.test.js` | 通过，9 项全部通过；含 Windows shim realpath 回归 |
+| `pnpm test:e2e` | 通过；本地 tarball 的两个 npm exec 命令均有输出且入口字节不变 |
+| `git ls-files --eol bin/silvermoon.js` | `i/lf w/lf attr/text eol=lf` |
+| `pnpm check` | 通过，全部 7 个 release-grade gate 完成 |
