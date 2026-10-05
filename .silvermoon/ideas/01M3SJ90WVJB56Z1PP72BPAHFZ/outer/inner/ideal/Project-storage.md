@@ -1,8 +1,8 @@
 # 项目身份、存储与执行空间
 
 本文件记录目标设计，不代表现有 registry 或 adapter 已支持这些能力。
-managed project 请求面向有规范 remote URL 的 Git 项目；设备控制项目是本机身份
-定位的特殊项目，不要求 remote URL。
+managed project 请求面向有规范 remote URL 的 Git 项目；设备控制项目按逻辑
+device identity 定位，不在上游 route 携带其 private remote URL。
 
 ## 稳定身份与唯一定位
 
@@ -43,13 +43,18 @@ Git repository 位于 `$HOME/.silvermoon/device-hq/`；可变 cache 等数据可
 Outer World 是设备真实状态；它包含设备自己的 Silvermoon idea contracts 和事件流，
 并承载唯一 governance Agent session。指定 daemon `--root` 时，改用该 root 下隔离的
 `device-hq/` 与非 Git cache 目录，绝不读取或写入真实 `$HOME/.silvermoon/`。
-设备控制项目默认不配置 remote，不与其他设备共享其 Outer World 或 idea history；
-初次从最小本地 Silvermoon project scaffold 初始化，不克隆 Silvermoon 源码，后续
-维护脚本与工具由其 ideas 增长。本地 primary branch 的选择和版本升级方式仍待定义。
+设备控制项目默认配置逻辑设备专属的 private remote。remote 保存可移植治理契约、
+idea history、恢复实现、期望 binary/skill release 和无凭据项目登记清单，不声称
+版本化设备的真实 Outer World。初次设备可从最小 scaffold 创建并发布该 remote；
+灾难恢复设备从准确 remote revision clone。两条路径都不克隆 Silvermoon 源码。
+设备 HEADQUARTER 是 Silvermoon binary 与 canonical skill 的安装和升级边界；
+managed repository 不另装一份。
 
 ```text
 $HOME/.silvermoon/
-├── device-hq/       # only this subdirectory is the device-management Git repository
+├── device-hq/       # private-remote-backed device-management Git repository
+├── registry/        # local bindings rebuilt from portable registration facts
+├── state/           # receipts, cursors, locks and session bindings
 └── cache/           # mutable, non-versioned data
 ```
 
@@ -66,12 +71,20 @@ managed project 的 Git primary。
 `.silvermoon/ideas/<ideaId>/events/`，下含按规范 ordinal 命名的 JSONL segment，
 每段最多 1000 个事件。idea 流 HEAD 是该 `events/` folder 的完整 Git tree digest
 及逻辑长度，使用项目 repository object format；cursor 是准确已处理前缀的
-length/digest。daemon 经项目版本 Silvermoon 的生产接口读写，不直接改目录。
-完成迁移的 schema 仍为 V2，不为分段布局新增 V3。
+length/digest。daemon 经 HEADQUARTER Silvermoon 针对项目 schema 的生产接口读写，
+不直接改目录。完成迁移的 schema 仍为 V2，不为分段布局新增 V3。历史 schema
+必须可识别、可诊断并有确定性升级路径；完整操作能力按 binary 声明的支持范围
+提供，登记、读取和调度不自动改写 schema。
 
 session 实体由 Agent runtime 管理，daemon registry 只持久记录唯一治理 session
 binding 和每个 idea session 的必要绑定。配置保存稳定的根目录设置；动态项目增删
 不要求重写 daemon 配置。requestId receipt 是调度可靠性元数据，不取代项目事件权威。
+
+portable registration facts 只包含恢复 clone 和核验身份所需的无凭据 projectUrl、
+稳定 projectKey 及期望约束，可在设备 HQ 中版本化。本机绝对路径、凭据、session
+binding、request receipt、cursor、lock、cache、checkout 和 worktree 都不是 portable
+facts，不得进入 device-hq remote。完整恢复与逻辑设备接管见
+[Device-recovery.md](./Device-recovery.md)。
 
 以上是默认托管布局，不授权自动搬迁已有 clone。是否支持任意外部路径登记、
 如何接入已有 worktree，以及登记变更的 API 和授权边界仍需细化。
