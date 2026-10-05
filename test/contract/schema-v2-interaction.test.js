@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import { test } from "node:test";
 import Ajv2020 from "ajv/dist/2020.js";
 
-import { eventsFromStatus, validateIdeaEvent } from "../../src/events/rules/grammar.js";
+import { eventsFromStatus, validateIdeaEvent } from "../../src/foundation/event-codec/index.js";
 
 test("public v2 schema and reducer agree on nine minimal types", async () => {
   const ajv = new Ajv2020({ strict: true, allErrors: true, formats: { uri: true } });

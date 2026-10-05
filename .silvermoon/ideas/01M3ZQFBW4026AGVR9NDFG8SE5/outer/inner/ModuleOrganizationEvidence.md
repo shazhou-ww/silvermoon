@@ -14,7 +14,7 @@ acceptInner 事实。目录组织要求通过修改实施契约使现有 idea �
 | 模块 | 职责文档 |
 | --- | --- |
 | CLI | [cli](../../../../../src/cli/README.md) |
-| 应用用例与子模块 | [application](../../../../../src/application/README.md) |
+| 应用用例与子模块 | [application](../../../../../src/business/README.md) |
 | idea 模型与规则 | [idea](../../../../../src/idea/README.md) |
 | 命令运行时、规则与 trace | [command](../../../../../src/command/README.md) |
 | 持久事件与规则 | [events](../../../../../src/events/README.md) |
@@ -118,7 +118,7 @@ folder，没有 `status.yaml`；历史 idea 证据记录内部事件格式迁移
 业务层统一为 `src/business/` 且每业务入口函数一个文件，共享函数进入
 `src/business/shared/` 后仍一函数一文件；基础层每模块独占
 `src/foundation/<module>/`。基础模块 README 除职责和依赖边界外，还必须逐项解释
-公开 index 的关键函数。现有 `scripts/`、`src/application/` 和顶层基础目录是待
+公开 index 的关键函数。现有 `scripts/`、`src/business/` 和顶层基础目录是待
 迁移来源，不被目标文档描述为已经完成。
 
 观察 review 将共享观察固定为 `observeDevice` → `observeProject` → `observeIdea`。
@@ -148,3 +148,33 @@ device 当前只包含运行来源、全局安装及全局配置的存在／有�
 先验证、同步并请求新 idealRevision 审批；获批后才可继续实现和重新运行完整
 release-grade check、提交前检查及准确候选元数据检查。此前记录的完整检查只证明
 上一候选，不冒充本次 review 修改后的准确版本证据。
+
+## 三层目标架构实施结果
+
+批准后的实现将应用入口统一到 `bin/`，业务入口统一到 `src/business/`，基础模块
+统一到 `src/foundation/<module>/`。应用入口每个文件可独立启动，不再保留 launcher；
+业务入口一函数一文件，shared 的 15 个公开函数各自独占文件。基础层实现 30 个
+单一职责目录，每个目录都包含 export-only `index.js`、实现代码和 README；README
+逐项说明职责、允许依赖、排除项和关键 exports。
+
+共享观察实现为 `observeDevice` → `observeProject` → `observeIdea`。device 当前
+观察运行来源、全局 executable 和全局配置，不探测 daemon。project 与 idea 显式
+消费下一层事实。事件 CLI 只保留 replay／append；revise／recover 代码、参数、
+测试和 skill 指引已移除，异常历史改为完整 `events/` folder 的直接 Git review
+与 snapshot／history 校验。已完成的两个 source-only 迁移也已删除，外部 v1→v2
+兼容迁移继续随包发布。
+
+移动后的模块依赖图无环；跨基础模块只使用公开 index，同模块实现不反向导入自身
+facade。修复 Windows source path 规范化、worktree path 比较和测试 junction 后，
+Windows 与安装态验证也可完整执行。
+
+| 实际命令 | 结果 |
+| --- | --- |
+| `pnpm check:sanity` | 通过 |
+| `npm test` | 通过；unit/runtime 175 项全部通过，contract 44 项全部通过 |
+| `pnpm test:integration` | 通过；152 项中 147 项通过、5 项按既有真实 Copilot 条件跳过 |
+| `pnpm test:e2e` | 通过；隔离 tarball 安装和公共／Agent 子路径烟测成功 |
+| `pnpm check:pure` | 通过；145 个纯函数、15 个规则模块 |
+| `pnpm pack:check` | 通过；严格白名单包含 177 个准确文件 |
+| `pnpm check:skills:local` | 通过；canonical 与 registered skill 一致 |
+| `pnpm check` | 通过；全部 7 个 release-grade gate 完成 |

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { generateNpmReadme } from "../../scripts/generate-npm-readme.mjs";
+import { generateNpmReadme } from "../../bin/generate-npm-readme.mjs";
 
 const commit = "a".repeat(40);
 

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { test } from "node:test";
 
-import { validBranchName } from "../../src/project/rules/repository.js";
+import { validBranchName } from "../../src/foundation/coordinates/index.js";
 
 const BRANCH_NAME_CORPUS = [
   "",

@@ -7,8 +7,8 @@ import { fileURLToPath } from "node:url";
 
 import Ajv2020 from "ajv/dist/2020.js";
 
-import { runCli } from "../../src/cli/cli.js";
-import { ideaPaths } from "../../src/project/rules/layout.js";
+import { runCli } from "../../bin/silvermoon.js";
+import { ideaPaths } from "../../src/foundation/coordinates/index.js";
 import { createRepository, FIRST_ID, git } from "../helpers/repository.js";
 
 const repositoryRoot = fileURLToPath(new URL("../..", import.meta.url));
@@ -177,8 +177,8 @@ test("writes schema-valid domain and telemetry events without changing the repor
     assert.ok(renderEnd.sequence < commandEnd.sequence);
     assert.ok(commandEnd.sequence < events.at(-1).sequence);
     assert.ok(events.some(({ name }) => name === "snapshot.observe"));
-    assert.ok(events.some(({ name }) => name === "adoption.inspect"));
-    assert.ok(events.some(({ name }) => name === "user-config.load"));
+    assert.ok(events.some(({ name }) => name === "project.observe"));
+    assert.ok(events.some(({ name }) => name === "device.observe"));
     assert.ok(events.some(({ name }) => name === "idea-layout.inspect"));
     assert.ok(events.some(({ name }) =>
       name === "repository.assess-readiness"

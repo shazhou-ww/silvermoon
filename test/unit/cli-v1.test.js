@@ -7,8 +7,8 @@ import {
   render,
   runCli,
   selectOutputRenderer,
-} from "../../src/cli/cli.js";
-import { CommandRun } from "../../src/command/index.js";
+} from "../../bin/silvermoon.js";
+import { CommandRun } from "../../src/foundation/command-message/index.js";
 
 function capture() {
   const logs = [];

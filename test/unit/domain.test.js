@@ -1,16 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import {
-  CommandRun,
-  DOMAIN_MESSAGE_SCHEMA_VERSION,
-  DomainInvariantError,
-  driveCommand,
-  initialInternalObservation,
-  projectActions,
-  projectReport,
-  reduceObservation,
-} from "../../src/command/index.js";
+import { CommandRun, DOMAIN_MESSAGE_SCHEMA_VERSION, DomainInvariantError, driveCommand, initialInternalObservation, projectActions, projectReport, reduceObservation } from "../../src/foundation/command-message/index.js";
 
 const INTENTION = {
   command: "whats-next",

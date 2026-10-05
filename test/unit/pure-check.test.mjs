@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { inspectPureSources } from "../../scripts/pure-check.mjs";
+import { inspectPureSources } from "../../bin/pure-check.mjs";
 
 function inspect(source, extra = []) {
   return inspectPureSources(new Map([
@@ -129,7 +129,7 @@ test("resolves pure imports and local bindings with Windows source paths", () =>
 
 test("rule boundaries reject I/O imports and missing annotations", () => {
   const result = inspectPureSources(new Map([
-    ["/fixture/application/rules/readiness.js", `
+    ["/fixture/business/shared/evaluate-local-readiness.js", `
       import { readFile } from "node:fs/promises";
       import { command } from "./cli.js";
       function unmarked() { return 1; }

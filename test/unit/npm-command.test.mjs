@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { npmCommand } from "../../scripts/npm-command.mjs";
+import { npmCommand } from "../../src/foundation/process/index.js";
 
 test("npm package tools use PATH on POSIX and a shell-free npm CLI on Windows", () => {
   const args = ["pack", "--pack-destination", "directory with spaces"];

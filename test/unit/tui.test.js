@@ -2,13 +2,13 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import stringWidth from "string-width";
 
-import { tuiMarkdownBlocks } from "../../src/presentation/tui/table.js";
+import { tuiMarkdownBlocks } from "../../src/foundation/tui/index.js";
 import {
   copyWindowsClipboard,
   copyStatusColor,
   copyTuiSelection,
   tuiOutputStream,
-} from "../../src/presentation/tui/tui.js";
+} from "../../src/foundation/tui/index.js";
 
 test("uses distinct readable colors for copy outcomes and restores the hint color", () => {
   assert.equal(copyStatusColor(null), "#6b6b6b");

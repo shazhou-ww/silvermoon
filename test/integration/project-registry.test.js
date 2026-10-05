@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 
-import { LocalProjectRegistry } from "../../src/agents/project-registry.js";
+import { LocalProjectRegistry } from "../../src/business/agent-project-registry.js";
 
 const URL = "https://github.com/example/project.git";
 const IDEA = "01M3SK3CGZF47A36D2GWN8BFPC";

@@ -7,9 +7,9 @@ import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 import { CopilotClient } from "@github/copilot-sdk";
 
-import { CopilotAdapter, LocalProjectRegistry } from "../../src/agents/copilot.js";
-import { ProjectRuntime } from "../../src/agents/project-runtime.js";
-import { migrateEvents } from "../../src/application/migrations/v1.js";
+import { CopilotAdapter, LocalProjectRegistry } from "../../src/business/agent-copilot.js";
+import { ProjectRuntime } from "../../src/business/agent-project-runtime.js";
+import { migrateEvents } from "../../src/business/migrate-v1-to-v2.js";
 import { createRepository, FIRST_ID, git, PRIMARY_REPOSITORY } from "../helpers/repository.js";
 
 const sourceRoot = fileURLToPath(new URL("../..", import.meta.url));
@@ -57,7 +57,8 @@ async function liveProject() {
   git(root, "push", "origin", "HEAD:main");
   await writeFile(join(root, "package.json"), JSON.stringify({ name: "consumer" }));
   await mkdir(join(root, "node_modules"), { recursive: true });
-  await symlink(sourceRoot, join(root, "node_modules", "silvermoon"), "dir");
+  await symlink(sourceRoot, join(root, "node_modules", "silvermoon"),
+    process.platform === "win32" ? "junction" : "dir");
   const registry = new LocalProjectRegistry({ root: join(base, "registry") });
   await registry.register(projectUrl, root);
   const route = { projectUrl, ideaId: FIRST_ID };

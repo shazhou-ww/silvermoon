@@ -6,13 +6,13 @@ import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 import { pathToFileURL } from "node:url";
 
-import { eventCommand } from "../../src/application/event.js";
-import { migrateEvents } from "../../src/application/migrations/v1.js";
+import { eventCommand } from "../../src/business/event-command.js";
+import { migrateEvents } from "../../src/business/migrate-v1-to-v2.js";
 import { checkRepository } from "../../src/index.js";
-import { createIdea } from "../../src/application/create.js";
-import { listIdeas } from "../../src/application/list.js";
-import { serializeIdeaEvents } from "../../src/events/rules/grammar.js";
-import { ideaPaths } from "../../src/project/rules/layout.js";
+import { createIdea } from "../../src/business/create-idea.js";
+import { listIdeas } from "../../src/business/list-ideas.js";
+import { serializeIdeaEvents } from "../../src/foundation/event-codec/index.js";
+import { ideaPaths } from "../../src/foundation/coordinates/index.js";
 import { createRepository, FIRST_ID, SECOND_ID, git } from "../helpers/repository.js";
 
 async function fixture(t, options) {
@@ -141,7 +141,7 @@ test("v2 creation writes an empty authoritative log and rejects legacy dual auth
 });
 
 test("migration recovers prepared files and partial switches, or rolls back exact original bytes", async (t) => {
-  const module = new URL("../../src/application/migrations/v1.js", import.meta.url).href;
+  const module = new URL("../../src/business/migrate-v1-to-v2.js", import.meta.url).href;
   for (const [stage, rollback] of [
     ["prepared", false],
     [`prepared:${ideaPaths(FIRST_ID).eventsPath}`, false],
@@ -197,32 +197,6 @@ test("two CLI processes cannot append different events at the same observed posi
   })));
   assert.equal(results.filter(({ code }) => code === 0).length, 1, JSON.stringify(results));
   assert.equal((await replay(root)).reduction.state.sequence, 2);
-});
-
-test("revise preserves primary while checks inspect only the selected commit boundary", async (t) => {
-  const { root } = await fixture(t);
-  await migrate(root);
-  publish(root, "Migrate");
-  git(root, "checkout", "-b", "candidate");
-  assert.equal((await append(root, { type: "setLanguage", payload: { language: "en" } })).observation.receipt.outcome, "candidate-written");
-  git(root, "add", ".");
-  git(root, "commit", "-m", "First local candidate");
-  const observed = await replay(root);
-  const revised = await eventCommand({
-    root, operation: "revise", idea: FIRST_ID, ownedSuffix: true,
-    expectedLength: observed.length, expectedDigest: observed.digest, expectedPrimary: observed.baseline.commit,
-    input: [
-      { type: "setAlias", payload: { alias: "fixture" } },
-      { type: "setLanguage", payload: { language: "zh-CN" } },
-    ],
-  });
-  assert.equal(revised.observation.receipt?.outcome, "candidate-written", JSON.stringify(revised));
-  git(root, "add", ".");
-  git(root, "commit", "-m", "Revise own candidate");
-  assert.equal((await checkRepository({ root })).observation.state, "check-unavailable");
-  git(root, "checkout", "main");
-  git(root, "merge", "--no-ff", "candidate", "-m", "Integrate reviewed candidate");
-  assert.equal((await checkRepository({ root })).observation.state, "project-ready");
 });
 
 test("a peer's failed reduction does not unlock a healthy prefix and format failures never permit repair", async (t) => {
@@ -306,56 +280,9 @@ test("missing tracking refs and shallow missing parents fail closed; committed v
   assert.equal((await checkRepository({ root })).observation.state, "check-unavailable");
 });
 
-test("event process interruption recovers its exact record; moved primary requires rollback and reobservation", async (t) => {
-  const { root } = await fixture(t);
-  await migrate(root);
-  publish(root, "Migrate");
-  const path = ideaPaths(FIRST_ID).eventsPath;
-  const module = new URL("../../src/repository/state-transaction.js", import.meta.url).href;
-  const before = await readFile(join(root, path), "utf8");
-  const after = before + serializeIdeaEvents([{ sequence: 2, type: "setLanguage", payload: { language: "en" } }]);
-  const context = {
-    id: FIRST_ID, storage: "segmented", primary: git(root, "rev-parse", "origin/main"),
-    revisions: {
-      idealRevision: git(root, "rev-parse", `HEAD:${ideaPaths(FIRST_ID).idealPath}`),
-      implementationRevision: git(root, "rev-parse", `HEAD:${ideaPaths(FIRST_ID).innerPath}`),
-      deploymentRevision: git(root, "rev-parse", `HEAD:${ideaPaths(FIRST_ID).outerPath}`),
-    },
-  };
-  const interrupt = () => {
-    const child = spawnSync(process.execPath, ["--input-type=module", "-e", `
-      import { stateTransaction } from ${JSON.stringify(module)};
-      await stateTransaction(${JSON.stringify(root)}, "events", [{
-        path: ${JSON.stringify(path)}, before: ${JSON.stringify(before)}, after: ${JSON.stringify(after)}
-      }], {
-        context: ${JSON.stringify(context)},
-        afterStep: (step) => { if (step === ${JSON.stringify(`prepared:${path}`)}) process.exit(77); }
-      });
-    `], { encoding: "utf8" });
-    assert.equal(child.status, 77, child.stderr);
-  };
-  interrupt();
-  const result = await eventCommand({ root, operation: "recover", confirmStopped: true });
-  assert.equal(result.observation.receipt?.outcome, "recovered", JSON.stringify(result));
-  assert.equal(await readFile(join(root, path), "utf8"), after);
-  // This is an operation-owned unintegrated candidate in an isolated fixture.
-  await writeFile(join(root, path), before);
-  interrupt();
-  await writeFile(join(root, "unrelated.txt"), "Move primary without changing worlds\n");
-  git(root, "add", "unrelated.txt");
-  git(root, "commit", "-m", "Concurrent primary");
-  git(root, "push", "origin", "HEAD:main");
-  const stale = await eventCommand({ root, operation: "recover", confirmStopped: true });
-  assert.equal(stale.observation.state, "check-unavailable");
-  assert.match(stale.observation.problems[0].summary, /Primary moved/);
-  const rollback = await eventCommand({ root, operation: "recover", confirmStopped: true, rollback: true });
-  assert.equal(rollback.observation.receipt.outcome, "rolled-back");
-  assert.equal(await readFile(join(root, path), "utf8"), before);
-});
-
 test("migration recovery refuses unknown changed bytes without overwriting them", async (t) => {
   const { root } = await fixture(t);
-  const module = new URL("../../src/application/migrations/v1.js", import.meta.url).href;
+  const module = new URL("../../src/business/migrate-v1-to-v2.js", import.meta.url).href;
   const plan = await migrateEvents({ root });
   const child = spawnSync(process.execPath, ["--input-type=module", "-e", `
     import { migrateEvents } from ${JSON.stringify(module)};

@@ -105,7 +105,7 @@ a function pure. Keep `@pure` separate from bundler `@__PURE__` annotations.
 `pnpm check:pure` uses the existing TypeScript AST and lexical symbols to check
 annotations, rule-module dependencies, known external state, calls/callbacks,
 and direct or borrowed-alias mutations. Reviewed external functions and
-standard-library methods are explicitly listed in `scripts/pure-check.mjs`.
+standard-library methods are explicitly listed in `bin/pure-check.mjs`.
 Do not add an entire package or arbitrary method to bypass a failure.
 The checker also runs in sanity and release checks; contract tests check the
 full source dependency graph and application boundaries.
@@ -131,7 +131,7 @@ scripts, workflows and unknown paths, requires package validation. The
 selector uses the full base/head diff and both endpoints of renames; missing
 history, malformed or empty changes conservatively require validation with
 an explicit reason. Core jobs never use path filtering. Run
-`node scripts/ci-package-risk.mjs --full` to inspect the full decision;
+`node bin/ci-package-risk.mjs --full` to inspect the full decision;
 `workflow_dispatch` executes the full CI set, and local `check:release` always
 executes package/E2E regardless of the diff.
 

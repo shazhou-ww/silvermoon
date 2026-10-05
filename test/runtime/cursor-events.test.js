@@ -5,12 +5,12 @@ import { join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 
-import { eventCommand } from "../../src/application/event.js";
-import { EventStream } from "../../src/events/stream.js";
-import { observeGitCommands } from "../../src/repository/git.js";
-import { serializeIdeaEvents } from "../../src/events/rules/grammar.js";
-import { ideaPaths } from "../../src/project/rules/layout.js";
-import { migrateEvents } from "../../src/application/migrations/v1.js";
+import { eventCommand } from "../../src/business/event-command.js";
+import { EventStream } from "../../src/foundation/event-store/index.js";
+import { observeGitCommands } from "../../src/foundation/git/index.js";
+import { serializeIdeaEvents } from "../../src/foundation/event-codec/index.js";
+import { ideaPaths } from "../../src/foundation/coordinates/index.js";
+import { migrateEvents } from "../../src/business/migrate-v1-to-v2.js";
 import { createRepository, FIRST_ID, git } from "../helpers/repository.js";
 
 async function fixture(t) {

@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test, { afterEach } from "node:test";
 
-import { isReachableFromPrimary } from "../../scripts/prepare-npm-release.mjs";
+import { isReachableFromPrimary } from "../../bin/prepare-npm-release.mjs";
 
 const temporaryDirectories = [];
 

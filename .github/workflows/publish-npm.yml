@@ -55,7 +55,7 @@ jobs:
           RELEASE_COMMIT: ${{ github.sha }}
           RELEASE_TAG: ${{ github.ref_name }}
         run: >-
-          node scripts/prepare-npm-release.mjs
+          node bin/prepare-npm-release.mjs
           --tag "$RELEASE_TAG"
           --commit "$RELEASE_COMMIT"
 
@@ -98,9 +98,9 @@ jobs:
         env:
           RELEASE_COMMIT: ${{ github.sha }}
         run: |
-          node "${{ github.workspace }}/scripts/generate-npm-readme.mjs" \
+          node "${{ github.workspace }}/bin/generate-npm-readme.mjs" \
             --commit "$RELEASE_COMMIT" --source README.md --out README.md
-          node "${{ github.workspace }}/scripts/generate-npm-readme.mjs" \
+          node "${{ github.workspace }}/bin/generate-npm-readme.mjs" \
             --commit "$RELEASE_COMMIT" --source README.zh-CN.md --out README.zh-CN.md
 
       - name: Build selected package tarball
@@ -110,7 +110,7 @@ jobs:
           ARTIFACT_DIRECTORY: ${{ steps.stage.outputs.artifact_directory }}
           RELEASE_COMMIT: ${{ github.sha }}
         run: >-
-          node scripts/build-npm-tarball.mjs
+          node bin/build-npm-tarball.mjs
           --package-directory "$PACKAGE_DIRECTORY"
           --output-directory "$ARTIFACT_DIRECTORY"
           --git-head "$RELEASE_COMMIT"
@@ -154,7 +154,7 @@ jobs:
           NPM_DIST_TAG: ${{ steps.release.outputs.dist_tag }}
           SILVERMOON_TARBALL: ${{ steps.package.outputs.tarball_path }}
         run: >-
-          node "${{ github.workspace }}/scripts/verify-npm-release.mjs"
+          node "${{ github.workspace }}/bin/verify-npm-release.mjs"
           --package-name "$PACKAGE_NAME"
           --version "$PACKAGE_VERSION"
           --dist-tag "$NPM_DIST_TAG"

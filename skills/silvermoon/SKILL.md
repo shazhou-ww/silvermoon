@@ -320,10 +320,11 @@ decision.
 
 For v2 projects, follow [events.md](./references/events.md): observe the exact
 log and primary, then use the project-version `event append` command after an
-explicit decision. Never hand-edit JSONL, infer authorization from a CLI flag,
-clear decisions, or append observations. `event revise` is only for reviewed
-owned suffixes or a definite reduction-failed primary repair. Keep selector,
-audience, and output language through conflicts and retries.
+explicit decision. Never infer authorization from a CLI flag, clear decisions,
+or append observations. Routine state changes use append only. Exceptional
+history maintenance edits the complete `events/` folder directly, then uses
+ordinary Git review and snapshot/history checks; there is no revise or recover
+command. Keep selector, audience, and output language through conflicts and retries.
 
 For v1 projects there is no decision mutation command. After an explicit human
 decision, reconfirm the selected idea and exact revision from `whats-next`;

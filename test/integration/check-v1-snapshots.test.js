@@ -4,18 +4,18 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterEach, test } from "node:test";
 
-import { observeGitCommands } from "../../src/repository/git.js";
+import { observeGitCommands } from "../../src/foundation/git/index.js";
 import { checkRepository } from "../../src/index.js";
 import {
   REPOSITORY_SKILL_PATH,
   SILVERMOON_VERSION,
-} from "../../src/project/adoption.js";
-import { serializeIdeaStatus } from "../../src/idea/rules/status.js";
+} from "../../src/foundation/skill-registration/index.js";
+import { serializeIdeaStatus } from "../../src/foundation/idea-model/index.js";
 import {
   GUIDANCE_ROOT,
   ideaPaths,
   phaseGuidancePath,
-} from "../../src/project/rules/layout.js";
+} from "../../src/foundation/coordinates/index.js";
 import {
   FIRST_ID,
   git,

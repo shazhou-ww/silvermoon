@@ -5,7 +5,7 @@ import {
   CHANGE_SAMPLE_BYTE_LIMIT,
   CHANGE_SAMPLE_ITEM_LIMIT,
   summarizeWorktreeChanges,
-} from "../../src/application/next.js";
+} from "../../src/business/whats-next.js";
 
 test("bounds worktree path samples by item count and UTF-8 bytes", () => {
   const changes = {

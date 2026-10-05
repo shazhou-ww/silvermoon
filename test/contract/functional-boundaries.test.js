@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 
 import ts from "typescript";
 
-import { inspectPureSources, loadJavaScriptSources, RULE_MODULES } from "../../scripts/pure-check.mjs";
+import { inspectPureSources, loadJavaScriptSources, RULE_MODULES } from "../../bin/pure-check.mjs";
 
 const root = fileURLToPath(new URL("../../src", import.meta.url));
 const parse = (path, source) => ts.createSourceFile(path, source, ts.ScriptTarget.Latest, true);
@@ -41,13 +41,22 @@ function dependencies(path, source, { includeReExports = true } = {}) {
 test("all declared pure functions and rule entrypoints satisfy path-aware boundaries", async () => {
   const result = inspectPureSources(await loadJavaScriptSources(root));
   assert.ok(result.count >= 144, `Expected existing pure coverage, received ${result.count}`);
-  assert.equal(RULE_MODULES.length, 14);
+  assert.equal(RULE_MODULES.length, 15);
   assert.deepEqual(result.problems, []);
 });
 
 test("every source directory has a concise responsibility README and explicit export-only index", async () => {
-  const directories = await sourceDirectories();
-  assert.equal(directories.length, 23);
+  const foundationRoot = resolve(root, "foundation");
+  const foundationDirectories = (await readdir(foundationRoot, { withFileTypes: true }))
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => resolve(foundationRoot, entry.name));
+  assert.equal(foundationDirectories.length, 30);
+  const directories = [
+    root,
+    resolve(root, "business"),
+    resolve(root, "business", "shared"),
+    ...foundationDirectories,
+  ];
   for (const directory of directories) {
     const [readme, source] = await Promise.all([
       readFile(resolve(directory, "README.md"), "utf8"),
@@ -55,8 +64,12 @@ test("every source directory has a concise responsibility README and explicit ex
     ]);
     assert.match(readme, /^# .+/);
     assert.ok(readme.trim().length >= 120, `${coordinate(directory)} must describe its responsibilities`);
-    const lineLimit = directory === root ? 240 : 45;
+    const lineLimit = directory === root ? 240 : 60;
     assert.ok(readme.split("\n").length <= lineLimit, `${coordinate(directory)} README must remain concise`);
+    if (dirname(directory) === foundationRoot) {
+      assert.match(readme, /## Capability boundary/);
+      assert.match(readme, /## Key exports/);
+    }
     const tree = parse(resolve(directory, "index.js"), source);
     assert.ok(tree.statements.length > 0);
     assert.ok(tree.statements.every((node) => ts.isExportDeclaration(node)
@@ -81,17 +94,34 @@ test("cross-directory imports use public indexes and siblings do not import thei
   }
 });
 
-test("application commands do not depend on CLI, presentation, root API or another command", async () => {
+test("shared business functions each own one implementation file", async () => {
+  const shared = resolve(root, "business", "shared");
+  const files = (await readdir(shared))
+    .filter((name) => name.endsWith(".js") && name !== "index.js");
+  for (const name of files) {
+    const path = resolve(shared, name);
+    const tree = parse(path, await readFile(path, "utf8"));
+    const exportedFunctions = tree.statements.filter((node) =>
+      ts.isFunctionDeclaration(node)
+      && node.modifiers?.some(({ kind }) => kind === ts.SyntaxKind.ExportKeyword));
+    assert.equal(exportedFunctions.length, 1,
+      `${coordinate(path)} must export exactly one shared function`);
+  }
+});
+
+test("business entries do not depend on bin, renderer, root API or another business entry", async () => {
   const sources = await loadJavaScriptSources(root);
-  const applications = ["check.js", "list.js", "next.js", "create.js", "event.js"]
-    .map((name) => resolve(root, "application", name));
-  for (const path of applications) {
+  const entries = [
+    "check-repository.js", "list-ideas.js", "whats-next.js",
+    "create-idea.js", "event-command.js", "migrate-v1-to-v2.js",
+  ].map((name) => resolve(root, "business", name));
+  for (const path of entries) {
     for (const target of dependencies(path, sources.get(path))) {
       assert.notEqual(target, resolve(root, "index.js"),
-        "Applications must not import the root package facade");
-      assert.equal(/^(?:cli|presentation)\//.test(coordinate(target)), false);
-      assert.equal(applications.includes(target), false,
-        `${coordinate(path)} depends on another command ${coordinate(target)}`);
+        "Business entries must not import the root package facade");
+      assert.equal(coordinate(target).startsWith("foundation/renderer/"), false);
+      assert.equal(entries.includes(target), false,
+        `${coordinate(path)} depends on another business entry ${coordinate(target)}`);
     }
   }
 });
@@ -113,7 +143,7 @@ test("the complete source dependency graph, including lazy imports, has no cycle
   for (const path of graph.keys()) visit(path);
 });
 
-test("presentation facade does not eagerly load the TUI or Copilot SDK", async () => {
+test("renderer facade does not eagerly load the TUI or Copilot SDK", async () => {
   const sources = await loadJavaScriptSources(root);
   const visited = new Set();
   const inspect = (path) => {
@@ -126,18 +156,17 @@ test("presentation facade does not eagerly load the TUI or Copilot SDK", async (
       assert.notEqual(value, "@github/copilot-sdk");
       if (value.startsWith(".")) {
         const target = resolve(dirname(path), value);
-        assert.equal(coordinate(target).startsWith("presentation/tui/"), false);
+        assert.equal(coordinate(target).startsWith("foundation/tui/"), false);
         inspect(target);
       }
     }
   };
-  inspect(resolve(root, "presentation/index.js"));
-  inspect(resolve(root, "cli/index.js"));
+  inspect(resolve(root, "foundation", "renderer", "index.js"));
 });
 
 test("authenticated projection source identity includes moved implementations and public rule facades", async () => {
   const sources = await loadJavaScriptSources(root);
-  const path = resolve(root, "events/projection.js");
+  const path = resolve(root, "foundation", "projection-cache", "projection.js");
   const tree = parse(path, sources.get(path));
   let coordinates;
   const visit = (node) => {
@@ -149,8 +178,8 @@ test("authenticated projection source identity includes moved implementations an
   };
   visit(tree);
   for (const name of [
-    "./rules/digest.js", "./rules/index.js", "../idea/rules/index.js",
-    "../project/rules/index.js", "../repository/index.js",
+    "../event-store/digest.js", "../event-codec/index.js",
+    "../idea-model/index.js", "../project-config/index.js", "../git/index.js",
   ]) assert.ok(coordinates.includes(name), name);
   for (const name of coordinates) assert.ok(sources.has(resolve(dirname(path), name)), name);
 });

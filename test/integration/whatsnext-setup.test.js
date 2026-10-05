@@ -11,19 +11,19 @@ import { join, resolve } from "node:path";
 import { afterEach, test } from "node:test";
 import { pathToFileURL } from "node:url";
 
-import { observeGitCommands } from "../../src/repository/git.js";
-import { inspectPhaseGuidance } from "../../src/project/guidance.js";
-import { ideaCreatedAt } from "../../src/idea/index.js";
+import { observeGitCommands } from "../../src/foundation/git/index.js";
+import { inspectPhaseGuidance } from "../../src/foundation/guidance/index.js";
+import { ideaCreatedAt } from "../../src/foundation/idea-query/index.js";
 import {
   GUIDANCE_ROOT,
   ideaPaths,
   phaseGuidancePath,
-} from "../../src/project/rules/layout.js";
+} from "../../src/foundation/coordinates/index.js";
 import {
   CHANGE_SAMPLE_ITEM_LIMIT,
   whatsNext,
-} from "../../src/application/next.js";
-import { renderResponse } from "../../src/presentation/render.js";
+} from "../../src/business/whats-next.js";
+import { renderResponse } from "../../src/foundation/renderer/index.js";
 import {
   createRepository,
   FIRST_ID,

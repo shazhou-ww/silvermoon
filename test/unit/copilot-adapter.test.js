@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 
-import { CopilotAdapter } from "../../src/agents/copilot.js";
+import { CopilotAdapter } from "../../src/business/agent-copilot.js";
 
 const IDEA = "01M3SK3CGZF47A36D2GWN8BFPC";
 async function nextWithin(iterator) {

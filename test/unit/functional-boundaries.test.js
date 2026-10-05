@@ -1,21 +1,21 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { CommandRun, createCommandRun } from "../../src/command/runtime.js";
-import { deepFreeze } from "../../src/command/rules/observation.js";
-import { assertHumanGate, planProjectedAppend } from "../../src/events/rules/policy.js";
-import { eventFolderDigest, gitContentDigest, segmentName } from "../../src/events/rules/digest.js";
-import { replayIdeaEvents, serializeIdeaEvents } from "../../src/events/rules/grammar.js";
-import { ideaPaths } from "../../src/project/rules/layout.js";
-import { renderMarkdownResponse } from "../../src/presentation/rules/markdown.js";
-import { evaluateLocalReadiness } from "../../src/application/rules/readiness.js";
-import { assessRepositoryReadinessWith } from "../../src/application/observation/readiness.js";
-import { listIdeasUseCase } from "../../src/application/list.js";
-import { buildIdeaScaffold } from "../../src/idea/scaffold-plan.js";
-import { evaluateNpmAdoption, skillInstruction } from "../../src/project/rules/adoption.js";
-import { encodeUlid } from "../../src/idea/rules/ulid.js";
-import { normalizeIdeaQuery, normalizeIdeaQueryCore, queryIdeaInventoryCore } from "../../src/idea/index.js";
-import { IDEA_STATES } from "../../src/idea/rules/status.js";
+import { CommandRun, createCommandRun } from "../../src/foundation/command-message/index.js";
+import { deepFreeze } from "../../src/foundation/command-message/index.js";
+import { assertHumanGate, planProjectedAppend } from "../../src/foundation/event-reducer/index.js";
+import { eventFolderDigest, gitContentDigest, segmentName } from "../../src/foundation/event-history/index.js";
+import { replayIdeaEvents, serializeIdeaEvents } from "../../src/foundation/event-codec/index.js";
+import { ideaPaths } from "../../src/foundation/coordinates/index.js";
+import { renderMarkdownResponse } from "../../src/foundation/renderer/index.js";
+import { evaluateLocalReadiness } from "../../src/business/shared/evaluate-local-readiness.js";
+import { assessRepositoryReadinessWith } from "../../src/business/shared/assess-repository-readiness-with.js";
+import { listIdeasUseCase } from "../../src/business/list-ideas.js";
+import { buildIdeaScaffold } from "../../src/foundation/scaffold-plan/index.js";
+import { evaluateNpmAdoption, skillInstruction } from "../../src/foundation/skill-registration/index.js";
+import { encodeUlid } from "../../src/foundation/idea-model/index.js";
+import { normalizeIdeaQuery, normalizeIdeaQueryCore, queryIdeaInventoryCore } from "../../src/foundation/idea-query/index.js";
+import { IDEA_STATES } from "../../src/foundation/idea-model/index.js";
 
 const id = "01M3ZQFBW4026AGVR9NDFG8SE5";
 const intention = { command: "whats-next", args: { idea: id, language: null } };

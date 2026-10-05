@@ -13,11 +13,11 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import test, { afterEach } from "node:test";
 
-import { formatGitHubOutput } from "../../scripts/build-npm-tarball.mjs";
-import { inspectNpmTarball } from "../../scripts/npm-tarball.mjs";
+import { formatGitHubOutput } from "../../bin/build-npm-tarball.mjs";
+import { inspectNpmTarball } from "../../src/foundation/package-resource/index.js";
 
 const temporaryDirectories = [];
-const builderPath = resolve("scripts/build-npm-tarball.mjs");
+const builderPath = resolve("bin/build-npm-tarball.mjs");
 const gitHead = "a".repeat(40);
 const readme = "# Tarball fixture\n";
 

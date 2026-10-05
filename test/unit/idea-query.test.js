@@ -1,13 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import {
-  extractIdeaTitle,
-  ideaCreatedAt,
-  ideaInventoryItem,
-  normalizeIdeaQuery,
-  queryIdeaInventory,
-} from "../../src/idea/index.js";
+import { extractIdeaTitle, ideaCreatedAt, ideaInventoryItem, normalizeIdeaQuery, queryIdeaInventory } from "../../src/foundation/idea-query/index.js";
 
 const ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
 

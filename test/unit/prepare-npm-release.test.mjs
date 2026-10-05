@@ -7,7 +7,7 @@ import {
   formatGitHubOutput,
   observeVersionPublication,
   parseReleaseTag,
-} from "../../scripts/prepare-npm-release.mjs";
+} from "../../bin/prepare-npm-release.mjs";
 
 const commit = "a".repeat(40);
 

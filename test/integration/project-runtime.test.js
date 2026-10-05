@@ -5,9 +5,9 @@ import { join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 
-import { ProjectRuntime } from "../../src/agents/project-runtime.js";
-import { LocalProjectRegistry } from "../../src/agents/project-registry.js";
-import { migrateEvents } from "../../src/application/migrations/v1.js";
+import { ProjectRuntime } from "../../src/business/agent-project-runtime.js";
+import { LocalProjectRegistry } from "../../src/business/agent-project-registry.js";
+import { migrateEvents } from "../../src/business/migrate-v1-to-v2.js";
 import { createRepository, FIRST_ID, git, PRIMARY_REPOSITORY } from "../helpers/repository.js";
 
 const ROUTE = { projectUrl: "https://github.com/example/project.git", ideaId: "01M3SK3CGZF47A36D2GWN8BFPC" };
@@ -109,7 +109,8 @@ test("real project CLI preserves exact interaction state across child processes"
   git(root, "push", "origin", "HEAD:main");
   await writeFile(join(root, "package.json"), JSON.stringify({ name: "consumer" }));
   await mkdir(join(root, "node_modules"), { recursive: true });
-  await symlink(sourceRoot, join(root, "node_modules", "silvermoon"), "dir");
+  await symlink(sourceRoot, join(root, "node_modules", "silvermoon"),
+    process.platform === "win32" ? "junction" : "dir");
   const registry = new LocalProjectRegistry({ root: join(base, "registry") });
   await registry.register(PRIMARY_REPOSITORY, root);
   const route = { projectUrl: PRIMARY_REPOSITORY, ideaId: FIRST_ID };
@@ -147,7 +148,8 @@ test("the project CLI interprets legacy v1 schema without inventing event suppor
   t.after(() => rm(base, { recursive: true, force: true }));
   await writeFile(join(root, "package.json"), JSON.stringify({ name: "consumer" }));
   await mkdir(join(root, "node_modules"), { recursive: true });
-  await symlink(sourceRoot, join(root, "node_modules", "silvermoon"), "dir");
+  await symlink(sourceRoot, join(root, "node_modules", "silvermoon"),
+    process.platform === "win32" ? "junction" : "dir");
   const registry = new LocalProjectRegistry({ root: join(base, "registry") });
   await registry.register(PRIMARY_REPOSITORY, root);
   const route = { projectUrl: PRIMARY_REPOSITORY, ideaId: FIRST_ID };

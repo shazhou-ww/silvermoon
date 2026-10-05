@@ -12,7 +12,7 @@ import {
   runChecks,
   runCheckScript,
   selectChecks,
-} from "../../scripts/run-checks.mjs";
+} from "../../bin/run-checks.mjs";
 
 test("selects exact scenario sets without changing release compatibility", async () => {
   assert.equal(selectChecks([]), CHECK_SCRIPTS);
@@ -82,7 +82,7 @@ test("falls back to a platform-safe npm command", () => {
 });
 
 test("recognizes the executable module path on the current platform", () => {
-  const moduleUrl = new URL("../../scripts/run-checks.mjs", import.meta.url);
+  const moduleUrl = new URL("../../bin/run-checks.mjs", import.meta.url);
   assert.equal(
     isMain(moduleUrl.href, ["node", fileURLToPath(moduleUrl)]),
     true,

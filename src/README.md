@@ -42,15 +42,15 @@ src/
 | --- | --- | --- | --- | --- |
 | `bin/silvermoon.js` | [bin/silvermoon.js](../bin/silvermoon.js) | 命令、argv、可选 JSON 输入文件、stdin、TTY／locale／trace 事实 | `CommandReport` 的 JSON、Text 或 TUI 表示，诊断／trace 和命令专属退出码 | 唯一用户 CLI；子命令不拆成应用 |
 | `bin/migrate-v1-to-v2.js` | [bin/migrate-v1-to-v2.js](../bin/migrate-v1-to-v2.js) | project root、plan／apply／resume／rollback、plan digest、writer 停止确认 | V1 到 V2 的 JSON 计划或执行／恢复回执；失败写 stderr 和非零退出码 | 一次性外部项目迁移 |
-| `bin/run-checks.mjs` | [scripts/run-checks.mjs](../scripts/run-checks.mjs) | 无参数或 `sanity`／`commit`／`release` tier | 逐 gate 开始、结果、耗时、汇总和退出码 | 组合检查，不修改候选 |
-| `bin/pure-check.mjs` | [scripts/pure-check.mjs](../scripts/pure-check.mjs) | `src` JavaScript 和纯规则入口 | 纯函数数量、违规位置／原因和退出码 | 静态纯度检查 |
-| `bin/check-pack.js` | [scripts/check-pack.js](../scripts/check-pack.js) | package manifest、白名单和 `npm pack` 结果 | 包内容／入口诊断和退出码 | 检查制品，不发布 |
-| `bin/sync-skills.mjs` | [scripts/sync-skills.mjs](../scripts/sync-skills.mjs) | canonical skill、registered copy、check／write 模式 | 差异清单或同步结果和退出码 | 不改变 idea 生命周期 |
-| `bin/ci-package-risk.mjs` | [scripts/ci-package-risk.mjs](../scripts/ci-package-risk.mjs) | base／head revision 或 full 模式 | 风险分类、受影响路径和退出码 | 只为 CI 选择 gate |
-| `bin/generate-npm-readme.mjs` | [scripts/generate-npm-readme.mjs](../scripts/generate-npm-readme.mjs) | commit、可选 source 和 output path | 固定 commit 链接的 README 或失败诊断 | 只生成制品文档 |
-| `bin/prepare-npm-release.mjs` | [scripts/prepare-npm-release.mjs](../scripts/prepare-npm-release.mjs) | release tag 和准确 commit | release key、版本、dist-tag 和 workflow 输出 | 不执行发布 |
-| `bin/build-npm-tarball.mjs` | [scripts/build-npm-tarball.mjs](../scripts/build-npm-tarball.mjs) | package directory、output directory、Git HEAD | tarball 路径、hash、integrity 和打包元数据 | 构建可验证制品 |
-| `bin/verify-npm-release.mjs` | [scripts/verify-npm-release.mjs](../scripts/verify-npm-release.mjs) | package、版本、dist-tag、commit、tag 和 tarball | registry、provenance、tag 与 tarball 一致性 | 发布后只读验证 |
+| `bin/run-checks.mjs` | [bin/run-checks.mjs](../bin/run-checks.mjs) | 无参数或 `sanity`／`commit`／`release` tier | 逐 gate 开始、结果、耗时、汇总和退出码 | 组合检查，不修改候选 |
+| `bin/pure-check.mjs` | [bin/pure-check.mjs](../bin/pure-check.mjs) | `src` JavaScript 和纯规则入口 | 纯函数数量、违规位置／原因和退出码 | 静态纯度检查 |
+| `bin/check-pack.js` | [bin/check-pack.js](../bin/check-pack.js) | package manifest、白名单和 `npm pack` 结果 | 包内容／入口诊断和退出码 | 检查制品，不发布 |
+| `bin/sync-skills.mjs` | [bin/sync-skills.mjs](../bin/sync-skills.mjs) | canonical skill、registered copy、check／write 模式 | 差异清单或同步结果和退出码 | 不改变 idea 生命周期 |
+| `bin/ci-package-risk.mjs` | [bin/ci-package-risk.mjs](../bin/ci-package-risk.mjs) | base／head revision 或 full 模式 | 风险分类、受影响路径和退出码 | 只为 CI 选择 gate |
+| `bin/generate-npm-readme.mjs` | [bin/generate-npm-readme.mjs](../bin/generate-npm-readme.mjs) | commit、可选 source 和 output path | 固定 commit 链接的 README 或失败诊断 | 只生成制品文档 |
+| `bin/prepare-npm-release.mjs` | [bin/prepare-npm-release.mjs](../bin/prepare-npm-release.mjs) | release tag 和准确 commit | release key、版本、dist-tag 和 workflow 输出 | 不执行发布 |
+| `bin/build-npm-tarball.mjs` | [bin/build-npm-tarball.mjs](../bin/build-npm-tarball.mjs) | package directory、output directory、Git HEAD | tarball 路径、hash、integrity 和打包元数据 | 构建可验证制品 |
+| `bin/verify-npm-release.mjs` | [bin/verify-npm-release.mjs](../bin/verify-npm-release.mjs) | package、版本、dist-tag、commit、tag 和 tarball | registry、provenance、tag 与 tarball 一致性 | 发布后只读验证 |
 
 事件历史修订和中断恢复不设进程入口，也不属于应用层。维护者直接编辑 idea 的
 `events/` folder，再通过普通 Git review 和 snapshot／event history 校验确认完整
@@ -165,9 +165,7 @@ language 不认识报告。必要组合上移业务层，不建设万能 utils �
 跨模块通过公开入口，纯工具不经入口加载 I/O。后续检查应验证三层依赖方向和
 模块图无环，不仅检查文件图无环。`@pure` 检查、行为、增量预算和异常历史校验继续保留。
 
-当前目录导航：[cli](./cli/README.md)、[application](./application/README.md)、
-[idea](./idea/README.md)、[command](./command/README.md)、[events](./events/README.md)、
-[project](./project/README.md)、[repository](./repository/README.md)、
-[response](./response/README.md)、[presentation](./presentation/README.md)、
-[agents](./agents/README.md)。[包入口](./index.js)和 Agent 独立子路径保持兼容。
+当前目录导航：[business](./business/README.md)、
+[business shared](./business/shared/README.md) 和 [foundation modules](./foundation/)。
+[包入口](./index.js)和 Agent 独立子路径保持兼容。
 维护约定见 [maintaining](../docs/maintaining.md)。

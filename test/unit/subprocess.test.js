@@ -4,8 +4,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 
-import { runSubprocess } from "../../src/repository/subprocess.js";
-import { withTraceFile } from "../../src/command/trace/trace.js";
+import { runSubprocess } from "../../src/foundation/process/index.js";
+import { withTraceFile } from "../../src/foundation/trace/index.js";
 
 test("traces subprocess outcomes without persisting arguments or input", async () => {
   const directory = await mkdtemp(join(tmpdir(), "silvermoon-subprocess-"));

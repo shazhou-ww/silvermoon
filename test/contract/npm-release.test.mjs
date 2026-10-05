@@ -7,11 +7,11 @@ import { parseDocument } from "yaml";
 const releaseGuideUrl = new URL("../../docs/npm-package-releases.md", import.meta.url);
 const workflowUrl = new URL("../../.github/workflows/publish-npm.yml", import.meta.url);
 const publishSkillUrl = new URL("../../.agents/skills/publish/SKILL.md", import.meta.url);
-const buildTarballUrl = new URL("../../scripts/build-npm-tarball.mjs", import.meta.url);
-const checkPackUrl = new URL("../../scripts/check-pack.js", import.meta.url);
-const npmTarballUrl = new URL("../../scripts/npm-tarball.mjs", import.meta.url);
+const buildTarballUrl = new URL("../../bin/build-npm-tarball.mjs", import.meta.url);
+const checkPackUrl = new URL("../../bin/check-pack.js", import.meta.url);
+const npmTarballUrl = new URL("../../src/foundation/package-resource/npm-tarball.mjs", import.meta.url);
 const verifyReleaseUrl = new URL(
-  "../../scripts/verify-npm-release.mjs",
+  "../../bin/verify-npm-release.mjs",
   import.meta.url,
 );
 const installedPackageUrl = new URL(
@@ -251,8 +251,8 @@ test("uses a protected, least-privilege trusted-publishing workflow", async () =
   );
   assert.match(checkPack, /SILVERMOON_TARBALL/);
   assert.match(checkPack, /SILVERMOON_RELEASE_COMMIT/);
-  assert.match(checkPack, /from "\.\/npm-tarball\.mjs"/);
-  assert.doesNotMatch(checkPack, /verify-npm-release\.mjs/);
+  assert.match(checkPack, /from "\.\.\/src\/foundation\/package-resource\/index\.js"/);
+  assert.doesNotMatch(checkPack, /from\s+["'][^"']*verify-npm-release\.mjs/);
   assert.doesNotMatch(npmTarball, /from "(?!node:)/);
   assert.match(buildTarball, /readmeFilename/);
   assert.match(checkPack, /package README metadata does not match README\.md/);
@@ -343,7 +343,7 @@ test("provides an explicit project publish skill with immutable release safeguar
   });
   for (const required of [
     "docs/npm-package-releases.md",
-    "scripts/prepare-npm-release.mjs",
+    "bin/prepare-npm-release.mjs",
     ".github/workflows/publish-npm.yml",
     "Never run",
     "npm publish",

@@ -5,11 +5,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
-import { observePackageRisk } from "../../scripts/ci-package-risk.mjs";
+import { observePackageRisk } from "../../bin/ci-package-risk.mjs";
 import { createRepository, FIRST_ID, git } from "../helpers/repository.js";
 
 const cli = fileURLToPath(new URL("../../bin/silvermoon.js", import.meta.url));
-const runner = new URL("../../scripts/run-checks.mjs", import.meta.url);
+const runner = new URL("../../bin/run-checks.mjs", import.meta.url);
 
 test("sanity preload reaches real test workers and blocks accidental process and network calls", async () => {
   const directory = await mkdtemp(join(tmpdir(), "silvermoon-sanity-boundary-"));
@@ -38,8 +38,8 @@ test("commit scope keeps partial staging intact and validates the index, not wor
   const repository = await createRepository({ prefix: "silvermoon-tier-index-", withRemote: false });
   try {
     const { root, base } = repository;
-    await mkdir(join(root, "scripts"));
-    await copyFile(runner, join(root, "scripts", "run-checks.mjs"));
+    await mkdir(join(root, "bin"), { recursive: true });
+    await copyFile(runner, join(root, "bin", "run-checks.mjs"));
     const sample = join(root, "candidate.txt");
     await writeFile(sample, "staged candidate");
     git(root, "add", "candidate.txt");
@@ -56,7 +56,7 @@ if (script === "check:staged") {
 }
 console.log("FIXTURE_WORKTREE " + script + ": " + readFileSync("candidate.txt", "utf8"));
 `);
-    const execute = () => spawnSync(process.execPath, ["scripts/run-checks.mjs", "--tier", "commit"], {
+    const execute = () => spawnSync(process.execPath, ["bin/run-checks.mjs", "--tier", "commit"], {
       cwd: root, encoding: "utf8",
       env: { ...process.env, npm_execpath: packageManager },
       windowsHide: true,

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { observePackageRisk, packageRisk, parseRiskArgs } from "../../scripts/ci-package-risk.mjs";
+import { observePackageRisk, packageRisk, parseRiskArgs } from "../../bin/ci-package-risk.mjs";
 
 const idea = ".silvermoon/ideas/01M3R65W3C3F3HGQFW12H92SV0/ledger.md";
 const base = "a".repeat(40);
@@ -9,11 +9,11 @@ const head = "b".repeat(40);
 test("only known idea metadata can avoid package validation", () => {
   assert.equal(packageRisk([idea]).required, false);
   for (const path of [
-    "src/cli/cli.js", "schema/v1/config.schema.json", "assets/logo.svg",
+    "bin/silvermoon.js", "schema/v1/config.schema.json", "assets/logo.svg",
     "README.md", "docs/maintaining.md", "package.json", "pnpm-lock.yaml",
     "package-lock.json", ".npmrc", "bin/silvermoon.js", "skills/silvermoon/SKILL.md",
     ".agents/skills/silvermoon/SKILL.md", "test/helpers/repository.js",
-    "test/e2e/installed-package.test.js", "scripts/run-checks.mjs",
+    "test/e2e/installed-package.test.js", "bin/run-checks.mjs",
     ".github/workflows/ci.yml", "AGENTS.md", "unknown", "", null, undefined,
     ".silvermoon/ideas/unknown/ledger.md", idea.replace("/ledger.md", "/../src.js"),
     idea.replaceAll("/", "\\"), idea.replace("/ledger.md", "//file"),

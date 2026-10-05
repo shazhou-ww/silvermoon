@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { Command } from "commander";
-import { migrateEvents } from "../src/application/migrations/index.js";
+import { migrateEvents } from "../src/business/migrate-v1-to-v2.js";
 
 const program = new Command()
   .name("migrate-v1-to-v2")

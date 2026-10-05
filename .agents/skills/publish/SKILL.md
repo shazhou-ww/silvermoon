@@ -20,8 +20,8 @@ development machine.
   [`docs/npm-package-releases.md`](../../../docs/npm-package-releases.md) before
   changing the manifest, creating a tag, rerunning a workflow, or troubleshooting
   a release.
-- Treat `scripts/prepare-npm-release.mjs` as the allowlist and release-key
-  authority and `scripts/verify-npm-release.mjs` as the post-publication
+- Treat `bin/prepare-npm-release.mjs` as the allowlist and release-key
+  authority and `bin/verify-npm-release.mjs` as the post-publication
   evidence gate. Do not derive a package path from user text.
 - Publish only through `.github/workflows/publish-npm.yml`. Never run
   `npm publish` locally and never create or request `NPM_TOKEN` or
@@ -102,7 +102,7 @@ commit because it leaves package contents unchanged.
 3. Run the release planner locally against the exact candidate:
 
    ```sh
-   node scripts/prepare-npm-release.mjs \
+   node bin/prepare-npm-release.mjs \
      --tag npm/<release-key>/v<version> \
      --commit <full-origin-main-commit>
    ```

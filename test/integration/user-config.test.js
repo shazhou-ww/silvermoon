@@ -8,7 +8,7 @@ import {
   loadUserConfig,
   serializeUserConfig,
   USER_CONFIG_PATH,
-} from "../../src/project/user-config.js";
+} from "../../src/foundation/device-config/index.js";
 
 const temporaryDirectories = [];
 

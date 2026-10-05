@@ -11,20 +11,20 @@ import {
 import { join, resolve } from "node:path";
 import { afterEach, test } from "node:test";
 
-import { createIdea } from "../../src/application/create.js";
-import { observeGitCommands } from "../../src/repository/git.js";
+import { createIdea } from "../../src/business/create-idea.js";
+import { observeGitCommands } from "../../src/foundation/git/index.js";
 import {
   DEPLOYMENT_TEMPLATE,
   IDEA_TEMPLATE,
   IMPLEMENTATION_TEMPLATE,
   LEDGER_TEMPLATE,
   ideaTemplates,
-} from "../../src/idea/rules/templates.js";
+} from "../../src/foundation/idea-template/index.js";
 import {
   GUIDANCE_ROOT,
   ideaPaths,
   phaseGuidancePath,
-} from "../../src/project/rules/layout.js";
+} from "../../src/foundation/coordinates/index.js";
 import {
   createRepository,
   FIRST_ID,

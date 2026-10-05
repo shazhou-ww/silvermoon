@@ -12,13 +12,13 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterEach, test } from "node:test";
 
-import { runCli } from "../../src/cli/cli.js";
-import { observeGitCommands } from "../../src/repository/git.js";
-import { readIdeaInventoryItem } from "../../src/application/observation/idea-metadata.js";
-import { serializeIdeaStatus } from "../../src/idea/rules/status.js";
-import { listIdeas } from "../../src/application/list.js";
-import { ideaPaths } from "../../src/project/rules/layout.js";
-import { withTraceFile } from "../../src/command/trace/trace.js";
+import { runCli } from "../../bin/silvermoon.js";
+import { observeGitCommands } from "../../src/foundation/git/index.js";
+import { readIdeaInventoryItem } from "../../src/business/shared/read-idea-inventory-item.js";
+import { serializeIdeaStatus } from "../../src/foundation/idea-model/index.js";
+import { listIdeas } from "../../src/business/list-ideas.js";
+import { ideaPaths } from "../../src/foundation/coordinates/index.js";
+import { withTraceFile } from "../../src/foundation/trace/index.js";
 import {
   createRepository,
   git,

@@ -6,11 +6,11 @@ import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { test } from "node:test";
 
-import { generateNpmReadme } from "../../scripts/generate-npm-readme.mjs";
+import { generateNpmReadme } from "../../bin/generate-npm-readme.mjs";
 
 const repositoryRoot = fileURLToPath(new URL("../..", import.meta.url));
 const readmePath = resolve(repositoryRoot, "README.md");
-const generatorPath = resolve(repositoryRoot, "scripts/generate-npm-readme.mjs");
+const generatorPath = resolve(repositoryRoot, "bin/generate-npm-readme.mjs");
 const commit = "b".repeat(40);
 
 test("rewrites the real repository README onto an immutable commit without touching the source file", async () => {

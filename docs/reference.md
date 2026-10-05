@@ -152,9 +152,10 @@ Its strict nine-event union updates the status facts and interaction
 projection; no observations, creation/import markers, or audit envelope are
 stored. The nested-world revisions and five lifecycle states are unchanged.
 
-Use `event replay`, `event append`, and `event revise`, never direct JSONL
-editing. Requests carry exact logical byte length and the normalized events-folder
-Git tree digest outside the business event;
+Use `event replay` and `event append` for routine state. Exceptional history
+maintenance edits the complete `events/` folder directly and validates it
+through ordinary Git review and snapshot/history checks. Append requests carry
+exact logical byte length and the normalized events-folder Git tree digest outside the business event;
 lifecycle writes also require expected primary. Canonical JSONL, human gates, concurrency,
 conditional append-only history, and interrupted-write recovery are specified
 in the [event operations contract](../skills/silvermoon/references/events.md).
@@ -286,7 +287,7 @@ silvermoon list-ideas [--state <state>] [--all] [--query <text>] [--created-sinc
 silvermoon whats-next [idea] [--language <en|en-US|zh|zh-CN>] [--audience <human|agent>] [--trace <file.trace.jsonl>]
 silvermoon create-idea [--language <tag>] [--audience <human|agent>] [--trace <file.trace.jsonl>]
 silvermoon check [--remote | --commit <revision> | --staged | --worktree] [--language <en|en-US|zh|zh-CN>] [--audience <human|agent>] [--trace <file.trace.jsonl>]
-silvermoon event <replay|append|revise|recover> [idea] [--input <request.json>] [--after-length <bytes>] [--after-digest <oid>] [--full-history] [--expected-length <bytes>] [--expected-digest <oid>] [--expected-primary <commit>] [--confirm-decision] [--owned-suffix] [--confirm-stopped] [--rollback] [--audience <human|agent>]
+silvermoon event <replay|append> <idea> [--input <request.json>] [--after-length <bytes>] [--after-digest <oid>] [--full-history] [--expected-length <bytes>] [--expected-digest <oid>] [--expected-primary <commit>] [--confirm-decision] [--audience <human|agent>]
 ```
 
 Every valid invocation starts one ordered domain-message stream with

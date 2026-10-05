@@ -10,12 +10,12 @@
   "exports": {
     ".": "./src/index.js",
     "./agents/copilot": {
-      "types": "./src/agents/copilot.d.ts",
-      "default": "./src/agents/copilot.js"
+      "types": "./src/business/agent-copilot.d.ts",
+      "default": "./src/business/agent-copilot.js"
     },
     "./agents/project-runtime": {
-      "types": "./src/agents/project-runtime.d.ts",
-      "default": "./src/agents/project-runtime.js"
+      "types": "./src/business/agent-project-runtime.d.ts",
+      "default": "./src/business/agent-project-runtime.js"
     }
   },
   "files": [
@@ -30,22 +30,22 @@
   ],
   "scripts": {
     "silvermoon": "node bin/silvermoon.js",
-    "check": "node scripts/run-checks.mjs",
-    "check:sanity": "node scripts/run-checks.mjs --tier sanity",
-    "check:commit": "node scripts/run-checks.mjs --tier commit",
-    "check:release": "node scripts/run-checks.mjs --tier release",
+    "check": "node bin/run-checks.mjs",
+    "check:sanity": "node bin/run-checks.mjs --tier sanity",
+    "check:commit": "node bin/run-checks.mjs --tier commit",
+    "check:release": "node bin/run-checks.mjs --tier release",
     "check:syntax": "node --check bin/silvermoon.js",
-    "check:pure": "node scripts/pure-check.mjs",
+    "check:pure": "node bin/pure-check.mjs",
     "check:staged": "node bin/silvermoon.js check --staged --audience agent",
     "check:diff": "git diff --check && git diff --cached --check",
     "check:quick": "node --check bin/silvermoon.js && npm test",
     "check:skills": "npm run check:skills:local && npm run check:skills:discover",
-    "check:skills:local": "node scripts/sync-skills.mjs --check",
+    "check:skills:local": "node bin/sync-skills.mjs --check",
     "check:skills:discover": "npx skills add . --list",
     "lint:markdown": "markdownlint-cli2",
-    "pack:check": "node scripts/check-pack.js",
-    "prepare:npm-release": "node scripts/prepare-npm-release.mjs",
-    "sync:skills": "node scripts/sync-skills.mjs",
+    "pack:check": "node bin/check-pack.js",
+    "prepare:npm-release": "node bin/prepare-npm-release.mjs",
+    "sync:skills": "node bin/sync-skills.mjs",
     "test": "npm run test:unit && npm run test:contract",
     "test:contract": "node --test \"test/contract/*.test.*\"",
     "test:e2e": "node --test \"test/e2e/*.test.*\"",

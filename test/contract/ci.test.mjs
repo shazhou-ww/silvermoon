@@ -4,7 +4,7 @@ import { test } from "node:test";
 
 import { parseDocument } from "yaml";
 
-import { CHECK_SCRIPTS } from "../../scripts/run-checks.mjs";
+import { CHECK_SCRIPTS } from "../../bin/run-checks.mjs";
 
 const packageUrl = new URL("../../package.json", import.meta.url);
 const workflowUrl = new URL("../../.github/workflows/ci.yml", import.meta.url);
@@ -38,11 +38,11 @@ test("runs fast layered validation in ordinary CI", async () => {
     manifest.scripts.test,
     "npm run test:unit && npm run test:contract",
   );
-  assert.equal(manifest.scripts.check, "node scripts/run-checks.mjs");
-  assert.equal(manifest.scripts["check:release"], "node scripts/run-checks.mjs --tier release");
+  assert.equal(manifest.scripts.check, "node bin/run-checks.mjs");
+  assert.equal(manifest.scripts["check:release"], "node bin/run-checks.mjs --tier release");
   assert.equal(manifest.scripts["test:unit"], 'node --test "test/unit/*.test.*" "test/runtime/*.test.*"');
   assert.equal(manifest.scripts["check:skills"], "npm run check:skills:local && npm run check:skills:discover");
-  assert.equal(manifest.scripts["check:skills:local"], "node scripts/sync-skills.mjs --check");
+  assert.equal(manifest.scripts["check:skills:local"], "node bin/sync-skills.mjs --check");
   assert.equal(manifest.scripts["check:skills:discover"], "npx skills add . --list");
   assert.deepEqual(CHECK_SCRIPTS, [
     "lint:markdown",
@@ -102,7 +102,7 @@ test("runs fast layered validation in ordinary CI", async () => {
   assert.equal(step(risk, "Observe package risk").env.BASE_SHA, "${{ github.event.pull_request.base.sha || github.event.before }}");
   assert.equal(step(risk, "Observe package risk").env.HEAD_SHA, "${{ github.sha }}");
   assert.match(step(risk, "Observe package risk").run, /--base "\$BASE_SHA" --head "\$HEAD_SHA"/);
-  assert.match(step(risk, "Observe package risk").run, /else\s+node scripts\/ci-package-risk\.mjs --full/);
+  assert.match(step(risk, "Observe package risk").run, /else\s+node bin\/ci-package-risk\.mjs --full/);
   const packaged = workflow.jobs.package;
   assert.equal(packaged.needs, "package-risk");
   assert.equal(packaged.if, "needs.package-risk.outputs.required == 'true'");

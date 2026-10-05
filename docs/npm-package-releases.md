@@ -181,7 +181,7 @@ verification again.
    `publishConfig` with `access: public` and registry
    `https://registry.npmjs.org/`.
 2. Add a fixed release-key entry to `RELEASE_PACKAGES` in
-   [`prepare-npm-release.mjs`](../scripts/prepare-npm-release.mjs). Never derive
+   [`prepare-npm-release.mjs`](../bin/prepare-npm-release.mjs). Never derive
    a filesystem path directly from tag text.
 3. Extend the release tests with the package selection, identity, version, and
    dist-tag cases.

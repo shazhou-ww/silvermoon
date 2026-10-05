@@ -34,9 +34,9 @@ jobs:
           HEAD_SHA: ${{ github.sha }}
         run: |
           if [ "$EVENT_NAME" = push ] || [ "$EVENT_NAME" = pull_request ]; then
-            node scripts/ci-package-risk.mjs --base "$BASE_SHA" --head "$HEAD_SHA"
+            node bin/ci-package-risk.mjs --base "$BASE_SHA" --head "$HEAD_SHA"
           else
-            node scripts/ci-package-risk.mjs --full
+            node bin/ci-package-risk.mjs --full
           fi
 
   unit:

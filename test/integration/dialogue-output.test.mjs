@@ -2,9 +2,9 @@ import assert from "node:assert/strict";
 import { rm } from "node:fs/promises";
 import { test } from "node:test";
 
-import { createIdea } from "../../src/application/create.js";
+import { createIdea } from "../../src/business/create-idea.js";
 import { checkRepository } from "../../src/index.js";
-import { whatsNext } from "../../src/application/next.js";
+import { whatsNext } from "../../src/business/whats-next.js";
 import { createRepository } from "../helpers/repository.js";
 
 test("all public commands return exactly four projections", async () => {

@@ -12,7 +12,7 @@ import {
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { npmCommand } from "../../scripts/npm-command.mjs";
+import { npmCommand } from "../../src/foundation/process/index.js";
 
 const packageRoot = fileURLToPath(new URL("../..", import.meta.url));
 const id = "01M36QGPNTXEPP61DA4KP4AVZF";
@@ -329,7 +329,7 @@ try {
       [
         "--input-type=module",
         "-e",
-        "import { renderTuiMarkdown } from './node_modules/silvermoon/src/presentation/tui/index.js'; console.log(typeof renderTuiMarkdown);",
+        "import { renderTuiMarkdown } from './node_modules/silvermoon/src/foundation/tui/index.js'; console.log(typeof renderTuiMarkdown);",
       ],
       consumer,
     ),

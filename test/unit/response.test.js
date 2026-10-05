@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { renderResponse } from "../../src/presentation/render.js";
+import { renderResponse } from "../../src/foundation/renderer/index.js";
 
 const now = new Date("2026-09-30T12:00:00.000Z");
 const minute = 60_000;

@@ -12,11 +12,11 @@ import { join } from "node:path";
 import test, { afterEach } from "node:test";
 import { fileURLToPath } from "node:url";
 
-import { buildNpmTarball } from "../../scripts/build-npm-tarball.mjs";
+import { buildNpmTarball } from "../../bin/build-npm-tarball.mjs";
 import {
   verifyNpmRelease,
   verifyNpmReleaseEventually,
-} from "../../scripts/verify-npm-release.mjs";
+} from "../../bin/verify-npm-release.mjs";
 
 const temporaryDirectories = [];
 const packageName = "silvermoon";

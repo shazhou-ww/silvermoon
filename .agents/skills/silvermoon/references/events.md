@@ -185,7 +185,7 @@ pre-state, not the same request. A stale request with another record at that
 position is a conflict, not permission to renumber. Two metadata edits are two
 requests; if the second fails, the first remains a completed local append.
 
-## Check and revise
+## Check and maintain exceptional history
 
 V2 `check` validates the chosen snapshot against its immediate event boundary:
 
@@ -201,23 +201,17 @@ V2 `check` validates the chosen snapshot against its immediate event boundary:
 - Repair is reported as repair, not append-only. The repaired log
   immediately becomes protected again; another idea receives no exemption.
 
-Keep unknown work. Sync and reassess intent and ownership before revising an
-unintegrated suffix. Save a JSON array of the complete desired business
-requests (without sequence), then run:
+Keep unknown work. Sync and reassess intent and ownership before maintaining an
+unintegrated suffix or a definite reduction-failed primary history. There is no
+revision command. Review and edit the complete idea `events/` folder directly:
+preserve canonical segment names, exact sequence, the 1000-record boundary,
+known decisions, and all unrelated bytes. Never edit only a projected cache or
+cursor.
 
-```sh
-silvermoon event revise <ULID> --input reviewed-requests.json --owned-suffix --expected-length <bytes> --expected-digest <oid> --expected-primary <commit> --audience agent
-```
-
-`--owned-suffix` asserts that the replacement has been reviewed and is yours
-to revise. The CLI assigns sequences and enforces the primary prefix or
-definite failed-base repair rule. Newly introduced decisions still require
-their human gate. It never automatically discards unknown candidates.
-
-After local committed candidates have been revised, preserve their history.
-If their intermediate transitions cannot fast-forward legally, integrate
-through an ordinary merge with current primary as first parent. Never force,
-reset, or rebase away those candidates to conceal the conflict.
+Run `check --worktree` on the complete candidate, inspect the Git diff, stage
+only the reviewed event folder, then run `check --staged`. Newly introduced
+decisions still require their human gate. Commit and integrate with ordinary
+non-force Git; never reset, force-push, or rebase away unknown candidates.
 
 An integration gate must refresh primary and bind the reported baseline to
 the actual old tip being updated. Primary movement requires rechecking.
@@ -230,19 +224,15 @@ business state; it stores original and candidate bytes. Normal commands block
 while it exists. Never commit it or `.pending`/`.prepared` temporary files.
 Do not delete a lock by age.
 
-After confirming the original writer has stopped:
+After confirming the original writer has stopped, inspect the transaction plan,
+original bytes, candidate bytes, host and PID. There is no event recovery
+command. Directly restore or complete the exact operation-owned `events/`
+folder bytes, preserve every unknown byte, and remove transaction-owned
+temporary files only after the selected complete state matches the plan.
+Then run worktree and staged checks before committing.
 
-```sh
-silvermoon event recover --confirm-stopped --audience agent
-silvermoon event recover --confirm-stopped --rollback --audience agent
-```
-
-Recovery refuses active/reused PIDs, foreign hosts, unknown bytes and a changed
-plan. Resume revalidates primary and worlds for lifecycle writes, or the
-complete candidate log for local interaction writes; rollback restores only exact
-operation-owned bytes. A second recovery is excluded by `transaction.recovery`.
-If a recovery process itself is killed, stop all recovery participants, verify
-its recorded PID is inactive and inspect the original plan, then explicitly
+If maintenance itself is interrupted, stop all participants, verify the
+recorded PID is inactive and inspect the original plan, then explicitly
 remove only that recovery mutex before retrying. The tool never guesses it is
 stale or removes it automatically. Preserve unexpected files for investigation. Files are
 fsynced before same-directory rename. POSIX directory entries are also synced;
