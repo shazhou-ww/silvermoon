@@ -2,7 +2,7 @@
  * daemon 上游连接的 Ideal World 类型草案，不是运行时代码。
  *
  * daemon 永远连接 upstream；本地 upstream server 由独立 CLI 启动。
- * 项目版本 Silvermoon 保持事件校验、追加和流程判断的权威。
+ * HEADQUARTER Silvermoon 按目标 repository schema 保持事件校验、追加和流程判断的权威。
  * 类型表达三种调度范围；具体 wire 编码、治理操作结果及冲突协议仍待细化。
  */
 

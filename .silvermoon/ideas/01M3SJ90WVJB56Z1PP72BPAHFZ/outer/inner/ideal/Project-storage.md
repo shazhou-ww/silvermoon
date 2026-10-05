@@ -45,7 +45,9 @@ Outer World 是设备真实状态；它包含设备自己的 Silvermoon idea con
 `device-hq/` 与非 Git cache 目录，绝不读取或写入真实 `$HOME/.silvermoon/`。
 设备控制项目默认不配置 remote，不与其他设备共享其 Outer World 或 idea history；
 初次从最小本地 Silvermoon project scaffold 初始化，不克隆 Silvermoon 源码，后续
-维护脚本与工具由其 ideas 增长。本地 primary branch 的选择和版本升级方式仍待定义。
+维护脚本与工具由其 ideas 增长。设备 HEADQUARTER 是该设备 Silvermoon binary 与
+canonical skill 的安装和升级边界；managed repository 不另装一份。本地 primary
+branch 的选择、HEADQUARTER binary 升级和 schema 迁移方式仍待定义。
 
 ```text
 $HOME/.silvermoon/
@@ -66,8 +68,10 @@ managed project 的 Git primary。
 `.silvermoon/ideas/<ideaId>/events/`，下含按规范 ordinal 命名的 JSONL segment，
 每段最多 1000 个事件。idea 流 HEAD 是该 `events/` folder 的完整 Git tree digest
 及逻辑长度，使用项目 repository object format；cursor 是准确已处理前缀的
-length/digest。daemon 经项目版本 Silvermoon 的生产接口读写，不直接改目录。
-完成迁移的 schema 仍为 V2，不为分段布局新增 V3。
+length/digest。daemon 经 HEADQUARTER Silvermoon 针对项目 schema 的生产接口读写，
+不直接改目录。完成迁移的 schema 仍为 V2，不为分段布局新增 V3。若项目仍声明
+受支持的旧 schema，新 binary 必须按旧语义安全操作并建议迁移最新 schema；不得因
+登记、读取或调度自动改写 schema。
 
 session 实体由 Agent runtime 管理，daemon registry 只持久记录唯一治理 session
 binding 和每个 idea session 的必要绑定。配置保存稳定的根目录设置；动态项目增删
