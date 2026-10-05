@@ -19,12 +19,12 @@ async function sourceDirectories(path = root) {
   return [path, ...nested.flat()];
 }
 
-function dependencies(path, source) {
+function dependencies(path, source, { includeReExports = true } = {}) {
   const tree = parse(path, source);
   const dependencies = [];
   const visit = (node) => {
     let specifier;
-    if ((ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) && node.moduleSpecifier) {
+    if ((ts.isImportDeclaration(node) || (includeReExports && ts.isExportDeclaration(node))) && node.moduleSpecifier) {
       specifier = node.moduleSpecifier;
     } else if (ts.isCallExpression(node) && node.expression.kind === ts.SyntaxKind.ImportKeyword) {
       specifier = node.arguments[0];
@@ -55,7 +55,8 @@ test("every source directory has a concise responsibility README and explicit ex
     ]);
     assert.match(readme, /^# .+/);
     assert.ok(readme.trim().length >= 120, `${coordinate(directory)} must describe its responsibilities`);
-    assert.ok(readme.split("\n").length <= 45, `${coordinate(directory)} README must remain concise`);
+    const lineLimit = directory === root ? 100 : 45;
+    assert.ok(readme.split("\n").length <= lineLimit, `${coordinate(directory)} README must remain concise`);
     const tree = parse(resolve(directory, "index.js"), source);
     assert.ok(tree.statements.length > 0);
     assert.ok(tree.statements.every((node) => ts.isExportDeclaration(node)
@@ -152,4 +153,33 @@ test("authenticated projection source identity includes moved implementations an
     "../project/rules/index.js", "../repository/index.js",
   ]) assert.ok(coordinates.includes(name), name);
   for (const name of coordinates) assert.ok(sources.has(resolve(dirname(path), name)), name);
+});
+
+test("target architecture diagram declares three downward-only layers without claiming implementation", async () => {
+  const readme = await readFile(resolve(root, "README.md"), "utf8");
+  const diagram = /```mermaid\n([\s\S]*?)\n```/.exec(readme)?.[1];
+  assert.ok(diagram, "Source README must contain the architecture diagram");
+  const aliases = new Map();
+  for (const match of diagram.matchAll(/^\s*(\w+)\["([^"]+)"\]\s*$/gm)) {
+    aliases.set(match[1], match[2]);
+  }
+  assert.deepEqual([...aliases.keys()].sort(), ["Application", "Business", "Foundation"]);
+  assert.match(aliases.get("Application"), /^应用层/);
+  assert.match(aliases.get("Business"), /^业务逻辑层/);
+  assert.match(aliases.get("Foundation"), /^基础 I\/O 和工具层/);
+  const drawn = new Set();
+  for (const match of diagram.matchAll(/^\s*(\w+)\s*(-->|<-->)\s*(.+)$/gm)) {
+    const from = aliases.get(match[1]);
+    assert.ok(from, `Unknown diagram source ${match[1]}`);
+    for (const target of match[3].split(/\s*&\s*/)) {
+      const to = aliases.get(target.trim());
+      assert.ok(to, `Unknown diagram target ${target}`);
+      assert.equal(match[2], "-->", "Target layers must not have reverse dependencies");
+      drawn.add(`${match[1]}->${target.trim()}`);
+    }
+  }
+  assert.deepEqual([...drawn].sort(), [
+    "Application->Business", "Application->Foundation", "Business->Foundation",
+  ]);
+  assert.ok(readme.includes("目标设计，不是当前源码依赖图"));
 });
