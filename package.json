@@ -20,13 +20,9 @@
   },
   "files": [
     "bin",
-    "!bin/migrate-internal-events.js",
-    "!bin/migrate-segmented-events.js",
     "docs",
     "skills/silvermoon",
     "src",
-    "!src/application/migrations/internal-events.js",
-    "!src/application/migrations/segmented-events.js",
     "LICENSE",
     "README.md",
     "README.zh-CN.md",

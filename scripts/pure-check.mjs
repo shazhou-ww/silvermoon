@@ -1,5 +1,5 @@
 import { readFile, readdir } from "node:fs/promises";
-import { dirname, relative, resolve } from "node:path";
+import { dirname, posix, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 import ts from "typescript";
@@ -83,8 +83,19 @@ function matchesCoordinate(path, coordinate) {
   return path.replaceAll("\\", "/").endsWith(`/${coordinate}`);
 }
 
+function normalizeSourcePath(path) {
+  return path.replaceAll("\\", "/");
+}
+
+function resolveSourcePath(path, specifier) {
+  return posix.normalize(posix.join(posix.dirname(path), specifier));
+}
+
 export function inspectPureSources(sources, { ruleModules = RULE_MODULES } = {}) {
-  const modules = new Map([...sources].map(([path, source]) => {
+  const normalizedSources = new Map(
+    [...sources].map(([path, source]) => [normalizeSourcePath(path), source]),
+  );
+  const modules = new Map([...normalizedSources].map(([path, source]) => {
     const tree = ts.createSourceFile(path, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.JS);
     const functions = new Map();
     const imports = new Map();
@@ -113,7 +124,7 @@ export function inspectPureSources(sources, { ruleModules = RULE_MODULES } = {})
       if (ts.isImportDeclaration(node) && node.importClause) {
         const specifier = node.moduleSpecifier.text;
         const target = specifier.startsWith(".")
-          ? resolve(dirname(path), specifier) : specifier;
+          ? resolveSourcePath(path, specifier) : specifier;
         const clause = node.importClause;
         if (clause.name) imports.set(clause.name.text, { target, name: "default" });
         if (clause.namedBindings && ts.isNamedImports(clause.namedBindings)) {
@@ -131,7 +142,7 @@ export function inspectPureSources(sources, { ruleModules = RULE_MODULES } = {})
         const target = node.moduleSpecifier?.text;
         for (const entry of node.exportClause.elements) {
           exports.set(entry.name.text, target
-            ? { target: resolve(dirname(path), target), name: entry.propertyName?.text ?? entry.name.text }
+            ? { target: resolveSourcePath(path, target), name: entry.propertyName?.text ?? entry.name.text }
             : { local: entry.propertyName?.text ?? entry.name.text });
         }
       }
@@ -149,7 +160,7 @@ export function inspectPureSources(sources, { ruleModules = RULE_MODULES } = {})
     getCurrentDirectory: () => "/",
     getDirectories: () => [],
     fileExists: (path) => modules.has(path),
-    readFile: (path) => sources.get(path),
+    readFile: (path) => normalizedSources.get(path),
     getCanonicalFileName: (path) => path,
     useCaseSensitiveFileNames: () => true,
     getNewLine: () => "\n",
@@ -194,7 +205,7 @@ export function inspectPureSources(sources, { ruleModules = RULE_MODULES } = {})
         if ((!ts.isImportDeclaration(node) && !ts.isExportDeclaration(node)) || !node.moduleSpecifier) continue;
         const target = node.moduleSpecifier.text;
         if (target.startsWith(".")) {
-          const resolved = resolve(dirname(path), target);
+          const resolved = resolveSourcePath(path, target);
           if (![...RULE_DEPENDENCIES].some((coordinate) => matchesCoordinate(resolved, coordinate))) {
             report(node, `Pure rule module depends on non-rule module ${target}`);
           }

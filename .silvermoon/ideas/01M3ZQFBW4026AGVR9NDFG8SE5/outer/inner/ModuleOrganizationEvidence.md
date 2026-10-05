@@ -86,4 +86,65 @@ idea 文档，不改变已验证的源码、README、测试、包清单或维护
 最终准确 implementationRevision 以收尾同步后的最新 whats-next 为准。
 
 本轮目录候选尚未获得准确版本验收，旧 acceptInner 事实仍然保留。
-Ideal World 未修改，目录组织更改本身不代表批准或验收；未进入 deployment。
+后续 review 修改了 Ideal World，idea 应先返回 preparing；未进入 deployment。
+
+## Review 补充：应用入口消息
+
+根据实现验收 review，[源码模块索引](../../../../../src/README.md) 的应用层改为
+每行一个唯一进程入口，不把多个入口合并，也不把一个入口拆成多行。每项明确接收
+与发出的进程边界消息和职责限制；消息名称不构成新增 schema 或进程间消息总线。
+
+review 明确否定事件修订／恢复脚本：异常历史应由维护者直接编辑完整 `events/`
+folder，再通过 Git review 和 snapshot／event history 校验确认。该决定改变了已
+批准的 Ideal World，因此已同步修改 Idea 与 FunctionalDesign，并将相关实施及
+验收 ledger 项恢复为未完成。CLI revise／recover 的实际移除须等新 idealRevision
+获得明确批准后实施；当前文档只定义目标，不冒充代码已完成。
+
+后续 review 逐项核对三个迁移入口。本仓库全部 42 个 idea 均使用分段 `events/`
+folder，没有 `status.yaml`；历史 idea 证据记录内部事件格式迁移及 41 个既有流的
+分段迁移已成功完成。`migrate-internal-events` 与 `migrate-segmented-events`
+只服务本仓库且不在发布包内，已删除入口、实现、运行时测试、包排除项和 skill
+操作指引。`migrate-v1-to-v2` 仍随发布包服务外部 v1 项目，并有运行时、安装态、
+打包白名单与参考文档调用方，因此保留。
+
+基础层 review 进一步发现原“Git 与快照”“事件协议与存储”“命令消息与报告”
+“输出与终端”“观测与进程 I/O”等能力桶仍有多个变化原因。[源码模块索引]
+(../../../../../src/README.md) 现为每个目标基础模块提供英文项目名、当前迁移
+来源、单一职责能力边界和明确排除项；FunctionalDesign 固化同一组 29 个目标名，
+并明确原 A–L 只组织接口讨论，不是宽泛物理模块。该部分仍是待批准和实施的目标，
+不声明当前目录已经完成拆分。
+
+后续 review 固定三层物理结构：应用层统一为 `bin/` 且每入口一个完整文件；
+业务层统一为 `src/business/` 且每业务入口函数一个文件，共享函数进入
+`src/business/shared/` 后仍一函数一文件；基础层每模块独占
+`src/foundation/<module>/`。基础模块 README 除职责和依赖边界外，还必须逐项解释
+公开 index 的关键函数。现有 `scripts/`、`src/application/` 和顶层基础目录是待
+迁移来源，不被目标文档描述为已经完成。
+
+观察 review 将共享观察固定为 `observeDevice` → `observeProject` → `observeIdea`。
+device 当前只包含运行来源、全局安装及全局配置的存在／有效性；源码 checkout
+不需要伪装成全局安装。project 和 idea 显式消费下一层结果，不通过 Context 重读。
+基础层相应增加单一职责的 `installation` 与 `device-config`，替换含义过窄的
+`preferences`。daemon 进程与通信事实明确留待 daemon 模式的独立契约。
+
+根 README 因承担详细架构索引而不再沿用普通模块 README 的 100 行上限；普通模块
+仍保持 45 行限制，根索引保留 180 行明确上限。以下针对性验证已通过：
+
+| 实际命令 | 结果 |
+| --- | --- |
+| `pnpm lint:markdown src/README.md` | 通过，Markdown 无问题 |
+| `node --test --test-name-pattern "every source directory has a concise responsibility README|target architecture diagram" test/contract/functional-boundaries.test.js` | 通过，2 项均通过；覆盖三层目录、一入口／函数一文件、基础模块 README 关键 export 说明，以及 device→project→idea 观察顺序和 daemon 范围边界 |
+| `git diff --check` | 通过 |
+| `node bin/silvermoon.js check --worktree --audience agent` | 通过，本次候选元数据有效 |
+| 初次 `pnpm check:sanity` | 未通过；Windows source key 与相对 import 使用不同分隔符，导致 2 个 pure-check fixture 无法识别已标注 helper，并将 `projectActions` 的局部 record 误判为外部 mutation |
+| `node --test test/unit/pure-check.test.mjs` | 修复路径规范化后通过，8 项全部通过；新增 Windows source path 回归用例 |
+| `pnpm check:pure` | 通过，144 个纯函数、14 个规则模块 |
+| `node --test test/contract/functional-boundaries.test.js` | 通过，8 项全部通过 |
+| `node --test test/runtime/event-state.test.js test/runtime/cursor-events.test.js test/runtime/event-v2-interaction.test.js test/contract/functional-boundaries.test.js` | 外部 v1→v2 迁移相关用例全部通过；其中旧 pure-check 误报已由上述路径规范化修复 |
+| `pnpm check:skills:local` | 通过，canonical 与 registered skill 的 3 个文件一致 |
+| `pnpm pack:check` | 通过，发布包 134 个准确文件，外部 v1→v2 入口仍在 |
+| 初次 `pnpm check` | 未通过；Markdown、pack 和完整 skill discovery gate 通过。pure-check 的 Windows 路径问题随后已修复；integration 另有 1 个 worktree-root 断言和 2 个 Windows symlink `EPERM`；安装态 E2E 在 npm install 处 `ETIMEDOUT`。这些失败均未指向已删除的 source-only 迁移；外部 v1→v2 针对性运行时用例及 package dry-run 已单独通过 |
+
+先验证、同步并请求新 idealRevision 审批；获批后才可继续实现和重新运行完整
+release-grade check、提交前检查及准确候选元数据检查。此前记录的完整检查只证明
+上一候选，不冒充本次 review 修改后的准确版本证据。

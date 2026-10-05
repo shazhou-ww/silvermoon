@@ -250,55 +250,6 @@ Node on Windows provides no directory-fsync guarantee, so power-loss durability
 depends on the filesystem. Process-interruption recovery does not imply a
 hardware power-loss guarantee.
 
-## Source checkout's internal format conversion
-
-The unpublished single-file V2 source state has a separate, source-only
-segmentation entrypoint. It preserves exact event bytes, order, payload,
-sequence, decisions and world content while keeping `version: 2`. It is not a
-public command or external-project compatibility promise:
-
-```sh
-node bin/migrate-segmented-events.js --root <source-checkout>
-node bin/migrate-segmented-events.js --root <source-checkout> --apply --expected-digest <plan-digest>
-node bin/migrate-segmented-events.js --root <source-checkout> --resume --confirm-stopped
-node bin/migrate-segmented-events.js --root <source-checkout> --rollback --confirm-stopped
-```
-
-Apply binds the exact clean source commit and fetched primary to the plan.
-Convert every idea together; mixed or dual storage, source changes, unknown
-bytes and primary movement block rather than fork or succeed partially.
-Historical single-file source commits remain readable. After the segmentation
-boundary, storage cannot revert to a single file. The tool never commits,
-pushes or records approval. Neither this tool nor the older internal format
-conversion entrypoint is included in the published package.
-
-The Silvermoon source repository itself contains earlier, unpublished v2
-dot-separated event records. Its one-time internal conversion is not a public
-v2-to-v3 migration or a compatibility promise to other projects. Only in that
-source checkout, after explicitly scheduling the conversion, use the bundled
-standalone entrypoint:
-
-```sh
-node bin/migrate-internal-events.js --root <source-checkout>
-node bin/migrate-internal-events.js --root <source-checkout> --apply --expected-digest <plan-digest>
-```
-
-The read-only plan checks all old logs against the named primary, exact type
-renames, equivalent fact projections, and the abandoned-window rule. Apply
-rechecks primary and requires a clean committed source. The recoverable
-transaction converts every source idea log and records an internal historical
-format boundary while leaving project `version: 2` unchanged. Prior Git
-commits remain readable as old format; subsequent records must satisfy the
-final public v2 schema and append-only history. This does not authorize an
-upgrade of another repository or an implicit migration. Validate, commit
-and synchronize normally; never hand-edit JSONL. For interrupted transactions,
-after confirming the original writer has stopped:
-
-```sh
-node bin/migrate-internal-events.js --root <source-checkout> --resume --confirm-stopped
-node bin/migrate-internal-events.js --root <source-checkout> --rollback --confirm-stopped
-```
-
 ## Explicit v1-to-v2 migration
 
 Migration is not a Silvermoon subcommand. Run the bundled

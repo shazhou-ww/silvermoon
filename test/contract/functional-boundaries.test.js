@@ -55,7 +55,7 @@ test("every source directory has a concise responsibility README and explicit ex
     ]);
     assert.match(readme, /^# .+/);
     assert.ok(readme.trim().length >= 120, `${coordinate(directory)} must describe its responsibilities`);
-    const lineLimit = directory === root ? 100 : 45;
+    const lineLimit = directory === root ? 240 : 45;
     assert.ok(readme.split("\n").length <= lineLimit, `${coordinate(directory)} README must remain concise`);
     const tree = parse(resolve(directory, "index.js"), source);
     assert.ok(tree.statements.length > 0);
@@ -157,7 +157,14 @@ test("authenticated projection source identity includes moved implementations an
 
 test("target architecture diagram declares three downward-only layers without claiming implementation", async () => {
   const readme = await readFile(resolve(root, "README.md"), "utf8");
-  const diagram = /```mermaid\n([\s\S]*?)\n```/.exec(readme)?.[1];
+  assert.match(readme, /bin\/\s+# 应用层；每个可启动入口一个文件/);
+  assert.match(readme, /business\/\s+# 业务层；每个业务入口函数一个文件/);
+  assert.match(readme, /shared\/\s+# 每个共享业务函数一个文件/);
+  assert.match(readme, /foundation\/\s+# 基础层；每个模块一个目录/);
+  assert.match(readme, /逐项解释 `index\.js` 输出的关键函数用途/);
+  assert.match(readme, /观察严格分三层：device → project → idea/);
+  assert.match(readme, /当前 `observeDevice` 只验证[\s\S]*daemon 模式形成独立契约后再扩展/);
+  const diagram = /```mermaid\r?\n([\s\S]*?)\r?\n```/.exec(readme)?.[1];
   assert.ok(diagram, "Source README must contain the architecture diagram");
   const aliases = new Map();
   for (const match of diagram.matchAll(/^\s*(\w+)\["([^"]+)"\]\s*$/gm)) {

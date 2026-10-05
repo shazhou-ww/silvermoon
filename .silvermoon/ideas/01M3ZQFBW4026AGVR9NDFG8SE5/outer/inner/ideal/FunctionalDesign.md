@@ -120,6 +120,21 @@ type EventCursor = Readonly<{
   digest: GitObjectId;
 }>;
 
+type ObservedDevice = Readonly<{
+  runtime: {
+    source: "global" | "source-checkout" | "other";
+    executable: string | null;
+    version: string | null;
+    globalInstallationPresent: boolean;
+  };
+  globalConfig: {
+    path: string;
+    present: boolean;
+    valid: boolean;
+  };
+  diagnostics: readonly Diagnostic[];
+}>;
+
 type WorldRevisions = Readonly<{
   idealRevision: GitObjectId;
   implementationRevision: GitObjectId;
@@ -141,6 +156,60 @@ type Report = Readonly<{
 `Result` 仅表达内部可预期校验结果，不直接改变既有公共 API 的返回值或异常
 行为。内部不变量失败仍显式抛错；I/O 错误映射为现有诊断或向上传播，不能成为
 成功默认值。所有以下签名都必须通过兼容包装保持现有外部行为。
+
+## 基础层目标模块
+
+以下英文名是目标模块／目录名；每个名称对应一个变化原因。现有 A–L 标记仅用于
+组织接口讨论，不是允许继续保留的宽泛物理模块。
+
+```text
+bin/<application-entry>.(js|mjs)
+src/business/<business-entry>.js
+src/business/shared/<shared-function>.js
+src/foundation/<module>/{README.md,index.js,<implementation>.js}
+```
+
+`bin/` 中每个文件是完整应用入口，不再调用另一份同入口 adapter；业务入口与
+shared 函数均一函数一文件，只通过显式 export-only index 发现；基础模块一目录，
+README 必须逐项解释关键 export，而不只写模块名称或泛化描述。
+
+| 模块 | 唯一职责 |
+| --- | --- |
+| `git` | Git 命令、refs／objects、显式 fetch 与提交关系 |
+| `snapshot` | snapshot 坐标选择和不可变批量内容读取 |
+| `installation` | 当前运行来源和全局 Silvermoon 安装事实 |
+| `device-config` | 全局 Silvermoon 配置读取与严格解析 |
+| `project-config` | 项目配置读取、严格解析及来源 |
+| `guidance` | 固定 phase guidance 及 content revision |
+| `skill-registration` | canonical／registered skill 来源与一致性 |
+| `package-resource` | 随包 schema、模板和静态资源定位 |
+| `schema` | 版本化结构字段与类型校验 |
+| `idea-model` | idea 身份、状态、世界 revision 与生命周期规则 |
+| `idea-query` | 显式 idea facts 的过滤、排序、限制和标题投影 |
+| `idea-template` | 显式语言／版本对应的规范世界文档内容 |
+| `scaffold-plan` | 显式 facts 到 `ScaffoldPlan` 的纯规划 |
+| `event-codec` | 规范事件记录与 segment 字节解析、校验和序列化 |
+| `event-reducer` | 已验证事件到状态或协议错误的归约 |
+| `event-store` | 1000 条边界的分段读取与准确字节计划 |
+| `event-history` | primary prefix、folder digest 和历史边界验证 |
+| `event-cursor` | 准确前缀验证和 suffix 增量结果 |
+| `projection-cache` | 可丢弃的认证派生投影缓存 |
+| `owned-write` | 脚手架独占创建和本操作所有权清理 |
+| `state-transaction` | 正常状态追加的锁内复查和准确字节原子应用 |
+| `command-message` | 单次调用消息归约与 action 顺序不变量 |
+| `report` | 显式终态到四投影、诊断和 next steps |
+| `renderer` | 显式报告与时间到 JSON／Text／Markdown 的纯渲染 |
+| `terminal` | stdout／stderr、TTY 能力和 clipboard 适配 |
+| `tui` | 惰性交互界面和明确用户选择 |
+| `language` | 内容语言、输出语言和 locale 基础值 |
+| `coordinates` | repository URL、OID、ULID 和规范相对路径值 |
+| `trace` | 结构化 trace 和显式计时事实发布 |
+| `process` | 受控子进程执行及 stdout／stderr／exit facts |
+
+上述模块不能以便利为由重新合并。`snapshot` 可以依赖 `git`，`event-history`
+可以依赖 `git` 与 `event-codec`，`renderer` 可以依赖 `language`；反向依赖禁止。
+跨模块组合属于业务层，不新增 `utils`、万能 repository 或共享 Context。shared
+只接收至少两个业务入口实际复用的编排函数，不接收基础 helper 或候选复用代码。
 
 ## 职责模块与关键函数
 
@@ -173,10 +242,9 @@ type Report = Readonly<{
 | B | `replayEventsUseCase` | 副作用编排 |
 | B | `queryEventDeltaUseCase` | 副作用编排 |
 | B | `appendEventUseCase` | 副作用编排 |
-| B | `reviseEventsUseCase` | 副作用编排 |
-| B | `recoverEventsUseCase` | 副作用编排 |
-| C | `observeProjectSnapshot` | 副作用编排 |
-| C | `observeIdeaSnapshot` | 副作用编排 |
+| C | `observeDevice` | 副作用编排 |
+| C | `observeProject` | 副作用编排 |
+| C | `observeIdea` | 副作用编排 |
 | C | `assembleObservation` | 纯函数 |
 | C | `selectIdea` | 纯函数 |
 | D | `evaluateLocalReadiness` | 纯函数 |
@@ -308,20 +376,11 @@ appendEventUseCase(
   request: AppendEventRequest,
   deps: AppendEventDeps,
 ): Promise<Report>;
-
-reviseEventsUseCase(
-  request: ReviseEventsRequest,
-  deps: ReviseEventsDeps,
-): Promise<Report>;
-
-recoverEventsUseCase(
-  request: RecoverEventsRequest,
-  deps: RecoverEventsDeps,
-): Promise<Report>;
 ```
 
-这些是副作用编排函数；事件读取、游标查询、写入、修订和恢复分别表达其前置条件，
-不继续集中在巨大的 operation switch 中。
+这些是副作用编排函数；事件读取、游标查询和追加分别表达其前置条件，不继续集中
+在巨大的 operation switch 中。异常历史维护不设业务函数：维护者直接编辑完整
+`events/` folder，再由 Git review 和 snapshot／event history 校验确认候选。
 
 依赖按用例收窄：
 
@@ -333,23 +392,28 @@ recoverEventsUseCase(
 | CheckDeps | 明确目标快照与历史证据；只有 remote 路径显式 fetch |
 | ReplayEventsDeps / EventDeltaDeps | 完整 replay 与精确游标后缀读取分别提供能力 |
 | AppendEventDeps | 区分本地 ping/pong 与需要 primary 证据的状态写入 |
-| ReviseEventsDeps / RecoverEventsDeps | 精确日志、授权、历史与事务验证；不自动重放 |
-
 保留现有 `listIdeas`、`whatsNext`、`createIdea`、`checkRepository`、`eventCommand`
 公共签名，通过薄包装接入内部用例，不新增公开命令。
 
-### C. 项目与快照观察
+### C. Device、project 与 idea 三层观察
 
 读取并组装事实，返回来源坐标，不决定下一步动作。
 
 ```ts
-observeProjectSnapshot(
+observeDevice(
+  request: DeviceObservationRequest,
+  deps: DeviceReadDeps,
+): Promise<ObservedDevice>;
+
+observeProject(
   request: ProjectObservationRequest,
+  device: ObservedDevice,
   deps: ProjectReadDeps,
 ): Promise<ObservedProject>;
 
-observeIdeaSnapshot(
+observeIdea(
   request: IdeaObservationRequest,
+  project: ObservedProject,
   deps: IdeaReadDeps,
 ): Promise<ObservedIdea>;
 
@@ -363,9 +427,20 @@ selectIdea(
 ): IdeaSelection;
 ```
 
-前两个函数编排读取，后两个是纯函数。观察结果包含明确 snapshot target、
-commit/tree、内容来源与 diagnostics，不混用工作区内容和 HEAD 版本标识。
-guidance 绑定该次快照，响应只能消费该次观察所得内容，不能后来按路径重读。
+前三个函数编排读取，后两个是纯函数。`observeDevice` 只识别当前运行来源，
+观察全局 Silvermoon 安装以及全局配置的存在性、可读性和格式；源码 checkout
+不依赖全局安装也必须如实返回事实。它不读取项目路径，也不探测 daemon 进程、
+socket、握手、健康或会话。
+
+`observeProject` 显式接收 device facts，不自行重读 device；它观察项目配置、
+布局、语言、adoption、snapshot 与 diagnostics，但不读取具体 idea。
+`observeIdea` 显式接收 project facts，只观察选中 idea 的身份、状态、world
+revision、guidance 和历史来源，不重复观察 project/device。
+
+project／idea 结果包含明确 snapshot target、commit/tree、内容来源与 diagnostics，
+不混用工作区内容和 HEAD 版本标识。guidance 绑定该次 idea 快照，响应只能消费
+该次观察所得内容，不能后来按路径重读。daemon 模式形成独立契约后才扩展
+`ObservedDevice`；本轮不加入预留 daemon 字段或无实现 capability。
 
 ### D. Readiness 纯规则
 
@@ -660,20 +735,14 @@ stateTransaction(
   plan: StateWritePlan,
   hooks: TransactionValidationHooks,
 ): Promise<TransactionReceipt>;
-
-recoverStateTransaction(
-  root: RepositoryRoot,
-  request: RecoveryRequest,
-  hooks: RecoveryValidationHooks,
-): Promise<RecoveryReceipt>;
 ```
 
 脚手架规划是纯函数，输入显式提供已生成 ID、时间和内容语言；写入函数仍负责
 操作所有权与失败清理，只能清理本次操作仍拥有的内容。
 
-事务保留锁、精确 before/after 字节、持久恢复计划、应用前后验证、原 writer
-停止确认与显式恢复授权。规划时的验证不能替代锁内再验证。恢复发现 primary、
-world revision 或未知字节变化时保留现场，不重放过时决定。
+事务保留锁、精确 before/after 字节和应用前后验证。规划时的验证不能替代锁内
+再验证。失败时保留可诊断现场，不自动重放过时决定；异常历史由维护者直接编辑
+完整 `events/` folder，并通过 Git review 与校验确认，不提供恢复业务入口。
 
 ### L. 配置、语言、资源与展示
 
@@ -741,5 +810,6 @@ renderTuiMarkdown(
 
 验证至少覆盖纯规则无 I/O、模块无反向依赖、用例执行顺序、不同命令联网和退出码
 区别、四投影 shape、公共 API 与 Agent 子路径、TTY/TUI、语言、快照来源、
-增量 I/O 预算、并发失败与恢复。不能削弱既有断言或用完整历史读取掩盖增量退化。
+增量 I/O 预算、并发失败与异常历史校验。不能削弱既有断言或用完整历史读取掩盖
+增量退化。
 新增本文与契约链接会改变 idealRevision；之前的 revision 不代表这份新增内容。

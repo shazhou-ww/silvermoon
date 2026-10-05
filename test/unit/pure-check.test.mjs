@@ -110,6 +110,23 @@ test("recognizes a bound arrow function marker and a pure named re-export", () =
   assert.deepEqual(result.problems, []);
 });
 
+test("resolves pure imports and local bindings with Windows source paths", () => {
+  const result = inspectPureSources(new Map([
+    ["D:\\fixture\\main.js", `
+      import { helper } from "./helper.js";
+      /** @pure */
+      export function run(input) {
+        const record = { value: input };
+        record.value = helper(record.value);
+        return record;
+      }
+    `],
+    ["D:\\fixture\\helper.js", "/** @pure */ export function helper(value) { return value; }"],
+  ]), { ruleModules: [] });
+  assert.equal(result.count, 2);
+  assert.deepEqual(result.problems, []);
+});
+
 test("rule boundaries reject I/O imports and missing annotations", () => {
   const result = inspectPureSources(new Map([
     ["/fixture/application/rules/readiness.js", `

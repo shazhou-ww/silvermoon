@@ -25,6 +25,11 @@
 共享 readiness 不属于导航命令。拆分纯 readiness 判断与事实获取，创建只使用
 本地前置条件，查询和本地 check 不引入 fetch 或导航限制。
 
+共享观察实现为 `src/business/shared/observe-device.js`、
+`observe-project.js` 和 `observe-idea.js`。三层结果依次显式传递，不共享可变
+Context 或重复读取下层。device 当前只接入 `installation` 与 `device-config`
+基础模块，报告全局安装／配置事实；不实现或预留 daemon 探测行为。
+
 ### I-S03: 分离纯规则与命令运行时及展示
 
 消息 reducer 与报告投影不依赖 trace 或真实 I/O。内部命令运行时采用函数式
@@ -34,8 +39,10 @@
 
 ### I-S04: 分离事件策略规划与仓库写入
 
-事件请求解析、人工 gate 与增量追加规划为纯规则；历史读取、快照验证、
-写入与恢复各有独立归属。创建脚手架规划与所有权保护写入分离。
+事件请求解析、人工 gate 与增量追加规划为纯规则；历史读取、快照验证与追加
+写入各有独立归属。移除 revise／recover 命令及专用业务编排；异常历史由维护者
+直接编辑完整 `events/` folder，再通过 Git review 与校验确认。创建脚手架规划
+与所有权保护写入分离。
 保留分段、游标、认证缓存、增量预算及事务前后精确验证，不引入普通写入捷径。
 
 ### I-S05: 标注并自动检查纯度与依赖
@@ -49,6 +56,23 @@
 将源码收敛为 CLI、应用、idea、命令、持久事件、project、repository、response、
 presentation 和既有 Agent 模块。每个源码目录包含简短 README，说明主要职责、
 公开入口、允许的依赖和不承担的职责。保持文档与实际目录对应，不另建通用 utils。
+根源码索引按唯一进程入口逐行列出应用，逐项说明接收与发出的进程边界消息及
+职责限制；不把多个入口合并为一行，不把一个入口拆成多行，不列事件修订／恢复
+脚本，并明确这些消息是适配契约而非新增 schema 或进程间消息总线。
+保留外部 v1→v2 迁移兼容入口；删除已完成的本仓库内部事件格式与分段格式迁移
+入口、实现、运行时测试、包排除项和 skill 操作指引。
+
+基础层按 FunctionalDesign 的英文目标模块命名落地。每个模块 README 声明当前
+迁移来源、唯一职责、允许依赖和明确不承担的能力。拆分当前过宽的 repository、
+events、project、command／response 与 presentation；不以 facade、共享 Context
+或 utils 重新隐藏 Git／snapshot、事件五类规则与存储、两种写入、消息／report、
+renderer／terminal／TUI、trace／process 的边界。
+
+应用层整体迁入 `bin/`，每个进程入口只保留一个文件，更新 package scripts、CI、
+文档和源码调用方，不保留同入口 launcher。业务层迁入 `src/business/`，每个业务
+入口函数一个文件；至少两个入口实际复用的函数才进入 `src/business/shared/`，
+且每个共享函数一个文件。基础层每个英文模块独占 `src/foundation/<module>/`，
+包含代码、export-only index 和职责 README；README 逐项解释关键公开函数。
 
 每个模块使用仅含显式 export 的 index.js。同目录内部引用具体实现，不绕回
 自己的 index；跨模块使用公开入口。混合纯规则与副作用的模块提供独立规则
@@ -79,11 +103,12 @@ presentation 和既有 Agent 模块。每个源码目录包含简短 README，�
 Agent 子路径、联网与退出码区别、四投影、language、TTY/TUI 与快照语义。
 不修改 schema 或新增功能，保留已批准的全部兼容约束。
 
-### I-AC03: 事件增量与并发恢复保护不退化
+### I-AC03: 事件增量与并发写入保护不退化
 
 通过现有分段、游标、认证投影、状态事务和创建竞争测试，保留每段 1000 条、
-folder Git digest、准确前缀、离线交互、并发冲突和恢复保护。保留已有可测
-读取预算与冷路径验证，不削弱测试断言。
+folder Git digest、准确前缀、离线交互和并发冲突保护。验证 revise／recover
+命令及专用编排已移除，直接编辑的异常历史会由 snapshot／event history 校验
+接受或明确拒绝。保留已有可测读取预算与冷路径验证，不削弱测试断言。
 
 ### I-AC04: 候选证据与准确版本可复核
 
@@ -96,4 +121,6 @@ folder Git digest、准确前缀、离线交互、并发冲突和恢复保护。
 每个源码目录有职责 README 和 export-only index，公开符号显式列出。架构测试
 验证完整目录覆盖、入口纯度／惰性加载边界、跨模块入口使用和无依赖环。
 通过打包及安装态验证确认 README、源码和公共／Agent 入口完整且可用；
-纯度与增量 I/O 预算不因目录搬迁失效。
+纯度与增量 I/O 预算不因目录搬迁失效。结构测试另外验证每个应用入口一个文件、
+每个业务入口函数一个文件、shared 中每个共享函数一个文件，以及每个基础模块
+独占目录并具有与关键 exports 对齐的 README。
