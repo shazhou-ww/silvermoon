@@ -1,105 +1,50 @@
 import type {
-  DaemonEventMessage, DownstreamEvent, DownstreamRequest, DownstreamResponse,
-  DownstreamRequestParams, DownstreamResponseResults, EventCursor, GeneralRoute,
-  IdeaAction, IdeaEvent, IdeaRoute, NextStep, SilvermoonRequest, SilvermoonResponse,
-  SilvermoonRequestParams, SilvermoonResponseResults, UpstreamRequest,
-  UpstreamRequestParams, UpstreamResponse, UpstreamResponseResults, WssMessage, WssSubprotocol,
+  AgentMessage, ChannelBinding, GeneralRoute, IdeaAction, IdeaEvent, IdeaRoute,
+  InputParams, MessageEnvelope, MessageContent, NextStep, OperationResults, Sender,
+  WssSubprotocol,
 } from "./Protocol-types.js";
 
-// 文档消息示例，不执行真实操作；OID 仅为格式示例，不声称对应真实 repo facts。
+// envelope 示例不填造 hash；验证时对规范字节计算真实 ID。
 const oid = "0123456789012345678901234567890123456789";
-const head = { length: 120, digest: oid } satisfies EventCursor;
-export const appendedEvent = {
-  sequence: 3, type: "ping", payload: { message: "继续当前工作。" },
-} satisfies IdeaEvent;
-const appendedHead = {
-  length: head.length + new TextEncoder().encode(`${JSON.stringify(appendedEvent)}\n`).length,
-  digest: "89abcdef0123456789abcdef0123456789abcdef01",
-} satisfies EventCursor;
 const ideaRoute = {
   scope: "idea", projectUrl: "https://github.com/example/project.git",
   ideaId: "01M3SJ90WVJB56Z1PP72BPAHFZ",
 } satisfies IdeaRoute;
-const generalRoute = {
-  scope: "project", projectUrl: ideaRoute.projectUrl,
-} satisfies GeneralRoute;
-const action = {
+export const channel = {
+  channelId: "example-upstream-channel", route: ideaRoute,
+  silvermoonId: "device-1", agentSessionId: "agent-session-1",
+  agentGeneration: 1, connectionRole: "upstream",
+} satisfies ChannelBinding;
+export const selectedSubprotocol = "silvermoon.v1" satisfies WssSubprotocol;
+export const inputEnvelope = {
+  version: 1, channelId: channel.channelId, sender: "agent",
+  refs: { after: null, inputs: [] },
+  content: {
+    type: "input", operation: "idea.ping.append",
+    params: { expectedHead: { length: 120, digest: oid }, message: "继续当前工作。" },
+  },
+} satisfies MessageEnvelope<MessageContent>;
+export const action = {
   kind: "idea", actionId: "action-1", route: ideaRoute,
   basis: {
-    head: appendedHead,
+    head: { length: 120, digest: oid },
     revisions: { idealRevision: oid, implementationRevision: oid, deploymentRevision: oid },
   },
-  instruction: "执行当前任务并返回结果与证据。",
+  instruction: "执行当前任务并报告结果。",
 } satisfies IdeaAction;
-const binding = { route: ideaRoute, sessionId: "session-1", generation: 1 };
-export const selectedSubprotocol = "silvermoon.v1" satisfies WssSubprotocol;
-
-export const pingRequest = {
-  protocolVersion: 1, kind: "request", requestId: "request-1",
-  operation: "idea.ping.append",
-  params: { route: ideaRoute, expectedHead: head, message: appendedEvent.payload.message, inReplyToActionId: null },
-} satisfies UpstreamRequest;
-
-export const pingResponse = {
-  protocolVersion: 1, kind: "response", requestId: "request-1",
-  operation: "idea.ping.append", status: "ok",
-  result: {
-    duplicate: false,
-    receipt: { outcome: "appended", route: ideaRoute, eventSequence: 3, head: appendedHead },
-  },
-} satisfies UpstreamResponse;
-
-export const staleResponse = {
-  protocolVersion: 1, kind: "response", requestId: "request-2",
-  operation: "idea.ping.append", status: "error",
-  error: { code: "stale-head", message: "事件前态已变化。", expectedHead: head, currentHead: appendedHead },
-} satisfies UpstreamResponse;
-
-export const handoffMessage = {
-  protocolVersion: 1, kind: "event", connectionId: "connection-1", sequence: 1,
-  event: { type: "action.handoff", recipient: "upstream", action },
-} satisfies DaemonEventMessage;
-
-export const generalRequest = {
-  protocolVersion: 1, kind: "request", requestId: "general-request-1",
-  operation: "general.submit",
-  params: { route: generalRoute, message: "检查项目状态。", inReplyToActionId: null },
-} satisfies UpstreamRequest;
-
-export const sendRequest = {
-  protocolVersion: 1, kind: "request", requestId: "send-1",
-  operation: "session.send", params: { binding, action },
-} satisfies DownstreamRequest;
-
-export const sendResponse = {
-  protocolVersion: 1, kind: "response", requestId: "send-1",
-  operation: "session.send", status: "ok",
-  result: {
-    binding, action,
-    delivery: { state: "unknown", reason: "SDK 不能证明该动作已处理。" },
-  },
-} satisfies DownstreamResponse;
-
-export const agentReply = {
-  type: "action.reply", binding, action,
-  result: { outcome: "blocked", message: "当前操作受阻。", needs: ["重新观察项目事实。"] },
-} satisfies DownstreamEvent;
-
-export const nextRequest = {
-  protocolVersion: 1, kind: "request", requestId: "next-1",
-  operation: "next", params: { kind: "idea", route: ideaRoute },
-} satisfies SilvermoonRequest;
-
-export const nextResponse = {
-  protocolVersion: 1, kind: "response", requestId: "next-1",
-  operation: "next", status: "ok",
-  result: { state: "dispatch", recipient: "downstream", action },
-} satisfies SilvermoonResponse;
-
-export const wireExamples = [
-  pingRequest, pingResponse, staleResponse, handoffMessage, generalRequest,
-] satisfies readonly WssMessage[];
-
+export function resultEnvelope(inputId: string, previousId: string | null): MessageEnvelope<MessageContent> {
+  return {
+    version: 1, channelId: channel.channelId, sender: "silvermoon",
+    refs: { after: previousId, inputs: [inputId] },
+    content: { type: "error", error: { code: "unavailable", message: "项目暂不可用。" } },
+  };
+}
+export function downstreamEnvelope(channelId: string): MessageEnvelope<MessageContent> {
+  return {
+    version: 1, channelId, sender: "silvermoon",
+    refs: { after: null, inputs: [] }, content: { type: "instruction", action },
+  };
+}
 export const eventExamples = [
   { sequence: 1, type: "setAlias", payload: { alias: "example" } },
   { sequence: 2, type: "setLanguage", payload: { language: "zh-CN" } },
@@ -114,32 +59,22 @@ export const eventExamples = [
 
 type Assert<T extends true> = T;
 type SameKeys<A, B> = [Exclude<keyof A, keyof B> | Exclude<keyof B, keyof A>] extends [never] ? true : false;
-export type OperationCoverage = [
-  Assert<SameKeys<UpstreamRequestParams, UpstreamResponseResults>>,
-  Assert<SameKeys<DownstreamRequestParams, DownstreamResponseResults>>,
-  Assert<SameKeys<SilvermoonRequestParams, SilvermoonResponseResults>>,
-];
-
-// general route 不可携带 ideaId。
+export type OperationCoverage = Assert<SameKeys<InputParams, OperationResults>>;
+// 相对接线角色不是消息 sender。
+// @ts-expect-error
+export const invalidSender: Sender = "downstream";
+// envelope 不重复具体 participant 身份。
+// @ts-expect-error
+export const invalidIdentity: MessageEnvelope<MessageContent> = { ...inputEnvelope, sender: { kind: "agent", id: "agent-1" } };
+// general route 不绑定 idea。
 // @ts-expect-error
 export const invalidGeneralRoute: GeneralRoute = { scope: "project", projectUrl: ideaRoute.projectUrl, ideaId: ideaRoute.ideaId };
-// idea route 必须携带 ideaId。
+// wait 不伪造 instruction。
 // @ts-expect-error
-export const invalidIdeaRoute: IdeaRoute = { scope: "idea", projectUrl: ideaRoute.projectUrl };
-// ping request 不可缺少 expectedHead。
+export const invalidWait: NextStep = { state: "wait", route: ideaRoute, reason: "等待。", recipient: "downstream", action };
+// WSS/Agent 外层不再是 request/response/notification 或 hello。
 // @ts-expect-error
-export const invalidPing: UpstreamRequest = { protocolVersion: 1, kind: "request", requestId: "bad-1", operation: "idea.ping.append", params: { route: ideaRoute, message: "继续。", inReplyToActionId: null } };
-// 错误响应不可同时包含成功 result。
-// @ts-expect-error
-export const invalidResponse: UpstreamResponse = { ...staleResponse, result: pingResponse.result };
-// wait 不可伪造 dispatch recipient/action。
-// @ts-expect-error
-export const invalidWait: NextStep = { state: "wait", route: ideaRoute, reason: "等待输入。", recipient: "downstream", action };
-// 上游连接没有应用层 hello/welcome 消息。
-// @ts-expect-error
-export const invalidHello: WssMessage = { protocolVersion: 1, kind: "hello", daemonId: "daemon-1", connectionId: "connection-1", silvermoonVersion: "0.4.0", capabilities: [] };
-// @ts-expect-error
-export const invalidWelcome: WssMessage = { protocolVersion: 1, kind: "welcome", connectionId: "connection-1", status: "ok", capabilities: [] };
-// 固定 subprotocol 不静默降级。
+export const invalidOuterMessage: AgentMessage = { kind: "request", requestId: "old-request", operation: "idea.observe", params: { route: ideaRoute } };
+// 固定 subprotocol 不降级。
 // @ts-expect-error
 export const invalidSubprotocol: WssSubprotocol = "silvermoon.v0";

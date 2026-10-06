@@ -10,6 +10,7 @@
 | 设备生产单元 | daemon 作为设备管理员，以 device-hq 为工作区，通过下游 Agent 执行管理工作 |
 | 交互 actor | 人、上游 Agent、daemon、下游 Agent；repo 是数据/工作区，不放入活跃 actor 图 |
 | 通信与调用 | 上下游通过 daemon 通信；daemon 与下游均可使用无状态 Silvermoon CLI 能力 |
+| 消息身份 | sender 为 silvermoon/agent，双方准确身份从 channel binding 取得，不重复 participant ID |
 | 职责分工 | 人作决定、上游取得意图与决定、daemon 调度、下游执行；无状态 CLI 返回规则/操作结果，不持有连接/session/loop |
 | 循环控制 | daemon 独占持续推进；下游自主执行当前 instruction，可查询状态但不另起 loop |
 | 回复与交互写入 | 下游结构化报告结果/阻塞；daemon 委托 Silvermoon 追加 ping/pong，不重复写“已处理”事件 |
@@ -53,15 +54,20 @@ unknown 对账和恢复演练另行设计。本期不交付这些流程，Git �
 
 ## 待验证与协议 review
 
+最新 [统一 Merkle DAG 消息候选](./Message-encoding.md) 取代原 Agent
+request/response/notification 外层，采用 envelope hash、after 与 inputs；
+上下游共用编码、独立 channel。sender/channel 身份方向已确认；规范编码、父节点
+保留/补齐、fork、SDK envelope 支持及跨 channel 关联仍是待 review 的技术候选。
+
 共享候选类型见 [Protocol-types.ts](./Protocol-types.ts)，具体消息示例见
 [Protocol-examples.ts](./Protocol-examples.ts)。类型已给出不等于语义已获 review：
 SDK 持久关联、确认边界、receipt 保留与动作身份稳定性仍须验证和收敛。
 
 | 项目 | 需要收敛的内容 |
 | --- | --- |
-| SDK 真实能力 | request/action 持久关联、历史查询、resume、send 崩溃窗口；无证据不承诺 exactly-once |
-| 上游协议 | Upgrade 认证/身份绑定、固定版本校验、全操作类型、ack、requestId、完整事件订阅、handoff |
-| 下游协议 | 每 repo general/idea 身份与代次、工具 root、skill 来源、动作身份、回复依据与 unknown 协调 |
+| SDK 真实能力 | message/action 持久关联、历史查询、resume、send 崩溃窗口；无证据不承诺 exactly-once |
+| 上游协议 | Upgrade/channel 绑定、统一 message/content、Merkle 引用、保留/补齐、完整事件订阅 |
+| 下游协议 | 共用 envelope 编码、SDK 可验证因果输出、session/代次、工具 root/skill、unknown 协调 |
 | Loop | 继续/等待/阻塞/无动作、唤醒、投递去重、背压与公平性 |
 | 新 API | 旧新对照、结构化结果、schema capability、持久格式调整与声明/subpath |
 

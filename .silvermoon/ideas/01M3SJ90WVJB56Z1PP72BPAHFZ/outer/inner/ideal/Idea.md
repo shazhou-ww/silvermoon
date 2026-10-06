@@ -149,10 +149,13 @@ daemon 配置与用户语言配置分离，配置变更通过重启生效。凭�
 ## 2. 上游协议
 
 见 [Upstream-protocol.md](./Upstream-protocol.md)：连接、route、请求身份、
-expectedHead、ack、订阅与上游 handoff。协议字段与状态机仍待准确候选 review；
+expectedHead、因果引用、订阅与上游工作消息。协议字段与状态机仍待准确候选 review；
 “上游请求即授权”不取消连接认证和输入校验。
-具体请求、响应与 WSS 消息候选类型见 [Protocol-types.ts](./Protocol-types.ts)，
+具体 message/content 与本地 API 候选类型见 [Protocol-types.ts](./Protocol-types.ts)，
 可检查的消息示例见 [Protocol-examples.ts](./Protocol-examples.ts)。
+Agent 业务协议现在统一为 [Merkle DAG 消息候选](./Message-encoding.md)，不再
+区分 request/response/notification 外层；sender 为 silvermoon/agent，具体双方
+身份从 channel binding 取得。上下游共用编码，但因果历史按 channel 隔离。
 
 ## 3. 下游协议
 
