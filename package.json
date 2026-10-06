@@ -116,7 +116,7 @@
     "@github/copilot-sdk": "1.0.16",
     "@opentui/core": "npm:@jitl/opentui-core@0.4.0",
     "@opentui/react": "npm:@jitl/opentui-react@0.4.0",
-    "commander": "^14.0.3",
+    "commander": "^15.0.0",
     "marked": "^18.0.13",
     "mdast-util-from-markdown": "^2.0.3",
     "mdast-util-to-markdown": "^2.1.2",
