@@ -11,9 +11,10 @@
 | 交互 actor | 人、上游 Agent、daemon、下游 Agent；repo 是数据/工作区，不放入活跃 actor 图 |
 | 通信与调用 | 上下游通过 daemon 通信；daemon 与下游均可使用无状态 Silvermoon CLI 能力 |
 | 消息身份 | sender 为 silvermoon/agent，双方准确身份从 channel binding 取得，不重复 participant ID |
+| 消息正文 | 当前为 Agent 对话文本，不是 RPC object；多模态留待未来版本 |
 | 职责分工 | 人作决定、上游取得意图与决定、daemon 调度、下游执行；无状态 CLI 返回规则/操作结果，不持有连接/session/loop |
 | 循环控制 | daemon 独占持续推进；下游自主执行当前 instruction，可查询状态但不另起 loop |
-| 回复与交互写入 | 下游结构化报告结果/阻塞；daemon 委托 Silvermoon 追加 ping/pong，不重复写“已处理”事件 |
+| 回复与交互写入 | 下游通过正文报告结果/阻塞；daemon 以本机验证依据委托 Silvermoon 追加 ping/pong，不重复写“已处理”事件 |
 | HQ 身份 | 管理员的普通 Silvermoon repo 工作区，以设备为 Outer World；不是管理员、专属 runtime 或特殊 session 类型 |
 | 管理员权限 | daemon 在现有 OS 权限下管理设备；上游请求授权 repo clone/onboarding，无额外审批/allowlist |
 | SUDO | 长期希望 daemon 在 device-hq 工作区组织自身管理员能力检查，本期不检查或获取 SUDO 权限 |
@@ -66,7 +67,7 @@ SDK 持久关联、确认边界、receipt 保留与动作身份稳定性仍须�
 | 项目 | 需要收敛的内容 |
 | --- | --- |
 | SDK 真实能力 | message/action 持久关联、历史查询、resume、send 崩溃窗口；无证据不承诺 exactly-once |
-| 上游协议 | Upgrade/channel 绑定、统一 message/content、Merkle 引用、保留/补齐、完整事件订阅 |
+| 上游协议 | Upgrade/channel 绑定、Agent 文本、Merkle 引用、保留/补齐与项目事实/决定映射；无 RPC 订阅协议 |
 | 下游协议 | 共用 envelope 编码、SDK 可验证因果输出、session/代次、工具 root/skill、unknown 协调 |
 | Loop | 继续/等待/阻塞/无动作、唤醒、投递去重、背压与公平性 |
 | 新 API | 旧新对照、结构化结果、schema capability、持久格式调整与声明/subpath |

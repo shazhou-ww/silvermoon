@@ -39,7 +39,7 @@ CLI/工具调用；这是两种调用方式，不是两套规则或额外 runtim
 | 人 | 表达目标，review 协议与契约，对准确 revision 作出批准/验收等人类决定 | 被请求、Agent 回复或执行完成自动代替决定 |
 | 上游 Agent | 理解人的意图，取得明确决定，提交请求、保留未确认输入并处理 daemon 交还 | 直接向下游发送协议消息；将接收确认当作执行完成或自行推断人类决定 |
 | Silvermoon daemon | 设备管理员与唯一持续 loop 控制者；接收/观察输入、调用无状态能力、路由与投递、等待和重新推进，管理 registry/session/receipt | 自行复制生命周期规则；绕过人类 gate；将未知投递当作未执行而重发 |
-| 下游 Agent | 在目标 repo 的 general/idea session 中自主执行当前 instruction，调用无状态 CLI 查询/校验/受控操作，结构化报告结果、证据或求助 | 独立领取下一轮并控制 loop；与上游直接通信；自行重复追加交互 pong；以 transcript 代替项目 facts |
+| 下游 Agent | 在目标 repo 的 general/idea session 中自主执行当前 instruction，调用无状态 CLI 查询/校验/受控操作，通过 Agent 消息正文报告结果、证据或求助 | 独立领取下一轮并控制 loop；与上游直接通信；自行重复追加交互 pong；以 transcript 代替项目 facts |
 | 无状态 Silvermoon CLI | 供 daemon 与下游共同调用；按目标 root/schema 校验、观察、受控追加并依据规则返回 recipient/instruction 或诊断 | 维护长连接、Agent session 或持续调度 loop；接收上下游通信；替人作出批准/验收 |
 
 device-hq 和 managed repos 是数据与工作区，不是上述执行主体。device-hq 是
@@ -65,7 +65,7 @@ Silvermoon 的下一步能力；有新事实才重新推进，不靠不停查询
 idea 依据项目事件，general session 依据自身 session/request 上下文。
 
 在 daemon 模式下，交互 ping/pong 的追加由 daemon 统一交给 Silvermoon 的受控
-接口完成。下游通过结构化回复报告当前 instruction 的结果、证据、阻塞或 unknown，
+接口完成。下游通过 Agent 文本回复报告当前 instruction 的结果、证据、阻塞或不确定，
 不自行追加同一 pong 后再返回一次回复，也不新增“这个 ping 已处理”的生命周期
 事件。投递确认、执行报告、阶段完成与人类验收保持不同语义。
 
@@ -149,13 +149,16 @@ daemon 配置与用户语言配置分离，配置变更通过重启生效。凭�
 ## 2. 上游协议
 
 见 [Upstream-protocol.md](./Upstream-protocol.md)：连接、route、请求身份、
-expectedHead、因果引用、订阅与上游工作消息。协议字段与状态机仍待准确候选 review；
+因果引用与 Agent 工作消息，以及本机项目事实/写入依据的映射。协议字段与状态
+机仍待准确候选 review；
 “上游请求即授权”不取消连接认证和输入校验。
 具体 message/content 与本地 API 候选类型见 [Protocol-types.ts](./Protocol-types.ts)，
 可检查的消息示例见 [Protocol-examples.ts](./Protocol-examples.ts)。
 Agent 业务协议现在统一为 [Merkle DAG 消息候选](./Message-encoding.md)，不再
 区分 request/response/notification 外层；sender 为 silvermoon/agent，具体双方
 身份从 channel binding 取得。上下游共用编码，但因果历史按 channel 隔离。
+content 当前仅为 Agent 对话文本，不承载 RPC operation/params/result、事件
+订阅或追加回执；多模态是未来内容扩展方向。
 
 ## 3. 下游协议
 

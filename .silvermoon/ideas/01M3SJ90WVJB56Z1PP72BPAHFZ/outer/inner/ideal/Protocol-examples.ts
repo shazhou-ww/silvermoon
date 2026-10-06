@@ -1,6 +1,6 @@
 import type {
   AgentMessage, ChannelBinding, GeneralRoute, IdeaAction, IdeaEvent, IdeaRoute,
-  InputParams, MessageEnvelope, MessageContent, NextStep, OperationResults, Sender,
+  MessageEnvelope, MessageContent, NextStep, Sender,
   WssSubprotocol,
 } from "./Protocol-types.js";
 
@@ -19,10 +19,7 @@ export const selectedSubprotocol = "silvermoon.v1" satisfies WssSubprotocol;
 export const inputEnvelope = {
   version: 1, channelId: channel.channelId, sender: "agent",
   refs: { after: null, inputs: [] },
-  content: {
-    type: "input", operation: "idea.ping.append",
-    params: { expectedHead: { length: 120, digest: oid }, message: "继续当前工作。" },
-  },
+  content: "继续当前工作。",
 } satisfies MessageEnvelope<MessageContent>;
 export const action = {
   kind: "idea", actionId: "action-1", route: ideaRoute,
@@ -36,13 +33,13 @@ export function resultEnvelope(inputId: string, previousId: string | null): Mess
   return {
     version: 1, channelId: channel.channelId, sender: "silvermoon",
     refs: { after: previousId, inputs: [inputId] },
-    content: { type: "error", error: { code: "unavailable", message: "项目暂不可用。" } },
+    content: "项目暂不可用，需要先检查仓库访问情况。",
   };
 }
 export function downstreamEnvelope(channelId: string): MessageEnvelope<MessageContent> {
   return {
     version: 1, channelId, sender: "silvermoon",
-    refs: { after: null, inputs: [] }, content: { type: "instruction", action },
+    refs: { after: null, inputs: [] }, content: action.instruction,
   };
 }
 export const eventExamples = [
@@ -57,9 +54,12 @@ export const eventExamples = [
   { sequence: 9, type: "pong", payload: { message: "报告当前结果。" } },
 ] satisfies readonly IdeaEvent[];
 
-type Assert<T extends true> = T;
-type SameKeys<A, B> = [Exclude<keyof A, keyof B> | Exclude<keyof B, keyof A>] extends [never] ? true : false;
-export type OperationCoverage = Assert<SameKeys<InputParams, OperationResults>>;
+// RPC object 不是 Agent 对话正文。
+// @ts-expect-error
+export const invalidRpcContent: MessageContent = { type: "input", operation: "general.submit", params: { message: "检查状态。" } };
+// 本期未定义多模态附件类型。
+// @ts-expect-error
+export const invalidMultimodalContent: MessageContent = [{ type: "image", url: "https://example.com/image.png" }];
 // 相对接线角色不是消息 sender。
 // @ts-expect-error
 export const invalidSender: Sender = "downstream";

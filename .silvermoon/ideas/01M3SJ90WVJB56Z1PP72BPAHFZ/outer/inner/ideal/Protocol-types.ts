@@ -7,7 +7,6 @@ export type WssSubprotocol = "silvermoon.v1";
 export type MessageId = string;
 export type ChannelId = string;
 export type ActionId = string;
-export type SubscriptionId = string;
 export type GitOid = string;
 export type Sender = "silvermoon" | "agent";
 
@@ -43,6 +42,11 @@ export interface Message<C> {
   readonly id: MessageId;
   readonly envelope: MessageEnvelope<C>;
 }
+
+// 当前 Agent 正文仅支持文本；多模态需要后续版本的显式内容定义。
+export type MessageContent = string;
+export type WssMessage = Message<MessageContent>;
+export type AgentMessage = Message<MessageContent>;
 
 export interface EventCursor {
   readonly length: number;
@@ -86,16 +90,6 @@ export interface SessionBinding {
   readonly sessionId: string;
   readonly generation: number;
 }
-export interface Evidence {
-  readonly kind: "repository" | "check" | "operation";
-  readonly reference: string;
-  readonly summary: string;
-}
-export type ActionResult =
-  | { readonly outcome: "completed"; readonly message: string; readonly evidence: readonly Evidence[] }
-  | { readonly outcome: "blocked"; readonly message: string; readonly needs: readonly string[] }
-  | { readonly outcome: "unknown"; readonly message: string };
-
 export interface GeneralAction {
   readonly kind: "general";
   readonly actionId: ActionId;
@@ -111,9 +105,6 @@ export interface IdeaAction {
   readonly instruction: string;
 }
 export type Action = GeneralAction | IdeaAction;
-export type ActionReference =
-  | Pick<GeneralAction, "kind" | "actionId" | "route" | "basis">
-  | Pick<IdeaAction, "kind" | "actionId" | "route" | "basis">;
 export type NextStep =
   | { readonly state: "dispatch"; readonly recipient: "upstream" | "downstream"; readonly action: Action }
   | { readonly state: "wait"; readonly route: SessionRoute; readonly reason: string }
@@ -157,57 +148,13 @@ export type Delivery =
       readonly sdkEvidenceReference: string;
     }
   | { readonly state: "unknown"; readonly reason: string };
-export type ReplyRecording =
-  | { readonly kind: "general-session" }
-  | { readonly kind: "idea-event"; readonly receipt: AppendReceipt }
-  | { readonly kind: "not-recorded"; readonly error: ProtocolError };
-
-// operation 是内容语义，不是 request/response 传输类别。
-export interface InputParams {
-  "project.onboard": { readonly projectUrl: string };
-  "general.submit": { readonly message: string };
-  "idea.ping.append": { readonly expectedHead: EventCursor; readonly message: string };
-  "idea.decision.append": {
-    readonly expectedHead: EventCursor;
-    readonly expectedPrimary: GitOid;
-    readonly decision: HumanDecision;
-    readonly humanStatement: string;
-  };
-  "idea.observe": Record<string, never>;
-  "idea.events.subscribe": { readonly after: EventCursor };
-  "idea.events.unsubscribe": { readonly subscriptionId: SubscriptionId };
+// 显式人类决定的本机受控写入参数，不是 Agent 消息正文格式。
+export interface DecisionInput {
+  readonly expectedHead: EventCursor;
+  readonly expectedPrimary: GitOid;
+  readonly decision: HumanDecision;
+  readonly humanStatement: string;
 }
-export type InputContent = {
-  [K in keyof InputParams]: { readonly type: "input"; readonly operation: K; readonly params: InputParams[K] }
-}[keyof InputParams];
-export interface OperationResults {
-  "project.onboard": {
-    readonly projectUrl: string;
-    readonly projectKey: string;
-    readonly schema: SchemaCapability;
-    readonly binding: SessionBinding;
-  };
-  "general.submit": { readonly result: ActionResult };
-  "idea.ping.append": AppendReceipt;
-  "idea.decision.append": AppendReceipt;
-  "idea.observe": IdeaSnapshot;
-  "idea.events.subscribe": { readonly subscriptionId: SubscriptionId; readonly delta: EventDelta };
-  "idea.events.unsubscribe": { readonly subscriptionId: SubscriptionId };
-}
-export type OperationContent = {
-  [K in keyof OperationResults]: { readonly type: "operation.result"; readonly operation: K; readonly result: OperationResults[K] }
-}[keyof OperationResults];
-export type MessageContent =
-  | InputContent
-  | OperationContent
-  | { readonly type: "instruction"; readonly action: Action }
-  | { readonly type: "action.result"; readonly action: ActionReference; readonly result: ActionResult }
-  | { readonly type: "reply.recorded"; readonly action: ActionReference; readonly recording: ReplyRecording }
-  | { readonly type: "idea.events"; readonly subscriptionId: SubscriptionId; readonly delta: EventDelta }
-  | { readonly type: "error"; readonly error: ProtocolError };
-
-export type WssMessage = Message<MessageContent>;
-export type AgentMessage = Message<MessageContent>;
 
 // 本机 SDK 管理调用不是 Agent 业务消息，也不是 WSS 协议。
 export interface DownstreamCapabilities {
@@ -215,7 +162,7 @@ export interface DownstreamCapabilities {
   readonly sendWhileRunning: boolean;
   readonly inspectMessage: boolean;
   readonly durableMessageCorrelation: boolean;
-  readonly structuredReply: boolean;
+  readonly causalEnvelopeReply: boolean;
 }
 export type SessionState =
   | { readonly state: "running" | "idle" | "gone" }
@@ -265,5 +212,5 @@ export interface SilvermoonOperations {
   readSince(route: IdeaRoute, after: EventCursor): Promise<EventDelta>;
   appendInteraction(route: IdeaRoute, expectedHead: EventCursor,
     event: Extract<IdeaEventInput, { type: "ping" | "pong" }>): Promise<AppendReceipt>;
-  appendDecision(route: IdeaRoute, input: InputParams["idea.decision.append"]): Promise<AppendReceipt>;
+  appendDecision(route: IdeaRoute, input: DecisionInput): Promise<AppendReceipt>;
 }

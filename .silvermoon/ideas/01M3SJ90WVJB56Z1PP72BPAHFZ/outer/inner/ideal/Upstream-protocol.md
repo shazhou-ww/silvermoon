@@ -1,21 +1,22 @@
 # 上游接入协议
 
-服务于 [Idea.md](./Idea.md)。WSS 使用 [统一消息编码](./Message-encoding.md)，
-具体类型见 [Protocol-types.ts](./Protocol-types.ts)。这是待 review 的协议候选，
-不表示现有 SDK/CLI 已实现；原 request/response/event 外层与 requestId 配对
-草案已被统一 message 取代。
+服务于 [Idea.md](./Idea.md)。上游 Agent 与 Silvermoon 使用
+[统一消息编码](./Message-encoding.md)，类型见 [Protocol-types.ts](./Protocol-types.ts)，
+示例见 [Protocol-examples.ts](./Protocol-examples.ts)。当前是 review 候选，不表示
+SDK/CLI 已实现；原 RPC 的 operation/params/result 和订阅推送不再作为 Agent 消息。
 
 ## 连接
 
 daemon 主动连接 upstream。远端 WSS，只有显式 loopback 测试允许 WS。HTTP
 Upgrade 使用受保护配置中的 Authorization Bearer token，并固定 subprotocol
 `silvermoon.v1`；认证绑定设备与 channel 身份，不信任消息自报身份。缺少/不匹配
-subprotocol 或认证失败拒绝连接，不降级、不做应用层握手/capability 交集协商。
+subprotocol 或认证失败拒绝连接，不降级，不做应用层握手或 capability 清单协商。
 
-每个 JSON 消息都是 WssMessage `{ id, envelope }`。双方均可发送，sender 为
-silvermoon/agent，无 participant ID、connection sequence 或独立 WireProtocolError。
-无法安全识别 channel/校验 hash 的格式错误关闭连接并记录不含正文/秘密的诊断；
-合法消息的业务错误以引用该输入的 content:error 表达。
+双方发送相同 WssMessage `{ id, envelope }`，envelope 为 version/channelId/
+sender/refs/content，sender 为 silvermoon/agent。没有 request/response/
+notification 外层、participant ID、connection sequence 或 WireProtocolError。
+无法安全验证格式、channel 或 hash 时关闭连接并记录不含正文/秘密的诊断；
+合法对话中的失败/求助以普通 Agent 文本表达，不伪造成功。
 
 ## Channel 路由
 
@@ -26,57 +27,59 @@ silvermoon/agent，无 participant ID、connection sequence 或独立 WireProtoc
 | device-idea + ideaId | HQ idea session |
 | idea + projectUrl + ideaId | managed idea session |
 
-route 在已验证 channel binding 中保存，不由 message 正文覆盖。projectUrl 是
-无凭据规范 HTTPS URL，不是本机路径。未知 repo 的接入在 device channel 提交
-project.onboard；接入后显式建立目标 project channel，不更换旧 channel 的 route。
+route 在已验证 channel binding 中保存，不由正文覆盖。projectUrl 为无凭据规范
+HTTPS URL，不是本机路径。未知 repo 接入意图在 device channel 表达，由 daemon
+在 HQ 工作区组织检查并交下游 clone；接入后显式建立目标 project channel，
+不修改旧 channel 的 route。
 
-Silvermoon daemon 是设备管理员，以 HQ 为工作区，通过下游执行。认证上游请求
-授权 clone/onboarding，不设 allowlist 或逐 repo 额外审批；实际 URL、目录、
-凭据和 OS 权限失败明确交还，不假设已有 SUDO。
+认证上游的 repo 接入请求即授权 clone/onboarding，不设 allowlist 或逐 repo
+额外审批。实际 URL、目录、凭据和 OS 权限失败明确交还，不假设已有 SUDO。
+自然语言意图的执行仍须经过明确目标、身份与真实结果核验，不能据正文自动
+覆盖未知工作或扩大一个 idea 的执行范围。
 
-## 具体内容
+## Agent 消息内容
 
-InputContent 是 `type: input` 与以下 operation/params 的 union：
+当前 content 是非空文本 string，不是命令 object。例如：
 
-| operation | params | 对应 operation.result |
-| --- | --- | --- |
-| project.onboard | projectUrl；只在 device channel | 核验成功的 projectUrl/projectKey/schema/binding |
-| general.submit | message；general channel | completed/blocked/unknown ActionResult |
-| idea.ping.append | expectedHead、message；idea channel | AppendReceipt |
-| idea.decision.append | expectedHead、expectedPrimary、HumanDecision、humanStatement | AppendReceipt |
-| idea.observe | 空 object；idea channel | IdeaSnapshot |
-| idea.events.subscribe | after EventCursor；idea channel | subscriptionId 与首批 EventDelta |
-| idea.events.unsubscribe | subscriptionId | 该连接订阅已解除 |
+```json
+{
+  "version": 1,
+  "channelId": "device-general-channel",
+  "sender": "agent",
+  "refs": { "after": null, "inputs": [] },
+  "content": "请接入 https://github.com/example/project.git，并检查项目状态。"
+}
+```
 
-内容匹配 channel route；结果中的 route/binding 必须与依据匹配。OperationContent
-通过 operation 绑定具体 result 类型，但不是一条请求必须对应一条响应：结果
-使用 refs.inputs 指出实际依据，多输入/多结果均可。新输入并不要求 replyTo。
+该 envelope 在实际发送前规范编码并计算外层 id。结果、工作指令、错误和求助
+同样是文本，使用 after/inputs 表示因果依据；不要求一条输入对应一条回复，
+也不新增 structured operation.result/action.result 的网络分类。
 
-instruction 携带 Action，action.result 携带原 ActionReference 与结果。
-reply.recorded 单独表达 general-session、idea-event 或 not-recorded，避免把
-Agent 完成与 pong 追加成功混淆。idea.events 推送全部九种规范事件的 delta，
-而非只推送 ping/pong；error 表达可区分的 stale、缺父节点、fork、cursor gap 等。
+未来多模态是内容格式扩展方向，不是本期能力；本期拒绝数组附件或未定义 object。
 
-## 观察不等于完成
+## 因果依据与项目事实
 
-refs.inputs 表示纳入判断，不证明输入要求的任务全完成，也不充当 SDK durable
-handoff receipt。消息保存、Agent queued/delivered/processed 与项目结果分别验证。
-本机 receipts 以 channelId/messageId 关联实际副作用；重投相同 envelope 不产生
-第二个 Agent turn。unknown 或缺 receipt 不证明未执行，先观察而不自动重发。
+refs.inputs 表示实际纳入判断的对端消息，不证明任务全完成，不充当 SDK 持久
+接收证明。双方 after 链与 hash 保护消息身份，Silvermoon 本机 receipts 关联
+channelId/messageId 与实际副作用。unknown 或缺 receipt 不证明未执行，
+先观察而不盲目重发。
 
-idea 输入必须校验准确事件 expectedHead；完全相同规范事件的准确前缀检查才证明
-写入幂等。stale 交还，不改新 HEAD 重试；after/inputs 不替代项目前态。
-明确的人类决定仍绑定 world revision 与 primary，humanStatement 不自动授权。
+上游消息不是 event append RPC，不能将正文中说“批准”自动当作人类决定。
+Silvermoon 的本机受控流程记录适当 idea ping，并保存准确事件前态、消息与动作
+关联；明确决定仍须证明人类授权、准确 world revision、primary 和 expectedHead。
+这些写入参数不放进通用 Agent content，具体授权证据与消息映射须协议 review。
 
-daemon 用无状态 Silvermoon 读取 projection/head 与准确 delta，组织持续订阅；
-订阅只在当前连接有效，重连以事件 cursor 重新订阅。delta.after 等于上一批 head，
-覆盖全部事件、末尾 head/sequence 一致；缺口不静默重置或退回生产 replay。
+项目 cursor、snapshot、delta 与追加回执是无状态 Silvermoon 的本机数据，
+不是对上游 Agent 的专用事件订阅协议。daemon 用这些事实决定何时生成对话消息，
+不以文本解析代替 lifecycle 规则。消息 refs 不替代项目 HEAD，也不授权刷新
+HEAD 后重试旧回复；未知/陈旧事实须明确交还。
 
 ## 调度与 review
 
-Silvermoon 的无状态规则返回 NextStep：dispatch/recipient/action 或
-wait/blocked/done。daemon 路由成面向 channel 的消息，Agent 不必知道自己是
-upstream/downstream。whats-next 不是传输通道，下游不另起持续 loop。
+无状态规则返回 NextStep，daemon 将工作或交还内容组织成 Agent 消息。
+upstream/downstream 只在本机调度层存在；Agent 不需要知道相对接线角色。
+whats-next 不是消息传输通道，下游不另起持续 loop。
 
-review 仍须明确传输保留/补齐、fork 协调、跨 channel action 关联、SDK 幂等
-证据、wait 唤醒/背压/公平性。内容 hash 和类型检查不证明这些能力已经存在。
+review 仍需明确 channel 建立、父节点保留/补齐、fork 处理、跨 channel 动作
+关联、文本与显式决定/事件写入的映射，以及 SDK 可验证投递能力。hash 与类型
+检查不证明投递 exactly-once，也不授权从自然语言猜人类决定。

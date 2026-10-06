@@ -9,8 +9,13 @@
 
 所有 Agent 业务交互使用 `{ id, envelope }`，不在传输外层区分 request、
 response、notification，也不定义 hello/welcome 或独立 protocol-error 消息。
-content 的 input、instruction、operation.result、action.result、reply.recorded、
-idea.events、error 只区分内容，不要求一问一答。
+content 是 Agent 对话正文，当前为非空文本 string，可以自然表达意图、指令、
+结果、证据、求助或错误，不带 operation/params/result 等 RPC 分类字段。
+role 由 sender/channel 决定，正文不重复 upstream/downstream 或 SDK role。
+
+未来可显式扩展为文本/图片/音频等多模态内容；本期不增加附件、URL、base64 或
+工具调用格式。届时须定义编码、媒体身份与 hash 覆盖边界，不将浮动外部 URL
+自动当作已验证内容；不能未经版本 review 改变现有 ID 的含义。
 
 envelope 包含 version、channelId、sender、refs、content。sender 只有
 `silvermoon | agent`，没有 participant ID；Silvermoon 是实体身份，daemon 是其
@@ -72,3 +77,7 @@ recipient 的 upstream/downstream 留在 Silvermoon 调度结果中，不传给 
 inputs 不替代 idea expectedHead、world revisions 或 primary。消息 hash 证明
 内容身份，不证明 delivered、processed、副作用完成或 exactly-once。SDK send
 回执仍是本地投递观察，不包装成 Agent 业务回复或生命周期验收。
+
+事件 HEAD、actionId、schema capability、追加回执和投递状态属于 Silvermoon
+本机控制与项目操作类型，不塞入 Agent content。Agent 正文可以描述结果与证据，
+但不能因正文说“完成”就自动记录验收；准确决定与前态必须由受控流程验证。

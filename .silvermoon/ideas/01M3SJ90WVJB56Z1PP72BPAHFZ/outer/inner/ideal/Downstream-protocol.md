@@ -20,18 +20,22 @@ binary/skill release 匹配，实际权限不足明确报告。本期不做 SUDO
 ## Agent 业务消息
 
 AgentMessage 与 WssMessage 使用相同 `{ id, envelope }`。上游、下游 channel
-各自隔离，sender 只有 silvermoon/agent。SDK adapter 将 instruction envelope
-交给 Agent，再取得带真实 after/inputs 的 action.result envelope；不原样转发
+各自隔离，sender 只有 silvermoon/agent。SDK adapter 将指令正文的 envelope
+交给 Agent，再取得带真实 after/inputs 的文本回复 envelope；不原样转发
 上游 message，不让 Agent 理解 upstream/downstream 接线角色。
 
 下游自主执行 instruction，可调用无状态 CLI 查询/校验/受控操作，但不查询并
-领取下一轮任务。idea action 携带实际事件 HEAD/world revisions，general action
-保留依据 messageIds；这些动作依据与 message 因果引用不同，不能事后附上新 HEAD。
+领取下一轮任务。消息 content 当前为非空文本，不要求 Agent 返回 action.result
+object。指令、执行结果、证据、阻塞与求助均通过文本表达，多模态留待未来扩展。
 
-completed 是当前 instruction 执行报告，blocked/unknown 明确表达未完成与不确定。
-general 日常回复不写 idea pong；idea 正式回复由 daemon 委托 Silvermoon 受控
-追加，stale 交还而不改 HEAD 重试。reply.recorded 区分实际记录结果，不自动批准
-或验收，也不新增“输入已处理”的生命周期事件。
+idea action 的事件 HEAD/world revisions、general action 的依据 messageIds
+由本机调度层保留，不塞入 Agent content；这些动作依据与 message 因果引用不同，
+不能收到回复后才附上最新 HEAD。
+
+Agent 用正文报告当前工作结果、未完成或不确定，不要求 completed/blocked/
+unknown 枚举。general 日常回复不写 idea pong；idea 正式回复由 daemon 委托
+Silvermoon 受控追加，stale 交还而不改 HEAD 重试。追加回执与投递状态由本机
+记录，不能据正文的成功描述自动批准/验收，也不新增“输入已处理”的生命周期事件。
 
 SDK callback/工具活动与 send 回执是本地观察，不伪造 Agent message。queued
 不等于 consumed，session idle 不证明动作完成；不能替 Agent 填写其未观察的
@@ -43,7 +47,7 @@ DownstreamAdapter 是 TypeScript 函数边界，不是新 WSS 或 Agent request/
 
 | 方法 | 输入 | 输出 |
 | --- | --- | --- |
-| capabilities | 无 | resume/sendWhileRunning/inspectMessage/durableMessageCorrelation/structuredReply |
+| capabilities | 无 | resume/sendWhileRunning/inspectMessage/durableMessageCorrelation/causalEnvelopeReply |
 | open | SessionOpenParams：route、root、create/resume binding、skill path/digest | binding 与 running/idle/gone/unknown |
 | inspect | 既有 binding | SessionState |
 | send | binding、AgentMessage | queued/delivered/processed + 证据或 unknown |
@@ -76,5 +80,6 @@ v1 可识别/诊断/读取，但没有 v2 event capability；显式独立迁移�
 或替换 session；共享 Git 操作仍需 repo 级协调，不能只有 idea route lock。
 
 review 须提供统一消息正常/失败时序、SDK 实测证据、channel 建立/父节点保留/
-补齐、Agent envelope 输出方式、未知投递与旧新 API 对照。普通 daemon 重启的
+补齐、Agent 文本/envelope 输出方式、本机事件/决定映射、未知投递与旧新 API
+对照。普通 daemon 重启的
 安全重观察属于本期；从 HQ remote 整机自动恢复不属于本期。
