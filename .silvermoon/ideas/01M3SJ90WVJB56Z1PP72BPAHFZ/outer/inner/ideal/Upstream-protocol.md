@@ -65,9 +65,10 @@ general session pending receipt 与 SDK send 之间的崩溃窗口必须验证�
 不能发成功形态确认；unknown 不授权自动重复 Agent turn 或副作用。接收确认、
 网络请求响应与生命周期 pong 是不同事实，pong 不逐条配对确认 ping。
 
-idea 观察/订阅提供当前 projection/head、准确 snapshot cursor 与 cursor 后全部
-增量事件，不只推送 ping/pong。snapshot 与增量须一致衔接；游标缺口、失效或未知
-追加结果明确交还，不静默重置为全量 replay 或漏事件。
+daemon 通过无状态 Silvermoon 能力读取当前 projection/head、准确 snapshot cursor
+与 cursor 后全部增量事件，再向上游提供 idea 观察/订阅，不只推送 ping/pong。
+持续订阅与连接由 daemon 管理，不交给 CLI；snapshot 与增量须一致衔接。
+游标缺口、失效或未知追加结果明确交还，不静默重置为全量 replay 或漏事件。
 
 ## 上游 handoff 与循环
 
@@ -75,9 +76,10 @@ idea 观察/订阅提供当前 projection/head、准确 snapshot cursor 与 curs
 上游请求和下游回复，再调用 Silvermoon 的 `whats-next`/下一步能力；该调用不是
 收消息通道，不以无新事实的轮询重复生成 instruction。
 
-Silvermoon 根据当前事实生成 `recipient + instruction`；daemon 不解析 status
-object 或自然语言 nextSteps 来猜路由。recipient 为 upstream 时交还上游，不能
-把下游回复直接当作上游 instruction。
+daemon 调用无状态 Silvermoon 能力，根据当前事实取得 `recipient + instruction`；
+CLI/业务函数返回规则结果，不承担上下游收发或常驻 loop。daemon 不解析 status
+object 或自然语言 nextSteps 来猜路由。recipient 为 upstream 时由 daemon
+交还上游，不能把下游回复直接当作上游 instruction。
 
 daemon 控制持续观察、投递、等待和再次推进；下游仅自主执行当前 instruction。
 下游可以调用无状态 CLI 查询状态，但不因此成为第二个调度者。idea ping/pong

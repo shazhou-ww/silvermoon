@@ -1,4 +1,4 @@
-# 下游 Agent 与 runtime 接入协议
+# 下游 Agent 接入与无状态 Silvermoon 能力
 
 服务于 [Idea.md](./Idea.md)。允许显式调整原实验性 API；以下是目标能力与保护
 边界，不是最终方法签名，也不声称 SDK 已支持持久请求幂等。
@@ -65,12 +65,17 @@ executable 或独立 runtime。目标 API 提供：
 - 当前 schema/capability、项目就绪和设备 Silvermoon/skill 来源验证；
 - next/handoff：由 Silvermoon 规则生成 recipient/instruction，不复制状态机；
 - projection/head 与准确 cursor 的初始观察；
-- readSince/subscribe：准确前缀后全部事件及新 cursor，失效时显式失败；
+- readSince：准确前缀后全部事件及新 cursor，失效时显式失败；daemon 基于该
+  读取能力组织订阅与唤醒，不由无状态 CLI 持有常驻订阅；
 - expected-head append：原子追加与可区分的成功、幂等、stale/conflict 结果。
 
 不启动 managed repository 自带 Silvermoon CLI，不通过 replay CLI 做生产查询，
 不绕过 event-store、reducer、history 与 state-transaction 的验证保护。
 诊断 replay 可保留为独立能力，不承担 daemon 生产 loop。
+
+这些是每次调用的规则/操作能力，不是独立常驻 runtime，也不维护 Agent session
+或上下游连接。daemon 组织持续推进；下游调用能力完成当前任务；实际 session、
+receipt 与项目 facts 按各自持久化边界保留。
 
 schema v1 可识别、诊断、读取既有生命周期，但没有 v2 event capability；只能
 通过保留的独立 v1→v2 迁移流程显式升级后重观察。新 binary 不静默迁移，损坏或

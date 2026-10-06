@@ -34,19 +34,26 @@ CLI/工具调用；这是两种调用方式，不是两套规则或额外 runtim
 
 ### 职责边界
 
-| 对象 | 职责 | 不承担 |
+| 主体/能力 | 职责 | 不承担 |
 | --- | --- | --- |
-| 上游 | 提交请求、保留未确认输入、处理交还、取得人类决定 | 将接收确认当作执行完成 |
-| device-hq | 管理员的普通 Silvermoon repo 工作区，以设备为 Outer World；保存设备目标、维护实现、ideas 与可同步管理信息 | 成为管理员、专属 runtime 或特殊 session 类型 |
-| daemon | 设备管理员；上游连接、registry 路由、session binding、轻量 receipt、投递与重观察，组织设备管理与 repo 接入 | 自行解释生命周期或复制项目状态机 |
-| Silvermoon | 按目标 repo schema 校验、观察、追加事件并生成 recipient/instruction | 使用 managed repo 自带 Silvermoon binary |
-| 下游 Agent | 各 repo 的 general session 或 idea session 内执行、报告结果/求助 | 以 transcript 代替项目 facts |
+| 人 | 表达目标，review 协议与契约，对准确 revision 作出批准/验收等人类决定 | 被请求、Agent 回复或执行完成自动代替决定 |
+| 上游 Agent | 理解人的意图，取得明确决定，提交请求、保留未确认输入并处理 daemon 交还 | 直接向下游发送协议消息；将接收确认当作执行完成或自行推断人类决定 |
+| Silvermoon daemon | 设备管理员与唯一持续 loop 控制者；接收/观察输入、调用无状态能力、路由与投递、等待和重新推进，管理 registry/session/receipt | 自行复制生命周期规则；绕过人类 gate；将未知投递当作未执行而重发 |
+| 下游 Agent | 在目标 repo 的 general/idea session 中自主执行当前 instruction，调用无状态 CLI 查询/校验/受控操作，结构化报告结果、证据或求助 | 独立领取下一轮并控制 loop；与上游直接通信；自行重复追加交互 pong；以 transcript 代替项目 facts |
+| 无状态 Silvermoon CLI | 供 daemon 与下游共同调用；按目标 root/schema 校验、观察、受控追加并依据规则返回 recipient/instruction 或诊断 | 维护长连接、Agent session 或持续调度 loop；接收上下游通信；替人作出批准/验收 |
+
+device-hq 和 managed repos 是数据与工作区，不是上述执行主体。device-hq 是
+管理员的普通 repo 工作区，以设备为 Outer World；保存设备目标、维护实现、
+ideas 和可同步管理信息，不成为管理员、专属 runtime 或特殊 session 类型。
+
+无状态表示 Silvermoon 不在调用之间持有常驻调度上下文，不表示没有读写副作用：
+项目 facts 仍在 repo 中持久化，受控操作仍须验证 schema、前态和明确的决定。
 
 ### 调用与循环控制
 
 无状态 Silvermoon CLI 不专属于 daemon。daemon 与下游 Agent 都可以查询项目、
 校验和执行受控操作，但 daemon 模式的持续推进 loop 只有 daemon 一个控制者。
-Silvermoon 规则决定下一步与 recipient；daemon 负责接收输入、观察、投递、等待
+无状态 Silvermoon 的规则决定下一步与 recipient；daemon 负责接收输入、观察、投递、等待
 和重新推进；下游自主完成当前 instruction，不自行领取下一轮任务。
 
 下游可以调用 `whats-next` 理解状态，但查询结果不授权它另起

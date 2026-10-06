@@ -10,6 +10,7 @@
 | 设备生产单元 | daemon 作为设备管理员，以 device-hq 为工作区，通过下游 Agent 执行管理工作 |
 | 交互 actor | 人、上游 Agent、daemon、下游 Agent；repo 是数据/工作区，不放入活跃 actor 图 |
 | 通信与调用 | 上下游通过 daemon 通信；daemon 与下游均可使用无状态 Silvermoon CLI 能力 |
+| 职责分工 | 人作决定、上游取得意图与决定、daemon 调度、下游执行；无状态 CLI 返回规则/操作结果，不持有连接/session/loop |
 | 循环控制 | daemon 独占持续推进；下游自主执行当前 instruction，可查询状态但不另起 loop |
 | 回复与交互写入 | 下游结构化报告结果/阻塞；daemon 委托 Silvermoon 追加 ping/pong，不重复写“已处理”事件 |
 | HQ 身份 | 管理员的普通 Silvermoon repo 工作区，以设备为 Outer World；不是管理员、专属 runtime 或特殊 session 类型 |
@@ -30,6 +31,8 @@
 
 管理员身份不替代准确 revision 上的人工批准/验收。未认证请求、损坏输入、未知
 工作和不可证明的执行仍须拒绝或明确交还；“无需额外授权”不是“无需验证结果”。
+repo 是数据与工作区，不是执行主体；无状态 CLI 可受控读写这些持久 facts，
+“无状态”不等于无副作用，也不意味着 daemon 与下游各自维护一套项目规则。
 
 ## HQ 同步的本期边界
 
