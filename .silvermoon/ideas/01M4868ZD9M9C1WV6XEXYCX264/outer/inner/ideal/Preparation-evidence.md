@@ -13,7 +13,7 @@ upstream 为 `origin/main`。Windows、Node v24.12.0、pnpm v11.22.0。
 
 ## 操作与检查
 
-以下均使用本 checkout 的源码入口。结果适用于准备候选，不是 V3 行为验证。
+以下均使用本 checkout 的源码入口。结果适用于准备候选，不是 DAG 行为验证。
 
 | 命令/检查 | 结果 |
 | --- | --- |
@@ -34,10 +34,17 @@ upstream 为 `origin/main`。Windows、Node v24.12.0、pnpm v11.22.0。
 仓库 Markdown lint 配置排除 ideas，commit tier 的 lint 成功不代表这些契约已获
 语义审查；本轮另验证本地 links 和候选类型。未改变 CLI/schema/模型运行时代码/
 canonical skill，故本轮未执行 release-grade `pnpm check`；实施交付必须执行。
-没有 V3 benchmark、迁移 apply、npm 发布、父 idea 修改或 acceptIdeal。
+没有 DAG benchmark、迁移 apply、npm 发布、父 idea 修改或 acceptIdeal。
 规模证据方案与未决 N/B 参数见 [Storage-validation.md](./Storage-validation.md)。
 下游契约/ledger 未完成占位不代表已实施或已验收。
 
 最终 primary commit 与准确 idealRevision 由提交/同步后的 `whats-next` 提供，
 不在世界内自嵌 revision，避免修改世界导致自引用失效。提交后还须刷新 primary、
 普通非 force 同步、确认 candidate 可达，再进入准确人类 gate。
+
+## 本轮审查反馈
+
+用户明确指出 V2 尚未发布，不必另立 V3。候选据此改为直接重设计 V2；
+格式标识用于保护已落盘旧数据，不是新的项目版本或长期双 V2 写入承诺。
+该反馈不批准上一版 Ideal，也不授权自动转换本仓库。修订后须重新验证、
+提交、同步与观察新的准确 revision，不能复用旧 revision 的人类 gate。

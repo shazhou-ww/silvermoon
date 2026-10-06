@@ -1,6 +1,7 @@
 # 事件身份、因果与归约候选
 
-服务于 [Idea.md](./Idea.md)。本文是 V3 项目事件契约，不是通信消息协议。
+服务于 [Idea.md](./Idea.md)。本文直接重设计未发布的 V2 项目事件，
+不另立 V3，也不是通信消息协议。
 类型见 [Event-types.ts](./Event-types.ts)。
 
 ## Envelope 与规范字节
@@ -84,7 +85,7 @@ metadata 冲突期间只允许受控、非人类决定的冲突消解写入：�
 因此与 abandon 并发的旧 pong 保留为事实，但最终状态为 abandoned，不能
 唤醒执行、自动 resume 或验收。pong 若观察了尚未 resume 的 abandon 则拒绝。
 先收到 pong 或先收到 abandon，归约同一集合必须相同；该规则是对 V2 的
-“abandon 后只允许 resume”和完整 HEAD stale 拒绝的显式变化，限 V3。
+“abandon 后只允许 resume”和完整 HEAD stale 拒绝的显式变化，限 DAG 格式。
 
 ping 的因果依据不能伪装覆盖尚未判断的 pong；也不承诺每 ping 一个 pong。
 连续 pong、无 ping 的 pong、报告阻塞/失败仍有效。DAG 不新增已处理任务事件。
@@ -103,7 +104,7 @@ append 前、事务锁内和最终 primary 重检查；变化返回 stale，不�
 
 ## 新旧行为边界
 
-| 行为 | V3 候选 |
+| 行为 | V2 DAG 候选 |
 | --- | --- |
 | 九种业务 payload、非空消息、准确 revision | 保持；不与网络 message 混为一谈 |
 | 全局 sequence | 不再是事件字段；物理序号/显示 rank 仅是派生位置 |
@@ -113,5 +114,5 @@ append 前、事务锁内和最终 primary 重检查；变化返回 stale，不�
 | 结构冲突/缺父 | 明确阻塞，不 silent repair，不给可执行成功指令 |
 
 测试须覆盖实际 CLI/API、候选类型、状态报告与消费方，不仅验证 hash 或 reducer
-纯函数。daemon 若尚未支持 V3 concurrent signal，capability 明确拒绝推进；
+纯函数。daemon 若尚未支持 DAG concurrent signal，capability 明确拒绝推进；
 不能让旧消费方把 null 当已完成。

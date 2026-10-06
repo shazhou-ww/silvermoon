@@ -40,13 +40,13 @@ blob 表、frontier、storageDigest、迁移审计摘要和 reduction/index 版�
 验证基础；不能靠 mtime/length 相等略过内容。完整审计仍读全量权威历史。
 缓存/key/lock/cursor 不提交，不包含新的批准事实或消息副本权威。
 
-V3 cursor 含 version、ideaId、frontier、storageDigest 与两侧准确物理
+DAG cursor 含 format: merkle-dag-v1、ideaId、frontier、storageDigest 与两侧准确物理
 {length,digest} 边界；完整 replay 初始化后才可增量。验证旧 frontier 的祖先
 闭合集合、两侧字节边界、历史段表与当前前缀一致，再按稳定拓扑序返回新增节点
 和新 cursor。delta 不包含完整归约有效性承诺；消费成功后才保存新 cursor。
 无变化返回空数组；缺父、同侧 fork、未知 id、改/删前缀、非记录边界、错误
 schema 及不闭合 cursor 明确拒绝，不自动从头开始、不把排序 rank 当 cursor。
-旧 V2 length/digest cursor 在 V3 明确不兼容，迁移后须完整 replay 初始化。
+旧 length/digest cursor 与 DAG cursor 明确不兼容，转换后须完整 replay 初始化。
 
 ## 原子追加和并发
 
@@ -81,9 +81,18 @@ Windows 无目录 fsync 的限制必须保留，进程恢复不承诺硬件掉�
 
 ## Schema 与显式迁移候选
 
-V1 status 与 V2 segmented 原生格式继续按各自版本读写，不更改 V2 grammar，
-旧正式兼容范围写入 docs/schema/API capability。V3 未支持的消费方明确
-unsupported-capability；普通安装、查询、daemon 与 append 不迁移。
+V2 尚未发布，DAG 直接成为 V2 的目标格式，不引入 V3，不承诺未发布旧 V2
+grammar/API 的长期兼容，也不同时维护两个 V2 正常写入模型。V1 支持保持；
+新运行时对旧 V2 仅提供明确识别、只读审计和显式转换入口，普通写入报
+storage-upgrade-required。支持范围须写入 docs/schema/API capability。
+
+为防同为 version: 2 时误读，目标 config 显式声明
+`eventFormat: merkle-dag-v1`；旧 V2 缺该标识按旧 segmented 格式识别，
+不根据某条 JSON 猜测或静默转换。此标识是未发布 V2 的格式边界，不是 V3
+项目版本。切换运行时前当前源码继续按现有格式工作；切换需要事先授权的
+项目转换安排，不能靠新运行时普通 append 自动转换本仓库。
+未支持 DAG 的消费方明确 unsupported-capability；普通安装、查询、daemon
+与 append 不转换数据。
 新迁移入口只在准确 Ideal 批准后开发，不恢复已删除旧 internal/segmented 工具。
 
 V2 没有可靠 source/observed 事实，尤其 metadata 属双方，不能凭业务类型
@@ -91,7 +100,7 @@ V2 没有可靠 source/observed 事实，尤其 metadata 属双方，不能凭�
 
 1. read-only plan 固定 config、全部 ideas、世界/ledger、完整旧事件原字节、
    primary、格式与 reduction，输出版本化 plan digest 和逐项差异。
-2. V3 每 idea 保留 `events/import/` 中不可变旧格式段和严格 manifest；
+2. DAG 每 idea 保留 `events/import/` 中不可变旧格式段和严格 manifest；
    manifest 记录原 schema、段 Git blob 表、原 length/digest、迁移前投影，
    从原段重放核验，不靠 manifest 投影自证。V1 另保留准确 status 原字节。
    它是权威历史审计基底，不是缓存，不伪称历史因果。
@@ -106,11 +115,11 @@ V2 没有可靠 source/observed 事实，尤其 metadata 属双方，不能凭�
    同步 primary、项目级事务；所有 ideas/config 同批变更。校验原始事实与
    候选审计重放、三个世界、ledger、有效语言/alias 和五态结果逐项等价。
 6. resume/rollback 显式确认原 writer 停止、核对计划与当前字节，不覆盖未知
-   工作。未写新 V3 事实前可恢复准确旧快照；接受新事实后禁止自动 downgrade，
+   工作。未写新 DAG 事实前可恢复准确旧快照；接受新事实后禁止自动 downgrade，
    另行设计转换并取得授权。迁移完成先验证并同步准确边界，再追加新节点。
 
 保留旧段与规范原生内容 hash 不是双份状态权威：import 只定义已封存的历史
-前态，新事件只定义其后的事实；任何 projection 可丢弃重建。V3 新建 idea
+前态，新事件只定义其后的事实；任何 projection 可丢弃重建。DAG 新建 idea
 没有 import，empty graph 不等于导入 idea 没有历史事实。
 
 ## 可复现规模矩阵与预算
@@ -145,7 +154,7 @@ Windows 与 POSIX、Git SHA-1/SHA-256、冷/暖索引/投影均覆盖。
 正确性矩阵包含 rollover（条数/字节）、尾段追加保持旧 id、重复 key/hash 错误、
 观测倒退/缺口/循环、同侧多 writer、abandon || pong、不同 accepted revision、
 metadata 并发消解、真实 Git 合并各父保留、异常事务恢复、缓存/key/source/
-ChangeTime 篡改、V1/V2/V3 混合能力诊断和迁移回滚。
+ChangeTime 篡改、V1/未发布旧 V2/V2 DAG 格式能力诊断和转换回滚。
 最终 CLI/schema/模型/skill 交付须 `pnpm check:sanity`、专门测试、
 `pnpm check:commit`、`pnpm check` 和准确 worktree/staged metadata 验证；
 源码 checkout 永远使用自己的 `node bin/silvermoon.js`。

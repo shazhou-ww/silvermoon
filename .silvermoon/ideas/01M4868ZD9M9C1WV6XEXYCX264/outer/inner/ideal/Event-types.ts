@@ -39,7 +39,7 @@ export interface PhysicalPrefix {
   readonly digest: GitOid;
 }
 export interface EventCursor {
-  readonly version: 3;
+  readonly format: "merkle-dag-v1";
   readonly ideaId: IdeaId;
   readonly frontier: Frontier;
   readonly storageDigest: GitOid;
