@@ -151,6 +151,8 @@ daemon 配置与用户语言配置分离，配置变更通过重启生效。凭�
 见 [Upstream-protocol.md](./Upstream-protocol.md)：连接、route、请求身份、
 expectedHead、ack、订阅与上游 handoff。协议字段与状态机仍待准确候选 review；
 “上游请求即授权”不取消连接认证和输入校验。
+具体请求、响应与 WSS 消息候选类型见 [Protocol-types.ts](./Protocol-types.ts)，
+可检查的消息示例见 [Protocol-examples.ts](./Protocol-examples.ts)。
 
 ## 3. 下游协议
 

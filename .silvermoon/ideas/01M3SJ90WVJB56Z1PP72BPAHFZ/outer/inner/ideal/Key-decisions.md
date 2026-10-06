@@ -52,6 +52,10 @@ unknown 对账和恢复演练另行设计。本期不交付这些流程，Git �
 
 ## 待验证与协议 review
 
+共享候选类型见 [Protocol-types.ts](./Protocol-types.ts)，具体消息示例见
+[Protocol-examples.ts](./Protocol-examples.ts)。类型已给出不等于语义已获 review：
+SDK 持久关联、确认边界、receipt 保留与动作身份稳定性仍须验证和收敛。
+
 | 项目 | 需要收敛的内容 |
 | --- | --- |
 | SDK 真实能力 | request/action 持久关联、历史查询、resume、send 崩溃窗口；无证据不承诺 exactly-once |

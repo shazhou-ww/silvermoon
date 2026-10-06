@@ -1,7 +1,72 @@
 # 下游 Agent 接入与无状态 Silvermoon 能力
 
-服务于 [Idea.md](./Idea.md)。允许显式调整原实验性 API；以下是目标能力与保护
-边界，不是最终方法签名，也不声称 SDK 已支持持久请求幂等。
+服务于 [Idea.md](./Idea.md)。具体下游 request/response/event 与无状态操作类型
+见 [Protocol-types.ts](./Protocol-types.ts)，消息示例见
+[Protocol-examples.ts](./Protocol-examples.ts)。允许显式调整原实验性 API；这些是
+版本 `1` 的 review 候选，不是已发布签名，不声称 SDK 已支持持久请求幂等。
+
+## 下游 request / response / event
+
+这是 daemon 与 SDK adapter 的本地类型边界，不新增 WSS 服务。`DownstreamRequest`
+与 `DownstreamResponse` 同样以 requestId/operation 关联，但不能发送到上游连接；
+downstream event 由 SDK callback/异步 iterator 提供，不是 repo lifecycle event。
+
+| operation | request params | ok response result |
+| --- | --- | --- |
+| `adapter.capabilities` | 空 object | resume/sendWhileRunning/inspectAction/durableRequestCorrelation/structuredReply |
+| `session.open` | general/idea route、repositoryRoot、idea worktreeRoot、create/resume binding、skill path/digest | 已验证 binding 与 SessionState |
+| `session.inspect` | 已有 binding | 相同 binding 与 running/idle/gone/unknown |
+| `session.send` | binding 与对应 GeneralAction/IdeaAction | ActionReference 与 queued/delivered/processed/unknown Delivery |
+| `action.inspect` | binding、ActionReference | found + delivery、not-found + 查询边界，或 unknown |
+| `session.detach` | binding | disconnected: true；不表示执行已停止或 session 被删除 |
+
+SessionBinding 包含完整 route、sessionId 与 generation。general open 不携带
+idea worktree，idea open 必须提供它；create/resume 都明确目标 binding，
+调用前持久化并验证 owner。create 只适用于确认未创建的初次绑定，不作为 resume
+失败、SDK 列表缺失或 unknown 的自动 fallback。
+
+skill path 是本地参数，不发送到上游；digest 校验匹配设备 binary release。
+mode.binding 与 request.route 必须一致，send.action 与 binding.route 必须一致。
+SDK 不支持某能力时返回 false/unsupported，不填造 receipt 或 processed 证据。
+
+`DownstreamEvent` 的类型为 session.state、action.delivery、action.reply 与
+action.activity。正式 action.reply 携带 binding、完整 ActionReference 和
+ActionResult；activity 仅表达 message/tool-start/tool-end，不带完整工具正文，
+也不自动成为 pong。completed 仅指当前 instruction 的执行报告，不代表阶段验收。
+
+ActionResult 明确分为 completed（message/evidence）、blocked（message/needs）
+与 unknown（message）。daemon 使用原 action basis 核验并追加 pong，不能收到
+回复后才读取最新 HEAD 绑定。general 回复不进入 idea events。
+
+capabilities 为 false 时，action.inspect 必须明确返回 unsupported 或 unknown。
+not-found 的 boundary 只证明查询覆盖范围，不能单独授权重发；队列接收的
+Delivery 也不能充当可恢复的持久接收回执。SDK 证据引用需要真实可查询来源，
+而不是 Agent 自称的消息 ID。
+
+## 无状态 request / response 类型
+
+`SilvermoonRequest` / `SilvermoonResponse` 是 CLI/业务调用的目标类型描述，
+不是新网络服务，也不表示既有 CommandReport 已经改版。
+
+| operation | params | ok result |
+| --- | --- | --- |
+| `project.inspect` | route | route 与 SchemaCapability |
+| `next` | idea route，或 general route + GeneralObservation | NextStep |
+| `idea.observe` | idea route | IdeaSnapshot |
+| `idea.readSince` | idea route、after | EventDelta |
+| `idea.interaction.append` | idea route、expectedHead、ping/pong event input | AppendReceipt |
+| `idea.decision.append` | 与上游明确决定请求同形状 | AppendReceipt |
+
+GeneralObservation 显式包含目标 binding、所观察的请求与已关联回复，不只传入
+requestIds 后让无状态函数猜 SDK 上下文。它是请求/session 的观察，不是新的
+general lifecycle 状态机。NextStep 区分 dispatch、wait、blocked、done；
+只有 dispatch 包含 recipient/action，其他分支不伪造 instruction。done 只表示
+当前 loop 无待派发动作，不记录完成/验收事实；wait 的唤醒与调度策略仍需 review。
+
+无状态 response 的 requestId 是调用关联，不构成去重账本。daemon 维护业务
+request/action receipts；Silvermoon 仍以准确事件前态、primary 与原子写入保护
+项目 facts。实际 CLI 参数与四投影报告如何映射这些目标类型须在 API review
+明确，不能直接移除现有报告校验或假定 SDK/CLI 已实现此接口。
 
 ## Session 与工具上下文
 

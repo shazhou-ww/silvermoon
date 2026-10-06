@@ -1,7 +1,89 @@
 # 上游接入协议
 
-服务于 [Idea.md](./Idea.md)。以下是当前协议要求，不是已实现或已批准的 wire
-schema。具体字段、操作清单、状态机和失败时序须以准确候选提交人工 review。
+服务于 [Idea.md](./Idea.md)。具体 request/response/WSS message 类型在
+[Protocol-types.ts](./Protocol-types.ts)，可检查的消息示例在
+[Protocol-examples.ts](./Protocol-examples.ts)。以下是版本 `1` 的 review 候选，
+不是已实现或已批准的 wire schema；SDK 能力与恢复保证仍须验证。
+
+## 数据类型与消息方向
+
+WSS 每条应用消息是一个 UTF-8 JSON object，使用顶层 `protocolVersion: 1` 和
+`kind` 判别，不把命令行、token 或本机路径放入网络消息。
+
+| 方向 | 类型 | kind 与用途 |
+| --- | --- | --- |
+| daemon → upstream | `DaemonHello` | `hello`：connectionId、daemonId、版本与能力 |
+| upstream → daemon | `UpstreamWelcome` | `welcome`：同 connectionId 的握手结果 |
+| upstream → daemon | `UpstreamRequest` | `request`：requestId、operation、对应 params |
+| daemon → upstream | `UpstreamResponse` | `response`：同 requestId/operation，ok/result 或 error/error |
+| daemon → upstream | `DaemonEventMessage` | `event`：connectionId、连接内 sequence 与 typed event |
+| daemon → upstream | `WireProtocolError` | `protocol-error`：无法归属合法 request 的格式/协议错误 |
+
+`WssMessage` 是以上消息的完整 union。响应类型通过 operation 与 result 关联，
+不能给 `idea.observe` 返回 general 接收回执。错误分支没有 result，成功分支没有
+error；unknown 写入/投递结果不能返回持久接收成功。
+
+连接在 HTTP Upgrade 阶段使用受保护配置中的 token 认证，候选使用 Authorization
+Bearer header；token 不进入 hello 或其他 JSON body。hello/welcome 完成前不接受
+业务 request。capabilities 取双方共同支持操作，不支持的操作返回明确错误。
+
+## Request / response 操作清单
+
+| operation | params | ok result |
+| --- | --- | --- |
+| `project.onboard` | projectUrl | HQ general session 的持久接收依据与 duplicate |
+| `general.submit` | GeneralRoute、message、inReplyToActionId | 目标 general session 的持久接收依据与 duplicate |
+| `idea.ping.append` | IdeaRoute、expectedHead、message、inReplyToActionId | AppendReceipt 与 duplicate |
+| `idea.decision.append` | IdeaRoute、expectedHead、expectedPrimary、HumanDecision、humanStatement、inReplyToActionId | AppendReceipt 与 duplicate |
+| `idea.observe` | IdeaRoute | IdeaSnapshot：head、sequence、schema、世界 revisions 与 lifecycle |
+| `idea.events.subscribe` | IdeaRoute、after cursor | subscriptionId 与第一批 EventDelta |
+| `idea.events.unsubscribe` | subscriptionId | 已停止该连接的 subscriptionId |
+| `request.inspect` | targetRequestId | pending/accepted/failed/unknown/not-found 回执 |
+| `action.ack` | actionId、boundary: received | actionId；只确认收到 upstream handoff |
+
+`inReplyToActionId` 为 null 表示新输入，非 null 关联已有 upstream action；它不
+替代 idea expectedHead，也不授权 daemon 改写 stale 输入。`action.ack` 不表达
+执行完成；处理后的新输入仍经 general.submit、idea.ping.append 或明确决定操作
+提交。humanStatement 是明确人类决定的上下文，不是自动批准 flag；上游须真正
+取得决定，Silvermoon 仍校验准确世界 revision、primary 和事件前态。
+
+project.onboard 的接收回执不证明 clone 已完成。完成身份/登记/schema/general
+session 检查后再推送 `project.ready`；失败/unknown 通过 typed action.result
+或错误响应表达，不伪造 projectKey 或成功登记。
+
+## 推送数据
+
+`DaemonEvent` 明确定义 request.received、project.ready、action.handoff、
+action.delivery、action.result、idea.events、subscription.error 和 loop.state。
+handoff 仅用于 recipient=upstream；下游动作投递使用本地 adapter 协议。
+
+Action/ActionReference 绑定 actionId、route 与 basis；idea basis 为准确 head 与
+世界 revisions，general basis 为所依据的 requestIds，不伪造 idea HEAD。
+action.result 分开表示 Agent 结果与 reply recording：general-session、
+idea-event 或 not-recorded。Agent 完成当前动作但 pong 追加 stale 时，两者必须
+同时呈现，不能将报告丢弃或改成已成功记录。
+
+EventDelta 的 events 包含全部九种规范 V2 事件，不只 ping/pong；sequence/type/
+payload 形状与现有 event schema 相同。网络不另加字段到持久事件记录。
+
+## 字段校验与关联规则
+
+- requestId/actionId/subscriptionId/sessionId 是非空标识符；generation 为正安全
+  整数，长度/sequence 为非负安全整数，持久事件 sequence 从 1 连续增长。
+- projectUrl、ideaId、OID、语言与 payload 通过现有规范校验。EventCursor.digest
+  使用目标 repo 的 Git object format；未知字段和不属于 route 分支的字段拒绝。
+- 响应 requestId/operation 必须对应请求；action 与 binding 的 route/代次必须
+  匹配，project.ready 的 projectUrl 必须匹配其 binding。
+- requestId 去重作用域为已认证上游身份 + daemonId，跨连接保留；相同 ID 的
+  operation/params 必须相同。pending/unknown 不重发 Agent turn，not-found 只
+  表示缺少 receipt，不证明副作用未发生。保留/压缩期限仍待 SDK 与恢复验证。
+- connectionId 与推送 sequence 只表示当前连接传输位置，不代替事件 HEAD 或
+  exactly-once。重连重新握手并按持久 cursor 订阅，不重放未知 instruction。
+- EventDelta.after 必须等于调用/前一批 head，head 是本批末尾准确前缀，sequence
+  是该前缀最后事件序号。分批不能拆开单事件；subscription.error 终止该订阅。
+  subscriptionId 只在当前连接有效，新连接不能复用旧 ID。
+
+类型检查不代替这些运行时校验，也不证明 SDK 提供 sdkReceiptReference。
 
 ## 连接与信任
 
@@ -40,8 +122,9 @@ general session 的路由，不是特殊 session 类型；`project` 不能解释
 
 请求携带稳定 requestId、明确 route 与正文；general session 输入不绑定 idea，
 没有 idea event HEAD，也不另建 general session lifecycle event stream。
-相同 ID/相同请求是重试，相同 ID/不同请求须显式冲突。ID 作用域、保留期限和
-receipt 状态机尚需定义；upstream 保留未确认请求，以同一 ID 重投。
+相同 ID/相同请求是重试，相同 ID/不同请求须显式冲突。ID 作用域与 receipt
+关联按上面的类型与字段规则处理；保留/压缩期限和 SDK 原子 handoff
+保证仍需验证。upstream 保留未确认请求，以同一 ID 重投。
 
 idea 输入额外携带所依据的 expectedHead `{ length, digest }`。权威追加接口原子
 校验完整 folder 前态；正常路径不先查询或运行 replay CLI。准确前缀之后已有完全
