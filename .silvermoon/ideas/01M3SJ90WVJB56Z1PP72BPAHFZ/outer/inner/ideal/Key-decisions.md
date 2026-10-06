@@ -11,7 +11,7 @@
 | 交互 actor | 人、上游 Agent、daemon、下游 Agent；repo 是数据/工作区，不放入活跃 actor 图 |
 | 通信与调用 | 上下游通过 daemon 通信；daemon 与下游均可使用无状态 Silvermoon CLI 能力 |
 | 消息身份 | sender 为 silvermoon/agent，双方准确身份从 channel binding 取得，不重复 participant ID |
-| 消息正文 | 当前为 Agent 对话文本，不是 RPC object；多模态留待未来版本 |
+| 消息正文 | body: { content: string }；文本不是 RPC object，body 预留未来附件字段，本期不定义附件 |
 | 职责分工 | 人作决定、上游取得意图与决定、daemon 调度、下游执行；无状态 CLI 返回规则/操作结果，不持有连接/session/loop |
 | 循环控制 | daemon 独占持续推进；下游自主执行当前 instruction，可查询状态但不另起 loop |
 | 回复与交互写入 | 下游通过正文报告结果/阻塞；daemon 以本机验证依据委托 Silvermoon 追加 ping/pong，不重复写“已处理”事件 |

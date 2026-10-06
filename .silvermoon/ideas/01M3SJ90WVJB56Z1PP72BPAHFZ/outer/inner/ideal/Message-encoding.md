@@ -9,15 +9,17 @@
 
 所有 Agent 业务交互使用 `{ id, envelope }`，不在传输外层区分 request、
 response、notification，也不定义 hello/welcome 或独立 protocol-error 消息。
-content 是 Agent 对话正文，当前为非空文本 string，可以自然表达意图、指令、
+body 是正文与未来附件的字段扩展容器，当前形状为 `{ content: string }`。
+body.content 是非空 Agent 对话文本，可以自然表达意图、指令、
 结果、证据、求助或错误，不带 operation/params/result 等 RPC 分类字段。
 role 由 sender/channel 决定，正文不重复 upstream/downstream 或 SDK role。
 
-未来可显式扩展为文本/图片/音频等多模态内容；本期不增加附件、URL、base64 或
-工具调用格式。届时须定义编码、媒体身份与 hash 覆盖边界，不将浮动外部 URL
+未来可在 body 增加附件字段支持图片/音频等多模态内容；本期只预留这个扩展位置，
+不定义附件、URL、base64 或工具调用格式。届时须定义编码、媒体身份与 hash
+覆盖边界，不将浮动外部 URL
 自动当作已验证内容；不能未经版本 review 改变现有 ID 的含义。
 
-envelope 包含 version、channelId、sender、refs、content。sender 只有
+envelope 包含 version、channelId、sender、refs、body。sender 只有
 `silvermoon | agent`，没有 participant ID；Silvermoon 是实体身份，daemon 是其
 运行模式。channel binding 保存双方准确身份、general/idea route 和 Agent 代次。
 upstream/downstream 仅是 Silvermoon 本机接线角色，不让 Agent 依赖它判断身份。
@@ -44,7 +46,7 @@ object keys，数组保持原顺序，string 使用 JSON.stringify 转义，不�
 
 收到消息后先验证结构、canonical 字节和 hash，再核验 sender/channel/refs。
 同 id 重投必须是同 envelope；id 不同但语义相近不能自动当作重试。重投保持
-原 refs，不能附上新父节点再声称同一消息。相同 content 的再次独立发送通过新的
+原 refs，不能附上新父节点再声称同一消息。相同 body 的再次独立发送通过新的
 after 区分；本期不允许每 sender/channel 多个无关联根或自动 fork merge。
 
 ## 两种引用
@@ -79,5 +81,5 @@ inputs 不替代 idea expectedHead、world revisions 或 primary。消息 hash �
 回执仍是本地投递观察，不包装成 Agent 业务回复或生命周期验收。
 
 事件 HEAD、actionId、schema capability、追加回执和投递状态属于 Silvermoon
-本机控制与项目操作类型，不塞入 Agent content。Agent 正文可以描述结果与证据，
+本机控制与项目操作类型，不塞入 Agent body。Agent 正文可以描述结果与证据，
 但不能因正文说“完成”就自动记录验收；准确决定与前态必须由受控流程验证。

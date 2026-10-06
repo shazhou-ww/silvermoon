@@ -152,13 +152,14 @@ daemon 配置与用户语言配置分离，配置变更通过重启生效。凭�
 因果引用与 Agent 工作消息，以及本机项目事实/写入依据的映射。协议字段与状态
 机仍待准确候选 review；
 “上游请求即授权”不取消连接认证和输入校验。
-具体 message/content 与本地 API 候选类型见 [Protocol-types.ts](./Protocol-types.ts)，
+具体 message/body 与本地 API 候选类型见 [Protocol-types.ts](./Protocol-types.ts)，
 可检查的消息示例见 [Protocol-examples.ts](./Protocol-examples.ts)。
 Agent 业务协议现在统一为 [Merkle DAG 消息候选](./Message-encoding.md)，不再
 区分 request/response/notification 外层；sender 为 silvermoon/agent，具体双方
 身份从 channel binding 取得。上下游共用编码，但因果历史按 channel 隔离。
-content 当前仅为 Agent 对话文本，不承载 RPC operation/params/result、事件
-订阅或追加回执；多模态是未来内容扩展方向。
+body 当前为 `{ content: string }`，仅承载 Agent 对话文本，不承载 RPC
+operation/params/result、事件订阅或追加回执；未来可在 body 增加附件字段，
+本期只预留扩展位置。
 
 ## 3. 下游协议
 
