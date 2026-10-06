@@ -6,7 +6,7 @@ Model idea identity, lifecycle state, world revisions, and status rules.
 
 - Allowed dependencies: coordinates and language.
 - Does not own: inventory I/O, event storage, and command orchestration.
-- Cross-module callers use [index.js](./index.js); sibling implementations do not import their own index.
+- Cross-module callers use [index.ts](./index.ts); sibling implementations do not import their own index.
 
 ## Key exports
 

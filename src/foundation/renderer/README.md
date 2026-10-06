@@ -6,7 +6,7 @@ Purely render explicit reports and time facts as JSON, Text, or Markdown.
 
 - Allowed dependencies: language and report.
 - Does not own: clock reads, lifecycle derivation, and terminal I/O.
-- Cross-module callers use [index.js](./index.js); sibling implementations do not import their own index.
+- Cross-module callers use [index.ts](./index.ts); sibling implementations do not import their own index.
 
 ## Key exports
 

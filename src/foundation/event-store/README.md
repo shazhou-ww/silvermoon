@@ -6,7 +6,7 @@ Read and plan segmented event storage at the 1000-record boundary.
 
 - Allowed dependencies: event-codec, event-history digest primitives, and snapshot.
 - Does not own: payload policy, fetch, and full command orchestration.
-- Cross-module callers use [index.js](./index.js); sibling implementations do not import their own index.
+- Cross-module callers use [index.ts](./index.ts); sibling implementations do not import their own index.
 
 ## Key exports
 

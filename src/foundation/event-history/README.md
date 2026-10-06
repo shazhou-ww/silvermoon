@@ -6,7 +6,7 @@ Verify primary prefixes, folder Git digests, and event history boundaries.
 
 - Allowed dependencies: git, snapshot, event-codec, event-store, and idea-model.
 - Does not own: history mutation and human authorization.
-- Cross-module callers use [index.js](./index.js); sibling implementations do not import their own index.
+- Cross-module callers use [index.ts](./index.ts); sibling implementations do not import their own index.
 
 ## Key exports
 

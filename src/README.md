@@ -27,8 +27,8 @@ src/
 └── foundation/              # 基础层；每个模块一个目录
     └── <module>/
         ├── README.md
-        ├── index.js
-        └── <implementation>.js
+        ├── index.ts
+        └── <implementation>.ts
 ```
 
 ## 1. 应用层按进程入口划分
@@ -40,17 +40,17 @@ src/
 
 | 目标入口文件 | 当前入口 | 接收的消息 | 发出的消息 | 说明 |
 | --- | --- | --- | --- | --- |
-| `bin/silvermoon.js` | [bin/silvermoon.js](../bin/silvermoon.js) | 命令、argv、可选 JSON 输入文件、stdin、TTY／locale／trace 事实 | `CommandReport` 的 JSON、Text 或 TUI 表示，诊断／trace 和命令专属退出码 | 唯一用户 CLI；子命令不拆成应用 |
-| `bin/migrate-v1-to-v2.js` | [bin/migrate-v1-to-v2.js](../bin/migrate-v1-to-v2.js) | project root、plan／apply／resume／rollback、plan digest、writer 停止确认 | V1 到 V2 的 JSON 计划或执行／恢复回执；失败写 stderr 和非零退出码 | 一次性外部项目迁移 |
-| `bin/run-checks.mjs` | [bin/run-checks.mjs](../bin/run-checks.mjs) | 无参数或 `sanity`／`commit`／`release` tier | 逐 gate 开始、结果、耗时、汇总和退出码 | 组合检查，不修改候选 |
-| `bin/pure-check.mjs` | [bin/pure-check.mjs](../bin/pure-check.mjs) | `src` JavaScript 和纯规则入口 | 纯函数数量、违规位置／原因和退出码 | 静态纯度检查 |
-| `bin/check-pack.js` | [bin/check-pack.js](../bin/check-pack.js) | package manifest、白名单和 `npm pack` 结果 | 包内容／入口诊断和退出码 | 检查制品，不发布 |
-| `bin/sync-skills.mjs` | [bin/sync-skills.mjs](../bin/sync-skills.mjs) | canonical skill、registered copy、check／write 模式 | 差异清单或同步结果和退出码 | 不改变 idea 生命周期 |
-| `bin/ci-package-risk.mjs` | [bin/ci-package-risk.mjs](../bin/ci-package-risk.mjs) | base／head revision 或 full 模式 | 风险分类、受影响路径和退出码 | 只为 CI 选择 gate |
-| `bin/generate-npm-readme.mjs` | [bin/generate-npm-readme.mjs](../bin/generate-npm-readme.mjs) | commit、可选 source 和 output path | 固定 commit 链接的 README 或失败诊断 | 只生成制品文档 |
-| `bin/prepare-npm-release.mjs` | [bin/prepare-npm-release.mjs](../bin/prepare-npm-release.mjs) | release tag 和准确 commit | release key、版本、dist-tag 和 workflow 输出 | 不执行发布 |
-| `bin/build-npm-tarball.mjs` | [bin/build-npm-tarball.mjs](../bin/build-npm-tarball.mjs) | package directory、output directory、Git HEAD | tarball 路径、hash、integrity 和打包元数据 | 构建可验证制品 |
-| `bin/verify-npm-release.mjs` | [bin/verify-npm-release.mjs](../bin/verify-npm-release.mjs) | package、版本、dist-tag、commit、tag 和 tarball | registry、provenance、tag 与 tarball 一致性 | 发布后只读验证 |
+| `bin/silvermoon.ts` | [bin/silvermoon.ts](../bin/silvermoon.ts) | 命令、argv、可选 JSON 输入文件、stdin、TTY／locale／trace 事实 | `CommandReport` 的 JSON、Text 或 TUI 表示，诊断／trace 和命令专属退出码 | 唯一用户 CLI；子命令不拆成应用 |
+| `bin/migrate-v1-to-v2.ts` | [bin/migrate-v1-to-v2.ts](../bin/migrate-v1-to-v2.ts) | project root、plan／apply／resume／rollback、plan digest、writer 停止确认 | V1 到 V2 的 JSON 计划或执行／恢复回执；失败写 stderr 和非零退出码 | 一次性外部项目迁移 |
+| `bin/run-checks.ts` | [bin/run-checks.ts](../bin/run-checks.ts) | 无参数或 `sanity`／`commit`／`release` tier | 逐 gate 开始、结果、耗时、汇总和退出码 | 组合检查，不修改候选 |
+| `bin/pure-check.ts` | [bin/pure-check.ts](../bin/pure-check.ts) | `src` TypeScript 和纯规则入口 | 纯函数数量、违规位置／原因和退出码 | 静态纯度检查 |
+| `bin/check-pack.ts` | [bin/check-pack.ts](../bin/check-pack.ts) | package manifest、白名单和 `npm pack` 结果 | 包内容／入口诊断和退出码 | 检查制品，不发布 |
+| `bin/sync-skills.ts` | [bin/sync-skills.ts](../bin/sync-skills.ts) | canonical skill、registered copy、check／write 模式 | 差异清单或同步结果和退出码 | 不改变 idea 生命周期 |
+| `bin/ci-package-risk.ts` | [bin/ci-package-risk.ts](../bin/ci-package-risk.ts) | base／head revision 或 full 模式 | 风险分类、受影响路径和退出码 | 只为 CI 选择 gate |
+| `bin/generate-npm-readme.ts` | [bin/generate-npm-readme.ts](../bin/generate-npm-readme.ts) | commit、可选 source 和 output path | 固定 commit 链接的 README 或失败诊断 | 只生成制品文档 |
+| `bin/prepare-npm-release.ts` | [bin/prepare-npm-release.ts](../bin/prepare-npm-release.ts) | release tag 和准确 commit | release key、版本、dist-tag 和 workflow 输出 | 不执行发布 |
+| `bin/build-npm-tarball.ts` | [bin/build-npm-tarball.ts](../bin/build-npm-tarball.ts) | package directory、output directory、Git HEAD | tarball 路径、hash、integrity 和打包元数据 | 构建可验证制品 |
+| `bin/verify-npm-release.ts` | [bin/verify-npm-release.ts](../bin/verify-npm-release.ts) | package、版本、dist-tag、commit、tag 和 tarball | registry、provenance、tag 与 tarball 一致性 | 发布后只读验证 |
 
 事件历史修订和中断恢复不设进程入口，也不属于应用层。维护者直接编辑 idea 的
 `events/` folder，再通过普通 Git review 和 snapshot／event history 校验确认完整
@@ -115,7 +115,7 @@ folder，并由 Git review 与校验发现无效候选；业务层不提供 revi
 基础模块可以理解 Silvermoon 的元数据和协议，但不编排完整用户意图，也不回调
 业务／应用入口。下表名称是目标英文模块／目录名；“当前边界”只说明迁移来源，
 不是继续保留大模块的理由。每个模块独占 `src/foundation/<module>/`，只有一个
-变化原因和一个 export-only `index.js` 公开入口。
+变化原因和一个 export-only `index.ts` 公开入口。
 
 | 目标模块 | 当前边界 | 单一职责与能力边界 | 明确不承担 |
 | --- | --- | --- | --- |
@@ -151,7 +151,7 @@ folder，并由 Git review 与校验发现无效候选；业务层不提供 revi
 | `process` | `repository` | 受控执行子进程并返回 stdout／stderr／exit facts | Git 语义、trace 策略、错误吞并 |
 
 每个基础模块目录必须同时包含代码和 `README.md`。README 说明模块职责、能力边界、
-允许依赖、明确不承担的职责，并逐项解释 `index.js` 输出的关键函数用途。新增、
+允许依赖、明确不承担的职责，并逐项解释 `index.ts` 输出的关键函数用途。新增、
 删除或改变关键 export 时，代码、README 和依赖测试必须在同一候选中同步更新。
 
 同属基础层不代表互相任意依赖。例如事件规则依赖 idea 的身份／状态规则，
@@ -167,5 +167,5 @@ language 不认识报告。必要组合上移业务层，不建设万能 utils �
 
 当前目录导航：[business](./business/README.md)、
 [business shared](./business/shared/README.md) 和 [foundation modules](./foundation/)。
-[包入口](./index.js)和 Agent 独立子路径保持兼容。
+[包入口](./index.ts)和 Agent 独立子路径保持兼容。
 维护约定见 [maintaining](../docs/maintaining.md)。

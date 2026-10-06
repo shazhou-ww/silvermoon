@@ -6,7 +6,7 @@ Adapt stdout, stderr, TTY capability, and terminal line writes.
 
 - Allowed dependencies: process primitives.
 - Does not own: content decisions, TUI state, and repository I/O.
-- Cross-module callers use [index.js](./index.js); sibling implementations do not import their own index.
+- Cross-module callers use [index.ts](./index.ts); sibling implementations do not import their own index.
 
 ## Key exports
 

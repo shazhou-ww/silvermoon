@@ -6,7 +6,7 @@ Generate canonical world and ledger document content for an explicit language an
 
 - Allowed dependencies: language.
 - Does not own: ID or time generation and filesystem writes.
-- Cross-module callers use [index.js](./index.js); sibling implementations do not import their own index.
+- Cross-module callers use [index.ts](./index.ts); sibling implementations do not import their own index.
 
 ## Key exports
 

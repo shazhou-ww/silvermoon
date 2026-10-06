@@ -28,6 +28,8 @@ Use the smallest check that covers a change:
 
 ```sh
 pnpm sync:skills       # refresh the generated universal skill copy
+pnpm typecheck         # strict no-emit TypeScript validation
+pnpm build             # clean reproducible JS, declarations and maps in dist/
 pnpm check:sanity      # offline pure logic and lightweight contracts
 pnpm check:pure        # JSDoc @pure constraints and functional-core imports
 pnpm check:commit      # worktree tests plus staged metadata validation
@@ -45,11 +47,11 @@ pnpm check:skills      # local consistency and external skill discovery
 
 | Scenario | Responsibility |
 | --- | --- |
-| Edit / Agent iteration | `check:sanity`: CLI syntax, @pure checks, pure unit tests, schema and API contracts; add change-specific tests |
+| Edit / Agent iteration | `check:sanity`: strict typecheck, clean build, CLI syntax, @pure checks, pure unit tests, schema and API contracts; add change-specific tests |
 | Before commit | `check:commit`: sanity, local contracts and Markdown, skill consistency, Git/CLI smoke, whitespace, staged Silvermoon metadata |
 | Ordinary CI | Triggered on pull request, daily scheduled run, or manual dispatch. Unconditional sanity then complete unit/runtime on Ubuntu/Windows/macOS, Node 22/24; complete contracts and integration, static checks and skill discovery |
 | Before delivery / release | `check` or `check:release`: every release-grade gate including package contents, installed-package E2E and external discovery |
-| After publication | The existing release workflow's `verify-npm-release.mjs`: registry identity, integrity, provenance, README and CDN |
+| After publication | The existing release workflow's `verify-npm-release.ts`: registry identity, integrity, provenance, README and CDN |
 
 `test:unit` includes `test/runtime` so moving filesystem, Git and terminal
 tests out of sanity does not remove matrix coverage. `check:quick` retains its
@@ -69,7 +71,7 @@ when splitting mixed-cost files; never disable the sanity guard to admit them.
 ### Functional boundaries and pure functions
 
 The [source module index](../src/README.md) describes the physical boundaries.
-Every source directory has a concise responsibility README and an `index.js`
+Every source directory has a concise responsibility README and an `index.ts`
 containing only explicit named exports. Keep assembly and initialization in
 implementation files, never in an index.
 
@@ -83,7 +85,7 @@ Moving files also requires updating package-resource URLs, authenticated cache
 source coordinates, source tools, declarations, strict package contents and tests.
 Keep source-only migration tools out of installed facades and package contents.
 
-Keep public export assembly in `src/index.js` and preserve the existing command
+Keep public export assembly in `src/index.ts` and preserve the existing command
 and Agent package entrypoints. Internal use cases receive narrow sets of function
 ports; they must not call another command, import the public barrel, or depend
 on CLI/presentation. Shared repository readiness belongs outside navigation.
@@ -105,7 +107,7 @@ a function pure. Keep `@pure` separate from bundler `@__PURE__` annotations.
 `pnpm check:pure` uses the existing TypeScript AST and lexical symbols to check
 annotations, rule-module dependencies, known external state, calls/callbacks,
 and direct or borrowed-alias mutations. Reviewed external functions and
-standard-library methods are explicitly listed in `bin/pure-check.mjs`.
+standard-library methods are explicitly listed in `bin/pure-check.ts`.
 Do not add an entire package or arbitrary method to bypass a failure.
 The checker also runs in sanity and release checks; contract tests check the
 full source dependency graph and application boundaries.
@@ -131,7 +133,7 @@ scripts, workflows and unknown paths, requires package validation. The
 selector uses the full base/head diff and both endpoints of renames; missing
 history, malformed or empty changes conservatively require validation with
 an explicit reason. Core jobs never use path filtering. Run
-`node bin/ci-package-risk.mjs --full` to inspect the full decision;
+`node bin/ci-package-risk.ts --full` to inspect the full decision;
 `workflow_dispatch` executes the full CI set, and local `check:release` always
 executes package/E2E regardless of the diff.
 

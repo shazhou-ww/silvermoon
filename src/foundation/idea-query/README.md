@@ -6,7 +6,7 @@ Filter, sort, limit, and project explicit idea inventory facts.
 
 - Allowed dependencies: idea-model.
 - Does not own: directory reads, networking, and lifecycle changes.
-- Cross-module callers use [index.js](./index.js); sibling implementations do not import their own index.
+- Cross-module callers use [index.ts](./index.ts); sibling implementations do not import their own index.
 
 ## Key exports
 

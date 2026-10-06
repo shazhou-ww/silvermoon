@@ -6,7 +6,7 @@ Project explicit terminal facts into four report projections, diagnostics, and l
 
 - Allowed dependencies: idea-model, coordinates, language, and pure facts.
 - Does not own: repository reads, action execution, and terminal rendering.
-- Cross-module callers use [index.js](./index.js); sibling implementations do not import their own index.
+- Cross-module callers use [index.ts](./index.ts); sibling implementations do not import their own index.
 
 ## Key exports
 

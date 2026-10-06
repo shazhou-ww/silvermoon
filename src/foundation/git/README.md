@@ -6,7 +6,7 @@ Execute Git commands and expose refs, objects, commit relations, and explicit fe
 
 - Allowed dependencies: process and trace.
 - Does not own: snapshot selection, lifecycle policy, and implicit network access.
-- Cross-module callers use [index.js](./index.js); sibling implementations do
+- Cross-module callers use [index.ts](./index.ts); sibling implementations do
   not import their own index.
 
 ## Key exports

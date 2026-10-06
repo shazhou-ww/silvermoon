@@ -1,0 +1,18 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "silvermoon": ["./src/index.ts"],
+      "silvermoon/agents/copilot": ["./src/business/agent-copilot.ts"],
+      "silvermoon/agents/project-runtime": ["./src/business/agent-project-runtime.ts"]
+    },
+    "noEmit": true
+  },
+  "include": [
+    "bin/**/*.ts",
+    "src/**/*.ts",
+    "test/**/*.ts",
+    "tools/**/*.ts"
+  ]
+}

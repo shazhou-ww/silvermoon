@@ -4,25 +4,28 @@
   "description": "The project spirit that checks repository state and answers what's next.",
   "packageManager": "pnpm@11.22.0",
   "type": "module",
+  "types": "./dist/src/index.d.ts",
   "bin": {
-    "silvermoon": "bin/silvermoon.js"
+    "silvermoon": "dist/bin/silvermoon.js"
   },
   "exports": {
-    ".": "./src/index.js",
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "default": "./dist/src/index.js"
+    },
     "./agents/copilot": {
-      "types": "./src/business/agent-copilot.d.ts",
-      "default": "./src/business/agent-copilot.js"
+      "types": "./dist/src/business/agent-copilot.d.ts",
+      "default": "./dist/src/business/agent-copilot.js"
     },
     "./agents/project-runtime": {
-      "types": "./src/business/agent-project-runtime.d.ts",
-      "default": "./src/business/agent-project-runtime.js"
+      "types": "./dist/src/business/agent-project-runtime.d.ts",
+      "default": "./dist/src/business/agent-project-runtime.js"
     }
   },
   "files": [
-    "bin",
+    "dist",
     "docs",
     "skills/silvermoon",
-    "src",
     "LICENSE",
     "README.md",
     "README.zh-CN.md",
@@ -30,29 +33,34 @@
   ],
   "scripts": {
     "silvermoon": "node bin/silvermoon.js",
-    "check": "node bin/run-checks.mjs",
-    "check:sanity": "node bin/run-checks.mjs --tier sanity",
-    "check:commit": "node bin/run-checks.mjs --tier commit",
-    "check:release": "node bin/run-checks.mjs --tier release",
-    "check:syntax": "node --check bin/silvermoon.js",
-    "check:pure": "node bin/pure-check.mjs",
-    "check:staged": "node bin/silvermoon.js check --staged --audience agent",
+    "clean": "node tools/clean.ts",
+    "typecheck": "tsc -p tsconfig.json",
+    "build": "npm run clean && tsc -p tsconfig.build.json && node tools/write-cli-shim.ts",
+    "check": "node bin/run-checks.ts",
+    "check:sanity": "node bin/run-checks.ts --tier sanity",
+    "check:commit": "node bin/run-checks.ts --tier commit",
+    "check:release": "node bin/run-checks.ts --tier release",
+    "check:syntax": "node --check bin/silvermoon.ts",
+    "check:pure": "node bin/pure-check.ts",
+    "check:staged": "node bin/silvermoon.ts check --staged --audience agent",
     "check:diff": "git diff --check && git diff --cached --check",
-    "check:quick": "node --check bin/silvermoon.js && npm test",
+    "check:quick": "npm run check:syntax && npm test",
     "check:skills": "npm run check:skills:local && npm run check:skills:discover",
-    "check:skills:local": "node bin/sync-skills.mjs --check",
+    "check:skills:local": "node bin/sync-skills.ts --check",
     "check:skills:discover": "npx skills add . --list",
     "lint:markdown": "markdownlint-cli2",
-    "pack:check": "node bin/check-pack.js",
-    "prepare:npm-release": "node bin/prepare-npm-release.mjs",
-    "sync:skills": "node bin/sync-skills.mjs",
+    "pack:check": "npm run build && npm run pack:check:built",
+    "pack:check:built": "node bin/check-pack.ts",
+    "prepare:npm-release": "node bin/prepare-npm-release.ts",
+    "sync:skills": "node bin/sync-skills.ts",
     "test": "npm run test:unit && npm run test:contract",
-    "test:contract": "node --test \"test/contract/*.test.*\"",
-    "test:e2e": "node --test \"test/e2e/*.test.*\"",
-    "test:integration": "node --test \"test/integration/*.test.*\"",
-    "test:sanity": "node --import ./test/helpers/sanity-guard.mjs --test \"test/unit/*.test.*\" test/contract/schema-v1.test.js test/contract/schema-v2.test.js test/contract/package-api.test.js",
-    "test:smoke": "node --test test/runtime/adoption.test.js test/runtime/cli-v1.test.js",
-    "test:unit": "node --test \"test/unit/*.test.*\" \"test/runtime/*.test.*\""
+    "test:contract": "node --test \"test/contract/*.test.ts\"",
+    "test:e2e": "npm run build && npm run test:e2e:built",
+    "test:e2e:built": "node --test \"test/e2e/*.test.ts\"",
+    "test:integration": "node --test \"test/integration/*.test.ts\"",
+    "test:sanity": "node --import ./test/helpers/sanity-guard.ts --test \"test/unit/*.test.ts\" test/contract/schema-v1.test.ts test/contract/schema-v2.test.ts test/contract/package-api.test.ts",
+    "test:smoke": "node --test test/runtime/adoption.test.ts test/runtime/cli-v1.test.ts",
+    "test:unit": "node --test \"test/unit/*.test.ts\" \"test/runtime/*.test.ts\""
   },
   "engines": {
     "node": ">=22"
@@ -95,6 +103,10 @@
     }
   ],
   "devDependencies": {
+    "@types/node": "^22.20.5",
+    "@types/react": "^19.3.0",
+    "@types/semver": "^7.8.0",
+    "@types/ws": "^8.18.2",
     "ajv": "^8.20.0",
     "markdownlint-cli2": "^0.23.3",
     "semver": "^7.8.5",

@@ -6,7 +6,7 @@ Parse, validate, and serialize canonical event records and segment bytes.
 
 - Allowed dependencies: idea-model and coordinates.
 - Does not own: Git history, storage I/O, and write authorization.
-- Cross-module callers use [index.js](./index.js); sibling implementations do not import their own index.
+- Cross-module callers use [index.ts](./index.ts); sibling implementations do not import their own index.
 
 ## Key exports
 

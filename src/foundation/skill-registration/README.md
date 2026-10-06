@@ -6,7 +6,7 @@ Inspect project adoption and canonical versus registered skill state.
 
 - Allowed dependencies: project-config, package-resource, git, and trace.
 - Does not own: installing dependencies, synchronizing files, and lifecycle decisions.
-- Cross-module callers use [index.js](./index.js); sibling implementations do not import their own index.
+- Cross-module callers use [index.ts](./index.ts); sibling implementations do not import their own index.
 
 ## Key exports
 

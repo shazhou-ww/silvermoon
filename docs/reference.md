@@ -176,7 +176,7 @@ Default metadata append receipts contain exact historical validation summaries;
 `--full-history` preserves complete historical reduction output. Alias and
 metadata paths retain layout, prefix and explicit human-gate checks.
 Full replay and history audits are not advertised as constant-time operations.
-That contract also documents the separate `bin/migrate-v1-to-v2.js` entrypoint.
+That contract also documents the separate `dist/bin/migrate-v1-to-v2.js` package entrypoint.
 No command automatically migrates a v1 project.
 
 V2's seven business types are `setAlias`, `setLanguage`, `acceptIdeal`,
@@ -268,7 +268,7 @@ and the safe correlation of delivery and reply observations.
 
 For an isolated, opt-in live acceptance run (requires an authenticated
 Copilot CLI), use
-`SILVERMOON_REAL_COPILOT=1 node --test test/integration/copilot-runtime-live.test.js`.
+`SILVERMOON_REAL_COPILOT=1 node --test test/integration/copilot-runtime-live.test.ts`.
 The three cases use distinct disposable Git projects and deny unrelated tool
 permissions. They check two sequential `ping`/reply/`pong` handoffs and a
 third after adapter restart; a custom test-only tool with a rejecting Git

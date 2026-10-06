@@ -6,7 +6,7 @@ Read and strictly parse one project configuration and its provenance.
 
 - Allowed dependencies: coordinates, language, schema, and git.
 - Does not own: adoption policy, guidance, user configuration, and readiness.
-- Cross-module callers use [index.js](./index.js); sibling implementations do not import their own index.
+- Cross-module callers use [index.ts](./index.ts); sibling implementations do not import their own index.
 
 ## Key exports
 

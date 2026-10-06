@@ -34,9 +34,9 @@ jobs:
           HEAD_SHA: ${{ github.sha }}
         run: |
           if [ "$EVENT_NAME" = push ] || [ "$EVENT_NAME" = pull_request ]; then
-            node bin/ci-package-risk.mjs --base "$BASE_SHA" --head "$HEAD_SHA"
+            node bin/ci-package-risk.ts --base "$BASE_SHA" --head "$HEAD_SHA"
           else
-            node bin/ci-package-risk.mjs --full
+            node bin/ci-package-risk.ts --full
           fi
 
   unit:
@@ -79,7 +79,7 @@ jobs:
         run: pnpm test:unit
 
       - name: Verify native incremental event sources
-        run: node --test test/integration/git.test.js test/integration/incremental-append.test.js
+        run: node --test test/integration/git.test.ts test/integration/incremental-append.test.ts
 
   contract:
     name: Repository contracts
@@ -116,7 +116,7 @@ jobs:
         run: |
           git remote set-url origin https://github.com/shazhou-ww/silvermoon.git
           git fetch --no-tags origin main
-          node bin/silvermoon.js check --commit HEAD --audience agent
+          node bin/silvermoon.ts check --commit HEAD --audience agent
 
       - name: Check whitespace
         run: pnpm check:diff

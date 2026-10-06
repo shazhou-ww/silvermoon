@@ -117,7 +117,7 @@ The [`publish-npm.yml`](../.github/workflows/publish-npm.yml) workflow then:
    dist-tag when the version was absent, allowing npm to include the
    package-level README metadata while the deterministic pack check and post-publication
    verifier guarantee the registry tarball matches the candidate bytes; and
-8. runs `verify-npm-release.mjs` until the registry is consistent or the
+8. runs `verify-npm-release.ts` until the registry is consistent or the
    bounded retry window expires.
 
 The post-publication verifier requires the exact version and dist-tag, matching
@@ -181,7 +181,7 @@ verification again.
    `publishConfig` with `access: public` and registry
    `https://registry.npmjs.org/`.
 2. Add a fixed release-key entry to `RELEASE_PACKAGES` in
-   [`prepare-npm-release.mjs`](../bin/prepare-npm-release.mjs). Never derive
+   [`prepare-npm-release.ts`](../bin/prepare-npm-release.ts). Never derive
    a filesystem path directly from tag text.
 3. Extend the release tests with the package selection, identity, version, and
    dist-tag cases.
@@ -189,8 +189,8 @@ verification again.
    the `npm` environment.
 5. Keep its tags under the protected `npm/<release-key>/v<semver>` convention.
 
-Run `node --test test/unit/prepare-npm-release.test.mjs
-test/integration/prepare-npm-release.test.mjs
-test/contract/npm-release.test.mjs` for focused release validation and
+Run `node --test test/unit/prepare-npm-release.test.ts
+test/integration/prepare-npm-release.test.ts
+test/contract/npm-release.test.ts` for focused release validation and
 `pnpm check` for the complete repository suite before merging the mapping
 change.

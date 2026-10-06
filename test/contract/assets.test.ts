@@ -1,0 +1,69 @@
+import assert from "node:assert/strict";
+import { lstat, readFile } from "node:fs/promises";
+import { test } from "node:test";
+
+const artworkUrl = new URL("../../assets/silvermoon.svg", import.meta.url);
+const avatarUrl = new URL("../../assets/silvermoon-avatar.svg", import.meta.url);
+const readmeUrl = new URL("../../README.md", import.meta.url);
+
+function luminance(hex: string) {
+  const matches = hex.match(/[0-9a-f]{2}/gi);
+  assert.ok(matches);
+  const channels = matches
+    .map((value) => Number.parseInt(value, 16) / 255)
+    .map((value: number) =>
+      value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4
+    );
+  const [red, green, blue] = channels;
+  if (red === undefined || green === undefined || blue === undefined) {
+    assert.fail("hex color must contain three channels");
+  }
+  return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+}
+
+function contrast(first: string, second: string) {
+  const [bright, dark] = [luminance(first), luminance(second)].sort(
+    (left, right) => right - left,
+  );
+  if (bright === undefined || dark === undefined) {
+    assert.fail("contrast requires two luminance values");
+  }
+  return (bright + 0.05) / (dark + 0.05);
+}
+
+test("ships safe canonical artwork from root assets", async () => {
+  const [artwork, avatarBytes, readme] = await Promise.all([
+    readFile(artworkUrl, "utf8"),
+    readFile(avatarUrl),
+    readFile(readmeUrl, "utf8"),
+  ]);
+  const avatar = avatarBytes.toString("utf8");
+  const avatarStatus = await lstat(avatarUrl);
+
+  assert.equal(avatarStatus.isFile(), true);
+  assert.equal(avatarStatus.isSymbolicLink(), false);
+  assert.match(artwork, /viewBox="0 400 1280 880"/);
+  assert.match(avatar, /viewBox="0 0 1280 1280"/);
+  assert.equal([...artwork.matchAll(/<path\b/g)].length, 23);
+  for (const source of [artwork, avatar]) {
+    assert.doesNotMatch(
+      source,
+      /<script\b|on[a-z]+\s*=|<image\b|<foreignObject\b|(?:href|src)\s*=/i,
+    );
+    assert.match(source, /fill="#7d8590"/);
+    assert.ok(contrast("7d8590", "ffffff") >= 3);
+    assert.ok(contrast("7d8590", "0d1117") >= 3);
+  }
+
+  assert.doesNotMatch(readme, /<picture>|prefers-color-scheme/);
+  assert.match(
+    readme,
+    /src="\.\/assets\/silvermoon\.svg"/,
+  );
+  assert.match(readme, /alt="Silvermoon, the artifact spirit of the project"/);
+  assert.match(
+    readme,
+    /src="\.\/assets\/silvermoon-mascot\.png" width="160"/,
+  );
+  assert.match(avatar, /viewBox="0 0 1280 1280"/);
+});

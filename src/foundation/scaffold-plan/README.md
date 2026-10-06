@@ -6,7 +6,7 @@ Convert explicit identity, time, language, and template facts into a ScaffoldPla
 
 - Allowed dependencies: coordinates, idea-model, idea-template, and event-codec.
 - Does not own: default value acquisition and filesystem writes.
-- Cross-module callers use [index.js](./index.js); sibling implementations do not import their own index.
+- Cross-module callers use [index.ts](./index.ts); sibling implementations do not import their own index.
 
 ## Key exports
 

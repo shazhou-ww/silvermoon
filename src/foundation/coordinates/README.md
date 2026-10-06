@@ -6,7 +6,7 @@ Validate repository URLs, Git object IDs, ULIDs, and canonical relative metadata
 
 - Allowed dependencies: no I/O dependencies.
 - Does not own: business composition and generic utilities.
-- Cross-module callers use [index.js](./index.js); sibling implementations do not import their own index.
+- Cross-module callers use [index.ts](./index.ts); sibling implementations do not import their own index.
 
 ## Key exports
 

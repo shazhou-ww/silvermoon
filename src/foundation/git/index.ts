@@ -1,0 +1,32 @@
+export {
+  openDerivedCache,
+} from "./derived-cache.ts";
+
+export {
+  compareCommits,
+  fetchPrimary,
+  fetchRepositoryBranch,
+  gitObjectSize,
+  indexSnapshot,
+  inspectCurrentBranch,
+  inspectRepositoryState,
+  inspectTree,
+  inspectTreeEntry,
+  inspectTreeLineage,
+  inspectTreePaths,
+  inspectWorktreeChanges,
+  listTreeEntries,
+  observeGitCommands,
+  parseRepositoryStatus,
+  parseWorktreeChanges,
+  readGitBlob,
+  readGitBlobs,
+  resolveCommit,
+  resolveHead,
+  resolveSnapshot,
+  runGit,
+  sanitizeGitMessage,
+  withTemporaryTree,
+  withTemporaryWorktree,
+  worktreeSnapshot,
+} from "./git.ts";

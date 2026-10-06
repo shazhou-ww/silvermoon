@@ -2,7 +2,7 @@
 
 Provide the explicit `observeDevice` to `observeProject` to `observeIdea`
 observation chain and repository readiness shared by multiple business entries.
-[index.js](./index.js) lists the supported shared surface.
+[index.ts](./index.ts) lists the supported shared surface.
 
 - `observeDevice` reports runtime source, global installation, and global config.
 - `observeProject` consumes device facts and reports project/config/snapshot facts.

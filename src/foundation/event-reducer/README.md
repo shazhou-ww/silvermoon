@@ -6,7 +6,7 @@ Plan authorized append changes from explicit event state and human-gate facts.
 
 - Allowed dependencies: event-codec and idea-model.
 - Does not own: storage reads, Git fetch, and repository writes.
-- Cross-module callers use [index.js](./index.js); sibling implementations do not import their own index.
+- Cross-module callers use [index.ts](./index.ts); sibling implementations do not import their own index.
 
 ## Key exports
 

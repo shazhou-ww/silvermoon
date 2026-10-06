@@ -20,8 +20,8 @@ development machine.
   [`docs/npm-package-releases.md`](../../../docs/npm-package-releases.md) before
   changing the manifest, creating a tag, rerunning a workflow, or troubleshooting
   a release.
-- Treat `bin/prepare-npm-release.mjs` as the allowlist and release-key
-  authority and `bin/verify-npm-release.mjs` as the post-publication
+- Treat `bin/prepare-npm-release.ts` as the allowlist and release-key
+  authority and `bin/verify-npm-release.ts` as the post-publication
   evidence gate. Do not derive a package path from user text.
 - Publish only through `.github/workflows/publish-npm.yml`. Never run
   `npm publish` locally and never create or request `NPM_TOKEN` or
@@ -102,7 +102,7 @@ commit because it leaves package contents unchanged.
 3. Run the release planner locally against the exact candidate:
 
    ```sh
-   node bin/prepare-npm-release.mjs \
+   node bin/prepare-npm-release.ts \
      --tag npm/<release-key>/v<version> \
      --commit <full-origin-main-commit>
    ```
@@ -143,7 +143,7 @@ The tag is the release instruction. Do not run a second publication command.
   rerun the same workflow run without changing the tag.
 - If post-publication verification fails transiently, rerun only the failed
   workflow job. The planner observes the existing version, the publish step
-  remains skipped, and `verify-npm-release.mjs` must still prove the exact
+  remains skipped, and `verify-npm-release.ts` must still prove the exact
   candidate before the run can succeed.
 - For source, manifest, or validation defects, leave the failed version and tag
   immutable. Fix the source on `main`, choose a new version, and create a new

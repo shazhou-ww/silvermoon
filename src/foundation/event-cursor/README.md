@@ -6,7 +6,7 @@ Validate one exact event prefix and return only its suffix.
 
 - Allowed dependencies: event-store and event-history.
 - Does not own: automatic cursor reset and substitution for full replay.
-- Cross-module callers use [index.js](./index.js); sibling implementations do not import their own index.
+- Cross-module callers use [index.ts](./index.ts); sibling implementations do not import their own index.
 
 ## Key exports
 

@@ -1,0 +1,16 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "allowImportingTsExtensions": false,
+    "declaration": true,
+    "declarationMap": true,
+    "outDir": "dist",
+    "rewriteRelativeImportExtensions": true,
+    "rootDir": ".",
+    "sourceMap": true
+  },
+  "include": [
+    "bin/**/*.ts",
+    "src/**/*.ts"
+  ]
+}

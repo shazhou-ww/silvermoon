@@ -6,7 +6,7 @@ Normalize content language, output language, and locale values.
 
 - Allowed dependencies: coordinates.
 - Does not own: project reads and command behavior selection.
-- Cross-module callers use [index.js](./index.js); sibling implementations do not import their own index.
+- Cross-module callers use [index.ts](./index.ts); sibling implementations do not import their own index.
 
 ## Key exports
 

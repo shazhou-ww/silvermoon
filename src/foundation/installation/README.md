@@ -6,7 +6,7 @@ Observe the current runtime source and whether a global Silvermoon executable ex
 
 - Allowed dependencies: process and filesystem primitives.
 - Does not own: installing, upgrading, daemon probing, and project inspection.
-- Cross-module callers use [index.js](./index.js); sibling implementations do not import their own index.
+- Cross-module callers use [index.ts](./index.ts); sibling implementations do not import their own index.
 
 ## Key exports
 

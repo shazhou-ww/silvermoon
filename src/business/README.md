@@ -2,7 +2,7 @@
 
 Orchestrate checking, inventory queries, navigation, creation, replay, append,
 migration, and Agent integration. Each top-level file owns one business entry
-or one compatibility surface; [index.js](./index.js) exports the CLI-facing APIs.
+or one compatibility surface; [index.ts](./index.ts) exports the CLI-facing APIs.
 
 Business entries receive narrow function ports and may depend on shared business
 observations or foundation indexes. They do not parse process arguments, choose
