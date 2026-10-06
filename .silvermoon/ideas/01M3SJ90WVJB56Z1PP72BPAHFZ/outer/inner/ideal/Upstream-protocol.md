@@ -19,8 +19,8 @@ allowlist、逐 repo 额外审批或二次授权 round-trip。实际 URL、目�
 
 | scope | 输入身份 | 处理者 |
 | --- | --- | --- |
-| `device` | 已选设备 | 唯一 HQ governance session |
-| `project` | `projectUrl` | 同一治理 session 的 repo 上下文 |
+| `device` | 已选设备 | device-hq repo 的 general session |
+| `project` | `projectUrl` | 目标 repo 自己的 general session |
 | `device-idea` | `ideaId` | HQ idea 的独立 session |
 | `idea` | `projectUrl`、`ideaId` | managed idea 的独立 session |
 
@@ -29,9 +29,15 @@ union 严格校验，不通过缺失字段、路径字符串或正文猜测 scop
 接入请求交 HQ 检查并 clone 到 registry/storageRoot 决定的位置；不能直接派发
 尚未就绪的 idea。新建 idea 必须获得真实持久 ideaId，不伪造身份。
 
+所有 repo（包括 HQ）使用相同 general/idea session 模型。`device` 是选择 HQ
+general session 的路由，不是特殊 session 类型；`project` 不能解释成借用 HQ
+会话的操作上下文。接入就绪后，目标 repo 的日常请求路由到其 general session；
+接入交接须核验目标身份与请求依据，不能重复执行或把上下文留在 HQ。
+
 ## 请求与事实
 
-请求携带稳定 requestId、明确 route 与正文；治理输入没有 governance event HEAD。
+请求携带稳定 requestId、明确 route 与正文；general session 输入不绑定 idea，
+没有 idea event HEAD，也不另建 general session lifecycle event stream。
 相同 ID/相同请求是重试，相同 ID/不同请求须显式冲突。ID 作用域、保留期限和
 receipt 状态机尚需定义；upstream 保留未确认请求，以同一 ID 重投。
 
@@ -48,11 +54,12 @@ stale 直接交还上游，由其重新观察和判断；daemon 不换新 HEAD �
 协议必须分别表达：
 
 1. 已收件：连接已收到，不证明持久化；
-2. 持久接收：idea 事件已追加，或治理 SDK handoff/receipt 已有可恢复证据；
+2. 持久接收：idea 事件已追加，或目标 repo general session 的 SDK handoff/receipt
+   已有可恢复证据；
 3. Agent 投递观察：queued/delivered/processed/unknown，受 SDK 实际证据限制；
 4. 项目交互事实和设备操作结果：不能用 SDK send ack 或 session idle 代替。
 
-治理 pending receipt 与 SDK send 之间的崩溃窗口必须验证。若没有证明持久接收，
+general session pending receipt 与 SDK send 之间的崩溃窗口必须验证。若没有证明持久接收，
 不能发成功形态确认；unknown 不授权自动重复 Agent turn 或副作用。接收确认、
 网络请求响应与生命周期 pong 是不同事实，pong 不逐条配对确认 ping。
 
@@ -74,4 +81,6 @@ object 或自然语言 nextSteps 来猜路由。recipient 为 upstream 时交还
 
 版本/能力握手、完整 request/response/handoff 类型、route 校验、requestId 与 ack
 状态机、expectedHead/cursor 操作、正常/失败/重连时序、上下游对称的动作关联。
+general session 的 repo 身份、接入交接与绑定恢复须覆盖 HQ 和至少两个 managed
+repos，不得通过共享 HQ 会话冒充项目隔离。
 认证和 clone 授权方向已决定；上述细节尚未因本文而获批。

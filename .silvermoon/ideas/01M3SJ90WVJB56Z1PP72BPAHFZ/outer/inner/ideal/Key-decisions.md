@@ -8,15 +8,17 @@
 | 决策 | 当前结论 |
 | --- | --- |
 | 设备生产单元 | 一台设备由 HQ、daemon 与下游 Agent 治理和执行 |
+| HQ 身份 | 普通 Silvermoon repo，以设备为 Outer World；不是专属 runtime 或特殊 session 类型 |
 | HQ 权限 | HQ 是设备管理员；上游请求授权 repo clone/onboarding，无额外审批/allowlist |
 | SUDO | 长期希望 HQ 检查自身管理员能力，本期不检查或获取 SUDO 权限 |
-| binary/skill | HQ 统一提供；managed repo 不要求自身安装 Silvermoon |
+| binary/skill | 设备统一安装、由 HQ 项目工作管理；不要求安装在 HQ repo 或由 managed repo 各自安装 |
 | schema | 推荐最新；历史 schema 可识别、诊断、迁移；完整读写范围明确，不静默升级 |
 | 状态权威 | repo contracts/events 仍权威，daemon 不建立第二套生命周期状态机 |
-| Session | 唯一设备治理 session；project 是上下文；idea 独立 workspace/session |
+| Session | 每 repo 一个长期、不绑定 idea 的 general session，另有独立 idea sessions；HQ 相同 |
+| 日常路由 | project 选择目标 repo general session；device 选择 HQ general session，不集中承载所有项目 |
 | 上游连接 | daemon 主动 WebSocket 连接；远端 WSS，本地 loopback 独立服务 |
 | API 政策 | 显式调整实验性 Agent/runtime API，不强制旧签名或旧执行行为兼容 |
-| Review | 上游、下游接入协议及 runtime API 的准确候选先由人类 review |
+| Review | 上游、下游接入协议及 Silvermoon 项目操作 API 的准确候选先由人类 review |
 | HQ remote | 每逻辑设备独立 private repo，本期仅同步治理信息供未来恢复 |
 | 恢复范围 | 保留正常重启/断线安全重观察；不做整机自动恢复、接管或自动生产放行 |
 | 不确定性 | stale 交还、不刷新 HEAD 重试；unknown 先观察、不能盲目重发 |
@@ -46,7 +48,7 @@ unknown 对账和恢复演练另行设计。本期不交付这些流程，Git �
 | --- | --- |
 | SDK 真实能力 | request/action 持久关联、历史查询、resume、send 崩溃窗口；无证据不承诺 exactly-once |
 | 上游协议 | 版本/capability、全操作类型、ack、requestId、完整事件订阅、handoff |
-| 下游协议 | session/代次、工具 root、skill 来源、动作身份、回复依据与 unknown 协调 |
+| 下游协议 | 每 repo general/idea 身份与代次、工具 root、skill 来源、动作身份、回复依据与 unknown 协调 |
 | Loop | 继续/等待/阻塞/无动作、唤醒、投递去重、背压与公平性 |
 | 新 API | 旧新对照、结构化结果、schema capability、持久格式调整与声明/subpath |
 

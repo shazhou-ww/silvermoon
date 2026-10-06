@@ -15,9 +15,15 @@ Silvermoon 根据项目事实生成下一步；下游 Agent 执行。
 ```text
 人 <-> 上游沟通者 <-> Silvermoon daemon <-> 下游 Agent
                            |
-                  HQ Silvermoon runtime
+               设备统一安装的 Silvermoon
                            |
               device-hq / managed repositories
+```
+
+```text
+每个 repo（包括 device-hq）
+├── general session       # 长期日常会话，不绑定 idea
+└── idea sessions         # 分别绑定具体 idea
 ```
 
 ### 职责边界
@@ -25,10 +31,10 @@ Silvermoon 根据项目事实生成下一步；下游 Agent 执行。
 | 主体 | 职责 | 不承担 |
 | --- | --- | --- |
 | 上游 | 提交请求、保留未确认输入、处理交还、取得人类决定 | 将接收确认当作执行完成 |
-| HQ | 设备管理、binary/skill、下游可用性、repo clone/onboarding、维护与 remote 同步 | 绕过项目生命周期人工 gate |
+| device-hq | 普通 Silvermoon repo，以设备为 Outer World；通过其 general/idea sessions 管理设备、工具与 repo 接入 | 成为专属 runtime 或特殊 session 类型 |
 | daemon | 上游连接、registry 路由、session binding、轻量 receipt、投递与重观察 | 自行解释生命周期或复制项目状态机 |
-| HQ runtime | 按目标 repo schema 校验、观察、追加事件并生成 recipient/instruction | 使用 managed repo 自带 Silvermoon binary |
-| 下游 Agent | 唯一设备治理 session 或独立 idea session 内执行、报告结果/求助 | 以 transcript 代替项目 facts |
+| Silvermoon | 按目标 repo schema 校验、观察、追加事件并生成 recipient/instruction | 使用 managed repo 自带 Silvermoon binary |
+| 下游 Agent | 各 repo 的 general session 或 idea session 内执行、报告结果/求助 | 以 transcript 代替项目 facts |
 
 HQ 是设备管理员，在现有 OS 权限下全权治理设备。已认证上游的 repo 接入请求
 即授权 clone/onboarding，不要求 allowlist 或额外逐 repo 批准。仍须核验 URL、
@@ -37,27 +43,38 @@ HQ 是设备管理员，在现有 OS 权限下全权治理设备。已认证上�
 
 ### 运行时与状态
 
-- 设备统一使用 HQ 提供的 Silvermoon binary 与 canonical skill，不推荐 managed
-  repo 各自安装 package/binary/skill。adoption/readiness 必须验证 HQ 来源，不能
-  继续要求 `devDependencies.silvermoon`，也不能靠跳过检查实现。
+- 设备统一安装 Silvermoon binary 与 canonical skill，由 device-hq 的日常/idea
+  工作管理安装、版本与可用性；binary 不属于 HQ repo，不需要 HQ 专属 runtime。
+  不推荐 managed repo 各自安装 package/binary/skill。adoption/readiness 必须验证
+  设备安装与 skill 来源，不能继续要求 `devDependencies.silvermoon`，也不能靠
+  跳过检查实现。
 - 持久兼容边界是 repo 声明的 schema，不是 binary version。推荐最新 schema，
   历史正式 schema 保持可识别、可诊断、有确定性迁移路径；完整读写范围显式声明。
   普通 daemon 操作不静默迁移。v1 无 v2 event capability，迁移前不进入 idea loop。
-- HQ runtime 直接调用本 release 的业务能力，显式传入 repository/worktree root，
+- daemon 使用设备 Silvermoon release 的业务能力，显式传入 repository/worktree root，
   不改变进程 cwd、不解析 repo 中的 Silvermoon executable、不启动 replay CLI。
   Silvermoon 源码 checkout 的自身运行时保护保持明确。
 - 项目配置、contracts 与 lifecycle events 在所属 repo 中保持权威。V2 idea
   使用分段 `events/`，每段最多 1000 条、单事件最多 1 MiB；HEAD/cursor 绑定
   准确逻辑字节长度与规范 folder Git tree OID，遵循 SHA-1/SHA-256 object format。
   sequence、Git commit、world revision 和事件 HEAD 不能互相代用。
-- 治理对话由 SDK 持久 session 承载，不建立 device/project governance event
-  stream，不将 transcript 或完整执行日志复制进 Git。
+- 每个 repo 的日常对话由 SDK 持久 general session 承载，不建立独立 general
+  session lifecycle event stream，不将 transcript 或完整执行日志复制进 Git。
 
 ### 身份与执行空间
 
-每设备只有一个长期 HQ governance session。`project` route 仅提供它的 repo
-上下文；`device-idea` 和 `idea` 各有独立 worktree/session。同一 idea 运行中收到
-新输入不另起并行执行者；状态未知不静默替换 session。
+每个 repo 都有一个长期存续、不绑定 idea 的 general session，以及分别绑定具体
+idea 的 sessions。general session 的日常上下文按 repo 隔离，不能集中在 HQ；
+常驻表示长期保留绑定与上下文，不要求 Agent 始终运行或持续保持连接。
+
+`project` route 选择目标 repo 的 general session；`device` 选择 device-hq 的
+general session，不创建特殊设备会话。`device-idea` 与 `idea` 选择各自 repo
+的 idea worktree/session。同一 idea 运行中收到新输入不另起并行执行者；状态
+未知不静默替换任何 general/idea session。
+
+HQ 的设备管理职责来自它的项目目标与 Outer World，不来自特殊 Agent/session
+类型。陌生 repo 的 clone/onboarding 由 HQ 的 general session 处理；就绪后该
+repo 的日常工作进入它自己的 general session，不继续借用 HQ 承载项目上下文。
 
 managed repo 以无凭据规范 projectUrl 接入；registry 绑定首次登记生成的稳定
 随机 projectKey，不能由 URL hash 派生。registry 是唯一定位依据，不扫描目录
@@ -100,7 +117,7 @@ expectedHead、ack、订阅与上游 handoff。协议字段与状态机仍待准
 
 ## 3. 下游协议
 
-见 [Downstream-protocol.md](./Downstream-protocol.md)：HQ/idea session、runtime
+见 [Downstream-protocol.md](./Downstream-protocol.md)：每 repo 的 general/idea sessions、项目操作
 能力、动作投递、回复依据与 unknown。原实验性 Agent API 允许显式调整，
 不承诺旧签名或项目自带版本执行行为不变。
 
@@ -116,6 +133,8 @@ expectedHead、ack、订阅与上游 handoff。协议字段与状态机仍待准
 
 - 同一 daemon 和真实下游可处理多个项目，按 route 隔离，运行中输入与 Git 阻塞
   诊断仍可处理；旧结果不覆盖新指令。
+- HQ 和 managed repos 使用相同 general/idea session 模型，各 general session
+  长期保留自身 repo 上下文且不绑定 idea；接入完成后不将目标 repo 日常请求误投 HQ。
 - projection、delta 与 expected-head append 使用准确前态，stale 交还上游，
   不改 HEAD 重试；未确认投递不自动重发。
 - 正常 daemon 重启/断线可安全重观察本机 session、receipt 和项目 facts；缺口或
