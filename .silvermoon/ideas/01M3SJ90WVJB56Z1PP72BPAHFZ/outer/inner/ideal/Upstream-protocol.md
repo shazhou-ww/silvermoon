@@ -13,7 +13,7 @@ Upgrade 使用受保护配置中的 Authorization Bearer token，并固定 subpr
 subprotocol 或认证失败拒绝连接，不降级，不做应用层握手或 capability 清单协商。
 
 双方发送相同 WssMessage `{ id, envelope }`，envelope 为 version/channelId/
-sender/refs/content，sender 为 silvermoon/agent。没有 request/response/
+sender/refs/body，sender 为 silvermoon/agent。没有 request/response/
 notification 外层、participant ID、connection sequence 或 WireProtocolError。
 无法安全验证格式、channel 或 hash 时关闭连接并记录不含正文/秘密的诊断；
 合法对话中的失败/求助以普通 Agent 文本表达，不伪造成功。
@@ -39,7 +39,8 @@ HTTPS URL，不是本机路径。未知 repo 接入意图在 device channel 表�
 
 ## Agent 消息内容
 
-当前 content 是非空文本 string，不是命令 object。例如：
+当前 body 是 `{ content: string }`，body.content 为非空对话文本，不是命令
+object。body 为未来附件预留字段位置。例如：
 
 ```json
 {
@@ -47,7 +48,9 @@ HTTPS URL，不是本机路径。未知 repo 接入意图在 device channel 表�
   "channelId": "device-general-channel",
   "sender": "agent",
   "refs": { "after": null, "inputs": [] },
-  "content": "请接入 https://github.com/example/project.git，并检查项目状态。"
+  "body": {
+    "content": "请接入 https://github.com/example/project.git，并检查项目状态。"
+  }
 }
 ```
 
@@ -55,7 +58,8 @@ HTTPS URL，不是本机路径。未知 repo 接入意图在 device channel 表�
 同样是文本，使用 after/inputs 表示因果依据；不要求一条输入对应一条回复，
 也不新增 structured operation.result/action.result 的网络分类。
 
-未来多模态是内容格式扩展方向，不是本期能力；本期拒绝数组附件或未定义 object。
+未来多模态可在 body 新增附件字段，不是本期能力；本期拒绝未定义附件字段，
+也不接受旧的 envelope 顶层 content 或裸字符串 body。
 
 ## 因果依据与项目事实
 
@@ -67,7 +71,7 @@ channelId/messageId 与实际副作用。unknown 或缺 receipt 不证明未执�
 上游消息不是 event append RPC，不能将正文中说“批准”自动当作人类决定。
 Silvermoon 的本机受控流程记录适当 idea ping，并保存准确事件前态、消息与动作
 关联；明确决定仍须证明人类授权、准确 world revision、primary 和 expectedHead。
-这些写入参数不放进通用 Agent content，具体授权证据与消息映射须协议 review。
+这些写入参数不放进通用 Agent body，具体授权证据与消息映射须协议 review。
 
 项目 cursor、snapshot、delta 与追加回执是无状态 Silvermoon 的本机数据，
 不是对上游 Agent 的专用事件订阅协议。daemon 用这些事实决定何时生成对话消息，

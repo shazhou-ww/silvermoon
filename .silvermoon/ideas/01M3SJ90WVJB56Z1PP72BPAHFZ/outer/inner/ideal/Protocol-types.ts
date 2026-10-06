@@ -28,7 +28,10 @@ export interface ChannelBinding {
   readonly connectionRole: "upstream" | "downstream";
 }
 
-export interface MessageEnvelope<C> {
+export interface MessageBody {
+  readonly content: string;
+}
+export interface MessageEnvelope {
   readonly version: ProtocolVersion;
   readonly channelId: ChannelId;
   readonly sender: Sender;
@@ -36,17 +39,16 @@ export interface MessageEnvelope<C> {
     readonly after: MessageId | null;
     readonly inputs: readonly MessageId[];
   };
-  readonly content: C;
+  readonly body: MessageBody;
 }
-export interface Message<C> {
+export interface Message {
   readonly id: MessageId;
-  readonly envelope: MessageEnvelope<C>;
+  readonly envelope: MessageEnvelope;
 }
 
-// 当前 Agent 正文仅支持文本；多模态需要后续版本的显式内容定义。
-export type MessageContent = string;
-export type WssMessage = Message<MessageContent>;
-export type AgentMessage = Message<MessageContent>;
+// body 为未来附件预留字段扩展位置；本期只定义文本 content。
+export type WssMessage = Message;
+export type AgentMessage = Message;
 
 export interface EventCursor {
   readonly length: number;

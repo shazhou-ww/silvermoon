@@ -25,11 +25,12 @@ AgentMessage 与 WssMessage 使用相同 `{ id, envelope }`。上游、下游 ch
 上游 message，不让 Agent 理解 upstream/downstream 接线角色。
 
 下游自主执行 instruction，可调用无状态 CLI 查询/校验/受控操作，但不查询并
-领取下一轮任务。消息 content 当前为非空文本，不要求 Agent 返回 action.result
-object。指令、执行结果、证据、阻塞与求助均通过文本表达，多模态留待未来扩展。
+领取下一轮任务。消息 body 当前为 `{ content: string }`，不要求 Agent 返回
+action.result object。指令、执行结果、证据、阻塞与求助均通过 body.content 文本
+表达，body 预留未来附件字段，但本期不定义多模态内容。
 
 idea action 的事件 HEAD/world revisions、general action 的依据 messageIds
-由本机调度层保留，不塞入 Agent content；这些动作依据与 message 因果引用不同，
+由本机调度层保留，不塞入 Agent body；这些动作依据与 message 因果引用不同，
 不能收到回复后才附上最新 HEAD。
 
 Agent 用正文报告当前工作结果、未完成或不确定，不要求 completed/blocked/

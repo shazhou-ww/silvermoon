@@ -1,6 +1,6 @@
 import type {
   AgentMessage, ChannelBinding, GeneralRoute, IdeaAction, IdeaEvent, IdeaRoute,
-  MessageEnvelope, MessageContent, NextStep, Sender,
+  MessageEnvelope, MessageBody, NextStep, Sender,
   WssSubprotocol,
 } from "./Protocol-types.js";
 
@@ -19,8 +19,8 @@ export const selectedSubprotocol = "silvermoon.v1" satisfies WssSubprotocol;
 export const inputEnvelope = {
   version: 1, channelId: channel.channelId, sender: "agent",
   refs: { after: null, inputs: [] },
-  content: "继续当前工作。",
-} satisfies MessageEnvelope<MessageContent>;
+  body: { content: "继续当前工作。" },
+} satisfies MessageEnvelope;
 export const action = {
   kind: "idea", actionId: "action-1", route: ideaRoute,
   basis: {
@@ -29,17 +29,17 @@ export const action = {
   },
   instruction: "执行当前任务并报告结果。",
 } satisfies IdeaAction;
-export function resultEnvelope(inputId: string, previousId: string | null): MessageEnvelope<MessageContent> {
+export function resultEnvelope(inputId: string, previousId: string | null): MessageEnvelope {
   return {
     version: 1, channelId: channel.channelId, sender: "silvermoon",
     refs: { after: previousId, inputs: [inputId] },
-    content: "项目暂不可用，需要先检查仓库访问情况。",
+    body: { content: "项目暂不可用，需要先检查仓库访问情况。" },
   };
 }
-export function downstreamEnvelope(channelId: string): MessageEnvelope<MessageContent> {
+export function downstreamEnvelope(channelId: string): MessageEnvelope {
   return {
     version: 1, channelId, sender: "silvermoon",
-    refs: { after: null, inputs: [] }, content: action.instruction,
+    refs: { after: null, inputs: [] }, body: { content: action.instruction },
   };
 }
 export const eventExamples = [
@@ -56,16 +56,22 @@ export const eventExamples = [
 
 // RPC object 不是 Agent 对话正文。
 // @ts-expect-error
-export const invalidRpcContent: MessageContent = { type: "input", operation: "general.submit", params: { message: "检查状态。" } };
+export const invalidRpcBody: MessageBody = { content: { type: "input", operation: "general.submit", params: { message: "检查状态。" } } };
 // 本期未定义多模态附件类型。
 // @ts-expect-error
-export const invalidMultimodalContent: MessageContent = [{ type: "image", url: "https://example.com/image.png" }];
+export const invalidAttachmentBody: MessageBody = { content: "图片说明。", attachments: [{ type: "image", url: "https://example.com/image.png" }] };
+// envelope 正文必须放在 body，不使用旧的顶层 content。
+// @ts-expect-error
+export const invalidFlatEnvelope: MessageEnvelope = { version: 1, channelId: channel.channelId, sender: "agent", refs: { after: null, inputs: [] }, content: "旧格式。" };
+// body 不是裸字符串。
+// @ts-expect-error
+export const invalidStringBody: MessageEnvelope = { ...inputEnvelope, body: "旧格式。" };
 // 相对接线角色不是消息 sender。
 // @ts-expect-error
 export const invalidSender: Sender = "downstream";
 // envelope 不重复具体 participant 身份。
 // @ts-expect-error
-export const invalidIdentity: MessageEnvelope<MessageContent> = { ...inputEnvelope, sender: { kind: "agent", id: "agent-1" } };
+export const invalidIdentity: MessageEnvelope = { ...inputEnvelope, sender: { kind: "agent", id: "agent-1" } };
 // general route 不绑定 idea。
 // @ts-expect-error
 export const invalidGeneralRoute: GeneralRoute = { scope: "project", projectUrl: ideaRoute.projectUrl, ideaId: ideaRoute.ideaId };
