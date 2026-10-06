@@ -71,9 +71,17 @@ idea 观察/订阅提供当前 projection/head、准确 snapshot cursor 与 curs
 
 ## 上游 handoff 与循环
 
+上游与下游通过 daemon 通信，不直接互发协议消息。daemon 先接收并记录/观察
+上游请求和下游回复，再调用 Silvermoon 的 `whats-next`/下一步能力；该调用不是
+收消息通道，不以无新事实的轮询重复生成 instruction。
+
 Silvermoon 根据当前事实生成 `recipient + instruction`；daemon 不解析 status
 object 或自然语言 nextSteps 来猜路由。recipient 为 upstream 时交还上游，不能
 把下游回复直接当作上游 instruction。
+
+daemon 控制持续观察、投递、等待和再次推进；下游仅自主执行当前 instruction。
+下游可以调用无状态 CLI 查询状态，但不因此成为第二个调度者。idea ping/pong
+追加统一由 daemon 委托 Silvermoon 完成，避免同一回复被重复记录。
 
 准确候选须定义动作身份、观察依据、投递去重，以及继续/等待/阻塞/无新动作的
 表达和唤醒条件。重复观察不能不断派发同一动作；连接重建不能盲目重发未知动作。

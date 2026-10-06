@@ -14,12 +14,17 @@ device-hq 为设备管理工作区，持续连接、路由和组织工作；Silv
 ## 1. 整体架构
 
 ```text
-人 <-> 上游沟通者 <-> Silvermoon daemon <-> 下游 Agent
-                           |
-               设备统一安装的 Silvermoon
-                           |
-              device-hq / managed repositories
+人 <-> 上游 Agent <-> Silvermoon daemon <-> 下游 Agent
+                           |                   |
+                           +---------+---------+
+                                     v
+                           无状态 Silvermoon CLI
 ```
+
+横向表示通信链路，上游与下游通过 daemon 交互；向下表示 daemon 与下游 Agent
+都可以调用 Silvermoon 的无状态能力。repo 是数据与工作区，不是活跃 actor，
+不放在这张交互图中。daemon 可直接调用 CLI 背后的同一组业务函数，下游可通过
+CLI/工具调用；这是两种调用方式，不是两套规则或额外 runtime 组件。
 
 ```text
 每个 repo（包括 device-hq）
@@ -29,13 +34,33 @@ device-hq 为设备管理工作区，持续连接、路由和组织工作；Silv
 
 ### 职责边界
 
-| 主体 | 职责 | 不承担 |
+| 对象 | 职责 | 不承担 |
 | --- | --- | --- |
 | 上游 | 提交请求、保留未确认输入、处理交还、取得人类决定 | 将接收确认当作执行完成 |
 | device-hq | 管理员的普通 Silvermoon repo 工作区，以设备为 Outer World；保存设备目标、维护实现、ideas 与可同步管理信息 | 成为管理员、专属 runtime 或特殊 session 类型 |
 | daemon | 设备管理员；上游连接、registry 路由、session binding、轻量 receipt、投递与重观察，组织设备管理与 repo 接入 | 自行解释生命周期或复制项目状态机 |
 | Silvermoon | 按目标 repo schema 校验、观察、追加事件并生成 recipient/instruction | 使用 managed repo 自带 Silvermoon binary |
 | 下游 Agent | 各 repo 的 general session 或 idea session 内执行、报告结果/求助 | 以 transcript 代替项目 facts |
+
+### 调用与循环控制
+
+无状态 Silvermoon CLI 不专属于 daemon。daemon 与下游 Agent 都可以查询项目、
+校验和执行受控操作，但 daemon 模式的持续推进 loop 只有 daemon 一个控制者。
+Silvermoon 规则决定下一步与 recipient；daemon 负责接收输入、观察、投递、等待
+和重新推进；下游自主完成当前 instruction，不自行领取下一轮任务。
+
+下游可以调用 `whats-next` 理解状态，但查询结果不授权它另起
+`whats-next -> 执行 -> whats-next` 循环。若观察到当前指令过时、阻塞或需要改变
+方向，向 daemon 报告并交还，由 daemon 重新观察和路由。
+
+`whats-next` 不是消息传输通道。daemon 先接收并记录/观察上下游输入，再使用
+Silvermoon 的下一步能力；有新事实才重新推进，不靠不停查询等待消息。
+idea 依据项目事件，general session 依据自身 session/request 上下文。
+
+在 daemon 模式下，交互 ping/pong 的追加由 daemon 统一交给 Silvermoon 的受控
+接口完成。下游通过结构化回复报告当前 instruction 的结果、证据、阻塞或 unknown，
+不自行追加同一 pong 后再返回一次回复，也不新增“这个 ping 已处理”的生命周期
+事件。投递确认、执行报告、阶段完成与人类验收保持不同语义。
 
 Silvermoon daemon 是设备管理员，在现有 OS 权限下组织设备管理，通过下游
 Agent 执行具体操作。已认证上游的 repo 接入请求即授权 clone/onboarding，不要求
@@ -56,6 +81,7 @@ allowlist 或额外逐 repo 批准。仍须核验 URL、目录占用、项目身
   普通 daemon 操作不静默迁移。v1 无 v2 event capability，迁移前不进入 idea loop。
 - daemon 使用设备 Silvermoon release 的业务能力，显式传入 repository/worktree root，
   不改变进程 cwd、不解析 repo 中的 Silvermoon executable、不启动 replay CLI。
+  下游 CLI/工具使用同一设备版本和规则；诊断 replay 不变成独立生产 loop。
   Silvermoon 源码 checkout 的自身运行时保护保持明确。
 - 项目配置、contracts 与 lifecycle events 在所属 repo 中保持权威。V2 idea
   使用分段 `events/`，每段最多 1000 条、单事件最多 1 MiB；HEAD/cursor 绑定

@@ -27,6 +27,11 @@ daemon 作为管理员，在实际 OS 权限下组织设备管理并交下游 Ag
 
 ## 投递与回复
 
+下游自主执行当前 instruction，可以调用设备上的无状态 Silvermoon CLI/工具
+查询、校验或完成指令要求的受控操作。daemon 可直接调用同一 CLI 背后的业务
+函数，不为下游建立另一套规则。持续推进由 daemon 控制，下游不自行查询并
+领取下一轮任务；`whats-next` 仅用于理解当前状态，发现变化或阻塞时报告并交还。
+
 daemon 投递 Silvermoon 生成的 instruction，不逐条转发输入。准确候选须携带
 稳定动作身份、repo/idea route 与 session 身份/代次；idea 工作附其依据的事件
 HEAD/revision，general 工作保留 request/action 依据，不伪造 idea HEAD。SDK 元
@@ -36,9 +41,11 @@ Agent 可以在运行中接收新输入，协议要区分 steering、排队和�
 成功只证明其实际承诺边界，不自动等于 delivered/processed 或副作用完成。
 session 存在、idle、工具活动或缺少回复都不能证明旧动作未执行。
 
-idea 的正式回复/求助保持执行依据，经 Silvermoon 准确前态检查后才成为 idea pong；若
-期间出现新 ping 导致 stale，交还上游，不换 HEAD 重试。pong 不要求阶段已完成，
-也不表示人类验收；过程消息与工具日志不自动成为生命周期 facts。
+下游通过结构化回复报告执行结果与证据、阻塞、求助或 unknown，不直接追加同一
+交互 pong。idea 的正式回复/求助由 daemon 交给 Silvermoon，经准确前态检查后
+记录为 pong；若期间出现新 ping 导致 stale，交还上游，不换 HEAD 重试。
+pong 不要求阶段已完成，也不表示人类验收；过程消息与工具日志不自动成为
+生命周期 facts。无需新增“ping 已处理”的业务事件来表达当前 instruction 完成。
 
 general session 的日常回复/操作结果属于该 repo 的请求上下文，不自动写成 idea
 pong；需要创建/推进 idea 时先取得真实 ideaId，并通过明确的 idea 交接流程处理。
@@ -51,8 +58,9 @@ session resume、历史查询、request/action 关联和投递后崩溃的能力
 ## Silvermoon 项目操作 API
 
 设备统一安装的 Silvermoon 对 HQ 与 managed repos 使用同一项目操作能力，
-直接调用本 release 的业务函数并显式传入 repository/worktree root 和 schema
-facts；HQ 本身只是普通 repo，不是 executable 或独立 runtime。目标 API 提供：
+daemon 直接调用本 release 的业务函数，下游通过无状态 CLI/工具使用同一能力，
+明确目标 repository/worktree root 和 schema facts；HQ 本身只是普通 repo，不是
+executable 或独立 runtime。目标 API 提供：
 
 - 当前 schema/capability、项目就绪和设备 Silvermoon/skill 来源验证；
 - next/handoff：由 Silvermoon 规则生成 recipient/instruction，不复制状态机；

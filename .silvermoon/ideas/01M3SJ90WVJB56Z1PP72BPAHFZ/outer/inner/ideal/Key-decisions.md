@@ -8,6 +8,10 @@
 | 决策 | 当前结论 |
 | --- | --- |
 | 设备生产单元 | daemon 作为设备管理员，以 device-hq 为工作区，通过下游 Agent 执行管理工作 |
+| 交互 actor | 人、上游 Agent、daemon、下游 Agent；repo 是数据/工作区，不放入活跃 actor 图 |
+| 通信与调用 | 上下游通过 daemon 通信；daemon 与下游均可使用无状态 Silvermoon CLI 能力 |
+| 循环控制 | daemon 独占持续推进；下游自主执行当前 instruction，可查询状态但不另起 loop |
+| 回复与交互写入 | 下游结构化报告结果/阻塞；daemon 委托 Silvermoon 追加 ping/pong，不重复写“已处理”事件 |
 | HQ 身份 | 管理员的普通 Silvermoon repo 工作区，以设备为 Outer World；不是管理员、专属 runtime 或特殊 session 类型 |
 | 管理员权限 | daemon 在现有 OS 权限下管理设备；上游请求授权 repo clone/onboarding，无额外审批/allowlist |
 | SUDO | 长期希望 daemon 在 device-hq 工作区组织自身管理员能力检查，本期不检查或获取 SUDO 权限 |
