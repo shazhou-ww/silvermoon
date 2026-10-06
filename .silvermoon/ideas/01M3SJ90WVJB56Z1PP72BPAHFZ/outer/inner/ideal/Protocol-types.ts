@@ -4,6 +4,7 @@
  */
 
 export type ProtocolVersion = 1;
+export type WssSubprotocol = "silvermoon.v1";
 export type RequestId = string;
 export type ActionId = string;
 export type SubscriptionId = string;
@@ -240,31 +241,6 @@ export interface UpstreamResponseResults {
 export type UpstreamRequest = RequestMessage<UpstreamRequestParams>;
 export type UpstreamResponse = ResponseMessage<UpstreamResponseResults>;
 
-export interface DaemonHello {
-  readonly protocolVersion: ProtocolVersion;
-  readonly kind: "hello";
-  readonly connectionId: string;
-  readonly daemonId: string;
-  readonly silvermoonVersion: string;
-  readonly capabilities: readonly (keyof UpstreamRequestParams)[];
-}
-
-export type UpstreamWelcome =
-  | {
-      readonly protocolVersion: ProtocolVersion;
-      readonly kind: "welcome";
-      readonly connectionId: string;
-      readonly status: "ok";
-      readonly capabilities: readonly (keyof UpstreamRequestParams)[];
-    }
-  | {
-      readonly protocolVersion: ProtocolVersion;
-      readonly kind: "welcome";
-      readonly connectionId: string;
-      readonly status: "error";
-      readonly error: ProtocolError;
-    };
-
 export type ReplyRecording =
   | { readonly kind: "general-session" }
   | { readonly kind: "idea-event"; readonly receipt: AppendReceipt }
@@ -301,8 +277,8 @@ export interface WireProtocolError {
   readonly error: ProtocolError;
 }
 
-export type UpstreamToDaemonMessage = UpstreamWelcome | UpstreamRequest;
-export type DaemonToUpstreamMessage = DaemonHello | UpstreamResponse | DaemonEventMessage | WireProtocolError;
+export type UpstreamToDaemonMessage = UpstreamRequest;
+export type DaemonToUpstreamMessage = UpstreamResponse | DaemonEventMessage | WireProtocolError;
 export type WssMessage = UpstreamToDaemonMessage | DaemonToUpstreamMessage;
 
 // 下游 adapter 归一化本地 SDK 调用，不新增 WSS 服务。

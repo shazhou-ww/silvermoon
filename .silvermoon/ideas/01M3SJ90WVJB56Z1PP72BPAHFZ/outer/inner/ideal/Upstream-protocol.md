@@ -12,8 +12,6 @@ WSS 每条应用消息是一个 UTF-8 JSON object，使用顶层 `protocolVersio
 
 | 方向 | 类型 | kind 与用途 |
 | --- | --- | --- |
-| daemon → upstream | `DaemonHello` | `hello`：connectionId、daemonId、版本与能力 |
-| upstream → daemon | `UpstreamWelcome` | `welcome`：同 connectionId 的握手结果 |
 | upstream → daemon | `UpstreamRequest` | `request`：requestId、operation、对应 params |
 | daemon → upstream | `UpstreamResponse` | `response`：同 requestId/operation，ok/result 或 error/error |
 | daemon → upstream | `DaemonEventMessage` | `event`：connectionId、连接内 sequence 与 typed event |
@@ -23,9 +21,18 @@ WSS 每条应用消息是一个 UTF-8 JSON object，使用顶层 `protocolVersio
 不能给 `idea.observe` 返回 general 接收回执。错误分支没有 result，成功分支没有
 error；unknown 写入/投递结果不能返回持久接收成功。
 
-连接在 HTTP Upgrade 阶段使用受保护配置中的 token 认证，候选使用 Authorization
-Bearer header；token 不进入 hello 或其他 JSON body。hello/welcome 完成前不接受
-业务 request。capabilities 取双方共同支持操作，不支持的操作返回明确错误。
+连接在 HTTP Upgrade 阶段使用受保护配置中的 token 认证，采用 Authorization
+Bearer header；token 不进入 JSON body。认证上下文绑定 daemon identity，而不是
+信任一条应用消息自称的 daemonId。
+
+Upgrade 请求和响应的 Sec-WebSocket-Protocol 固定为 `silvermoon.v1`，类型为
+`WssSubprotocol`；服务器不接受该版本则拒绝 Upgrade，daemon 也不得接受未选择
+或选择不同 subprotocol 的连接。每条 JSON 的 protocolVersion 必须与之相符。
+不协商其他版本，不静默降级。
+
+认证且版本匹配的连接建立后直接收发业务 request/response/event，不定义应用层
+hello/welcome，也不交换 capabilities 清单。未知或不支持的业务 operation 返回
+unsupported-capability；不能为未知 operation 生成成功 result。
 
 ## Request / response 操作清单
 
@@ -77,8 +84,10 @@ payload 形状与现有 event schema 相同。网络不另加字段到持久事�
 - requestId 去重作用域为已认证上游身份 + daemonId，跨连接保留；相同 ID 的
   operation/params 必须相同。pending/unknown 不重发 Agent turn，not-found 只
   表示缺少 receipt，不证明副作用未发生。保留/压缩期限仍待 SDK 与恢复验证。
-- connectionId 与推送 sequence 只表示当前连接传输位置，不代替事件 HEAD 或
-  exactly-once。重连重新握手并按持久 cursor 订阅，不重放未知 instruction。
+- connectionId 由 daemon 为每次已建立连接生成，推送 sequence 从 1 开始；无需
+  单独交换或确认该 ID。二者只表示当前连接传输位置，不代替事件 HEAD 或
+  exactly-once。重连重新认证并验证 Upgrade subprotocol，按持久 cursor 订阅，
+  不增加应用层握手或重放未知 instruction。
 - EventDelta.after 必须等于调用/前一批 head，head 是本批末尾准确前缀，sequence
   是该前缀最后事件序号。分批不能拆开单事件；subscription.error 终止该订阅。
   subscriptionId 只在当前连接有效，新连接不能复用旧 ID。
@@ -90,8 +99,9 @@ payload 形状与现有 event schema 相同。网络不另加字段到持久事�
 daemon 主动建立 WebSocket 长连接；远端使用 WSS，仅显式 loopback 测试允许 WS。
 本地 upstream server 使用同一协议并执行认证，不承担项目生命周期判断。
 
-握手需确认 daemon identity、协议版本与能力。设备选择在外层连接/控制信封，
-不把 daemonId 塞入每条 route。未知版本、无效认证或格式明确拒绝，不静默降级。
+daemon identity 与固定协议版本在连接认证/HTTP Upgrade 时确认。设备选择在
+外层连接上下文，不把 daemonId 塞入每条 route；无额外 hello/welcome 或能力
+交集协商。未知版本、无效认证或格式明确拒绝，不静默降级。
 
 Silvermoon daemon 是设备管理员，以 device-hq 为管理工作区，通过下游 Agent
 执行具体操作。已认证上游的 repo 接入请求即授权 clone/onboarding，不再设置
@@ -174,7 +184,7 @@ daemon 控制持续观察、投递、等待和再次推进；下游仅自主执�
 
 ## Review 必须提供
 
-版本/能力握手、完整 request/response/handoff 类型、route 校验、requestId 与 ack
+连接认证与固定 subprotocol、完整 request/response/handoff 类型、route 校验、requestId 与 ack
 状态机、expectedHead/cursor 操作、正常/失败/重连时序、上下游对称的动作关联。
 general session 的 repo 身份、接入交接与绑定恢复须覆盖 HQ 和至少两个 managed
 repos，不得通过共享 HQ 会话冒充项目隔离。

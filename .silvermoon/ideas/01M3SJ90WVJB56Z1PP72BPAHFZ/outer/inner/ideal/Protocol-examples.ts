@@ -3,7 +3,7 @@ import type {
   DownstreamRequestParams, DownstreamResponseResults, EventCursor, GeneralRoute,
   IdeaAction, IdeaEvent, IdeaRoute, NextStep, SilvermoonRequest, SilvermoonResponse,
   SilvermoonRequestParams, SilvermoonResponseResults, UpstreamRequest,
-  UpstreamRequestParams, UpstreamResponse, UpstreamResponseResults, WssMessage,
+  UpstreamRequestParams, UpstreamResponse, UpstreamResponseResults, WssMessage, WssSubprotocol,
 } from "./Protocol-types.js";
 
 // 文档消息示例，不执行真实操作；OID 仅为格式示例，不声称对应真实 repo facts。
@@ -32,6 +32,7 @@ const action = {
   instruction: "执行当前任务并返回结果与证据。",
 } satisfies IdeaAction;
 const binding = { route: ideaRoute, sessionId: "session-1", generation: 1 };
+export const selectedSubprotocol = "silvermoon.v1" satisfies WssSubprotocol;
 
 export const pingRequest = {
   protocolVersion: 1, kind: "request", requestId: "request-1",
@@ -134,3 +135,11 @@ export const invalidResponse: UpstreamResponse = { ...staleResponse, result: pin
 // wait 不可伪造 dispatch recipient/action。
 // @ts-expect-error
 export const invalidWait: NextStep = { state: "wait", route: ideaRoute, reason: "等待输入。", recipient: "downstream", action };
+// 上游连接没有应用层 hello/welcome 消息。
+// @ts-expect-error
+export const invalidHello: WssMessage = { protocolVersion: 1, kind: "hello", daemonId: "daemon-1", connectionId: "connection-1", silvermoonVersion: "0.4.0", capabilities: [] };
+// @ts-expect-error
+export const invalidWelcome: WssMessage = { protocolVersion: 1, kind: "welcome", connectionId: "connection-1", status: "ok", capabilities: [] };
+// 固定 subprotocol 不静默降级。
+// @ts-expect-error
+export const invalidSubprotocol: WssSubprotocol = "silvermoon.v0";

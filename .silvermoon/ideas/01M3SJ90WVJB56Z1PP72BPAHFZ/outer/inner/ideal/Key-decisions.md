@@ -22,6 +22,7 @@
 | Session | 每 repo 一个长期、不绑定 idea 的 general session，另有独立 idea sessions；HQ 相同 |
 | 日常路由 | project 选择目标 repo general session；device 选择 HQ general session，不集中承载所有项目 |
 | 上游连接 | daemon 主动 WebSocket 连接；远端 WSS，本地 loopback 独立服务 |
+| 上游建连 | 认证与固定 silvermoon.v1 在 HTTP Upgrade 完成；无应用层 hello/welcome 或能力清单协商 |
 | API 政策 | 显式调整实验性 Agent/runtime API，不强制旧签名或旧执行行为兼容 |
 | Review | 上游、下游接入协议及 Silvermoon 项目操作 API 的准确候选先由人类 review |
 | HQ remote | 每逻辑设备独立 private repo，本期仅同步治理信息供未来恢复 |
@@ -59,7 +60,7 @@ SDK 持久关联、确认边界、receipt 保留与动作身份稳定性仍须�
 | 项目 | 需要收敛的内容 |
 | --- | --- |
 | SDK 真实能力 | request/action 持久关联、历史查询、resume、send 崩溃窗口；无证据不承诺 exactly-once |
-| 上游协议 | 版本/capability、全操作类型、ack、requestId、完整事件订阅、handoff |
+| 上游协议 | Upgrade 认证/身份绑定、固定版本校验、全操作类型、ack、requestId、完整事件订阅、handoff |
 | 下游协议 | 每 repo general/idea 身份与代次、工具 root、skill 来源、动作身份、回复依据与 unknown 协调 |
 | Loop | 继续/等待/阻塞/无动作、唤醒、投递去重、背压与公平性 |
 | 新 API | 旧新对照、结构化结果、schema capability、持久格式调整与声明/subpath |
