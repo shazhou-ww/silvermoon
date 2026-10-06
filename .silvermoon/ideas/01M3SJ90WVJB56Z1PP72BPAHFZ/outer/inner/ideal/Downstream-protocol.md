@@ -14,14 +14,16 @@ Agent 始终执行或保持连接。HQ 使用完全相同的 session 模型，�
 `device` route 选择 HQ general session，`project` 选择目标 repo general session，
 idea routes 选择对应 idea session。
 
-HQ 负责下游可用性与 canonical skill 正确来源；binary/skill 使用匹配 release。
-这是普通 HQ repo 的项目工作，不表示 HQ 提供专属 runtime。接入协议须明确每个
-general session 的 repository root，以及 idea session 的 worktree root、工具
-上下文与权限；不能依靠修改 daemon 的全局 cwd。HQ 的工具范围由设备管理工作
-决定，不通过特殊 session 类型获得；managed repo 会话仍绑定自身项目范围。
+daemon 在 device-hq 工作区组织下游可用性与 canonical skill 来源检查，由下游
+Agent 执行；binary/skill 使用匹配 release。HQ 只是普通 repo 工作区，不提供专属
+runtime。接入协议须明确每个 general session 的 repository root，以及 idea
+session 的 worktree root、工具上下文与权限；不能依靠修改 daemon 的全局 cwd。
+device-hq session 的工具范围由设备管理工作决定，不通过特殊 session 类型获得；
+managed repo 会话仍绑定自身项目范围。
 
-HQ 在实际 OS 权限下管理设备，不增加逐 repo clone 审批。本期不执行 SUDO
-能力自检或自动提权；工具权限不足、身份/目录冲突和执行失败明确返回。
+daemon 作为管理员，在实际 OS 权限下组织设备管理并交下游 Agent 执行，不增加
+逐 repo clone 审批。本期不执行 SUDO 能力自检或自动提权；工具权限不足、
+身份/目录冲突和执行失败明确返回。
 
 ## 投递与回复
 

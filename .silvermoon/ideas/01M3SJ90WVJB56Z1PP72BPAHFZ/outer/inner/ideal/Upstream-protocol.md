@@ -11,7 +11,8 @@ daemon 主动建立 WebSocket 长连接；远端使用 WSS，仅显式 loopback 
 握手需确认 daemon identity、协议版本与能力。设备选择在外层连接/控制信封，
 不把 daemonId 塞入每条 route。未知版本、无效认证或格式明确拒绝，不静默降级。
 
-HQ 全权治理设备，已认证上游的 repo 接入请求即授权 clone/onboarding，不再设置
+Silvermoon daemon 是设备管理员，以 device-hq 为管理工作区，通过下游 Agent
+执行具体操作。已认证上游的 repo 接入请求即授权 clone/onboarding，不再设置
 allowlist、逐 repo 额外审批或二次授权 round-trip。实际 URL、目录、凭据和 OS
 权限问题是可观察阻塞，不是额外授权 gate；缺少 SUDO 不隐式触发提权。
 
@@ -26,8 +27,9 @@ allowlist、逐 repo 额外审批或二次授权 round-trip。实际 URL、目�
 
 projectUrl 为无凭据规范 HTTPS repo URL，不是本机路径。route 按 discriminated
 union 严格校验，不通过缺失字段、路径字符串或正文猜测 scope。不认识的 project
-接入请求交 HQ 检查并 clone 到 registry/storageRoot 决定的位置；不能直接派发
-尚未就绪的 idea。新建 idea 必须获得真实持久 ideaId，不伪造身份。
+接入请求由 daemon 在 device-hq 工作区组织检查，通过下游 Agent clone 到
+registry/storageRoot 决定的位置；不能直接派发尚未就绪的 idea。新建 idea 必须
+获得真实持久 ideaId，不伪造身份。
 
 所有 repo（包括 HQ）使用相同 general/idea session 模型。`device` 是选择 HQ
 general session 的路由，不是特殊 session 类型；`project` 不能解释成借用 HQ

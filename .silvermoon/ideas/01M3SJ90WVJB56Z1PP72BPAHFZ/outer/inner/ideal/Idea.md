@@ -3,8 +3,9 @@
 ## 意图
 
 将一台设备、HEADQUARTER（HQ）、Silvermoon daemon 和下游 Agent 组成一个生产
-单元。上游表达意图并取得人类决定；HQ 治理设备；daemon 持续连接、路由和调度；
-Silvermoon 根据项目事实生成下一步；下游 Agent 执行。
+单元。上游表达意图并取得人类决定；Silvermoon daemon 作为设备管理员，以
+device-hq 为设备管理工作区，持续连接、路由和组织工作；Silvermoon 根据项目
+事实生成下一步；下游 Agent 执行具体操作。
 
 本 idea 的整体交付目标为 `0.4.0`。当前仍是理想契约，不表示 daemon 已实现，
 不授权提前实施或 npm 发布。上下游协议须先 review，完整 ideal revision 须再
@@ -31,20 +32,22 @@ Silvermoon 根据项目事实生成下一步；下游 Agent 执行。
 | 主体 | 职责 | 不承担 |
 | --- | --- | --- |
 | 上游 | 提交请求、保留未确认输入、处理交还、取得人类决定 | 将接收确认当作执行完成 |
-| device-hq | 普通 Silvermoon repo，以设备为 Outer World；通过其 general/idea sessions 管理设备、工具与 repo 接入 | 成为专属 runtime 或特殊 session 类型 |
-| daemon | 上游连接、registry 路由、session binding、轻量 receipt、投递与重观察 | 自行解释生命周期或复制项目状态机 |
+| device-hq | 管理员的普通 Silvermoon repo 工作区，以设备为 Outer World；保存设备目标、维护实现、ideas 与可同步管理信息 | 成为管理员、专属 runtime 或特殊 session 类型 |
+| daemon | 设备管理员；上游连接、registry 路由、session binding、轻量 receipt、投递与重观察，组织设备管理与 repo 接入 | 自行解释生命周期或复制项目状态机 |
 | Silvermoon | 按目标 repo schema 校验、观察、追加事件并生成 recipient/instruction | 使用 managed repo 自带 Silvermoon binary |
 | 下游 Agent | 各 repo 的 general session 或 idea session 内执行、报告结果/求助 | 以 transcript 代替项目 facts |
 
-HQ 是设备管理员，在现有 OS 权限下全权治理设备。已认证上游的 repo 接入请求
-即授权 clone/onboarding，不要求 allowlist 或额外逐 repo 批准。仍须核验 URL、
-目录占用、项目身份、实际权限和结果；不覆盖未知工作。本期不检查或获取 SUDO
-权限，长期希望 HQ 检查自身管理员能力。
+Silvermoon daemon 是设备管理员，在现有 OS 权限下组织设备管理，通过下游
+Agent 执行具体操作。已认证上游的 repo 接入请求即授权 clone/onboarding，不要求
+allowlist 或额外逐 repo 批准。仍须核验 URL、目录占用、项目身份、实际权限和结果；
+不覆盖未知工作。本期不检查或获取 SUDO 权限，长期希望 daemon 在 device-hq
+工作区组织自身管理员能力检查。
 
 ### 运行时与状态
 
-- 设备统一安装 Silvermoon binary 与 canonical skill，由 device-hq 的日常/idea
-  工作管理安装、版本与可用性；binary 不属于 HQ repo，不需要 HQ 专属 runtime。
+- 设备统一安装 Silvermoon binary 与 canonical skill，由 daemon 在 device-hq
+  工作区组织安装、版本与可用性管理，通过下游 Agent 执行；binary 不属于 HQ
+  repo，不需要 HQ 专属 runtime。
   不推荐 managed repo 各自安装 package/binary/skill。adoption/readiness 必须验证
   设备安装与 skill 来源，不能继续要求 `devDependencies.silvermoon`，也不能靠
   跳过检查实现。
@@ -72,9 +75,10 @@ general session，不创建特殊设备会话。`device-idea` 与 `idea` 选择�
 的 idea worktree/session。同一 idea 运行中收到新输入不另起并行执行者；状态
 未知不静默替换任何 general/idea session。
 
-HQ 的设备管理职责来自它的项目目标与 Outer World，不来自特殊 Agent/session
-类型。陌生 repo 的 clone/onboarding 由 HQ 的 general session 处理；就绪后该
-repo 的日常工作进入它自己的 general session，不继续借用 HQ 承载项目上下文。
+device-hq 只是管理员的工作区，其项目目标与 Outer World 描述设备管理工作，
+不赋予 repo 或 session 特殊身份。陌生 repo 的 clone/onboarding 由 daemon 在
+device-hq 的 general session 中组织、交下游 Agent 执行；就绪后该 repo 的日常
+工作进入它自己的 general session，不继续借用 HQ 承载项目上下文。
 
 managed repo 以无凭据规范 projectUrl 接入；registry 绑定首次登记生成的稳定
 随机 projectKey，不能由 URL hash 派生。registry 是唯一定位依据，不扫描目录

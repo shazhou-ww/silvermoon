@@ -7,11 +7,11 @@
 
 | 决策 | 当前结论 |
 | --- | --- |
-| 设备生产单元 | 一台设备由 HQ、daemon 与下游 Agent 治理和执行 |
-| HQ 身份 | 普通 Silvermoon repo，以设备为 Outer World；不是专属 runtime 或特殊 session 类型 |
-| HQ 权限 | HQ 是设备管理员；上游请求授权 repo clone/onboarding，无额外审批/allowlist |
-| SUDO | 长期希望 HQ 检查自身管理员能力，本期不检查或获取 SUDO 权限 |
-| binary/skill | 设备统一安装、由 HQ 项目工作管理；不要求安装在 HQ repo 或由 managed repo 各自安装 |
+| 设备生产单元 | daemon 作为设备管理员，以 device-hq 为工作区，通过下游 Agent 执行管理工作 |
+| HQ 身份 | 管理员的普通 Silvermoon repo 工作区，以设备为 Outer World；不是管理员、专属 runtime 或特殊 session 类型 |
+| 管理员权限 | daemon 在现有 OS 权限下管理设备；上游请求授权 repo clone/onboarding，无额外审批/allowlist |
+| SUDO | 长期希望 daemon 在 device-hq 工作区组织自身管理员能力检查，本期不检查或获取 SUDO 权限 |
+| binary/skill | 设备统一安装，daemon 在 device-hq 工作区组织管理、下游 Agent 执行；不要求安装在 HQ repo 或由 managed repo 各自安装 |
 | schema | 推荐最新；历史 schema 可识别、诊断、迁移；完整读写范围明确，不静默升级 |
 | 状态权威 | repo contracts/events 仍权威，daemon 不建立第二套生命周期状态机 |
 | Session | 每 repo 一个长期、不绑定 idea 的 general session，另有独立 idea sessions；HQ 相同 |
@@ -35,7 +35,8 @@ private remote 保存 HQ 三世界、idea events、维护实现、期望 binary/
 秘密、Agent session/transcript、receipt、cursor、lock、cache、managed checkout、
 idea worktree 和本机绝对路径不进入 remote；private visibility 不替代内容核验。
 
-HQ 候选验证、提交、刷新 primary 并普通非 force push，确认准确 commit 可达。
+daemon 在 device-hq 工作区组织候选验证、提交、刷新 primary 与普通非 force
+push，由下游 Agent 执行并核验准确 commit 可达。
 并发、凭据/网络失败或冲突保留本机候选、明确报告，不覆盖历史、不声称已同步。
 同步触发、退避和冲突处理在实施契约细化。
 
