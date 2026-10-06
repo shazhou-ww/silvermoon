@@ -1,2 +1,3 @@
 {"sequence":1,"type":"setAlias","payload":{"alias":"typescript-strict-refactor"}}
 {"sequence":2,"type":"acceptIdeal","payload":{"idealRevision":"cf06785d559e59d8a5fc4ab897a7cb6e5c462ffe"}}
+{"sequence":3,"type":"acceptInner","payload":{"implementationRevision":"fdec2b1c5ed37cedbd7e177a660c1aba7bf5e7c8"}}
