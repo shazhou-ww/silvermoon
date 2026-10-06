@@ -9,6 +9,10 @@
 daemon 的生产路径不得调用 `event replay`。发现此类调用需求时，应先识别真正
 缺少的能力，而不是把调试命令固化为跨进程依赖。
 
+重构后的生产实现还不得通过 `ProjectRuntime` 启动 managed repository 自带的
+Silvermoon CLI。HEADQUARTER runtime 应直接调用 `src/business/` use cases 与
+`src/foundation/` projection/cursor/store 能力；public class 只保留兼容委托。
+
 设备治理由 Agent SDK 持久 session 承载，不建立治理 event stream，也不调用
 项目 CLI replay 还原治理对话。upstream 保留未确认治理请求并以稳定 requestId
 重投；daemon 保存 session binding 和轻量去重/投递回执。详见
@@ -53,6 +57,10 @@ HEAD 是已交付分段事件流定义的长度 + folder digest；digest 覆盖�
 daemon 生产路径不得启动该 CLI 子进程；项目 runtime 必须暴露满足同一 prefix
 校验语义的生产 `readSince` 能力或专用 runtime 操作。不得因已有 cursor 参数就
 把诊断命令改作生产接口。
+
+schema v1 没有 v2 event stream，不能因为 `whats-next` 可读就推断 replay、delta
+或 append capability。它只能明确受阻并指向独立 `migrate-v1-to-v2` 流程；daemon
+不调用迁移入口替项目自动升级。
 
 ## 恢复边界
 

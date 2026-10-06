@@ -77,6 +77,15 @@ repository 的 schema 执行；不要求每个 managed repository 安装自己�
 能力探索可提前。各 idea 的人类批准和验收仍独立，文本依赖不自动记录状态，
 也不把其中一项获准视为其他项获准。
 
+### 重构后源码边界
+
+已完成的源码重构固定三层物理结构：完整进程入口位于 `bin/`，可复用异步编排
+位于 `src/business/`，封闭 I/O 与规则能力位于 `src/foundation/<module>/`。
+daemon 集成遵循该结构，不恢复旧 `src/application/`、宽泛模块或 service container。
+现有 Agent package subpaths 是须保持行为的实验性兼容表面，不是继续聚合 daemon
+职责的内核。具体归属、runtime 替换和 schema capability 见
+[Refactored-architecture.md](./Refactored-architecture.md)。
+
 ## 期望结果
 
 ### 一个包中的设备级调度入口
@@ -107,6 +116,11 @@ binary 版本不是跨 repository 的持久兼容边界，schema 才是。一个
 HEADQUARTER runtime 决定正常流程的下一步、继续或交还；daemon 执行结构化结果，
 管理本机调度、会话路由及运行故障，不维护第二套生命周期状态机。
 不同项目和工作区不能串线；同一 idea 不因新消息到达就另起并行执行者。
+
+HEADQUARTER runtime 直接调用当前 release 的业务 use cases，并显式传入目标 root、
+worktree 和 schema facts；不从 managed repository 解析 package manifest、
+`node_modules/silvermoon` 或自带 CLI。普通根 package import 和非 daemon CLI
+路径不得因此 eager-load Copilot SDK、WebSocket 或 daemon state。
 
 每次 `whats-next` 输出都包含机器可读的 `recipient` 和对应 `instruction`：
 `recipient` 明确指出下一步由 `upstream` 还是 `downstream` 处理，daemon 按此
@@ -180,6 +194,11 @@ daemon 使用已观察的 authoritative head 直接向 HEADQUARTER Silvermoon ru
 生产协议须提供 expected-head append、读取当前权威 projection/head、从 cursor
 读取或订阅增量事件，以及结构化的 appended、stale、idempotent 和 conflict
 结果。具体操作名称与编码由实施契约确定，不假定当前前置接口已经具备这些能力。
+
+当前 `ProjectRuntime.next/replay/readSince/appendInteraction` 及
+`LocalProjectRegistry` 只作为前置兼容表面和迁移来源：它们仍启动项目自带 CLI、
+以 URL hash 定位并聚合多种持久职责，不满足最终内核边界。实施不得在这些 class
+中继续堆叠 daemon 状态；兼容 wrapper 应委托新 business/foundation 能力。
 
 发往 idea 流的上游输入携带其依据的 expectedHead；对应权威流原子校验并追加。若实际 head
 已变化，确认同一提交已记录时可返回幂等结果，否则交还上游重新观察和判断，
@@ -306,6 +325,8 @@ HEADQUARTER runtime 按各 repository 声明的受支持 schema 解释流程、�
 - 设备/项目长期治理 session、独立治理交互流及固定条数分段。
 - daemon root 隔离、动态项目登记、稳定 projectKey 与显式 URL 迁移。
 - HEADQUARTER binary/skill 治理、schema capability 检查及显式升级路径。
+- 三层源码结构内的 daemon 应用、函数式业务入口、封闭基础模块及 Agent subpath
+  兼容 wrapper。
 - 每逻辑设备独立 private `device-hq` remote、bootstrap、整机恢复与 owner fencing。
 - daemon 运行故障和重启恢复，以及与真实 session 状态的协调。
 - 端到端协作场景、相应帮助、文档和 skill。
@@ -323,6 +344,7 @@ HEADQUARTER runtime 按各 repository 声明的受支持 schema 解释流程、�
 - 本次拆分工作直接实现 daemon、修改 schema、迁移项目或发布 npm。
 - 将凭据、Agent transcript、receipt、cursor、cache、checkout 或 worktree 备份进
   `device-hq` Git history。
+- 恢复已删除的 internal/segmented migration 入口，或把迁移并入普通 daemon 调度。
 
 ## 约束
 
@@ -344,6 +366,8 @@ HEADQUARTER runtime 按各 repository 声明的受支持 schema 解释流程、�
 - 解析失败、未知事件或不确定执行不得静默跳过、冒充成功或盲目重试。
 - 实施契约须明确所依赖的前置能力和证据；前置项变化影响集成时重新观察，
   不静默沿用过期结论。
+- 新代码遵循 `bin` → `business` → `foundation` 单向依赖；每个 foundation 模块
+  具有单一职责 README 与 export-only index，业务入口不调用另一个命令实现。
 - 四个前置 idea 已完成不构成本 idea 的批准。治理 Agent session 与轻量
   requestId receipt 不修改或替代项目 idea schema，也不从治理请求或其结果推断
   lifecycle decision。
@@ -362,6 +386,10 @@ WSS 出站连接和独立的 loopback upstream server 是
 当前设计方向，不预先锁定具体消息编码或接口细节。事件格式与迁移、交互顺序
 与确认、运行时协议与 Copilot 实际能力分别在对应前置 idea 中细化，不在本项
 重复作出独立定义。
+
+实施计划还须将现有 Agent compatibility classes 映射到新函数边界，明确 daemon
+子命令的 lazy-load、foundation 模块拆分和 package surface；不得以移动旧 class
+到新目录冒充架构对齐。
 
 治理操作结果、权限与 registry 控制接口、device governance/idea 交接、idea
 分段轮转原子性与 checkpoint/cursor 一致性，以及 governance Agent session 换代
@@ -387,6 +415,9 @@ lifecycle interpreter。
 - TBD：设备控制项目 scaffold、private remote 创建或接入、可信 bootstrap、
   secret recovery、owner fencing 与定期恢复演练的具体接口；自定义 `--root`
   下的隔离项目不得接触真实设备 HQ。
-- TBD：project runtime 如何通过非 replay 生产接口读取已定 prefix/cursor。
+- TBD：HEADQUARTER runtime 调用哪些现有/新增 business functions 取得 projection、
+  prefix delta 与 expected-head append，并让 `ProjectRuntime` wrapper 保持兼容。
+- TBD：现有 URL-hash registry 与稳定 projectKey 模型之间的兼容读取、显式迁移或
+  非兼容升级边界；不得静默把 hash 当作 projectKey。
 - TBD：Agent SDK session 的持久恢复、requestId receipt 与 unknown delivery 衔接。
 - TBD：权限边界、协议能力协商与投递观察证据。

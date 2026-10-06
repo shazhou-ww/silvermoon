@@ -24,6 +24,11 @@ CLI 启动 loopback upstream server，daemon 连接它，使用与远端相同�
 object format。治理 session 由 Agent SDK 持久化，不设治理流 HEAD。sequence 是事件位置，
 不是 HEAD。上游附带的 expectedHead 是前态约束，stale 时不得被 daemon 替换。
 
+图中的 Silvermoon participant 是同一 HEADQUARTER process 内的 business runtime
+边界，不是 managed repository 的 `node_modules/silvermoon` 或 CLI 子进程。
+应用入口、业务函数、基础模块和现有兼容 wrapper 的物理归属见
+[Refactored-architecture.md](./Refactored-architecture.md)。
+
 ```mermaid
 sequenceDiagram
     autonumber
@@ -207,8 +212,10 @@ sequenceDiagram
 - [project-agent-runtime](../../../../01M3SK3CGZF47A36D2GWN8BFPC/outer/inner/Implementation.md)
   已提供项目执行边界、准确前态交互追加，以及按 `projectUrl + ideaId` 定位项目
   和 worktree 的注册表。既有 `ProjectRuntime.replay` 是前置实现的接口，不是
-  本图认可的 daemon 生产接口；生产整合须补足权威 projection/head、增量 cursor
-  与结构化冲突协调能力。图中的操作名和新回执字段都是目标协议，并非已交付能力。
+  本图认可的 daemon 生产接口；其 current implementation 仍解析项目自带 CLI 并
+  启动子进程。生产整合须改为 HEADQUARTER business use cases，补足权威
+  projection/head、增量 cursor 与结构化冲突协调能力。图中的操作名和新回执字段
+  都是目标协议，并非已交付能力。
 - 同一前置 idea 已提供 `AgentAdapter.start/observe/send/events`。投递观察区分
   `queued`、`delivered`、`processed` 和 `unknown`，但只有 SDK 明确证据才可报告；
   `unknown` 不会授权适配器暗中重试。
@@ -229,3 +236,5 @@ sequenceDiagram
 - `event replay` 的开发、历史验证、受控人工恢复和内部 reducer/projector
   使用边界见 [Replay-boundary.md](./Replay-boundary.md)。daemon 生产路径不调用
   它，Silvermoon 内部不通过 CLI 子进程调用自己。
+- 已交付重构删除 internal/segmented migration 工具，只保留独立 v1→v2 外部迁移
+  入口。v1 project 不进入本图的 idea 事件循环；迁移完成并重新观察后才可调度。

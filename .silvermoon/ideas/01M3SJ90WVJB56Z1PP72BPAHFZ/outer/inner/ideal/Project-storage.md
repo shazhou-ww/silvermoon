@@ -67,6 +67,12 @@ requestId 去重和投递回执等最小运行状态；不保存治理消息历�
 managed project 的治理事实由设备控制项目的持久 Agent session 提供，不复制到各
 managed project 的 Git primary。
 
+现有 `LocalProjectRegistry` 将 URL hash 用作持久路径并同时承担项目登记、worktree、
+session binding 和 route lock，只是前置兼容表面。实施按
+[Refactored-architecture.md](./Refactored-architecture.md) 将这些变化原因拆成
+foundation modules；稳定随机 projectKey 继续作为权威本机身份，不能把既有 hash
+重命名为 projectKey。兼容存量 entry 的方式必须显式验证或迁移。
+
 在 idea worktree 内，项目 Silvermoon 的规范状态目录为
 `.silvermoon/ideas/<ideaId>/events/`，下含按规范 ordinal 命名的 JSONL segment，
 每段最多 1000 个事件。idea 流 HEAD 是该 `events/` folder 的完整 Git tree digest

@@ -18,6 +18,12 @@ node bin/silvermoon.js daemon [--root <path>]
 连接使用同一 WebSocket 应用协议；仅显式的 loopback endpoint 允许 `ws://`，
 其他地址必须使用 `wss://`。
 
+按照已交付源码分层，`bin/silvermoon.js` 仍是完整用户应用入口；只有选择 daemon
+子命令后才动态加载 daemon business、Copilot SDK、WebSocket 和运行状态能力。
+普通命令和根 package import 不得 eager-load 这些长寿命依赖。独立 loopback
+upstream server 是另一个进程入口，放在自己的 `bin/` 文件中，不作为 daemon mode
+或 `src/application/` launcher。
+
 CLI 不提供 `replay` 参数，也不在投递前调用 `event replay`；
 相关边界见 [Replay-boundary.md](./Replay-boundary.md)。
 
