@@ -90,10 +90,14 @@ allowlist 或额外逐 repo 批准。仍须核验 URL、目录占用、项目身
   不改变进程 cwd、不解析 repo 中的 Silvermoon executable、不启动 replay CLI。
   下游 CLI/工具使用同一设备版本和规则；诊断 replay 不变成独立生产 loop。
   Silvermoon 源码 checkout 的自身运行时保护保持明确。
-- 项目配置、contracts 与 lifecycle events 在所属 repo 中保持权威。V2 idea
+- 项目配置、contracts 与 lifecycle events 在所属 repo 中保持权威。当前 V2 基线
   使用分段 `events/`，每段最多 1000 条、单事件最多 1 MiB；HEAD/cursor 绑定
   准确逻辑字节长度与规范 folder Git tree OID，遵循 SHA-1/SHA-256 object format。
   sequence、Git commit、world revision 和事件 HEAD 不能互相代用。
+- 事件模型本来就是 daemon 的前置能力，本期允许同时设计其 Merkle DAG 演进，
+  不要求为了复用旧接口而延后。上述 V2 布局是已实现基线，不是新模型的固定
+  目标。新 schema、upstream/downstream 因果链、归约、HEAD/cursor、存储粒度、
+  Git 并发与显式迁移须先收敛/review，再实施；本次不自动迁移既有事件。
 - 每个 repo 的日常对话由 SDK 持久 general session 承载，不建立独立 general
   session lifecycle event stream，不将 transcript 或完整执行日志复制进 Git。
 

@@ -22,6 +22,7 @@
 | binary/skill | 设备统一安装，daemon 在 device-hq 工作区组织管理、下游 Agent 执行；不要求安装在 HQ repo 或由 managed repo 各自安装 |
 | schema | 推荐最新；历史 schema 可识别、诊断、迁移；完整读写范围明确，不静默升级 |
 | 状态权威 | repo contracts/events 仍权威，daemon 不建立第二套生命周期状态机 |
+| 事件演进范围 | 允许现在随 daemon 设计演进 idea events 的 Merkle DAG，不要求另行延后；具体新模型/存储/迁移仍须 review |
 | Session | 每 repo 一个长期、不绑定 idea 的 general session，另有独立 idea sessions；HQ 相同 |
 | 日常路由 | project 选择目标 repo general session；device 选择 HQ general session，不集中承载所有项目 |
 | 上游连接 | daemon 主动 WebSocket 连接；远端 WSS，本地 loopback 独立服务 |
@@ -72,6 +73,7 @@ SDK 持久关联、确认边界、receipt 保留与动作身份稳定性仍须�
 | 下游协议 | 共用 envelope 编码、SDK 可验证因果输出、session/代次、工具 root/skill、unknown 协调 |
 | Loop | 继续/等待/阻塞/无动作、唤醒、投递去重、背压与公平性 |
 | 新 API | 旧新对照、结构化结果、schema capability、持久格式调整与声明/subpath |
+| Idea event DAG | upstream/downstream 角色因果链、确定性归约/冲突、frontier/cursor、单事件文件或分段、Git 合并与显式迁移 |
 
 这些是技术收敛和 review 工作，不重新打开上述产品方向。SDK 若无法满足要求，
 先提供证据和具体取舍，再请求新决定；不让用户提前为假设性缺口作选择。
