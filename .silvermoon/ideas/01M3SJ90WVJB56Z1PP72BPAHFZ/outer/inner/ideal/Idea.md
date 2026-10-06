@@ -157,9 +157,11 @@ daemon 配置与用户语言配置分离，配置变更通过重启生效。凭�
 Agent 业务协议现在统一为 [Merkle DAG 消息候选](./Message-encoding.md)，不再
 区分 request/response/notification 外层；sender 为 silvermoon/agent，具体双方
 身份从 channel binding 取得。上下游共用编码，但因果历史按 channel 隔离。
-body 当前为 `{ content: string }`，仅承载 Agent 对话文本，不承载 RPC
-operation/params/result、事件订阅或追加回执；未来可在 body 增加附件字段，
-本期只预留扩展位置。
+body 是互斥 union：普通 `{ type: "message", content: string }`，或复用验收
+event input 的 acceptIdeal/acceptInner/acceptOuter type/payload。只有普通
+消息含 content 并预留未来附件字段；验收引用准确评审消息并携带对应 world
+revision，不等于事件已记录。不承载 RPC operation/params/result、事件订阅
+或追加回执。
 
 ## 3. 下游协议
 

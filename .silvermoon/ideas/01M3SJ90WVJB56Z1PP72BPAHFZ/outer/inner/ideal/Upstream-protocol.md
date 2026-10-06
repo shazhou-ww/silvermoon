@@ -39,8 +39,8 @@ HTTPS URL，不是本机路径。未知 repo 接入意图在 device channel 表�
 
 ## Agent 消息内容
 
-当前 body 是 `{ content: string }`，body.content 为非空对话文本，不是命令
-object。body 为未来附件预留字段位置。例如：
+普通 body 是 `{ type: "message", content: string }`，正文为非空文本，不是命令
+object。只有普通消息有 content，body 为未来附件预留字段位置。例如：
 
 ```json
 {
@@ -49,17 +49,35 @@ object。body 为未来附件预留字段位置。例如：
   "sender": "agent",
   "refs": { "after": null, "inputs": [] },
   "body": {
+    "type": "message",
     "content": "请接入 https://github.com/example/project.git，并检查项目状态。"
   }
 }
 ```
 
 该 envelope 在实际发送前规范编码并计算外层 id。结果、工作指令、错误和求助
-同样是文本，使用 after/inputs 表示因果依据；不要求一条输入对应一条回复，
+同样是普通文本消息，使用 after/inputs 表示因果依据；不要求一条输入对应一条回复，
 也不新增 structured operation.result/action.result 的网络分类。
 
 未来多模态可在 body 新增附件字段，不是本期能力；本期拒绝未定义附件字段，
 也不接受旧的 envelope 顶层 content 或裸字符串 body。
+
+### 明确批准/验收
+
+取得人类对准确契约候选的决定后，上游 Agent 发出没有 content 的验收 body：
+
+```json
+{
+  "type": "acceptIdeal",
+  "payload": { "idealRevision": "准确的 ideal revision" }
+}
+```
+
+acceptInner/acceptOuter 分别使用 implementationRevision/deploymentRevision。
+普通消息与验收不能混合字段，后者不附 content、decision 或持久 sequence。
+envelope.refs.inputs 为 `[reviewMessageId]`，关联准确契约的 Silvermoon 评审消息；
+revision 还须与本机保存的该消息/idea/world/primary 绑定一致。
+该消息的传达与项目事件追加是两个步骤，成功校验并追加前不能声称验收已记录。
 
 ## 因果依据与项目事实
 
@@ -68,10 +86,11 @@ refs.inputs 表示实际纳入判断的对端消息，不证明任务全完成�
 channelId/messageId 与实际副作用。unknown 或缺 receipt 不证明未执行，
 先观察而不盲目重发。
 
-上游消息不是 event append RPC，不能将正文中说“批准”自动当作人类决定。
+普通上游消息不是 event append RPC，不能将正文中说“批准”自动当作人类决定。
 Silvermoon 的本机受控流程记录适当 idea ping，并保存准确事件前态、消息与动作
-关联；明确决定仍须证明人类授权、准确 world revision、primary 和 expectedHead。
-这些写入参数不放进通用 Agent body，具体授权证据与消息映射须协议 review。
+关联。验收消息复用对应 event input 的 type/payload，不记录为普通 ping；
+仍须核验上游角色、明确人类授权、准确评审消息/world revision、primary 和
+expectedHead。这些额外写入依据由本机控制层保留，不添加到普通消息正文。
 
 项目 cursor、snapshot、delta 与追加回执是无状态 Silvermoon 的本机数据，
 不是对上游 Agent 的专用事件订阅协议。daemon 用这些事实决定何时生成对话消息，

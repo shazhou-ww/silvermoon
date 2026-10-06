@@ -9,12 +9,23 @@
 
 所有 Agent 业务交互使用 `{ id, envelope }`，不在传输外层区分 request、
 response、notification，也不定义 hello/welcome 或独立 protocol-error 消息。
-body 是正文与未来附件的字段扩展容器，当前形状为 `{ content: string }`。
-body.content 是非空 Agent 对话文本，可以自然表达意图、指令、
-结果、证据、求助或错误，不带 operation/params/result 等 RPC 分类字段。
+body 按 type 区分普通消息与明确的验收决定，二者互斥：
+
+| type | 必需内容 | 禁止内容 |
+| --- | --- | --- |
+| message | 非空 content 文本 | 决定 payload |
+| acceptIdeal | payload.idealRevision | content、sequence |
+| acceptInner | payload.implementationRevision | content、sequence |
+| acceptOuter | payload.deploymentRevision | content、sequence |
+
+普通消息 `{ type: "message", content: string }` 可以自然表达意图、指令、结果、
+证据、求助或错误，不带 operation/params/result 等 RPC 分类字段。
+验收消息复用既有对应 event input 的 type/payload，不将决定作为普通 content
+的可选附加字段。本次仅定义上述三个验收类型，abandon/resume 等仍是本机受控
+能力，不自动扩展为网络 body。
 role 由 sender/channel 决定，正文不重复 upstream/downstream 或 SDK role。
 
-未来可在 body 增加附件字段支持图片/音频等多模态内容；本期只预留这个扩展位置，
+未来可在普通 message 的 body 增加附件字段支持图片/音频等多模态内容；本期只预留这个扩展位置，
 不定义附件、URL、base64 或工具调用格式。届时须定义编码、媒体身份与 hash
 覆盖边界，不将浮动外部 URL
 自动当作已验证内容；不能未经版本 review 改变现有 ID 的含义。
@@ -80,6 +91,26 @@ inputs 不替代 idea expectedHead、world revisions 或 primary。消息 hash �
 内容身份，不证明 delivered、processed、副作用完成或 exactly-once。SDK send
 回执仍是本地投递观察，不包装成 Agent 业务回复或生命周期验收。
 
+## 验收消息与事件记录
+
+验收 envelope 的 refs.inputs 必须是 `[reviewMessageId]`，指向同 idea channel
+中 Silvermoon 发给上游的准确契约评审消息。after 仍指向 Agent 自身前条消息，
+不代替被批准对象。该评审消息的 hash 与本机评审绑定必须共同核验：绑定记录
+idea 身份、world、准确 world revision、已同步的 primary commit 与评审依据。
+
+body.payload 的 revision 必须与该 reviewMessageId 绑定的契约一致，不只批准
+一句文本，也不根据当前最新版本替换用户批准的候选。缺失评审绑定、错 channel、
+错 world/revision、无明确人类决定或过时前态时明确交还，不推断或改写决定。
+
+验收只能由已绑定为上游的 Agent 在取得明确人类决定后发送；sender:agent 本身
+不能证明授权，也不能让下游以相同编码代替人类验收。普通 message 中说“好”
+或“已完成”不生成 acceptIdeal/acceptInner/acceptOuter。
+
+消息的 type/payload 是“用户已作出准确决定”的表达，不是已落盘的事件。验证
+权限、revision、primary 和准确事件前态后才通过受控接口追加，成功后项目流才
+有该验收事实。消息 ID 不替代 world revision，body 不携带持久 sequence。
+重投要检查消息与事件是否已存在，不重复追加；并发时不换新候选重放旧决定。
+
 事件 HEAD、actionId、schema capability、追加回执和投递状态属于 Silvermoon
-本机控制与项目操作类型，不塞入 Agent body。Agent 正文可以描述结果与证据，
-但不能因正文说“完成”就自动记录验收；准确决定与前态必须由受控流程验证。
+本机控制与项目操作类型，不塞入普通 Agent body。验收 body 只携带对应
+world revision 的标准 payload；写入前态和授权仍由受控流程验证。

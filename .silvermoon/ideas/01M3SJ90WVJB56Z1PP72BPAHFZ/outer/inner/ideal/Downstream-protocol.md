@@ -25,7 +25,7 @@ AgentMessage 与 WssMessage 使用相同 `{ id, envelope }`。上游、下游 ch
 上游 message，不让 Agent 理解 upstream/downstream 接线角色。
 
 下游自主执行 instruction，可调用无状态 CLI 查询/校验/受控操作，但不查询并
-领取下一轮任务。消息 body 当前为 `{ content: string }`，不要求 Agent 返回
+领取下一轮任务。普通消息 body 为 `{ type: "message", content: string }`，不要求 Agent 返回
 action.result object。指令、执行结果、证据、阻塞与求助均通过 body.content 文本
 表达，body 预留未来附件字段，但本期不定义多模态内容。
 
@@ -37,6 +37,11 @@ Agent 用正文报告当前工作结果、未完成或不确定，不要求 comp
 unknown 枚举。general 日常回复不写 idea pong；idea 正式回复由 daemon 委托
 Silvermoon 受控追加，stale 交还而不改 HEAD 重试。追加回执与投递状态由本机
 记录，不能据正文的成功描述自动批准/验收，也不新增“输入已处理”的生命周期事件。
+
+共用编码同时定义 acceptIdeal/acceptInner/acceptOuter 的标准 type/payload，
+与普通 content 互斥；它们只可在已授权的上游 channel 取得明确人类决定后使用。
+下游不会因为也叫 sender:agent 就获得验收权限；下游完成报告仍为普通 message，
+不允许自行构造验收 body 或由 adapter 把“做完了”转换成接受事件。
 
 SDK callback/工具活动与 send 回执是本地观察，不伪造 Agent message。queued
 不等于 consumed，session idle 不证明动作完成；不能替 Agent 填写其未观察的

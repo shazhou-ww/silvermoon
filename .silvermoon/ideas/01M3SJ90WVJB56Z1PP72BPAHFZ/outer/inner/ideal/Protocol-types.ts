@@ -28,9 +28,15 @@ export interface ChannelBinding {
   readonly connectionRole: "upstream" | "downstream";
 }
 
-export interface MessageBody {
+export interface TextMessageBody {
+  readonly type: "message";
   readonly content: string;
+  readonly payload?: never;
 }
+export type AcceptanceMessageBody =
+  Extract<HumanDecision, { type: "acceptIdeal" | "acceptInner" | "acceptOuter" }>
+  & { readonly content?: never; readonly sequence?: never };
+export type MessageBody = TextMessageBody | AcceptanceMessageBody;
 export interface MessageEnvelope {
   readonly version: ProtocolVersion;
   readonly channelId: ChannelId;
@@ -46,7 +52,7 @@ export interface Message {
   readonly envelope: MessageEnvelope;
 }
 
-// body 为未来附件预留字段扩展位置；本期只定义文本 content。
+// 普通 message 的 body 为未来附件预留位置；验收 body 复用对应事件输入形状。
 export type WssMessage = Message;
 export type AgentMessage = Message;
 

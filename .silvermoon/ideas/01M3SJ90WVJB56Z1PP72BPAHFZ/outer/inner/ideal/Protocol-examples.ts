@@ -1,6 +1,6 @@
 import type {
   AgentMessage, ChannelBinding, GeneralRoute, IdeaAction, IdeaEvent, IdeaRoute,
-  MessageEnvelope, MessageBody, NextStep, Sender,
+  AcceptanceMessageBody, MessageEnvelope, MessageBody, NextStep, Sender,
   WssSubprotocol,
 } from "./Protocol-types.js";
 
@@ -19,7 +19,7 @@ export const selectedSubprotocol = "silvermoon.v1" satisfies WssSubprotocol;
 export const inputEnvelope = {
   version: 1, channelId: channel.channelId, sender: "agent",
   refs: { after: null, inputs: [] },
-  body: { content: "继续当前工作。" },
+  body: { type: "message", content: "继续当前工作。" },
 } satisfies MessageEnvelope;
 export const action = {
   kind: "idea", actionId: "action-1", route: ideaRoute,
@@ -33,13 +33,25 @@ export function resultEnvelope(inputId: string, previousId: string | null): Mess
   return {
     version: 1, channelId: channel.channelId, sender: "silvermoon",
     refs: { after: previousId, inputs: [inputId] },
-    body: { content: "项目暂不可用，需要先检查仓库访问情况。" },
+    body: { type: "message", content: "项目暂不可用，需要先检查仓库访问情况。" },
   };
 }
 export function downstreamEnvelope(channelId: string): MessageEnvelope {
   return {
     version: 1, channelId, sender: "silvermoon",
-    refs: { after: null, inputs: [] }, body: { content: action.instruction },
+    refs: { after: null, inputs: [] }, body: { type: "message", content: action.instruction },
+  };
+}
+export const acceptanceBodies = [
+  { type: "acceptIdeal", payload: { idealRevision: oid } },
+  { type: "acceptInner", payload: { implementationRevision: oid } },
+  { type: "acceptOuter", payload: { deploymentRevision: oid } },
+] satisfies readonly AcceptanceMessageBody[];
+export function acceptanceEnvelope(reviewId: string, previousId: string | null): MessageEnvelope {
+  return {
+    version: 1, channelId: channel.channelId, sender: "agent",
+    refs: { after: previousId, inputs: [reviewId] },
+    body: acceptanceBodies[0],
   };
 }
 export const eventExamples = [
@@ -56,10 +68,25 @@ export const eventExamples = [
 
 // RPC object 不是 Agent 对话正文。
 // @ts-expect-error
-export const invalidRpcBody: MessageBody = { content: { type: "input", operation: "general.submit", params: { message: "检查状态。" } } };
+export const invalidRpcBody: MessageBody = { type: "message", content: { type: "input", operation: "general.submit", params: { message: "检查状态。" } } };
 // 本期未定义多模态附件类型。
 // @ts-expect-error
-export const invalidAttachmentBody: MessageBody = { content: "图片说明。", attachments: [{ type: "image", url: "https://example.com/image.png" }] };
+export const invalidAttachmentBody: MessageBody = { type: "message", content: "图片说明。", attachments: [{ type: "image", url: "https://example.com/image.png" }] };
+// 验收与文本互斥，不能在同一 body 中并存。
+// @ts-expect-error
+export const invalidMixedAcceptance: MessageBody = { type: "acceptIdeal", payload: { idealRevision: oid }, content: "批准。" };
+// 普通消息不能附带决定 payload。
+// @ts-expect-error
+export const invalidMixedText: MessageBody = { type: "message", content: "批准。", payload: { idealRevision: oid } };
+// 决定类型与 revision 字段必须匹配。
+// @ts-expect-error
+export const invalidRevisionField: MessageBody = { type: "acceptIdeal", payload: { implementationRevision: oid } };
+// 验收消息不是持久事件，不携带事件序号。
+// @ts-expect-error
+export const invalidEventBody: MessageBody = { type: "acceptIdeal", payload: { idealRevision: oid }, sequence: 1 };
+// 不接受缺少 type 的旧文本格式。
+// @ts-expect-error
+export const invalidUntypedBody: MessageBody = { content: "旧格式。" };
 // envelope 正文必须放在 body，不使用旧的顶层 content。
 // @ts-expect-error
 export const invalidFlatEnvelope: MessageEnvelope = { version: 1, channelId: channel.channelId, sender: "agent", refs: { after: null, inputs: [] }, content: "旧格式。" };
