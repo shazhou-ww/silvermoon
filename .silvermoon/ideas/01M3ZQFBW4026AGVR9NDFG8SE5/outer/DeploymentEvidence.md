@@ -80,3 +80,10 @@ ERROR usage: Use event replay|append <idea>; append requires --input.
 查询或修改 registry、生成 registry provenance，也没有声明生产环境已更新。
 5 个真实 Copilot 用例因缺少外部运行条件按既有条件跳过；其本地 adapter 与
 project runtime 集成测试已通过。
+
+## 同步与验收准备
+
+部署证据提交 `387cbc8a28e93038b1a48aaead9ad2130c67cd82` 已通过普通非强制
+push 同步 `origin/main`；刷新后确认 primary 包含该提交。Deployment World 与
+ledger 的 worktree、staged metadata 检查均通过。最终准确 deploymentRevision
+以本收尾提交同步 primary 后的最新 `whats-next` 为准。
