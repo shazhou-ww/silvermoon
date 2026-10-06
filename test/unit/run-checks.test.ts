@@ -32,7 +32,7 @@ test("selects exact scenario sets without changing release compatibility", async
   ]);
   assert.ok(CHECK_SCRIPTS.includes("check:pure"));
   assert.deepEqual(selectChecks(["--tier", "commit"]), [
-    "check:sanity", "test:contract", "lint:markdown", "check:skills:local",
+    "check:sanity", "test:contract:built", "lint:markdown", "check:skills:local",
     "test:smoke", "check:staged", "check:diff",
   ]);
   assert.equal(CHECK_TIERS.release, CHECK_SCRIPTS);

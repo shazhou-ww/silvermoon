@@ -11,8 +11,8 @@ const workflowUrl = new URL("../../.github/workflows/ci.yml", import.meta.url);
 const suites = {
   unit: "test:unit",
   runtime: "test:unit",
-  contract: "test:contract",
-  integration: "test:integration",
+  contract: "test:contract:built",
+  integration: "test:integration:built",
   e2e: "test:e2e:built",
 };
 
@@ -97,7 +97,7 @@ test("runs fast layered validation in ordinary CI", async () => {
     "lint:markdown",
     "check:pure",
     "check:quick",
-    "test:integration",
+    "test:integration:built",
     "pack:check:built",
     "test:e2e:built",
     "check:skills",

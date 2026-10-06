@@ -9,7 +9,7 @@ export const CHECK_SCRIPTS = Object.freeze([
   "lint:markdown",
   "check:pure",
   "check:quick",
-  "test:integration",
+  "test:integration:built",
   "pack:check:built",
   "test:e2e:built",
   "check:skills",
@@ -19,7 +19,7 @@ export const CHECK_TIERS = Object.freeze({
   sanity: Object.freeze(["typecheck", "build", "check:syntax", "check:pure", "test:sanity"]),
   commit: Object.freeze([
     "check:sanity",
-    "test:contract",
+    "test:contract:built",
     "lint:markdown",
     "check:skills:local",
     "test:smoke",
