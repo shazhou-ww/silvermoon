@@ -24,14 +24,14 @@
 
 ### Deployment steps
 
-- [ ] **D-S01:** 固化并同步部署验证契约
-- [ ] **D-S02:** 执行跨平台主分支 CI
-- [ ] **D-S03:** 验证 primary 历史与远端 Silvermoon 状态
-- [ ] **D-S04:** 汇总部署证据并同步
+- [x] **D-S01:** 固化并同步部署验证契约
+- [x] **D-S02:** 执行跨平台主分支 CI
+- [x] **D-S03:** 验证 primary 历史与远端 Silvermoon 状态
+- [x] **D-S04:** 汇总部署证据并同步
 
 ### Deployment acceptance criteria
 
-- [ ] **D-AC01:** 主分支 CI 在全部目标环境通过
-- [ ] **D-AC02:** 安装包可在真实隔离环境消费
-- [ ] **D-AC03:** Primary 候选与 Silvermoon 历史有效
-- [ ] **D-AC04:** 部署边界无未授权发布
+- [x] **D-AC01:** 主分支 CI 在全部目标环境通过
+- [x] **D-AC02:** 安装包可在真实隔离环境消费
+- [x] **D-AC03:** Primary 候选与 Silvermoon 历史有效
+- [x] **D-AC04:** 部署边界无未授权发布
