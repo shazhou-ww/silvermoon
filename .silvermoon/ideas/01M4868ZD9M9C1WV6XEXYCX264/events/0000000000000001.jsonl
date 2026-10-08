@@ -1,1 +1,2 @@
 {"sequence":1,"type":"setAlias","payload":{"alias":"idea-event-merkle-dag"}}
+{"sequence":2,"type":"abandon"}
