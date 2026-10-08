@@ -26,6 +26,7 @@ type TransactionPlan = {
   host: string;
   files: EncodedTransactionFile[];
   directories?: string[];
+  removeDirectories?: string[];
   context?: unknown;
 };
 type TransactionOptions = {
@@ -34,6 +35,7 @@ type TransactionOptions = {
   validateApplied?: () => void | Promise<void>;
   context?: unknown;
   directories?: string[];
+  removeDirectories?: string[];
 };
 type RecoveryOptions = {
   rollback?: boolean;
@@ -117,6 +119,20 @@ function equal(left: NonSharedBuffer|null, right: NonSharedBuffer|null) {
   return left === null || right === null ? left === right : left.equals(right);
 }
 
+function validateDirectories(value: unknown, label: string) {
+  if (value === undefined) return undefined;
+  if (!Array.isArray(value)
+    || !value.every((directory): directory is string => typeof directory === "string")
+    || new Set(value).size !== value.length
+    || value.some((path) => {
+      const match = /^\.silvermoon\/ideas\/([^/]+)\/events$/.exec(path);
+      return !match || match[1] === undefined || !isValidUlid(match[1]);
+    })) {
+    throw new Error(`Unsafe transaction ${label}.`);
+  }
+  return value;
+}
+
 function validatePlan(value: unknown): TransactionPlan {
   if (typeof value !== "object" || value === null
     || !("kind" in value) || (value.kind !== "events" && value.kind !== "migration")
@@ -126,14 +142,17 @@ function validatePlan(value: unknown): TransactionPlan {
     || !("host" in value) || typeof value.host !== "string") {
     throw new Error("Invalid state transaction plan; preserve it for manual recovery.");
   }
-  const directories = "directories" in value ? value.directories : undefined;
-  if (directories !== undefined && (!Array.isArray(directories)
-    || !directories.every((directory): directory is string => typeof directory === "string")
-    || new Set(directories).size !== directories.length
-    || directories.some((path) => {
-      const match = /^\.silvermoon\/ideas\/([^/]+)\/events$/.exec(path);
-      return !match || match[1] === undefined || !isValidUlid(match[1]);
-    }))) throw new Error("Unsafe transaction directories.");
+  const directories = validateDirectories(
+    "directories" in value ? value.directories : undefined,
+    "directories",
+  );
+  const removeDirectories = validateDirectories(
+    "removeDirectories" in value ? value.removeDirectories : undefined,
+    "removed directories",
+  );
+  if (directories?.some((directory) => removeDirectories?.includes(directory))) {
+    throw new Error("Transaction cannot create and remove the same directory.");
+  }
   const paths = new Set<string>();
   const files: EncodedTransactionFile[] = [];
   for (const candidate of value.files) {
@@ -159,6 +178,7 @@ function validatePlan(value: unknown): TransactionPlan {
     host: value.host,
     files,
     ...(directories === undefined ? {} : { directories }),
+    ...(removeDirectories === undefined ? {} : { removeDirectories }),
     ...("context" in value ? { context: value.context } : {}),
   };
 }
@@ -169,7 +189,11 @@ async function applyPlan(
   rollback: boolean,
   afterStep?: (step: string) => void | Promise<void>,
 ) {
-  for (const directory of plan.directories ?? []) {
+  const managedDirectories = [
+    ...(plan.directories ?? []),
+    ...(plan.removeDirectories ?? []),
+  ];
+  for (const directory of managedDirectories) {
     await checkParents(root, directory);
     const path = resolve(root, directory);
     try { await mkdir(path); }
@@ -232,6 +256,11 @@ async function applyPlan(
       await rmdir(resolve(root, directory));
       await syncDirectory(dirname(resolve(root, directory)));
     }
+  } else {
+    for (const directory of [...(plan.removeDirectories ?? [])].reverse()) {
+      await rmdir(resolve(root, directory));
+      await syncDirectory(dirname(resolve(root, directory)));
+    }
   }
 }
 
@@ -245,12 +274,13 @@ async function finish(root: string, expectedPlan: Uint8Array<ArrayBufferLike>|No
 }
 
 export async function stateTransaction(root: string, kind: TransactionPlan["kind"], files: TransactionFile[], {
-  afterStep, validate, validateApplied, context, directories = [],
+  afterStep, validate, validateApplied, context, directories = [], removeDirectories = [],
 }: TransactionOptions = {}) {
   const path = resolve(root, TRANSACTION_PATH);
   const plan = {
     kind, pid: process.pid, host: hostname(),
     ...(directories.length ? { directories } : {}),
+    ...(removeDirectories.length ? { removeDirectories } : {}),
     ...(context === undefined ? {} : { context }),
     files: files.map(({ path, before, after }) => ({
       path, before: before === null ? null : Buffer.from(before).toString("base64"),
@@ -260,7 +290,12 @@ export async function stateTransaction(root: string, kind: TransactionPlan["kind
   const validatedPlan = validatePlan(plan);
   await checkParents(root, ".silvermoon/config.yaml");
   for (const file of plan.files) {
-    await checkParents(root, directories.includes(dirname(file.path)) ? dirname(file.path) : file.path);
+    await checkParents(
+      root,
+      [...directories, ...removeDirectories].includes(dirname(file.path))
+        ? dirname(file.path)
+        : file.path,
+    );
     if (await regularBytes(resolve(root, `${file.path}.pending`)) !== null) {
       throw new Error(`Existing pending file at ${file.path}; preserve it and recover its original transaction.`);
     }
@@ -271,6 +306,12 @@ export async function stateTransaction(root: string, kind: TransactionPlan["kind
       throw new Error(`Existing migration destination: ${directory}`);
     } catch (cause) {
       if (!hasErrorCode(cause, "ENOENT")) throw cause;
+    }
+  }
+  for (const directory of removeDirectories) {
+    const info = await lstat(resolve(root, directory));
+    if (!info.isDirectory() || info.isSymbolicLink()) {
+      throw new Error(`Irregular migration source directory: ${directory}`);
     }
   }
   const prepared = `${path}.${randomUUID()}.prepared`;
@@ -286,7 +327,12 @@ export async function stateTransaction(root: string, kind: TransactionPlan["kind
     await syncDirectory(dirname(path));
     // Before taking any effect the entire source must still equal the requested old state.
     for (const file of plan.files) {
-      await checkParents(root, directories.includes(dirname(file.path)) ? dirname(file.path) : file.path);
+      await checkParents(
+        root,
+        [...directories, ...removeDirectories].includes(dirname(file.path))
+          ? dirname(file.path)
+          : file.path,
+      );
       if (!equal(await regularBytes(resolve(root, file.path)), decode(file.before))) {
         throw new Error(`Stale transaction source: ${file.path}`);
       }

@@ -366,7 +366,17 @@ function transition(
   const wasSegmented = base.entries.some(({ name }) => name === directory);
   const isSegmented = candidate.entries.some(({ name }) => name === directory);
   if (wasSegmented && !isSegmented) {
-    throw new Error(`${id}: segmented events cannot return to a single-file log`);
+    if (!base.sourceProject || !candidate.sourceProject || !previous.equals(next)
+      || base.ids.length !== candidate.ids.length) {
+      throw new Error(
+        `${id}: source-only single-file migration must preserve the complete inventory and exact event bytes`,
+      );
+    }
+    const result = replayIdeaEvents(id, parseIdeaEvents(next, candidateOptions), candidateOptions);
+    if (!result.ok || !("state" in result)) {
+      throw new Error(`${id}: cannot migrate an invalid segmented event stream`);
+    }
+    return { id, mode: "migration-single-file", candidate: result };
   }
   if (!wasSegmented && isSegmented) {
     if (!base.sourceProject || !candidate.sourceProject || !previous.equals(next)
