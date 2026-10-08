@@ -19,7 +19,7 @@ import {
   runGit,
 } from "../git/index.ts";
 import { CONFIG_PATH, IDEAS_ROOT, ideaPaths } from "../coordinates/index.ts";
-import { EventStream, isEventAuxiliary, snapshotEventPrefix } from "../event-store/index.ts";
+import { snapshotEventPrefix, validateEventRecordSizes } from "../event-store/index.ts";
 import { createGitSnapshotFileSystem } from "../snapshot/index.ts";
 import { projectEventSnapshot, ProjectedReductionError } from "../projection-cache/index.ts";
 
@@ -200,8 +200,7 @@ async function snapshot(
   const stateObjects = entries
     .filter(({ name, object, type }) =>
       type === "blob"
-      && (name.endsWith(`/${stateFile}`)
-        || (config.version === 2 && /\/events\/[0-9]{16}\.jsonl$/.test(name)))
+      && name.endsWith(`/${stateFile}`)
       && !overrides?.has(name)
       && !stateBlobs.has(object))
     .map(({ object }) => object);
@@ -262,52 +261,25 @@ export async function detectEventFormat({
 
 function source(root: string, state: SnapshotState, id: string, name: string): Buffer {
   const paths = ideaPaths(id);
-  if (name === "events.jsonl") {
-    const override = state.overrides?.get(paths.eventsDirectory);
-    if (override !== undefined) return requireBuffer(override, "Historical event folder override");
-    const folder = state.entries.find(({ name: entryName }) =>
-      entryName === paths.eventsDirectory);
-    if (folder) {
-      if (folder.type !== "tree" || folder.mode !== "040000") {
-        throw new Error("Irregular historical event folder.");
-      }
-      if (state.entries.some(({ name: entryName }) =>
-        entryName === paths.legacyEventsPath)) {
-        throw new Error(`${id}: dual event authority in snapshot`);
-      }
-      const children = state.entries.filter(({ name: entryName }) =>
-        entryName.startsWith(`${paths.eventsDirectory}/`));
-      if (children.some(({ type, mode }) =>
-        type !== "blob" || !["100644", "100755"].includes(mode))) {
-        throw new Error("Irregular historical event entry.");
-      }
-      const segments = children.filter(({ name: entryName }) =>
-        !isEventAuxiliary(entryName.slice(paths.eventsDirectory.length + 1)));
-      const segmentEntries = segments.map((entry) => {
-        const bytes = state.blobs.get(entry.object)
-          ?? requireBuffer(readGitBlob(root, entry.object), `Git object ${entry.object}`);
-        return {
-          name: entry.name.slice(paths.eventsDirectory.length + 1),
-          bytes,
-        };
-      });
-      return EventStream.fromSegments(
-        segmentEntries,
-        { objectIdLength: folder.object.length },
-      ).bytes();
-    }
-  }
   const path = `${paths.ideaPath}/${name}`;
   const override = state.overrides?.get(path);
-  if (override !== undefined) return requireBuffer(override, `Historical override ${path}`);
+  if (override !== undefined) {
+    const bytes = requireBuffer(override, `Historical override ${path}`);
+    if (name === "events.jsonl") validateEventRecordSizes(bytes);
+    return bytes;
+  }
   const entry = state.entries.find(({ name: entryName }) => entryName === path);
   if (!entry || entry.type !== "blob" || !["100644", "100755"].includes(entry.mode)) {
     throw new Error(`Historical state file missing or irregular: ${path}`);
   }
   const cached = state.blobs.get(entry.object);
-  if (cached !== undefined) return cached;
+  if (cached !== undefined) {
+    if (name === "events.jsonl") validateEventRecordSizes(cached);
+    return cached;
+  }
   const bytes = requireBuffer(readGitBlob(root, entry.object), `Git object ${entry.object}`);
   state.blobs.set(entry.object, bytes);
+  if (name === "events.jsonl") validateEventRecordSizes(bytes);
   return bytes;
 }
 
@@ -362,35 +334,6 @@ function transition(
     return { id, mode: "migration", candidate: result };
   }
   const previous = source(root, base, id, "events.jsonl");
-  const directory = ideaPaths(id).eventsDirectory;
-  const wasSegmented = base.entries.some(({ name }) => name === directory);
-  const isSegmented = candidate.entries.some(({ name }) => name === directory);
-  if (wasSegmented && !isSegmented) {
-    if (!base.sourceProject || !candidate.sourceProject || !previous.equals(next)
-      || base.ids.length !== candidate.ids.length) {
-      throw new Error(
-        `${id}: source-only single-file migration must preserve the complete inventory and exact event bytes`,
-      );
-    }
-    const result = replayIdeaEvents(id, parseIdeaEvents(next, candidateOptions), candidateOptions);
-    if (!result.ok || !("state" in result)) {
-      throw new Error(`${id}: cannot migrate an invalid segmented event stream`);
-    }
-    return { id, mode: "migration-single-file", candidate: result };
-  }
-  if (!wasSegmented && isSegmented) {
-    if (!base.sourceProject || !candidate.sourceProject || !previous.equals(next)
-      || base.ids.length !== candidate.ids.length) {
-      throw new Error(
-        `${id}: source-only segmentation must preserve the complete inventory and exact event bytes`,
-      );
-    }
-    const result = replayIdeaEvents(id, parseIdeaEvents(next, candidateOptions), candidateOptions);
-    if (!result.ok || !("state" in result)) {
-      throw new Error(`${id}: cannot segment an invalid event stream`);
-    }
-    return { id, mode: "migration-segmented", candidate: result };
-  }
   if (base.format === "legacy" && candidate.format === "final") {
     if (base.ids.length !== candidate.ids.length) {
       throw new Error(
@@ -465,17 +408,6 @@ function noDeletion(base: SnapshotState, candidate: SnapshotState) {
   if (base.version !== null && candidate.version !== null
     && base.version >= 2 && candidate.version < base.version) {
     throw new Error("An event project cannot be downgraded to an earlier version.");
-  }
-  if (base.version === 2 && base.ids.some((id) =>
-    !base.entries.some(({ name }) => name === ideaPaths(id).eventsDirectory))
-    && candidate.ids.some((id) =>
-      candidate.entries.some(({ name }) => name === ideaPaths(id).eventsDirectory))) {
-    if (candidate.ids.length !== base.ids.length || candidate.ids.some((id) =>
-      !candidate.entries.some(({ name }) => name === ideaPaths(id).eventsDirectory))) {
-      throw new Error(
-        "Segmentation boundary must convert every existing idea without changing inventory.",
-      );
-    }
   }
   if (base.format === "legacy" && candidate.format === "final"
     && (base.ids.length !== candidate.ids.length
@@ -617,9 +549,9 @@ export async function inspectProjectedEventHistory({
     throw new Error("Removing an integrated idea is not an event repair.");
   }
   if (previousIds.some((id) =>
-    baseline.snapshotEntry(ideaPaths(id).eventsDirectory)?.type !== "tree")
+    baseline.snapshotEntry(ideaPaths(id).eventsPath)?.type !== "blob")
     || ids.some((id) =>
-      candidate.snapshotEntry(ideaPaths(id).eventsDirectory)?.type !== "tree")) {
+      candidate.snapshotEntry(ideaPaths(id).eventsPath)?.type !== "blob")) {
     return { supported: false, reason: "storage-transition" };
   }
   const options = { objectIdLength: primary.length };

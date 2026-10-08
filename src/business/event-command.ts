@@ -156,7 +156,6 @@ export async function eventCommandUseCase({
       const { tree } = worktreeSnapshot(root, { reuseIndex: incremental || projectedInteraction || projectedMetadata });
       const options = {
         objectIdLength: tree.length,
-        allowSingleFile: config.primaryRepository === "https://github.com/shazhou-ww/silvermoon.git",
       };
       if (incremental) {
         if (
@@ -192,7 +191,7 @@ export async function eventCommandUseCase({
           filesystem: businessSnapshot,
         })
         : null;
-      if (projectedId && snapshot.snapshotEntry(ideaPaths(projectedId).eventsDirectory)) {
+      if (projectedId && snapshot.snapshotEntry(ideaPaths(projectedId).eventsPath)) {
         if (expectedPrimary !== undefined) throw new Error("Local interaction append does not accept --expected-primary.");
         const action = await runtime.performAction({ type: "write-idea-events" }, () => appendProjectedInteraction({
           root, id: projectedId, paths: ideaPaths(projectedId), filesystem: businessSnapshot, input: parsedInput,
@@ -212,7 +211,7 @@ export async function eventCommandUseCase({
           projectedEvents: true,
           filesystem: businessSnapshot,
         });
-        if (snapshot.snapshotEntry(ideaPaths(id).eventsDirectory)) {
+        if (snapshot.snapshotEntry(ideaPaths(id).eventsPath)) {
           const result = await appendProjectedMetadata({
             root, id, paths: ideaPaths(id), filesystem: businessSnapshot, tree, config, input: parsedInput,
             ...(expectedLength === undefined ? {} : { expectedLength }),
@@ -271,8 +270,8 @@ export async function eventCommandUseCase({
       problems: [{ type: "event.failed", summary: errorMessage(cause) }],
     }, {
       nextSteps: localize(outputLanguage,
-        "Preserve unknown work and reobserve the exact idea and primary. Exceptional history maintenance requires direct review of the complete events folder.",
-        "保留未知修改并重新观察准确 idea 和 primary。异常历史维护需要直接审阅完整 events folder。")
+        "Preserve unknown work and reobserve the exact idea and primary. Exceptional history maintenance requires direct review of the complete events.jsonl file.",
+        "保留未知修改并重新观察准确 idea 和 primary。异常历史维护需要直接审阅完整 events.jsonl 文件。")
     });
   }
 }

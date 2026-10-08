@@ -6,7 +6,7 @@ import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 
 import { eventCommand } from "../../src/business/event-command.ts";
-import { EventStream } from "../../src/foundation/event-store/index.ts";
+import { gitContentDigest } from "../../src/foundation/event-store/index.ts";
 import { observeGitCommands } from "../../src/foundation/git/index.ts";
 import { serializeIdeaEvents } from "../../src/foundation/event-codec/index.ts";
 import { ideaPaths } from "../../src/foundation/coordinates/index.ts";
@@ -180,20 +180,29 @@ test("cursor replay returns only the verified suffix and never substitutes for f
   assert.match(firstProblem(stale).summary, /Stale cursor digest/);
 });
 
-test("cursor replay validates partial-segment boundaries and initial empty streams", async (t) => {
+test("cursor replay validates record boundaries and initial empty streams", async (t) => {
   const { root, paths, source } = await fixture(t);
   const partial = source.subarray(0, source.indexOf(10) + 1);
   const cursor = {
-    length: partial.length, digest: EventStream.fromBytes(partial, { objectIdLength: 40 }).digest,
+    length: partial.length,
+    digest: gitContentDigest("blob", partial, { objectIdLength: 40 }),
   };
   const report = await replay(root, cursor);
   assert.equal(report.events.length, 999);
   assert.equal(report.sequence, 1000);
   const invalid = await replayReport(root, { ...cursor, length: partial.length - 1 });
   assert.match(firstProblem(invalid).summary, /not an event boundary/);
+  await writeFile(
+    join(root, paths.eventsPath),
+    source.toString("utf8").replace('"sequence":2', '"sequence":3'),
+  );
+  const discontinuous = await replayReport(root, cursor);
+  assert.match(firstProblem(discontinuous).summary, /sequence is not continuous/);
   await writeFile(join(root, paths.eventsPath), "");
-  const empty = EventStream.fromBytes(Buffer.alloc(0), { objectIdLength: 40 });
-  const initial = await replay(root, { length: 0, digest: empty.digest });
+  const initial = await replay(root, {
+    length: 0,
+    digest: gitContentDigest("blob", Buffer.alloc(0), { objectIdLength: 40 }),
+  });
   assert.deepEqual(initial.events, []);
   assert.equal(initial.sequence, 0);
 });

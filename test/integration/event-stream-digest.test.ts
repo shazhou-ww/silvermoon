@@ -1,66 +1,59 @@
 import assert from "node:assert/strict";
-import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 
-import { EventStream } from "../../src/foundation/event-store/index.ts";
 import { serializeIdeaEvents } from "../../src/foundation/event-codec/index.ts";
-import { git } from "../helpers/repository.ts";
+import {
+  gitContentDigest,
+  snapshotEventFileHead,
+} from "../../src/foundation/event-store/index.ts";
 import { createGitSnapshotFileSystem } from "../../src/foundation/snapshot/index.ts";
-import { snapshotEventFolderHead } from "../../src/foundation/event-store/index.ts";
+import { git } from "../helpers/repository.ts";
 
-test("events-folder digest equals its Git subtree OID in SHA-1 and SHA-256 repositories", async () => {
+test("events.jsonl digest equals its Git blob OID in SHA-1 and SHA-256 repositories", async () => {
   for (const format of ["sha1", "sha256"]) {
     const root = await mkdtemp(join(tmpdir(), "silvermoon-stream-digest-"));
     try {
       git(root, "init", "--initial-branch=main", `--object-format=${format}`);
-      await mkdir(join(root, "events"));
-      const source = Buffer.from(serializeIdeaEvents(Array.from({ length: 1001 }, (_, index) => ({
-        sequence: index + 1, type: "pong", payload: { message: `记录 ${index + 1}` },
-      }))));
-      const stream = EventStream.fromBytes(source, { objectIdLength: format === "sha1" ? 40 : 64 });
-      for (const { name, bytes, object } of stream.entries()) {
-        await writeFile(join(root, "events", name), bytes);
-        assert.equal(git(root, "hash-object", "--no-filters", join("events", name)), object);
-      }
-      await writeFile(join(root, ".gitattributes"), "**/*.jsonl -text\n");
+      const source = Buffer.from(serializeIdeaEvents(Array.from(
+        { length: 1001 },
+        (_, index) => ({
+          sequence: index + 1,
+          type: "pong",
+          payload: { message: `record ${index + 1}` },
+        }),
+      )));
+      await writeFile(join(root, "events.jsonl"), source);
+      await writeFile(join(root, ".gitattributes"), "**/events.jsonl -text -filter\n");
       await writeFile(join(root, "unrelated.txt"), "not part of this stream\n");
       git(root, "add", ".");
       const tree = git(root, "write-tree");
-      assert.equal(git(root, "rev-parse", `${tree}:events`), stream.digest);
-      assert.notEqual(tree, stream.digest);
+      const objectIdLength = format === "sha1" ? 40 : 64;
+      const blob = git(root, "rev-parse", `${tree}:events.jsonl`);
+      assert.equal(blob, gitContentDigest("blob", source, { objectIdLength }));
+      assert.equal(
+        git(root, "hash-object", "--no-filters", "events.jsonl"),
+        blob,
+      );
+      assert.notEqual(tree, blob);
       const filesystem = createGitSnapshotFileSystem({ gitRoot: root, tree });
-      filesystem.readFile = () => { throw new Error("HEAD must not read historical segment bodies"); };
-      const storageFilesystem = {
-        lstat: (path: string) => filesystem.lstat(path),
-        readFile: async (path: string) => {
-          const bytes = await filesystem.readFile(path);
-          assert.ok(Buffer.isBuffer(bytes));
-          return bytes;
-        },
-        readdir: async (path: string) => {
-          const entries = await filesystem.readdir(path);
-          return entries.map((entry) => {
-            assert.ok(typeof entry === "string");
-            return entry;
-          });
-        },
-        snapshotEntry: (path: string) => filesystem.snapshotEntry(path),
-        snapshotEntries: (path: string) => filesystem.snapshotEntries(path),
-        snapshotFile: (path: string) => filesystem.snapshotFile(path),
+      filesystem.readFile = () => {
+        throw new Error("HEAD calculation must not read immutable blob bytes");
       };
-      const paths = {
-        eventsDirectory: "events",
-        legacyEventsPath: "events.jsonl",
-      };
-      assert.equal(await snapshotEventFolderHead(root, paths, {
-        objectIdLength: format === "sha1" ? 40 : 64,
-      }, storageFilesystem), stream.digest);
-      const empty = EventStream.fromBytes(Buffer.alloc(0), { objectIdLength: format === "sha1" ? 40 : 64 });
+      assert.equal(
+        await snapshotEventFileHead(
+          root,
+          { eventsPath: "events.jsonl" },
+          { objectIdLength },
+          filesystem,
+        ),
+        blob,
+      );
       assert.equal(
         git(root, "hash-object", "--no-filters", "--stdin"),
-        empty.entries().at(0)?.object,
+        gitContentDigest("blob", Buffer.alloc(0), { objectIdLength }),
       );
     } finally {
       await rm(root, { recursive: true, force: true });

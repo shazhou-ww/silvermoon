@@ -26,8 +26,6 @@ export interface IdeaPaths {
   ideaPath: string;
   statusPath: string;
   eventsPath: string;
-  legacyEventsPath: string;
-  eventsDirectory: string;
   ledgerPath: string;
   outerPath: string;
   innerPath: string;
@@ -39,7 +37,6 @@ export interface IdeaPaths {
 
 export interface EventOptions {
   objectIdLength: number;
-  allowSingleFile?: boolean;
   legacy?: boolean;
 }
 

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { cp, mkdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
+import { cp, lstat, mkdir, readFile, readdir, rm, symlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -8,10 +8,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { migrateEvents } from "../../src/business/migrate-v1-to-v2.ts";
 import { serializeIdeaEvents } from "../../src/foundation/event-codec/index.ts";
 import { ideaPaths } from "../../src/foundation/coordinates/index.ts";
-import {
-  EventStream,
-  readEventStorage,
-} from "../../src/foundation/event-store/index.ts";
+import { readEventStorage } from "../../src/foundation/event-store/index.ts";
 import { createRepository, FIRST_ID, git } from "../helpers/repository.ts";
 
 const SOURCE_REPOSITORY = "https://github.com/shazhou-ww/silvermoon.git";
@@ -22,6 +19,13 @@ function requiredDigest(result: Awaited<ReturnType<typeof migrateEvents>>) {
   assert.equal(result.outcome, "migration-planned");
   assert.ok("digest" in result);
   return result.digest;
+}
+
+async function readSegmentedBytes(root: string, eventsDirectory: string) {
+  const names = (await readdir(join(root, eventsDirectory))).sort();
+  return Buffer.concat(await Promise.all(
+    names.map((name) => readFile(join(root, eventsDirectory, name))),
+  ));
 }
 
 async function fixture(t: test.TestContext) {
@@ -45,11 +49,15 @@ async function fixture(t: test.TestContext) {
     })),
   ];
   const source = Buffer.from(serializeIdeaEvents(events));
-  const stream = EventStream.fromBytes(source, { objectIdLength: 40 });
-  await rm(join(root, paths.eventsDirectory), { recursive: true });
-  await mkdir(join(root, paths.eventsDirectory));
-  for (const entry of stream.entries()) {
-    await writeFile(join(root, paths.eventsDirectory, entry.name), entry.bytes);
+  const eventsDirectory = `${paths.ideaPath}/events`;
+  await rm(join(root, paths.eventsPath));
+  await mkdir(join(root, eventsDirectory));
+  for (let index = 0; index < events.length; index += 1000) {
+    const name = `${String(index / 1000 + 1).padStart(16, "0")}.jsonl`;
+    await writeFile(
+      join(root, eventsDirectory, name),
+      serializeIdeaEvents(events.slice(index, index + 1000)),
+    );
   }
   for (const path of ["src", "bin", "tools", "skills", "package.json"]) {
     await cp(join(sourceRoot, path), join(root, path), { recursive: true });
@@ -81,7 +89,7 @@ async function fixture(t: test.TestContext) {
   );
   return {
     ...repository,
-    paths,
+    paths: { ...paths, eventsDirectory },
     source,
     module,
     checkRepository: runtime.checkRepository,
@@ -127,9 +135,8 @@ test("one-time migration preserves exact V2 bytes without changing the schema ve
     expectedDigest: plan.digest,
   });
   assert.equal(migrated.outcome, "migrated");
-  assert.deepEqual(await readFile(join(root, paths.legacyEventsPath)), source);
-  await assert.rejects(readFile(join(root, paths.eventsPath)), /ENOENT/);
-  await assert.rejects(readFile(join(root, paths.eventsDirectory)), /ENOENT/);
+  assert.deepEqual(await readFile(join(root, paths.eventsPath)), source);
+  await assert.rejects(lstat(join(root, paths.eventsDirectory)), /ENOENT/);
   assert.match(
     await readFile(join(root, ".silvermoon", "config.yaml"), "utf8"),
     /^version: 2$/m,
@@ -137,15 +144,14 @@ test("one-time migration preserves exact V2 bytes without changing the schema ve
   const store = await readEventStorage(
     root,
     paths,
-    { objectIdLength: 40, allowSingleFile: true },
+    { objectIdLength: 40 },
   );
   assert.equal(store.storage, "single-file");
   assert.deepEqual(store.bytes, source);
-  const results = validationResults(await checkRepository({ root, worktree: true }));
-  assert.equal(results[0]?.mode, "migration-single-file");
   git(root, "add", ".");
   git(root, "commit", "-m", "Migrate V2 events to one file");
   git(root, "push", "origin", "HEAD:main");
+  validationResults(await checkRepository({ root, worktree: true }));
   assert.equal(
     (await migrateV2EventsToSingleFile({ root })).outcome,
     "already-single-file",
@@ -166,10 +172,7 @@ test("one-time migration preserves dirty work and exact source bytes", async (t)
     /clean committed/,
   );
   assert.equal(await readFile(join(root, "unknown.txt"), "utf8"), "preserve\n");
-  assert.deepEqual(
-    (await readEventStorage(root, paths, { objectIdLength: 40 })).bytes,
-    source,
-  );
+  assert.deepEqual(await readSegmentedBytes(root, paths.eventsDirectory), source);
 });
 
 test("interrupted single-file migration resumes or rolls back exact owned paths", async (t) => {
@@ -190,7 +193,7 @@ test("interrupted single-file migration resumes or rolls back exact owned paths"
         apply: true,
         expectedDigest: ${JSON.stringify(plan.digest)},
         afterStep: (step) => {
-          if (step === ${JSON.stringify(`applied:${paths.legacyEventsPath}`)}) process.exit(77);
+          if (step === ${JSON.stringify(`applied:${paths.eventsPath}`)}) process.exit(77);
         },
       });
     `], { encoding: "utf8", windowsHide: true });
@@ -203,15 +206,12 @@ test("interrupted single-file migration resumes or rolls back exact owned paths"
     });
     assert.equal(result.outcome, rollback ? "rolled-back" : "recovered");
     if (rollback) {
-      assert.deepEqual(
-        (await readEventStorage(root, paths, { objectIdLength: 40 })).bytes,
-        source,
-      );
+      assert.deepEqual(await readSegmentedBytes(root, paths.eventsDirectory), source);
     } else {
       const store = await readEventStorage(
         root,
         paths,
-        { objectIdLength: 40, allowSingleFile: true },
+        { objectIdLength: 40 },
       );
       assert.equal(store.storage, "single-file");
       assert.deepEqual(store.bytes, source);

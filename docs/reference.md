@@ -16,7 +16,7 @@ Each idea is self-contained under one canonical uppercase ULID:
 |   `-- deploying.md
 `-- ideas/
     `-- 01M36QGPNTXEPP61DA4KP4AVZF/
-        |-- status.yaml (v1) or events/ (v2, 1000-record JSONL segments)
+        |-- status.yaml (v1) or events.jsonl (v2)
         |-- ledger.md
         `-- outer/
             |-- Deployment.md
@@ -80,7 +80,7 @@ Each world is an opaque Git tree:
 - `implementationRevision` identifies `inner/` and includes the Ideal World.
 - `deploymentRevision` identifies `outer/` and includes both nested worlds.
 
-`status.yaml` (v1), `events/` (v2), and `ledger.md` are outside all three
+`status.yaml` (v1), `events.jsonl` (v2), and `ledger.md` are outside all three
 world trees. The repository
 object format in use determines revision shape. Silvermoon validates canonical
 revision shape, computes the current world trees, and compares those values to
@@ -144,21 +144,22 @@ State is derived in order:
 
 ## Event State (v2)
 
-Project `version: 2` replaces mutable status with a required `events/`
-folder at each idea root. Its consecutive 16-digit ordinal JSONL segments hold
-at most 1000 records, with full non-tail segments and an initially empty first
-segment. Sequence and logical sessions continue across segment boundaries.
-Its strict nine-event union updates the status facts and interaction
+Project `version: 2` replaces mutable status with one required regular
+`events.jsonl` file at each idea root. The file may be empty; otherwise it is
+canonical UTF-8 JSONL with LF record endings, a final LF, consecutive sequence
+numbers beginning at 1, and a 1 MiB limit per record including LF. Its strict
+nine-event union updates the status facts and interaction
 projection; no observations, creation/import markers, or audit envelope are
 stored. The nested-world revisions and five lifecycle states are unchanged.
 
 Use `event replay` and `event append` for routine state. Exceptional history
-maintenance edits the complete `events/` folder directly and validates it
+maintenance edits the complete `events.jsonl` file directly and validates it
 through ordinary Git review and snapshot/history checks. Append requests carry
-exact logical byte length and the normalized events-folder Git tree digest outside the business event;
-lifecycle writes also require expected primary. Canonical JSONL, human gates, concurrency,
-conditional append-only history, and interrupted-write recovery are specified
-in the [event operations contract](../skills/silvermoon/references/events.md).
+the exact byte length and Git blob OID of the complete file outside the business
+event; lifecycle writes also require expected primary. Canonical JSONL, human
+gates, concurrency, conditional append-only history, and interrupted-write
+recovery are specified in the
+[event operations contract](../skills/silvermoon/references/events.md).
 
 For repeated consumption, `event replay <ULID> --after-length <bytes>
 --after-digest <oid>` returns only the events after an exactly matched cursor.
@@ -166,12 +167,14 @@ The `delta-observed` receipt is not a complete reduction or authorization;
 ordinary full replay is unchanged. The experimental project runtime exposes
 this additive query as `readSince(route, { length, digest })`.
 
-Canonical-ULID interaction appends use authenticated local sealed-prefix
-projections to avoid replaying sealed history on the warm path. These
-Git-private, runtime/source-bound files are disposable derived state, not
-event facts or authorization. Incremental snapshot acquisition performs precise source checks; Windows
-authenticates native ChangeTime-to-OID bindings because Git uses CreationTime.
-Coarse timestamps and missing source records force content verification.
+Canonical-ULID interaction appends may use an authenticated local projection
+bound to the complete event-file blob OID to avoid repeating reduction on the
+warm path. These Git-private, runtime/source-bound files are disposable derived
+state, not event facts or authorization. The authoritative file is still read
+and validated. Incremental snapshot acquisition performs precise source checks;
+Windows authenticates native ChangeTime-to-OID bindings because Git uses
+CreationTime. Coarse timestamps and missing source records force content
+verification.
 Default metadata append receipts contain exact historical validation summaries;
 `--full-history` preserves complete historical reduction output. Alias and
 metadata paths retain layout, prefix and explicit human-gate checks.

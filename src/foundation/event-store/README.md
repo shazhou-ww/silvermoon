@@ -1,6 +1,6 @@
 # event-store
 
-Read and plan segmented event storage at the 1000-record boundary.
+Read and plan one authoritative `events.jsonl` file.
 
 ## Capability boundary
 
@@ -10,8 +10,7 @@ Read and plan segmented event storage at the 1000-record boundary.
 
 ## Key exports
 
-- `readEventStorage`: reads one complete authoritative segmented stream.
+- `readEventStorage`: reads one complete authoritative event file.
 - `eventStorageChanges`: plans exact filesystem changes for candidate bytes.
-- `EventStream`: indexes canonical records across fixed-size segments.
 - `snapshotEventPrefix`: reads an exact canonical prefix from a snapshot.
-- `eventFolderDigest`: computes the Git-compatible digest for canonical segmented storage entries.
+- `gitContentDigest`: computes the Git-compatible blob digest for exact event bytes.

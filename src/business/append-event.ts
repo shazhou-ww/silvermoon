@@ -3,7 +3,7 @@ import { inspectProjectedEventHistory } from "../foundation/event-history/index.
 import { readEventDelta } from "../foundation/event-cursor/index.ts";
 import { assertHumanGate, parseRequest, planProjectedAppend } from "../foundation/event-reducer/index.ts";
 import { projectEventSnapshot } from "../foundation/projection-cache/index.ts";
-import { eventStorageChanges, readEventStorage, snapshotEventFolderHead, storageDigest } from "../foundation/event-store/index.ts";
+import { eventStorageChanges, readEventStorage, snapshotEventFileHead, storageDigest } from "../foundation/event-store/index.ts";
 import { createGitSnapshotFileSystem } from "../foundation/snapshot/index.ts";
 import { fetchPrimary, inspectTreePaths, worktreeSnapshot } from "../foundation/git/index.ts";
 import { parseIdeaEvents, replayIdeaEvents, serializeIdeaEvents } from "../foundation/event-codec/index.ts";
@@ -133,7 +133,7 @@ export async function appendProjectedInteraction({
   if (typeof expectedLength !== "number" || !Number.isSafeInteger(expectedLength) || expectedLength < 0
     || typeof expectedDigest !== "string"
     || !new RegExp(`^[0-9a-f]{${options.objectIdLength}}$`).test(expectedDigest ?? "")) {
-    throw new Error("Interaction writes require an exact observed length and folder digest.");
+    throw new Error("Interaction writes require an exact observed length and file digest.");
   }
   const before = await projectEventSnapshot(root, id, paths, options, snapshotFilesystem);
   if (before.length !== expectedLength || before.digest !== expectedDigest) {
@@ -186,7 +186,7 @@ export async function writeProjectedAppend(
   if (planned.files === undefined) {
     throw new TypeError("Projected append did not produce transaction files.");
   }
-  const liveHead = () => snapshotEventFolderHead(root, paths, options,
+  const liveHead = () => snapshotEventFileHead(root, paths, options,
     asBusinessFileSystem(
       createGitSnapshotFileSystem({
         gitRoot: root,
@@ -194,7 +194,7 @@ export async function writeProjectedAppend(
       }),
     ));
   await stateTransaction(root, "events", planned.files, {
-    context: { id, storage: "segmented", afterDigest: planned.digest, ...context },
+    context: { id, storage: "single-file", afterDigest: planned.digest, ...context },
     validate: async () => {
       if (await liveHead() !== before.digest) throw new Error("Complete event stream changed before write.");
       await validate?.();
@@ -229,7 +229,7 @@ export async function appendProjectedMetadata({
     || typeof expectedDigest !== "string"
     || !new RegExp(`^[0-9a-f]{${options.objectIdLength}}$`).test(expectedDigest ?? "")
     || !new RegExp(`^[0-9a-f]{${options.objectIdLength}}$`).test(expectedPrimary ?? "")) {
-    throw new Error("Writes require exact observed length, folder digest and primary.");
+    throw new Error("Writes require exact observed length, file digest and primary.");
   }
   const refreshPrimary = async () => {
     const action = await runtime.performAction({ type: "fetch-primary" },

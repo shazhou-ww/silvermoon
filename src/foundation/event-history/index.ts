@@ -1,11 +1,8 @@
 export {
-  EVENTS_PER_SEGMENT,
   MAX_EVENT_BYTES,
   algorithm,
-  eventFolderBytes,
-  eventFolderDigest,
   gitContentDigest,
-  segmentName,
+  validateEventRecordSizes,
 } from "./digest.ts";
 
 export {

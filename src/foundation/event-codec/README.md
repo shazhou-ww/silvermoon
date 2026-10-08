@@ -1,6 +1,6 @@
 # event-codec
 
-Parse, validate, and serialize canonical event records and segment bytes.
+Parse, validate, and serialize canonical event records and complete log bytes.
 
 ## Capability boundary
 

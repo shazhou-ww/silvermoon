@@ -1,6 +1,6 @@
 # event-history
 
-Verify primary prefixes, folder Git digests, and event history boundaries.
+Verify primary prefixes, event-file Git digests, and history boundaries.
 
 ## Capability boundary
 
@@ -12,5 +12,5 @@ Verify primary prefixes, folder Git digests, and event history boundaries.
 
 - `inspectEventHistory`: validates project event history against the configured primary.
 - `inspectProjectedEventHistory`: validates a projected append without rereading unrelated streams.
-- `eventFolderDigest`: computes the Git-compatible digest of canonical event-folder entries.
+- `detectEventFormat`: identifies the source repository's internal event-type migration boundary.
 - `localPrimary`: resolves the observed local tracking commit for the configured primary.

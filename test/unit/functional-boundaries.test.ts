@@ -4,7 +4,7 @@ import { test } from "node:test";
 import { CommandRun, createCommandRun } from "../../src/foundation/command-message/index.ts";
 import { deepFreeze } from "../../src/foundation/command-message/index.ts";
 import { assertHumanGate, planProjectedAppend } from "../../src/foundation/event-reducer/index.ts";
-import { eventFolderDigest, gitContentDigest, segmentName } from "../../src/foundation/event-history/index.ts";
+import { gitContentDigest } from "../../src/foundation/event-history/index.ts";
 import { replayIdeaEvents, serializeIdeaEvents } from "../../src/foundation/event-codec/index.ts";
 import { ideaPaths } from "../../src/foundation/coordinates/index.ts";
 import { renderMarkdownResponse } from "../../src/foundation/renderer/index.ts";
@@ -229,7 +229,7 @@ test("event decisions require explicit authorization and the synchronized exact 
   assert.doesNotThrow(() => assertHumanGate(event, idea, { idealRevision: revision }, true));
 });
 
-test("pure append planning preserves the 1000-record boundary without invoking hash observers", () => {
+test("pure append planning replaces one complete event file", () => {
   const paths = ideaPaths(id);
   for (const objectIdLength of [40, 64]) {
     for (const count of [999, 1000]) {
@@ -238,14 +238,11 @@ test("pure append planning preserves the 1000-record boundary without invoking h
         sequence: index + 1, type: "ping", payload: { message: "message" },
       }));
       const bytes = Buffer.from(serializeIdeaEvents(events, options));
-      const name = `${paths.eventsDirectory}/${segmentName(1)}`;
-      const object = gitContentDigest("blob", bytes, options);
       const replayed = replayIdeaEvents(id, events, options);
       assert.ok(replayed.ok);
       const before = {
         state: replayed.state,
-        entries: [{ name, object }],
-        tail: { name, bytes },
+        bytes,
       };
       const planned = planProjectedAppend(before, paths,
         { sequence: count + 1, type: "pong", payload: { message: "reply" } },
@@ -255,23 +252,21 @@ test("pure append planning preserves the 1000-record boundary without invoking h
       assert.ok("files" in planned);
       const file = planned.files[0];
       assert.ok(file);
-      assert.equal(file.path, `${paths.eventsDirectory}/${segmentName(count === 1000 ? 2 : 1)}`);
-      assert.equal(file.before, count === 1000 ? null : bytes);
-      const segments = count === 1000
-        ? [{ name: segmentName(1), object }, { name: segmentName(2), object: gitContentDigest("blob", planned.record, options) }]
-        : [{ name: segmentName(1), object: gitContentDigest("blob", file.after, options) }];
-      assert.equal(planned.digest, eventFolderDigest(segments, options));
+      assert.equal(file.path, paths.eventsPath);
+      assert.equal(file.before, bytes);
+      assert.deepEqual(file.after, Buffer.concat([bytes, planned.record]));
+      assert.equal(planned.digest, gitContentDigest("blob", file.after, options));
       assert.equal(before.state.sequence, count);
-      assert.deepEqual(before.tail.bytes, bytes);
+      assert.deepEqual(before.bytes, bytes);
     }
   }
 });
 
-test("scaffold planning keeps v1 status and v2 segmented authorities distinct", () => {
+test("scaffold planning keeps v1 status and v2 event files distinct", () => {
   for (const formatVersion of [1, 2]) {
     const plan = buildIdeaScaffold({ id, formatVersion, contentLanguage: "zh-CN" });
     assert.equal(plan.files.length, 5);
-    assert.equal(plan.directoryPaths.length, formatVersion === 2 ? 5 : 4);
+    assert.equal(plan.directoryPaths.length, 4);
     const finalFile = plan.files.at(-1);
     assert.ok(finalFile);
     assert.equal(finalFile[0], formatVersion === 2 ? ideaPaths(id).eventsPath : ideaPaths(id).statusPath);

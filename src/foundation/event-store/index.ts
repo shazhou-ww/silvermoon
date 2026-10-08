@@ -1,24 +1,15 @@
 export {
-  EVENTS_PER_SEGMENT,
   MAX_EVENT_BYTES,
   algorithm,
-  eventFolderBytes,
-  eventFolderDigest,
   gitContentDigest,
-  segmentName,
+  validateEventRecordSizes,
 } from "./digest.ts";
 
 export {
   eventStorageChanges,
-  isEventAuxiliary,
   readEventStorage,
   readRecoveryEventStorage,
-  snapshotEventFolderHead,
+  snapshotEventFileHead,
   snapshotEventPrefix,
   storageDigest,
 } from "./storage.ts";
-
-export {
-  EVENT_STREAM_DIRECTORY,
-  EventStream,
-} from "./stream.ts";

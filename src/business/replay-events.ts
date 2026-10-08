@@ -1,5 +1,4 @@
 import { localPrimary } from "../foundation/event-history/index.ts";
-import { EventStream } from "../foundation/event-store/index.ts";
 import { IdeaEventFormatError, parseIdeaEvents, replayIdeaEvents } from "../foundation/event-codec/index.ts";
 import type { EventOptions, EventStore, ProjectConfig } from "./shared/business-types.ts";
 import { errorMessage } from "./shared/business-types.ts";
@@ -20,7 +19,6 @@ export function replayStoredEvents({
   let reduction = null;
   let format: { ok: boolean; error?: string } = { ok: true };
   try {
-    if (store.storage === "segmented") EventStream.fromSegments(store.entries, options);
     reduction = replayIdeaEvents(id, parseIdeaEvents(bytes, options), options);
   }
   catch (error) {

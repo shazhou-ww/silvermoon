@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { isDeepStrictEqual } from "node:util";
-import { readFile } from "node:fs/promises";
+import { lstat, readFile, readdir } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
 
@@ -9,19 +9,19 @@ import { Command } from "commander";
 import { inspectAdoption } from "../src/foundation/skill-registration/index.ts";
 import { loadConfigSnapshot } from "../src/foundation/project-config/index.ts";
 import {
-  inspectEventHistory,
   localPrimary,
   SOURCE_REPOSITORY,
 } from "../src/foundation/event-history/index.ts";
 import {
   gitContentDigest,
-  readEventStorage,
+  validateEventRecordSizes,
 } from "../src/foundation/event-store/index.ts";
 import { parseIdeaEvents, replayIdeaEvents } from "../src/foundation/event-codec/index.ts";
 import { inspectIdeaLayout } from "../src/business/shared/index.ts";
 import {
   fetchPrimary,
   inspectRepositoryState,
+  inspectTreePaths,
   inspectTreeLineage,
   worktreeSnapshot,
 } from "../src/foundation/git/index.ts";
@@ -84,6 +84,122 @@ async function requireSourceCheckout(root: string) {
       "Single-file V2 migration is restricted to the unpublished Silvermoon source checkout.",
     );
   }
+}
+
+const EVENTS_PER_SEGMENT = 1000;
+
+function segmentedPaths(id: string) {
+  const current = ideaPaths(id);
+  return {
+    ...current,
+    eventsDirectory: `${current.ideaPath}/events`,
+  };
+}
+
+async function metadata(path: string) {
+  try {
+    return await lstat(path);
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") return null;
+    throw error;
+  }
+}
+
+async function readMigrationSource(
+  root: string,
+  id: string,
+  objectIdLength: number,
+) {
+  const paths = segmentedPaths(id);
+  const fileInfo = await metadata(resolve(root, paths.eventsPath));
+  const directoryInfo = await metadata(resolve(root, paths.eventsDirectory));
+  if (fileInfo && directoryInfo) {
+    throw new Error(`${id}: single-file and segmented authorities cannot coexist`);
+  }
+  if (fileInfo) {
+    if (!fileInfo.isFile() || fileInfo.isSymbolicLink()) {
+      throw new Error(`${id}: irregular events.jsonl authority`);
+    }
+    const bytes = await readFile(resolve(root, paths.eventsPath));
+    validateEventRecordSizes(bytes);
+    return {
+      storage: "single-file" as const,
+      paths,
+      bytes,
+      length: bytes.length,
+      entries: [],
+      digest: gitContentDigest("blob", bytes, { objectIdLength }),
+    };
+  }
+  if (!directoryInfo?.isDirectory() || directoryInfo.isSymbolicLink()) {
+    throw new Error(`${id}: missing regular segmented event source`);
+  }
+  const names = (await readdir(resolve(root, paths.eventsDirectory))).sort();
+  if (!names.length) throw new Error(`${id}: segmented source has no identity segment`);
+  const entries: { name: string; bytes: Buffer; object: string }[] = [];
+  for (let index = 0; index < names.length; index++) {
+    const expected = `${String(index + 1).padStart(16, "0")}.jsonl`;
+    const name = names[index];
+    if (name !== expected) {
+      throw new Error(`${id}: unexpected or noncanonical segmented entry ${String(name)}`);
+    }
+    const path = resolve(root, paths.eventsDirectory, name);
+    const info = await lstat(path);
+    if (!info.isFile() || info.isSymbolicLink()) {
+      throw new Error(`${id}: irregular segmented entry ${name}`);
+    }
+    const bytes = await readFile(path);
+    validateEventRecordSizes(bytes);
+    const events = parseIdeaEvents(bytes, { objectIdLength });
+    if (events.length > EVENTS_PER_SEGMENT
+      || (index < names.length - 1 && events.length !== EVENTS_PER_SEGMENT)
+      || (!events.length && names.length !== 1)) {
+      throw new Error(`${id}: invalid segmented record count at ${name}`);
+    }
+    entries.push({
+      name,
+      bytes,
+      object: gitContentDigest("blob", bytes, { objectIdLength }),
+    });
+  }
+  const treeBytes = Buffer.concat(entries.map(({ name, object }) => Buffer.concat([
+    Buffer.from(`100644 ${name}\0`),
+    Buffer.from(object, "hex"),
+  ])));
+  return {
+    storage: "segmented" as const,
+    paths,
+    entries,
+    bytes: Buffer.concat(entries.map(({ bytes }) => bytes)),
+    length: entries.reduce((total, entry) => total + entry.bytes.length, 0),
+    digest: gitContentDigest("tree", treeBytes, { objectIdLength }),
+  };
+}
+
+function worldSnapshots(root: string, tree: string, ids: string[]): WorldSnapshot[] {
+  const paths = ids.flatMap((id) => {
+    const current = ideaPaths(id);
+    return [current.idealPath, current.innerPath, current.outerPath];
+  });
+  const objects = inspectTreePaths(root, tree, paths);
+  return ids.map((id) => {
+    const current = ideaPaths(id);
+    const required = (path: string) => {
+      const entry = objects.get(path);
+      if (!entry || entry.type !== "tree" || entry.object === null) {
+        throw new Error(`${id}: required world tree is unavailable at ${path}`);
+      }
+      return entry.object;
+    };
+    return {
+      id,
+      revisions: {
+        idealRevision: required(current.idealPath),
+        implementationRevision: required(current.innerPath),
+        deploymentRevision: required(current.outerPath),
+      },
+    };
+  });
 }
 
 export async function migrateV2EventsToSingleFile({
@@ -177,17 +293,13 @@ export async function migrateV2EventsToSingleFile({
   const repository = inspectRepositoryState(root);
   const { tree } = worktreeSnapshot(root);
   const primary = localPrimary(root, config).commit;
-  await inspectEventHistory({ root, tree, config, primary });
-  const layout = await inspectIdeaLayout({ root, config, snapshotTree: tree });
-  if (layout.diagnostics.length) {
-    throw new Error(layout.diagnostics.map((item) => item.message).join("; "));
-  }
   const ids = inspectTreeLineage(root, tree, IDEAS_ROOT)
     .filter(({ type, name }) => type === "tree" && name.split("/").length === 3)
     .map(({ name }) => name.split("/")[2])
     .filter((id): id is string => id !== undefined)
     .sort();
-  const options = { objectIdLength: tree.length, allowSingleFile: true };
+  const options = { objectIdLength: tree.length };
+  const worlds = worldSnapshots(root, tree, ids);
   const files: { path: string; before: Buffer | null; after: Buffer | null }[] = [];
   const removeDirectories: string[] = [];
   const ideas: {
@@ -199,8 +311,8 @@ export async function migrateV2EventsToSingleFile({
   }[] = [];
   let singleFile = 0;
   for (const id of ids) {
-    const paths = ideaPaths(id);
-    const store = await readEventStorage(root, paths, options);
+    const store = await readMigrationSource(root, id, tree.length);
+    const { paths } = store;
     const result = replayIdeaEvents(id, parseIdeaEvents(store.bytes, options), options);
     if (!result.ok || !("state" in result)) {
       throw new Error(
@@ -213,7 +325,7 @@ export async function migrateV2EventsToSingleFile({
     }
     const candidateDigest = gitContentDigest("blob", store.bytes, options);
     files.push({
-      path: paths.legacyEventsPath,
+      path: paths.eventsPath,
       before: null,
       after: store.bytes,
     }, ...store.entries.map(({ name, bytes }) => ({
@@ -278,10 +390,6 @@ export async function migrateV2EventsToSingleFile({
   ].some((changes) => changes.length > 0)) {
     throw new Error("Migration requires a clean committed worktree; preserve every local change.");
   }
-  const worlds: WorldSnapshot[] = layout.ideas.map(({ id, revisions }) => ({
-    id,
-    revisions,
-  }));
   await stateTransaction(root, "migration", files, {
     removeDirectories,
     ...(afterStep === undefined ? {} : { afterStep }),

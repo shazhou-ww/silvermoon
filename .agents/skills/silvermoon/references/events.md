@@ -6,34 +6,27 @@ Never change the version alone or migrate a project implicitly.
 
 ## Storage and state
 
-V2 replaces each idea's `status.yaml` with an `events/` folder; never keep both.
-Segments are named `0000000000000001.jsonl`, `0000000000000002.jsonl`, and so
-on, using consecutive 16-digit positive ordinals. Each holds at most **1000**
-records; every non-tail segment must be full. Full segments are sealed;
-append to the partial tail or create the next segment. An empty first segment
-is the identity-only initial state. Do not create an empty trailing segment
-after a full segment. Date boundaries never split a logical stream or session,
-and event sequences do not restart.
+V2 replaces each idea's `status.yaml` with one regular `events.jsonl` file;
+never keep both. An empty file is the identity-only initial state. Appends add
+one canonical record to this same file; event sequences begin at 1 and never
+restart.
 Identity comes from the ULID directory. Events are canonical UTF-8 JSONL
 without BOM, with LF and a final LF for nonempty logs. Do not let Git convert
-these bytes: add `**/events/*.jsonl -text -filter` to the project's `.gitattributes`.
+these bytes: add `**/events.jsonl -text -filter` to the project's `.gitattributes`.
 A record including LF is limited to 1048576 bytes; this is a byte limit, not
 a character limit. Oversized records are explicit errors, not truncated messages.
 
-The stream HEAD is the **events folder's** normalized Git tree digest, not
-the repository HEAD, a commit, the entire repository tree, one sequence, or
-the tail segment alone. Hash raw segment bytes as Git blobs and encode their
-ordered canonical names with fixed `100644` modes in a Git tree. Use the
-repository's SHA-1/SHA-256 object format, just like world revisions. Locks,
-`.pending`/`.prepared` temporary files, `checkpoint.json`, `cursor.json`,
-permissions and mtime are excluded; unknown or irregular entries are errors.
-Do not trust checkpoint/cursor contents as facts or authorization.
+The stream HEAD is the Git blob OID of the complete raw `events.jsonl` bytes,
+not the repository HEAD, a commit, the entire repository tree, one sequence,
+or a filesystem metadata value. Use the repository's SHA-1/SHA-256 object
+format, just like world revisions. The stream `length` is the exact raw byte
+length. Permissions and mtime are excluded; a missing file, directory or
+symlink is invalid. Do not trust cursor contents as facts or authorization.
 
-Verified immutable snapshots reuse sealed blob digests and hash only the
-changed tail plus the segment table. Immutable Git snapshots can calculate
-the normalized folder digest from their object table without loading segment
-bodies. Full event replay, reduction validation and filesystem integrity audits
-still read history; do not describe these as constant-time operations.
+Immutable snapshots reuse the file's existing blob OID. Worktree snapshots
+verify the complete authoritative file before using its OID. Full replay,
+reduction validation and filesystem integrity audits read the log; do not
+describe them as constant-time operations.
 
 Every record has a consecutive positive safe-integer `sequence` and `type`.
 V2 defines seven business changes and two interaction messages:
@@ -77,8 +70,9 @@ checkout, replace `silvermoon` below with `node bin/silvermoon.js`.
 silvermoon event replay <idea> --audience agent
 ```
 
-The receipt gives exact logical byte `length`, events-folder Git tree `digest`, the reduction result,
-and a local primary tracking commit explicitly marked **not fetched**.
+The receipt gives exact byte `length`, complete-file Git blob `digest`, the
+reduction result, and a local primary tracking commit explicitly marked
+**not fetched**.
 Refresh the configured named remote before relying on that baseline. A
 missing/ambiguous tracking ref blocks rather than choosing an arbitrary base.
 
@@ -99,27 +93,29 @@ empty array. A changed/deleted prefix or a non-record byte boundary is an
 explicit error, never an automatic cursor reset. A cursor is not a checkpoint,
 session boundary, approval, append authorization, or successful SDK delivery.
 Full replay remains available and unchanged for initialization and audits.
-The query reuses sealed Git blob OIDs and reads only the boundary/suffix
-segments. On POSIX, cursor queries and canonical-ULID interaction appends
-reuse a private copy of the current index's verified content OIDs. Precise
-ctime/mtime nanoseconds invalidate changed entries, including restored-mtime
-edits; sources are rechecked after snapshot acquisition. Assume-unchanged,
-skip-worktree, fsmonitor and weakened stat settings cannot conceal edits.
-Coarse timestamp entries retain full content verification. Windows uses
-authenticated native ChangeTime records bound to the corresponding Git OID
-and runtime instead of comparing Node ChangeTime with Git CreationTime;
-missing or changed records force content verification.
+The query verifies that the cursor ends at a record boundary, its prefix digest
+matches, and sequence remains continuous across the complete file. It returns
+only the suffix but does not promise sublinear file I/O. On POSIX, cursor
+queries and canonical-ULID interaction appends may reuse a private copy of the
+current index's verified content OIDs. Precise ctime/mtime nanoseconds
+invalidate changed entries, including restored-mtime edits; sources are
+rechecked after snapshot acquisition. Assume-unchanged, skip-worktree,
+fsmonitor and weakened stat settings cannot conceal edits. Coarse timestamp
+entries retain full content verification. Windows uses authenticated native
+ChangeTime records bound to the corresponding Git OID and runtime instead of
+comparing Node ChangeTime with Git CreationTime; missing or changed records
+force content verification.
 Other snapshot consumers keep their previous full-validation behavior.
 
 For canonical-ULID `ping`/`pong` appends, the project runtime may persist a
-disposable authenticated sealed-prefix projection under a worktree-specific
-Git-private `silvermoon-event-cache/` directory. It contains only reduced
-status, sequence and last signal, never messages or new facts. A local
-private key authenticates the runtime-produced summary; its context binds
-the idea, exact prefix Git digest and relevant runtime source identity.
-Cold or changed prefixes are rebuilt from canonical events, while a warm
-match reads only the tail. An unauthenticated or irregular cache is an
-explicit error, never a successful fallback or permission to append.
+disposable authenticated projection under a worktree-specific Git-private
+`silvermoon-event-cache/` directory. A local private key authenticates the
+runtime-produced reduction; its context binds the idea, complete event-file
+blob OID and relevant runtime source identity. Cold or changed files are
+rebuilt from canonical events. A warm match may reuse only the reduction; the
+authoritative file bytes and canonical records are still verified. An
+unauthenticated or irregular cache is an explicit error, never a successful
+fallback or permission to append.
 The private key and derived files must never be committed or shared.
 These are not security guarantees against a local user who can replace
 both the runtime and its key.
@@ -128,15 +124,15 @@ The authenticated projection is neither an independent state authority nor
 a human decision. Complete replay, historical audits, migration/repair boundaries
 and recovery remain available and perform full validation. Alias interaction
 appends retain complete alias/layout resolution with authenticated projections.
-Default segmented V2 metadata append receipts use `history.detail: "summary"`
-with exact base/candidate lengths, folder digests and sequences, not complete
-message arrays. They validate every project's current projection and the exact
+Default V2 metadata append receipts use `history.detail: "summary"` with exact
+base/candidate lengths, file digests and sequences, not complete message
+arrays. They validate every project's current projection and the exact
 immutable primary prefix; lifecycle gates still require the exact synchronized
 world and explicit human decision. Use `--full-history` on append to retain the
 complete historical reduction receipt. Version/storage transitions and
 definitely reduction-failed primary repair use the existing complete checks.
 No format error, cache failure or unknown source enables repair. All appends still
-verify the complete folder HEAD before and after the recoverable transaction,
+verify the complete file HEAD before and after the recoverable transaction,
 and retries still require the exact record after their original prefix.
 Use the exact ULID if invalid logs prevent alias resolution.
 
@@ -155,11 +151,11 @@ silvermoon event append <idea> --input request.json --expected-length <bytes> --
 
 The writer fetches primary, verifies the request, validates the entire project,
 acquires an exclusive project transaction, rechecks the source and world
-snapshot, refreshes primary again, and writes only changed segments through a
-recoverable transaction. Project commands block while the transaction exists;
-cross-segment writes have no successful receipt until the complete stream has
-been validated. Raw filesystem readers must honor this transaction boundary.
-The commit
+snapshot, refreshes primary again, and atomically replaces `events.jsonl`
+through a recoverable transaction. Project commands block while the
+transaction exists; no successful receipt is returned until the complete
+stream has been validated. Raw filesystem readers must honor this transaction
+boundary. The commit
 is an external write precondition, never event data. Cooperating writers
 cannot write the same position; unexpected external edits block recovery.
 Do not concurrently hand-edit a target while its CLI transaction runs.
@@ -180,7 +176,7 @@ review-and-synchronization human gate from the main skill.
 
 Receipts distinguish `candidate-written`, `already-present` and
 `no-state-change`; none means integrated into primary. Retries recognize the
-original prefix folder digest and exact record. Equal HEADs prove the same
+original prefix file digest and exact record. Equal HEADs prove the same
 pre-state, not the same request. A stale request with another record at that
 position is a conflict, not permission to renumber. Two metadata edits are two
 requests; if the second fails, the first remains a completed local append.
@@ -203,13 +199,12 @@ V2 `check` validates the chosen snapshot against its immediate event boundary:
 
 Keep unknown work. Sync and reassess intent and ownership before maintaining an
 unintegrated suffix or a definite reduction-failed primary history. There is no
-revision command. Review and edit the complete idea `events/` folder directly:
-preserve canonical segment names, exact sequence, the 1000-record boundary,
-known decisions, and all unrelated bytes. Never edit only a projected cache or
-cursor.
+revision command. Review and edit the complete idea `events.jsonl` file
+directly: preserve canonical bytes, exact sequence, known decisions, and all
+unrelated records. Never edit only a projected cache or cursor.
 
 Run `check --worktree` on the complete candidate, inspect the Git diff, stage
-only the reviewed event folder, then run `check --staged`. Newly introduced
+only the reviewed event file, then run `check --staged`. Newly introduced
 decisions still require their human gate. Commit and integrate with ordinary
 non-force Git; never reset, force-push, or rebase away unknown candidates.
 
@@ -226,8 +221,8 @@ Do not delete a lock by age.
 
 After confirming the original writer has stopped, inspect the transaction plan,
 original bytes, candidate bytes, host and PID. There is no event recovery
-command. Directly restore or complete the exact operation-owned `events/`
-folder bytes, preserve every unknown byte, and remove transaction-owned
+command. Directly restore or complete the exact operation-owned `events.jsonl`
+bytes, preserve every unknown byte, and remove transaction-owned
 temporary files only after the selected complete state matches the plan.
 Then run worktree and staged checks before committing.
 

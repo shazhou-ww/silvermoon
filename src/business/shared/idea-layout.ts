@@ -5,7 +5,6 @@ import { deriveIdeaState, isValidUlid, parseIdeaStatus } from "../../foundation/
 import { parseIdeaEvents, reduceIdeaEvent, replayIdeaEvents } from "../../foundation/event-codec/index.ts";
 import { detectEventFormat } from "../../foundation/event-history/index.ts";
 import { readEventStorage } from "../../foundation/event-store/index.ts";
-import { EventStream } from "../../foundation/event-store/index.ts";
 import { projectEventSnapshot } from "../../foundation/projection-cache/index.ts";
 import { inspectTreePaths, worktreeSnapshot } from "../../foundation/git/index.ts";
 import { IDEAS_ROOT, ideaPaths } from "../../foundation/coordinates/index.ts";
@@ -323,11 +322,11 @@ export async function inspectIdeaLayout({
   let legacyEvents = false;
   const useProjections = config?.version === 2 && projectedEvents && !eventOverrides
     && typeof snapshotEntry === "function"
-    && [...ideaIds].every((id) => snapshotEntry(ideaPaths(id).eventsDirectory)?.type === "tree");
+    && [...ideaIds].every((id) => snapshotEntry(ideaPaths(id).eventsPath)?.type === "blob");
   if (config?.version === 2 && !useProjections) {
     try {
       const overrides = eventOverrides && new Map([...eventOverrides].map(([id, store]) => [
-        store.storage === "segmented" ? ideaPaths(id).eventsDirectory : ideaPaths(id).legacyEventsPath,
+        ideaPaths(id).eventsPath,
         store.bytes,
       ]));
       legacyEvents = await detectEventFormat({
@@ -381,12 +380,10 @@ export async function inspectIdeaLayout({
       ));
       continue;
     }
-
     const paths = ideaPaths(entry.name);
     const eventFormat = config?.version === 2;
-    const segmented = eventFormat && await metadata(resolve(root, paths.eventsDirectory), filesystem);
-    const stateName = eventFormat ? segmented ? "events" : "events.jsonl" : "status.yaml";
-    const statePath = eventFormat ? segmented ? paths.eventsDirectory : paths.legacyEventsPath : paths.statusPath;
+    const stateName = eventFormat ? "events.jsonl" : "status.yaml";
+    const statePath = eventFormat ? paths.eventsPath : paths.statusPath;
     const children = (
       await filesystem.readdir(folderPath, { withFileTypes: true })
     )
@@ -440,12 +437,12 @@ export async function inspectIdeaLayout({
       resolve(root, statePath),
       filesystem,
     );
-    if (!statusMetadata || !(segmented ? statusMetadata.isDirectory() : statusMetadata.isFile())
+    if (!statusMetadata || !statusMetadata.isFile()
       || statusMetadata.isSymbolicLink()) {
       diagnostics.push(error(
         "idea.status.invalid-file",
         statePath,
-        `Idea state must be a repository-owned regular ${segmented ? "directory" : "file"} named ${stateName}.`,
+        `Idea state must be a repository-owned regular file named ${stateName}.`,
         `Restore ${statePath} from its authoritative history.`,
       ));
       continue;
@@ -484,11 +481,8 @@ export async function inspectIdeaLayout({
         const reducedState = reduced && "state" in reduced ? reduced.state : projected.state;
         status = normalizedEventStatus(reducedState.status);
       } else if (eventFormat) {
-        const store = eventOverrides?.get(entry.name) ?? await readEventStorage(root, paths, {
-          ...options, allowSingleFile: config.primaryRepository === "https://github.com/shazhou-ww/silvermoon.git",
-        }, filesystem);
-        if (store.storage === "segmented") EventStream.fromBytes(store.bytes, options);
-        if (store.storage === "segmented" && store.entries) EventStream.fromSegments(store.entries, options);
+        const store = eventOverrides?.get(entry.name)
+          ?? await readEventStorage(root, paths, options, filesystem);
         const events = parseIdeaEvents(
           store.bytes, options,
         );

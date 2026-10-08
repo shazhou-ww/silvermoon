@@ -211,7 +211,6 @@ if (packed.status !== 0) {
     "src/foundation/event-store/digest.js",
     "src/foundation/event-store/index.js",
     "src/foundation/event-store/storage.js",
-    "src/foundation/event-store/stream.js",
     "src/foundation/git/README.md",
     "src/foundation/git/derived-cache.js",
     "src/foundation/git/git.js",

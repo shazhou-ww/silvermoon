@@ -80,7 +80,7 @@ function preloadCheckBlob({ name }: { name: string }): boolean {
     || name.startsWith(`${GUIDANCE_ROOT}/`)
     || (
       name.startsWith(`${IDEAS_ROOT}/`)
-      && (name.endsWith("/status.yaml") || name.endsWith("/events.jsonl") || /\/events\/[0-9]{16}\.jsonl$/.test(name))
+      && (name.endsWith("/status.yaml") || name.endsWith("/events.jsonl"))
     )
   );
 }

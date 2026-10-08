@@ -3,7 +3,7 @@ import { copyFileSync, lstatSync, mkdtempSync, readFileSync, rmSync, statSync, u
 import type { BigIntStats } from "node:fs";
 import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { join, relative, resolve } from "node:path";
 
 import { runSubprocess } from "../process/index.ts";
 import { traceAsync } from "../trace/index.ts";
@@ -329,6 +329,36 @@ function sourceFingerprint(value: BigIntStats|undefined) {
   return value ? `${value.ctimeNs}:${value.mtimeNs}:${value.size}:${value.ino}:${value.dev}:${value.mode}` : null;
 }
 
+function sameSourceExceptChangeTime(
+  before: string | null,
+  after: string | null,
+) {
+  if (before === null || after === null) return false;
+  return before.slice(before.indexOf(":") + 1) === after.slice(after.indexOf(":") + 1);
+}
+
+function sourceMatchesIndex(
+  root: string,
+  path: string,
+  env: NodeJS.ProcessEnv & { GIT_INDEX_FILE: string },
+) {
+  const relativePath = relative(root, path).replaceAll("\\", "/");
+  const indexed = /^([0-7]{6}) ([0-9a-f]{40}|[0-9a-f]{64}) 0\t/
+    .exec(requireGit(
+      root,
+      ["ls-files", "--stage", "--", relativePath],
+      "Cannot recheck snapshot source",
+      { env },
+    ))?.[2];
+  if (indexed === undefined) return false;
+  return requireGit(
+    root,
+    ["hash-object", `--path=${relativePath}`, path],
+    "Cannot rehash snapshot source",
+    { env },
+  ) === indexed;
+}
+
 function preciseIndexSources(
   root: string,
   env: NodeJS.ProcessEnv & { GIT_INDEX_FILE: string },
@@ -435,7 +465,13 @@ export function worktreeSnapshot(root: string, {
           throw cause;
         }
       }
-      if (sourceFingerprint(metadata) !== source.fingerprint) {
+      const fingerprint = sourceFingerprint(metadata);
+      if (fingerprint !== source.fingerprint) {
+        if (sameSourceExceptChangeTime(source.fingerprint, fingerprint)
+          && sourceMatchesIndex(root, source.path, env)) {
+          source.fingerprint = fingerprint;
+          continue;
+        }
         throw new Error("Worktree source changed while taking its snapshot; preserve changes and reobserve.");
       }
     }

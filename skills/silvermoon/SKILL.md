@@ -143,7 +143,7 @@ in its selected snapshot but never returns their content.
 ### Create A New Idea
 
 `create-idea` creates only the scaffold: `Idea.md`, `Implementation.md`,
-`Deployment.md`, `ledger.md`, and either v1 `status.yaml` or a v2 `events/` folder.
+`Deployment.md`, `ledger.md`, and either v1 `status.yaml` or a v2 `events.jsonl` file.
 It never stages, commits,
 pushes, or records a decision. Preserve explicit creation intent through
 hygiene retries: retry `create-idea`, not bare `whats-next`.
@@ -191,7 +191,7 @@ Each idea has three canonical entries:
 
 ```text
 .silvermoon/ideas/<ULID>/
-├── status.yaml (v1) or events/ (v2, consecutive 1000-record JSONL segments)
+├── status.yaml (v1) or events.jsonl (v2)
 ├── ledger.md
 └── outer/
     ├── Deployment.md
@@ -211,7 +211,7 @@ In `Implementation.md` and `Deployment.md`, put plans under `## Steps` and
 outcomes under `## Acceptance criteria`. Use stable level-three IDs: `I-Sxx`,
 `I-ACxx`, `D-Sxx`, and `D-ACxx`. Each criterion states an observable outcome
 and how to prove it. Do not put checkboxes in world contracts. World content
-changes its world revision and containing revisions; `status.yaml`/`events/` and
+changes its world revision and containing revisions; `status.yaml`/`events.jsonl` and
 `ledger.md` are outside those trees.
 
 The required idea-root `ledger.md` is an execution checklist only, not
@@ -322,7 +322,7 @@ For v2 projects, follow [events.md](./references/events.md): observe the exact
 log and primary, then use the project-version `event append` command after an
 explicit decision. Never infer authorization from a CLI flag, clear decisions,
 or append observations. Routine state changes use append only. Exceptional
-history maintenance edits the complete `events/` folder directly, then uses
+history maintenance edits the complete `events.jsonl` file directly, then uses
 ordinary Git review and snapshot/history checks; there is no revise or recover
 command. Keep selector, audience, and output language through conflicts and retries.
 

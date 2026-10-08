@@ -203,7 +203,7 @@ export class ProjectRuntime {
   ): Promise<RuntimeResult> {
     if (!Number.isSafeInteger(length) || length < 0
       || !/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(digest ?? "")) {
-      throw new TypeError("Incremental replay requires an exact length and folder digest cursor.");
+      throw new TypeError("Incremental replay requires an exact length and file digest cursor.");
     }
     const result = await this.#run(route, "event", [
       "replay", canonicalRoute(route).ideaId,

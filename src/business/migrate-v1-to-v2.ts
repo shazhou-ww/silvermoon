@@ -9,7 +9,6 @@ import { inspectRepositoryState, worktreeSnapshot } from "../foundation/git/inde
 import { CONFIG_PATH, ideaPaths } from "../foundation/coordinates/index.ts";
 import { digest, recoverStateTransaction, regularBytes, stateTransaction } from "../foundation/state-transaction/index.ts";
 import { isDeepStrictEqual } from "node:util";
-import { EventStream } from "../foundation/event-store/index.ts";
 
 interface MigrationOptions {
   root?: string;
@@ -100,13 +99,11 @@ export async function migrateEvents({
   if (layout.diagnostics.length) throw new Error(layout.diagnostics.map((d) => d.message).join("; "));
   if (config.version === 2) return { outcome: "already-v2", written: false };
   const files: { path: string; before: Buffer | null; after: Buffer | null }[] = [];
-  const directories: string[] = [];
   for (const idea of layout.ideas) {
     const paths = ideaPaths(idea.id);
     const before = await regularBytes(resolve(root, paths.statusPath));
     if (before === null) throw new Error(`Missing migration source: ${paths.statusPath}`);
-    if (await regularBytes(resolve(root, paths.eventsPath)) !== null
-      || await regularBytes(resolve(root, paths.legacyEventsPath)) !== null) {
+    if (await regularBytes(resolve(root, paths.eventsPath)) !== null) {
       throw new Error(`Refusing to overwrite existing ${paths.eventsPath}`);
     }
     const eventOptions = { objectIdLength: tree.length };
@@ -121,12 +118,9 @@ export async function migrateEvents({
       throw new Error(`Migration projection differs for ${idea.id}`);
     }
     files.push(
-      ...EventStream.fromBytes(after, { objectIdLength: tree.length }).entries().map(({ name, bytes }) => ({
-        path: `${paths.eventsDirectory}/${name}`, before: null, after: bytes,
-      })),
+      { path: paths.eventsPath, before: null, after },
       { path: paths.statusPath, before, after: null },
     );
-    directories.push(paths.eventsDirectory);
   }
   files.push({
     path: CONFIG_PATH,
@@ -141,7 +135,7 @@ export async function migrateEvents({
     })),
   });
   const attributes = await regularBytes(resolve(root, ".gitattributes"));
-  const attributeRule = "**/events/*.jsonl -text -filter";
+  const attributeRule = "**/events.jsonl -text -filter";
   if (!attributes?.toString("utf8").split(/\r?\n/).includes(attributeRule)) {
     files.push({
       path: ".gitattributes", before: attributes,
@@ -169,7 +163,6 @@ export async function migrateEvents({
   }
   await stateTransaction(root, "migration", files, {
     ...(afterStep === undefined ? {} : { afterStep }),
-    directories,
     context: { sourceCommit: repository.head },
   });
   return { ...receipt, outcome: "migrated", written: true };

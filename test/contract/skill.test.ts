@@ -118,7 +118,7 @@ test("exposes one consolidated silvermoon skill", async () => {
     "unknown, unrelated, or user-authored work",
     "Never use force-push",
     "For v1 projects there is no decision mutation command",
-    "Exceptional history maintenance edits the complete `events/` folder directly",
+    "Exceptional history maintenance edits the complete `events.jsonl` file directly",
     "there is no revise or recover command",
     "Ideal World (理想世界)",
     "Inner World (主体世界)",

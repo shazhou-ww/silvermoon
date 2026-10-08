@@ -178,9 +178,9 @@ changes materially.
 After an explicit decision, reconfirm that it applies to the selected idea and
 the current reported world revision. For v2, use the
 [event commands and recovery protocol](../skills/silvermoon/references/events.md)
-instead of editing JSONL; stage only changed canonical segments in `events/`
-after a validated append. The expected digest covers the complete normalized
-events folder, while retries also require the exact record after that prefix.
+instead of editing JSONL; stage the changed canonical `events.jsonl` after a
+validated append. The expected digest is the Git blob OID of the complete
+file, while retries also require the exact record after that prefix.
 For v1, edit only the corresponding status fact:
 
 - `approvedRevision`

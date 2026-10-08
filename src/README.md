@@ -53,8 +53,8 @@ src/
 | `bin/verify-npm-release.ts` | [bin/verify-npm-release.ts](../bin/verify-npm-release.ts) | package、版本、dist-tag、commit、tag 和 tarball | registry、provenance、tag 与 tarball 一致性 | 发布后只读验证 |
 
 事件历史修订和中断恢复不设进程入口，也不属于应用层。维护者直接编辑 idea 的
-`events/` folder，再通过普通 Git review 和 snapshot／event history 校验确认完整
-目录。CLI 正常事件能力只保留 replay 和 append；目标实现应移除 revise／recover
+`events.jsonl`，再通过普通 Git review 和 snapshot／event history 校验确认完整
+文件。CLI 正常事件能力只保留 replay 和 append；目标实现应移除 revise／recover
 命令及其专用业务编排，而不是把它们迁移成脚本。
 
 应用入口把 argv、文件、stdin、终端和环境事实适配成业务函数参数，再把业务结果
@@ -91,8 +91,9 @@ Agent 适配库／包子路径和公共 export 不是进程入口，不单列应
 `CommandReport` 保留 `intention`、`observation`、`actions`、`response` 四投影；
 事件 receipt 置于既有报告中，不替代报告。受阻、无效和可恢复失败显式携带诊断，
 未映射的异常 reject；不以空数据、成功回执或统一退出码掩盖错误。
-正常事件业务只保留读取与追加。历史修订和中断恢复由维护者直接编辑 `events/`
-folder，并由 Git review 与校验发现无效候选；业务层不提供 revise／recover 编排。
+正常事件业务只保留读取与追加。历史修订和中断恢复由维护者直接编辑
+`events.jsonl`，并由 Git review 与校验发现无效候选；业务层不提供
+revise／recover 编排。
 
 共享业务函数不属于某个命令，顶层业务之间不互相调用：
 
@@ -132,7 +133,7 @@ folder，并由 Git review 与校验发现无效候选；业务层不提供 revi
 | `idea-query` | `idea` | 对显式 idea facts 执行过滤、排序、限制和标题投影 | 读取目录、默认联网、生命周期变更 |
 | `idea-template` | `idea` | 从显式语言／版本事实生成规范世界文档内容 | 生成 ID／时间、写文件 |
 | `scaffold-plan` | `idea` | 将显式 ID、时间、语言和模板组成 `ScaffoldPlan` | 默认值获取、所有权写入 |
-| `event-codec` | `events` | 解析、验证和序列化规范事件记录与 segment 字节 | reduce、Git 历史、写入授权 |
+| `event-codec` | `events` | 解析、验证和序列化规范事件记录与完整日志字节 | reduce、Git 历史、写入授权 |
 | `event-reducer` | `events` | 将已验证事件归约为状态和协议错误 | 读取 storage、缓存、修复历史 |
 | `event-store` | `events` | 按 1000 条边界读取／规划分段文件和准确字节 | 解释 payload、fetch、完整命令编排 |
 | `event-history` | `events` | 验证 primary prefix、folder Git digest 和历史边界 | 修改历史、决定人工授权 |
