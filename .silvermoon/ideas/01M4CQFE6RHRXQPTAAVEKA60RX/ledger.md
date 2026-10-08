@@ -23,12 +23,12 @@
 
 ### Deployment steps
 
-- [ ] **D-S01:** 固化并同步部署验证契约
-- [ ] **D-S02:** 审计准确 primary 的单文件权威
-- [ ] **D-S03:** 验证 hosted CI 并同步部署证据
+- [x] **D-S01:** 固化并同步部署验证契约
+- [x] **D-S02:** 审计准确 primary 的单文件权威
+- [x] **D-S03:** 验证 hosted CI 并同步部署证据
 
 ### Deployment acceptance criteria
 
-- [ ] **D-AC01:** 已接受实现与部署契约存在于 primary
-- [ ] **D-AC02:** 远端单文件布局与事件历史有效
-- [ ] **D-AC03:** Hosted CI 完整通过且最终证据可审阅
+- [x] **D-AC01:** 已接受实现与部署契约存在于 primary
+- [x] **D-AC02:** 远端单文件布局与事件历史有效
+- [x] **D-AC03:** Hosted CI 完整通过且最终证据可审阅
