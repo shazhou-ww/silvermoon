@@ -162,6 +162,7 @@ contract as ready.
 
 During preparation, complete `Idea.md`. Keep the Implementation, Deployment,
 and matching ledger placeholders synchronized until their lifecycle actions.
+Treat scaffold sections as prompts, not invitations to speculate or fill space.
 
 ### Continue A Selected Idea
 
@@ -169,18 +170,20 @@ Use the reported `ledgerPath` after lifecycle hygiene and continue only the
 selected world's unfinished work:
 
 - **Preparing:** Edit `Idea.md` and supporting Ideal World (理想世界) files.
-  Supporting files serve the contract, not replace it. The human gate is
-  approval of the exact reported `idealRevision`.
+  Keep the idea as a brief direction card and defer solution design. Supporting
+  files serve the contract, not replace it. The human gate is approval of the
+  exact reported `idealRevision`.
 - **Implementing:** Edit `Implementation.md`, supporting Inner World (主体世界)
   files, and repository deliverables. Change the ideal only if it truly changed
-  and the idea must return to preparing. The human gate is acceptance of the
-  exact reported `implementationRevision`.
+  and the idea must return to preparing. Expand the plan only as concrete work
+  requires it. The human gate is acceptance of the exact reported
+  `implementationRevision`.
 - **Deploying:** Use `Deployment.md` and supporting Outer World (现实世界)
-  files to drive and verify external outcomes; do not change repository
-  deliverables. Synchronize a new or materially changed deployment contract to
-  primary first, reobserve its stable `deploymentRevision`, then run checks
-  against it and record evidence in the ledger. The human gate is acceptance
-  of that exact revision.
+  files to drive and verify external outcomes; do not recap implementation or
+  change repository deliverables. Synchronize a new or materially changed
+  deployment contract to primary first, reobserve its stable
+  `deploymentRevision`, then run checks against it and record evidence in the
+  ledger. The human gate is acceptance of that exact revision.
 - **Abandoned:** Keep canonical `abandoned: true`, remove it only after an
   explicit reversal, or choose another idea.
 - **Completed:** Revise its definition or create a different idea.
@@ -207,12 +210,25 @@ is the Outer World (现实世界) real-world deployment contract. Each world may
 contain supporting files, but those artifacts serve the same-world entry and
 never define a second contract.
 
+Use progressive elaboration in every world. Record only the durable information
+needed for the current gate, link existing context instead of copying it, and
+add supporting files only for a concrete decision, risk, disagreement, or
+proof that would make the canonical contract unclear. Do not pre-author
+speculative architecture, exhaustive task trees, or future-phase details.
+
+`Idea.md` is a short direction card: a concise title; a problem and outcome of
+one or two sentences each; one to three material boundaries and acceptance
+criteria; and at most one current preparation step, removed before approval.
+Keep implementation design out of the ideal contract.
+
 In `Implementation.md` and `Deployment.md`, put plans under `## Steps` and
 outcomes under `## Acceptance criteria`. Use stable level-three IDs: `I-Sxx`,
 `I-ACxx`, `D-Sxx`, and `D-ACxx`. Each criterion states an observable outcome
-and how to prove it. Do not put checkboxes in world contracts. World content
-changes its world revision and containing revisions; `status.yaml`/`events.jsonl` and
-`ledger.md` are outside those trees.
+and how to prove it. Start each contract with no more than three steps and
+three criteria; add another only for independently necessary work or proof.
+Do not repeat the prior world or anticipate the next one. Do not put checkboxes
+in world contracts. World content changes its world revision and containing
+revisions; `status.yaml`/`events.jsonl` and `ledger.md` are outside those trees.
 
 The required idea-root `ledger.md` is an execution checklist only, not
 operational prose, a decision log, a discussion record, or a fourth world. It

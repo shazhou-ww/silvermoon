@@ -1,34 +1,30 @@
-export const IDEA_TEMPLATE = `# Replace with a specific title for this idea
+export const IDEA_TEMPLATE = `# Replace with a concise action-oriented title
 
-## Intent
+<!--
+Keep this direction card brief: aim for 200-400 words.
+Link existing detail instead of copying it. Add detail only when a concrete
+decision, risk, or disagreement requires it.
+-->
 
-<!-- State the desired outcome in one or two sentences. -->
+## Problem
 
-## Context
+<!-- State the current problem in one or two sentences. -->
 
-<!-- Describe the current problem, situation, or opportunity. -->
+## Outcome
 
-## Desired outcome
+<!-- State the externally meaningful change in one or two sentences. -->
 
-<!-- Describe the externally meaningful state that should become true. -->
+## Boundaries
 
-## Scope
+<!-- List one to three material constraints or explicit exclusions. -->
 
-### In scope
+## Acceptance criteria
 
-<!-- Describe what this idea includes. -->
+<!-- List no more than three observable outcomes. Do not describe implementation steps. -->
 
-### Out of scope
+## Next step
 
-<!-- Describe adjacent work this idea intentionally excludes. -->
-
-## Constraints
-
-<!-- Record material product, repository, compatibility, or operational constraints. -->
-
-## Open questions
-
-<!-- Record unresolved decisions. Remove this section when none remain. -->
+<!-- Keep only the highest-priority preparation action or decision. Remove it before approval. -->
 `;
 
 export const IMPLEMENTATION_TEMPLATE = `# Implementation
@@ -37,7 +33,9 @@ export const IMPLEMENTATION_TEMPLATE = `# Implementation
 
 <!--
 Give every step a stable I-Sxx identifier and a level-three heading.
-Describe what will change, its boundaries, and important design details.
+Start with no more than three steps. Add another only for independently
+necessary work. Describe what changes now and its material boundaries without
+repeating the idea or anticipating deployment.
 Do not use task-list checkboxes in this document.
 -->
 
@@ -49,6 +47,8 @@ Do not use task-list checkboxes in this document.
 
 <!--
 Give every criterion a stable I-ACxx identifier and a level-three heading.
+Start with no more than three criteria. Add another only when it requires
+independent proof.
 Describe both the observable outcome and the method that proves it.
 Do not create a separate validation section or use task-list checkboxes.
 -->
@@ -64,7 +64,9 @@ export const DEPLOYMENT_TEMPLATE = `# Deployment
 
 <!--
 Give every step a stable D-Sxx identifier and a level-three heading.
-Describe deployment or external-world verification work.
+Start with no more than three steps. Add another only for independently
+necessary external work. Describe deployment or external-world verification
+without recapping implementation.
 Do not use task-list checkboxes in this document.
 -->
 
@@ -76,6 +78,8 @@ Do not use task-list checkboxes in this document.
 
 <!--
 Give every criterion a stable D-ACxx identifier and a level-three heading.
+Start with no more than three criteria. Add another only when it requires
+independent external proof.
 Describe both the observable external outcome and the method that proves it.
 Do not create a separate validation section or use task-list checkboxes.
 -->
@@ -108,37 +112,32 @@ export const LEDGER_TEMPLATE = `# Ledger
 - [ ] **D-AC01:** Criterion title
 `;
 
-const CHINESE_IDEA_TEMPLATE = `# 将标题替换为这个 idea 的具体名称
+const CHINESE_IDEA_TEMPLATE = `# 将标题替换为简洁的“动作 + 目标”
 
-## 意图
+<!--
+把本文档保持为轻量方向卡，默认控制在 200-400 字。
+已有细节用链接引用，不要复制。只有真实出现的决策、风险或分歧才值得增加内容。
+-->
 
-<!-- 用一两句话说明期望结果。 -->
+## 问题
 
-## 背景
+<!-- 用一两句话说明当前问题。 -->
 
-<!-- 描述当前问题、情境或机会。 -->
+## 结果
 
-## 期望结果
+<!-- 用一两句话说明应当实现的、对外有意义的变化。 -->
 
-<!-- 描述应当实现的、对外有意义的状态。 -->
+## 边界
 
-## 范围
+<!-- 列出一至三条重要约束或明确排除项。 -->
 
-### 范围内
+## 验收标准
 
-<!-- 描述这个 idea 包含的内容。 -->
+<!-- 最多列出三条可观察结果，不要描述实现步骤。 -->
 
-### 范围外
+## 下一步
 
-<!-- 描述这个 idea 有意排除的相邻工作。 -->
-
-## 约束
-
-<!-- 记录重要的产品、仓库、兼容性或操作约束。 -->
-
-## 待解决问题
-
-<!-- 记录尚未解决的决定；没有时删除本节。 -->
+<!-- 只保留当前最高优先级的准备动作或决定；批准前删除本节。 -->
 `;
 
 const CHINESE_IMPLEMENTATION_TEMPLATE = `# Implementation
@@ -147,7 +146,8 @@ const CHINESE_IMPLEMENTATION_TEMPLATE = `# Implementation
 
 <!--
 为每个步骤分配稳定的 I-Sxx 标识符和三级标题。
-说明修改内容、边界和重要设计细节。
+先写不超过三个步骤；只有存在必须独立完成的工作时才增加。
+说明当前修改及其重要边界，不要复述 idea，也不要提前描述部署。
 不要在本文档中使用任务列表复选框。
 -->
 
@@ -159,6 +159,7 @@ const CHINESE_IMPLEMENTATION_TEMPLATE = `# Implementation
 
 <!--
 为每项标准分配稳定的 I-ACxx 标识符和三级标题。
+先写不超过三项标准；只有需要独立证明时才增加。
 同时说明可观察结果及其证明方法。
 不要创建单独的验证章节，也不要使用任务列表复选框。
 -->
@@ -174,7 +175,8 @@ const CHINESE_DEPLOYMENT_TEMPLATE = `# Deployment
 
 <!--
 为每个步骤分配稳定的 D-Sxx 标识符和三级标题。
-描述部署或现实世界验证工作。
+先写不超过三个步骤；只有存在必须独立完成的外部工作时才增加。
+描述部署或现实世界验证，不要复述实现过程。
 不要在本文档中使用任务列表复选框。
 -->
 
@@ -186,6 +188,7 @@ const CHINESE_DEPLOYMENT_TEMPLATE = `# Deployment
 
 <!--
 为每项标准分配稳定的 D-ACxx 标识符和三级标题。
+先写不超过三项标准；只有需要独立的外部证明时才增加。
 同时说明可观察的外部结果及其证明方法。
 不要创建单独的验证章节，也不要使用任务列表复选框。
 -->

@@ -544,37 +544,33 @@ try {
   assert.equal(Object.hasOwn(created.observation, "ideas"), false);
   assert.equal(
     await readFile(join(consumer, createdPaths.idea), "utf8"),
-    `# Replace with a specific title for this idea
+    `# Replace with a concise action-oriented title
 
-## Intent
+<!--
+Keep this direction card brief: aim for 200-400 words.
+Link existing detail instead of copying it. Add detail only when a concrete
+decision, risk, or disagreement requires it.
+-->
 
-<!-- State the desired outcome in one or two sentences. -->
+## Problem
 
-## Context
+<!-- State the current problem in one or two sentences. -->
 
-<!-- Describe the current problem, situation, or opportunity. -->
+## Outcome
 
-## Desired outcome
+<!-- State the externally meaningful change in one or two sentences. -->
 
-<!-- Describe the externally meaningful state that should become true. -->
+## Boundaries
 
-## Scope
+<!-- List one to three material constraints or explicit exclusions. -->
 
-### In scope
+## Acceptance criteria
 
-<!-- Describe what this idea includes. -->
+<!-- List no more than three observable outcomes. Do not describe implementation steps. -->
 
-### Out of scope
+## Next step
 
-<!-- Describe adjacent work this idea intentionally excludes. -->
-
-## Constraints
-
-<!-- Record material product, repository, compatibility, or operational constraints. -->
-
-## Open questions
-
-<!-- Record unresolved decisions. Remove this section when none remain. -->
+<!-- Keep only the highest-priority preparation action or decision. Remove it before approval. -->
 `,
   );
   assert.match(
