@@ -72,22 +72,23 @@ projection、cursor 和 checkpoint 均不属于规范日志，也不得提交。
 另一个请求占用了同一前态时必须拒绝 stale 请求，不能自动刷新、覆盖或重编号。
 移除 segment 后不应保留 segment table、封存段、跨段切换或空尾段等无效分支。
 
-### O-04: 现有分段 V2 历史显式、等价地迁移
+### O-04: V2 不升级 schema 版本，只做一次性内部迁移
 
-项目 schema 保持 `version: 2`，不为这次尚未发布的内部布局修订引入 V3。已有
-分段 V2 idea 必须通过显式授权的一次性迁移，将所有规范 segment 按序逐字节连接为
-一个 `events.jsonl`；迁移前后的事件记录、顺序、sequence、payload、归约状态、
-交互消息和生命周期决定必须完全等价。
+V2 尚未正式发布，项目配置保持 `version: 2`。这次布局收敛不引入 V3、新的 format
+version、兼容协商或双格式运行模式。已有分段 V2 idea 只通过显式授权的一次性内部
+迁移，将所有规范 segment 按序逐字节连接为一个 `events.jsonl`；迁移前后的事件记录、
+顺序、sequence、payload、归约状态、交互消息和生命周期决定必须完全等价。
 
-迁移需要可审阅的计划摘要、准确来源 digest、干净且已提交的来源、可恢复事务、
+一次性迁移需要可审阅的计划摘要、准确来源 digest、干净且已提交的来源、可恢复事务、
 重复调用幂等检测和普通非强制 Git 集成。来源、primary、候选或未知文件发生变化时
-必须阻挡，不能覆盖并发工作。迁移完成后正常命令只接受单文件布局；历史检查仍须识别
-准确的分段到单文件 format boundary，并证明边界两侧逻辑事件流等价，而不是要求
-旧 commit 被改写。
+必须阻挡，不能覆盖并发工作。迁移工具在应用前后负责证明分段来源与单文件候选的逻辑
+事件流等价；迁移完成后，正常 runtime、schema 校验和写入路径只接受单文件布局，
+不为未发布的分段 V2 保留长期读取、写入或 format-boundary 兼容分支。既有 Git commit
+保留为历史且不被改写，但不因此形成对旧分段布局的正式兼容承诺。
 
 现有 V1 `status.yaml` 支持与 V1 到 V2 的显式迁移语义保持不变，但新的 V2 候选
-必须直接生成 `events.jsonl`。不得隐式迁移外部 checkout，也不得同时长期维护两套
-当前 V2 写入格式。
+必须直接生成 `events.jsonl`。不得隐式迁移外部 checkout，也不得同时维护两套当前
+V2 读写格式。
 
 ### O-05: 所有相关表面采用同一单文件契约
 
@@ -109,13 +110,15 @@ worktree/index/commit/remote snapshot，以及分段来源到单文件候选的�
 - 将 V2 idea 的规范布局从 `events/` folder 改为根目录 `events.jsonl`。
 - 统一完整 replay、增量 cursor、append、事务、历史验证和 Git digest 语义。
 - 删除 segment 命名、固定条数边界、封存段、segment table 和跨段事务分支。
-- 提供本仓库现有分段 V2 数据的一次性显式迁移、恢复和逻辑等价验证。
-- 更新脚手架、schema、类型、测试、文档、skill、`.gitattributes` 与 package 内容。
+- 提供本仓库现有分段 V2 数据的一次性内部迁移、恢复和逻辑等价验证。
+- 更新脚手架、V2 schema/layout 声明、类型、测试、文档、skill、`.gitattributes`
+  与 package 内容，但不升级 schema 版本号。
 - 保持 V1 支持和既有事件业务语义的回归验证。
 
 ### 范围外
 
 - 改变事件类型、payload、sequence、归约、alias/language 或生命周期决定语义。
+- 引入 V3、新的 format version、双格式兼容模式或正式支持未发布的分段 V2。
 - 引入 Merkle DAG、双链、每事件一个文件、数据库或新的 session/transcript 存储。
 - 把 general session transcript、完整 Agent trace 或任意观察写入 idea 事件日志。
 - 自动重试 stale 意图、自动推断人类决定、改变 daemon/SDK 消息路由协议。
