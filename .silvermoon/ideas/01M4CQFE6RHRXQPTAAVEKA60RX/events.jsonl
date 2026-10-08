@@ -1,3 +1,4 @@
 {"sequence":1,"type":"setAlias","payload":{"alias":"single-event-log"}}
 {"sequence":2,"type":"acceptIdeal","payload":{"idealRevision":"0cfbf9b287724e012317c7421b957c8bf1221c1f"}}
 {"sequence":3,"type":"acceptInner","payload":{"implementationRevision":"63d40f0b0a1f63ad4ea5619860996678bfb117ad"}}
+{"sequence":4,"type":"acceptOuter","payload":{"deploymentRevision":"ebae4a116a27073b5f7cc49a87e26fc07a387fe6"}}
