@@ -68,6 +68,7 @@ function lifecycleIdea(
     id: "01M4TESTIDEA00000000000000",
     alias: "fixture",
     state,
+    eventDigest: "deadbeef",
     control: {
       owner,
       lastTransfer: null,
@@ -338,6 +339,7 @@ test("lifecycle instructions route all six derived template phases", () => {
       lifecycleIdea(state, submissionState),
       "en-US",
       "en-US",
+      "d".repeat(40),
     );
     assert.match(instruction, new RegExp(expected));
     assert.doesNotMatch(instruction, new RegExp(excluded));
@@ -356,6 +358,7 @@ test("submitted lifecycle templates preserve downstream current-phase exchange",
       lifecycleIdea(state, "submitted", "downstream"),
       "en-US",
       "en-US",
+      "d".repeat(40),
     );
     assert.match(
       instruction,

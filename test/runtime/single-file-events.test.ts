@@ -96,7 +96,6 @@ test("append replaces one file while preserving exact prefix retry identity", as
     operation: "append",
     idea: FIRST_ID,
     input: { type: "ping", payload: { message: "boundary" } },
-    expectedLength: before.length,
     expectedDigest: before.digest,
   };
   assert.equal(eventReceipt(await eventCommand(request)).sequence, 1001);
@@ -106,7 +105,6 @@ test("append replaces one file while preserving exact prefix retry identity", as
   const after = await replay(root);
   assert.equal(eventReceipt(await eventCommand({
     ...request,
-    expectedLength: after.length,
     expectedDigest: after.digest,
     input: { type: "pong", payload: { message: "following" } },
   })).sequence, 1002);
@@ -148,7 +146,6 @@ test("file digest ignores metadata but detects changed historical bytes", async 
     operation: "append",
     idea: FIRST_ID,
     input: { type: "pong", payload: { message: "stale" } },
-    expectedLength: before.length,
     expectedDigest: before.digest,
   });
   assert.equal(stale.observation.state, "check-unavailable");

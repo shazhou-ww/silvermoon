@@ -56,12 +56,22 @@ export async function readEventDelta(
       "Stale cursor digest; historical content changed. Reobserve before deciding a new intent.",
     );
   }
-  const events = parseIdeaEvents(bytes.subarray(cursor.length), options);
+  const events = parseIdeaEvents(bytes.subarray(cursor.length), {
+    ...options,
+    sequenceOffset: prefixEvents.length,
+  });
+  let lastTimestamp: string | undefined;
   for (const [index, event] of [...prefixEvents, ...events].entries()) {
     if (event.sequence !== index + 1) {
       throw new Error(
         `Event sequence is not continuous at record ${index + 1}.`,
       );
+    }
+    if (event.timestamp !== undefined) {
+      if (lastTimestamp !== undefined && event.timestamp < lastTimestamp) {
+        throw new Error(`Event timestamp regressed at record ${index + 1}.`);
+      }
+      lastTimestamp = event.timestamp;
     }
   }
   const cursorSequence = prefixEvents.at(-1)?.sequence ?? 0;

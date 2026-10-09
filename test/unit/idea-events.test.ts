@@ -12,7 +12,10 @@ import type {
   IdeaEventState,
   IdeaEventStatus,
 } from "../../src/foundation/event-codec/index.ts";
-import { deriveEventIdeaState } from "../../src/foundation/event-reducer/index.ts";
+import {
+  deriveEventIdeaState,
+  planFullEventChange,
+} from "../../src/foundation/event-reducer/index.ts";
 import { deriveIdeaState } from "../../src/foundation/idea-model/index.ts";
 
 const id = "01M3SJTKFRQ19DP0RPPJACKGMC";
@@ -145,6 +148,83 @@ test("serializes submit and accept pairs and replays without mutating inputs", (
   });
   assert.deepEqual(events, saved);
   assert.deepEqual(replayIdeaEvents(id, []), { ok: true, state: initialEventState(id) });
+});
+
+test("new records omit sequence, retain optional timestamps and derive display order", () => {
+  const events: IdeaEvent[] = [
+    {
+      sequence: 1,
+      type: "setAlias",
+      timestamp: "2026-10-09T13:12:18.838Z",
+      payload: { alias: "example" },
+    },
+    { sequence: 2, type: "abandon" },
+    {
+      sequence: 3,
+      type: "resume",
+      timestamp: "2026-10-09T13:12:18.838Z",
+    },
+  ];
+  const source = serializeIdeaEvents(events);
+  assert.equal(source,
+    '{"type":"setAlias","timestamp":"2026-10-09T13:12:18.838Z","payload":{"alias":"example"}}\n'
+    + '{"type":"abandon"}\n'
+    + '{"type":"resume","timestamp":"2026-10-09T13:12:18.838Z"}\n');
+  assert.deepEqual(parseIdeaEvents(source), events);
+  assert.deepEqual(parseIdeaEvents(
+    '{"sequence":1,"type":"setAlias","payload":{"alias":"legacy"}}\n'
+    + '{"type":"abandon","timestamp":"2026-10-09T13:12:18.838Z"}\n',
+  ), [
+    { sequence: 1, type: "setAlias", payload: { alias: "legacy" } },
+    {
+      sequence: 2,
+      type: "abandon",
+      timestamp: "2026-10-09T13:12:18.838Z",
+    },
+  ]);
+});
+
+test("timestamps are canonical and nondecreasing when present", () => {
+  for (const timestamp of [
+    "2026-10-09T13:12:18Z",
+    "2026-10-09T13:12:18.838+00:00",
+    "2026-99-09T13:12:18.838Z",
+  ]) {
+    assert.throws(
+      () => serializeIdeaEvents([{ sequence: 1, type: "abandon", timestamp }]),
+      /timestamp must be a valid UTC RFC 3339 instant with millisecond precision/,
+    );
+  }
+  const result = replayIdeaEvents(id, [
+    {
+      sequence: 1,
+      type: "setAlias",
+      timestamp: "2026-10-09T13:12:19.000Z",
+      payload: { alias: "example" },
+    },
+    { sequence: 2, type: "setLanguage", payload: { language: "zh-CN" } },
+    {
+      sequence: 3,
+      type: "abandon",
+      timestamp: "2026-10-09T13:12:18.999Z",
+    },
+  ]);
+  assert.equal(failureCode(result), "timestamp-regression");
+  if (result.ok) throw new Error("Expected timestamp regression");
+  assert.equal(result.sequence, 3);
+  const future = serializeIdeaEvents([{
+    sequence: 1,
+    type: "setAlias",
+    timestamp: "2026-10-09T13:12:19.000Z",
+    payload: { alias: "example" },
+  }]);
+  assert.throws(() => planFullEventChange({
+    operation: "append",
+    input: { type: "setLanguage", payload: { language: "zh-CN" } },
+    bytes: Buffer.from(future),
+    id,
+    timestamp: "2026-10-09T13:12:18.999Z",
+  }), /Local clock timestamp .* is earlier than latest event timestamp/);
 });
 
 test("rejects malformed or noncanonical logs rather than treating them as repairable", () => {

@@ -218,7 +218,8 @@ test("[branch-mismatch] accepts any local branch with the configured primary ups
   );
 
   assert.equal(report.observation.state, "idea-selected");
-  assert.match(responseText(report), /event replay/);
+  assert.match(responseText(report), /event append .*--expected-digest [0-9a-f]{40}/);
+  assert.doesNotMatch(responseText(report), /event replay/);
   const readinessCommands = alignedCommands.filter(([name, option]) =>
     name !== undefined
     && (["config", "status", "symbolic-ref"].includes(name)

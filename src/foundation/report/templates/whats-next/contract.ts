@@ -77,9 +77,11 @@ interface LifecycleCurrentParameters {
   action: string;
   controlOwner: "upstream" | "downstream" | "none" | null;
   documentPath: string;
+  eventDigest: string | null;
   ideaId: string;
   ledgerPath: string;
   name: string;
+  primaryCommit: string;
   submissionState: "unsubmitted" | "accepted" | "stale" | null;
   submitAction: string;
 }
@@ -87,7 +89,9 @@ interface LifecycleCurrentParameters {
 interface LifecycleSubmittedParameters {
   action: string;
   controlOwner: "upstream" | "downstream" | "none" | null;
+  eventDigest: string | null;
   ideaId: string;
+  primaryCommit: string;
   revisionReference: string;
   submitAction: string;
 }

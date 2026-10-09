@@ -137,6 +137,11 @@ function renderReview(
 /** @pure */
 function renderIdeaCoordination(idea: IdeaReference, language: string) {
   const lines: string[] = [];
+  if (idea.eventDigest !== undefined) {
+    lines.push(
+      `- ${localize(language, "Event digest", "事件 digest")}: ${codeSpan(idea.eventDigest)}`,
+    );
+  }
   if (idea.control !== undefined) {
     const transfer = idea.control.lastTransfer === null
       ? localize(language, "initial assignment", "初始分配")

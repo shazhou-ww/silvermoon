@@ -1,11 +1,14 @@
 
 import { inspectProjectedEventHistory } from "../foundation/event-history/index.ts";
-import { readEventDelta } from "../foundation/event-cursor/index.ts";
 import {
+  assertAppendTimestamp,
   assertHumanGate,
   deriveEventIdeaState,
+  matchesBusinessRequest,
   parseRequest,
   planProjectedAppend,
+  retryEventAfterDigest,
+  validateExpectedDigestPrefix,
 } from "../foundation/event-reducer/index.ts";
 import { projectEventSnapshot } from "../foundation/projection-cache/index.ts";
 import { eventStorageChanges, readEventStorage, snapshotEventFileHead, storageDigest } from "../foundation/event-store/index.ts";
@@ -28,40 +31,6 @@ import {
   requireSnapshotFileSystem,
 } from "./shared/business-types.ts";
 
-function eventCursorFileSystem(filesystem: ReturnType<typeof requireSnapshotFileSystem>) {
-  const cursorEntry = (entry: ReturnType<typeof filesystem.snapshotEntry>) => {
-    if (entry === null || entry === undefined) return entry;
-    if (entry.size === null) {
-      throw new TypeError(`Snapshot entry ${entry.name} does not have a file size.`);
-    }
-    return { ...entry, size: entry.size };
-  };
-  return {
-    lstat: filesystem.lstat,
-    readFile: filesystem.readFile,
-    readdir: (path: string) => filesystem.readdir(path),
-    snapshotEntry: (path: string) => cursorEntry(filesystem.snapshotEntry(path)),
-    snapshotEntries: (path: unknown) => {
-      if (typeof path !== "string") {
-        throw new TypeError("Snapshot directory path must be a string.");
-      }
-      return filesystem.snapshotEntries(path).map((entry) => {
-        const validated = cursorEntry(entry);
-        if (validated === null || validated === undefined) {
-          throw new TypeError("Snapshot directory returned an empty entry.");
-        }
-        return validated;
-      });
-    },
-    snapshotFile: (path: unknown) => {
-      if (typeof path !== "string") {
-        throw new TypeError("Snapshot file path must be a string.");
-      }
-      return filesystem.snapshotFile(path);
-    },
-  };
-}
-
 interface InteractionArguments {
   root: string;
   id: string;
@@ -72,42 +41,42 @@ interface InteractionArguments {
   options: EventOptions;
 }
 
+export function eventTimestamp(options: EventOptions) {
+  return (options.now ?? (() => new Date()))().toISOString();
+}
+
 export async function appendLocalInteraction({
   root, id, paths, store, bytes, input, expectedLength, expectedDigest, options,
 }: InteractionArguments & { store: EventStore; bytes: Buffer }) {
   const head = (source: Buffer) => storageDigest(store, source, options);
-  if (typeof expectedLength !== "number" || !Number.isSafeInteger(expectedLength)
-    || expectedLength < 0 || !/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/.test(expectedDigest ?? "")) {
-    throw new Error("Interaction writes require --expected-length and --expected-digest from event replay.");
+  if (expectedLength !== undefined) {
+    throw new Error("Append no longer accepts --expected-length; use an optional digest prefix.");
   }
-  if (bytes.length !== expectedLength || store.digest !== expectedDigest) {
-    if (bytes.length > expectedLength && head(bytes.subarray(0, expectedLength)) === expectedDigest) {
-      const previous = replayIdeaEvents(id,
-        parseIdeaEvents(bytes.subarray(0, expectedLength), options), options);
-      if (previous.ok && "state" in previous) {
-        const event = parseRequest(input, previous.state.sequence + 1, options);
-        if (event === undefined) throw new TypeError("Event request did not produce an event.");
-        const record = Buffer.from(serializeIdeaEvents([event], options));
-        if (["ping", "pong"].includes(event.type)
-          && bytes.subarray(expectedLength, expectedLength + record.length).equals(record)) {
-          const current = replayIdeaEvents(id, parseIdeaEvents(bytes, options), options);
-          if (!current.ok || !("state" in current)) {
-            throw new Error(`Current log reduction failed: ${"code" in current ? current.code : "missing-state"}`);
-          }
-          return {
-            id, outcome: "already-present", written: false,
-            length: bytes.length, digest: store.digest, sequence: current.state.sequence
-          };
-        }
+  validateExpectedDigestPrefix(expectedDigest, options.objectIdLength);
+  if (expectedDigest !== undefined && !store.digest.startsWith(expectedDigest)) {
+    const existing = retryEventAfterDigest(bytes, expectedDigest, options);
+    if (existing && ["ping", "pong"].includes(existing.type)
+      && matchesBusinessRequest(existing, input, options)) {
+      const current = replayIdeaEvents(id, parseIdeaEvents(bytes, options), options);
+      if (!current.ok || !("state" in current)) {
+        throw new Error(`Current log reduction failed: ${"code" in current ? current.code : "missing-state"}`);
       }
+      return {
+        id, outcome: "already-present", written: false,
+        length: bytes.length, digest: store.digest, sequence: current.state.sequence,
+        ...(existing.timestamp === undefined ? {} : { timestamp: existing.timestamp }),
+      };
     }
-    throw new Error("Stale log length or digest; reobserve before responding to new messages.");
+    throw new Error("Stale event digest; reobserve before responding to new messages.");
   }
-  const before = replayIdeaEvents(id, parseIdeaEvents(bytes, options), options);
+  const events = parseIdeaEvents(bytes, options);
+  const before = replayIdeaEvents(id, events, options);
   if (!before.ok || !("state" in before)) {
     throw new Error(`Current log reduction failed: ${"code" in before ? before.code : "missing-state"}`);
   }
-  const event = parseRequest(input, before.state.sequence + 1, options);
+  const timestamp = eventTimestamp(options);
+  assertAppendTimestamp(events, timestamp);
+  const event = parseRequest(input, before.state.sequence + 1, options, timestamp);
   const candidate = Buffer.concat([bytes, Buffer.from(serializeIdeaEvents([event], options))]);
   const after = replayIdeaEvents(id, parseIdeaEvents(candidate, options), options);
   if (!after.ok || !("state" in after)) {
@@ -127,6 +96,7 @@ export async function appendLocalInteraction({
   return {
     id, outcome: "candidate-written", written: true,
     length: candidate.length, digest: head(candidate), sequence: after.state.sequence,
+    timestamp,
   };
 }
 
@@ -134,31 +104,26 @@ export async function appendProjectedInteraction({
   root, id, paths, filesystem, input, expectedLength, expectedDigest, options,
 }: InteractionArguments & { filesystem: BusinessFileSystem }) {
   const snapshotFilesystem = requireSnapshotFileSystem(filesystem);
-  if (typeof expectedLength !== "number" || !Number.isSafeInteger(expectedLength) || expectedLength < 0
-    || typeof expectedDigest !== "string"
-    || !new RegExp(`^[0-9a-f]{${options.objectIdLength}}$`).test(expectedDigest ?? "")) {
-    throw new Error("Interaction writes require an exact observed length and file digest.");
+  if (expectedLength !== undefined) {
+    throw new Error("Append no longer accepts --expected-length; use an optional digest prefix.");
   }
+  validateExpectedDigestPrefix(expectedDigest, options.objectIdLength);
   const before = await projectEventSnapshot(root, id, paths, options, snapshotFilesystem);
-  if (before.length !== expectedLength || before.digest !== expectedDigest) {
-    const delta = await readEventDelta(root, paths, options, eventCursorFileSystem(snapshotFilesystem),
-      { length: expectedLength, digest: expectedDigest });
-    const first = delta.events[0];
-    if (first) {
-      const proposed = parseRequest(input, first.sequence, options);
-      if (proposed === undefined) {
-        throw new TypeError("Event request did not produce an event.");
-      }
-      if (serializeIdeaEvents([first], options) === serializeIdeaEvents([proposed], options)) {
-        return {
-          id, outcome: "already-present", written: false,
-          length: before.length, digest: before.digest, sequence: before.state.sequence
-        };
-      }
+  if (expectedDigest !== undefined && !before.digest.startsWith(expectedDigest)) {
+    const existing = retryEventAfterDigest(before.bytes, expectedDigest, options);
+    if (existing && ["ping", "pong"].includes(existing.type)
+      && matchesBusinessRequest(existing, input, options)) {
+      return {
+        id, outcome: "already-present", written: false,
+        length: before.length, digest: before.digest, sequence: before.state.sequence,
+        ...(existing.timestamp === undefined ? {} : { timestamp: existing.timestamp }),
+      };
     }
-    throw new Error("Stale log length or digest; do not renumber or replay the old request.");
+    throw new Error("Stale event digest; reobserve before responding to new messages.");
   }
-  const event = parseRequest(input, before.state.sequence + 1, options);
+  const timestamp = eventTimestamp(options);
+  assertAppendTimestamp(parseIdeaEvents(before.bytes, options), timestamp);
+  const event = parseRequest(input, before.state.sequence + 1, options, timestamp);
   if (event === undefined) throw new TypeError("Event request did not produce an event.");
   const planned = planProjectedAppend(before, paths, event, options);
   if (!planned.reduction.ok || !("state" in planned.reduction)) {
@@ -167,7 +132,8 @@ export async function appendProjectedInteraction({
   await writeProjectedAppend(root, id, paths, before, planned, options, { localInteraction: true });
   return {
     id, outcome: "candidate-written", written: true,
-    length: before.length + planned.record.length, digest: planned.digest, sequence: planned.reduction.state.sequence
+    length: before.length + planned.record.length, digest: planned.digest,
+    sequence: planned.reduction.state.sequence, timestamp,
   };
 }
 
@@ -229,11 +195,12 @@ export async function appendProjectedMetadata({
   runtime: CommandRuntime;
 }) {
   const snapshotFilesystem = requireSnapshotFileSystem(filesystem);
-  if (typeof expectedLength !== "number" || !Number.isSafeInteger(expectedLength) || expectedLength < 0
-    || typeof expectedDigest !== "string"
-    || !new RegExp(`^[0-9a-f]{${options.objectIdLength}}$`).test(expectedDigest ?? "")
-    || !new RegExp(`^[0-9a-f]{${options.objectIdLength}}$`).test(expectedPrimary ?? "")) {
-    throw new Error("Writes require exact observed length, file digest and primary.");
+  if (expectedLength !== undefined) {
+    throw new Error("Append no longer accepts --expected-length; use an optional digest prefix.");
+  }
+  validateExpectedDigestPrefix(expectedDigest, options.objectIdLength);
+  if (!new RegExp(`^[0-9a-f]{${options.objectIdLength}}$`).test(expectedPrimary ?? "")) {
+    throw new Error("Writes require the exact observed primary commit.");
   }
   const refreshPrimary = async () => {
     const action = await runtime.performAction({ type: "fetch-primary" },
@@ -245,29 +212,23 @@ export async function appendProjectedMetadata({
   const primary = await refreshPrimary();
   if (primary !== expectedPrimary) throw new Error("Primary moved; preserve the candidate, synchronize and reassess the request.");
   const before = await projectEventSnapshot(root, id, paths, options, snapshotFilesystem);
-  if (before.length !== expectedLength || before.digest !== expectedDigest) {
-    const delta = await readEventDelta(
-      root,
-      paths,
-      options,
-      eventCursorFileSystem(snapshotFilesystem),
-      { length: expectedLength, digest: expectedDigest },
-    );
-    if (delta.events[0]) {
-      const event = parseRequest(input, delta.events[0].sequence, options);
-      if (event === undefined) throw new TypeError("Event request did not produce an event.");
-      if (serializeIdeaEvents([event], options) === serializeIdeaEvents([delta.events[0]], options)) {
-        return {
-          supported: true, receipt: {
-            id, outcome: "already-present", written: false,
-            length: before.length, digest: before.digest, sequence: before.state.sequence, primary
-          }
-        };
-      }
+  if (expectedDigest !== undefined && !before.digest.startsWith(expectedDigest)) {
+    const existing = retryEventAfterDigest(before.bytes, expectedDigest, options);
+    if (existing && matchesBusinessRequest(existing, input, options)) {
+      return {
+        supported: true, receipt: {
+          id, outcome: "already-present", written: false,
+          length: before.length, digest: before.digest,
+          sequence: before.state.sequence, primary,
+          ...(existing.timestamp === undefined ? {} : { timestamp: existing.timestamp }),
+        }
+      };
     }
-    throw new Error("Stale log length or digest; do not renumber or replay the old request.");
+    throw new Error("Stale event digest; reobserve before retrying the request.");
   }
-  const event = parseRequest(input, before.state.sequence + 1, options);
+  const timestamp = eventTimestamp(options);
+  assertAppendTimestamp(parseIdeaEvents(before.bytes, options), timestamp);
+  const event = parseRequest(input, before.state.sequence + 1, options, timestamp);
   if (event === undefined) throw new TypeError("Event request did not produce an event.");
   const planned = planProjectedAppend(before, paths, event, options);
   if (!planned.reduction.ok) {
@@ -277,7 +238,7 @@ export async function appendProjectedMetadata({
     return {
       supported: true, receipt: {
         id, outcome: "no-state-change", written: false,
-        length: before.length, digest: before.digest, primary
+        length: before.length, digest: before.digest, primary, timestamp,
       }
     };
   }
@@ -350,7 +311,7 @@ export async function appendProjectedMetadata({
     return {
       id, outcome: "candidate-written", written: true, primary,
       length: candidate.length, digest: planned.digest,
-      sequence: reductionState.sequence, history: updatedHistory,
+      sequence: reductionState.sequence, timestamp, history: updatedHistory,
     };
   }, (cause) => ({ problem: { type: "event.write-failed", summary: errorMessage(cause) } }));
   if (action.status === "failure") throw new Error(action.problem.summary);

@@ -350,7 +350,9 @@ test("resolves the repository root when invoked from a nested directory", async 
   assert.equal(report.observation.selectedIdea.state, "preparing");
   assert.equal(Object.hasOwn(report.observation, "ideas"), false);
   assert.equal(Object.hasOwn(report.observation, "guidance"), false);
-  assert.match(responseText(report), /event replay/);
+  assert.match(report.observation.selectedIdea.eventDigest ?? "", /^[0-9a-f]{40}$/);
+  assert.match(responseText(report), /event append .*--expected-digest [0-9a-f]{40}/);
+  assert.doesNotMatch(responseText(report), /event replay/);
   assert.doesNotMatch(responseText(report), /道心|内景|现世/);
 });
 

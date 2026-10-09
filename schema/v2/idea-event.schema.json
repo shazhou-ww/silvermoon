@@ -2,11 +2,15 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/shazhou-ww/silvermoon/raw/refs/heads/main/schema/v2/idea-event.schema.json",
   "title": "Silvermoon idea state event v2",
-  "description": "One canonical UTF-8 JSONL record in an idea's events.jsonl file, with LF and at most 1048576 bytes including LF. The file may be empty; otherwise every record ends with LF and sequence starts at 1 and remains consecutive. Runtime also enforces canonical byte encoding, a regular-file layout, nonempty transitions and the abandoned boundary.",
+  "description": "One canonical UTF-8 JSONL record in an idea's events.jsonl file, with LF and at most 1048576 bytes including LF. The file may be empty; otherwise every record ends with LF. New records omit sequence and include timestamp; sequence remains readable for historical records and is derived from file order. Timestamp is optional for historical compatibility, but present values use UTC RFC 3339 millisecond precision and never decrease. Runtime also enforces canonical byte encoding, a regular-file layout, nonempty transitions and the abandoned boundary.",
   "type": "object",
-  "required": ["sequence", "type"],
+  "required": ["type"],
   "properties": {
     "sequence": { "type": "integer", "minimum": 1, "maximum": 9007199254740991 },
+    "timestamp": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z$"
+    },
     "type": { "type": "string" }
   },
   "oneOf": [

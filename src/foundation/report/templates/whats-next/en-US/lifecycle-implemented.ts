@@ -8,7 +8,9 @@ import type { LifecycleImplementedParameters } from "../contract.ts";
 /** @pure */
 const submittedUpstream = ({
   action,
+  eventDigest,
   ideaId,
+  primaryCommit,
   revisionReference,
   submitAction,
 }: LifecycleImplementedParameters) =>
@@ -17,7 +19,10 @@ const submittedUpstream = ({
     `Present response.review and request the explicit ${action} decision`,
     `for revision reference ${revisionReference}.`,
     `Record an acceptance only with the full revision from response.review`,
-    `and an exact silvermoon event replay ${ideaId} --audience agent cursor.`,
+    `using silvermoon event append ${ideaId}`,
+    `--expected-digest ${eventDigest ?? "<event-digest>"}`,
+    `--expected-primary ${primaryCommit} --audience agent;`,
+    `no replay cursor is required.`,
   ].join(" ");
 
 /** @pure */

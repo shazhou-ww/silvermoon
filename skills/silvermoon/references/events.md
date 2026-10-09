@@ -8,8 +8,8 @@ Never change the version alone or migrate a project implicitly.
 
 V2 replaces each idea's `status.yaml` with one regular `events.jsonl` file;
 never keep both. An empty file is the identity-only initial state. Appends add
-one canonical record to this same file; event sequences begin at 1 and never
-restart.
+one canonical record to this same file. Sequence numbers are derived from
+one-based file order and never stored in new records.
 Identity comes from the ULID directory. Events are canonical UTF-8 JSONL
 without BOM, with LF and a final LF for nonempty logs. Do not let Git convert
 these bytes: add `**/events.jsonl -text -filter` to the project's `.gitattributes`.
@@ -28,8 +28,12 @@ verify the complete authoritative file before using its OID. Full replay,
 reduction validation and filesystem integrity audits read the log; do not
 describe them as constant-time operations.
 
-Every record has a consecutive positive safe-integer `sequence` and `type`.
-V2 defines ten business changes and two interaction messages:
+Every record has `type`, an optional `payload`, and an optional `timestamp`.
+New appends always write a CLI-generated UTC RFC 3339 timestamp with millisecond
+precision. Historical records may omit timestamp or retain a stored sequence;
+readers derive sequence from file order. Present timestamps must never decrease;
+missing timestamps are skipped by that check. V2 defines ten business changes
+and two interaction messages:
 
 | Type | Payload |
 | --- | --- |
@@ -46,7 +50,7 @@ V2 defines ten business changes and two interaction messages:
 | `ping` | `{"message":"nonempty string"}` |
 | `pong` | `{"message":"nonempty string"}` |
 
-Interaction messages occupy the same sequence and log as business events.
+Interaction messages occupy the same ordered log as business events.
 Replay retains ordered `interaction.messages` (`sequence`, `type`, `message`)
 and projects `control.owner` plus `control.lastTransfer`. Initial active
 control is `downstream`. `ping`, each `accept*`, and `resume` transfer control
@@ -65,8 +69,8 @@ acceptance decisions, `abandon`, `resume`, and `ping`; downstream for
 submissions and `pong`; and both for metadata. The stateless CLI does not
 authenticate senders or reject messages based on current control.
 
-No timestamps, actors, repository commits, IDs, observations, imports,
-creation, arbitrary patches, or decision retractions belong in a record.
+No actors, repository commits, IDs, observations, imports, creation, arbitrary
+patches, or decision retractions belong in a record.
 Null clears only alias/language. Identical state changes are not appended.
 The last decision for each field is compared to current nested world trees
 using the existing five-state algorithm. Queries never write observations.
@@ -148,7 +152,7 @@ verify the complete file HEAD before and after the recoverable transaction,
 and retries still require the exact record after their original prefix.
 Use the exact ULID if invalid logs prevent alias resolution.
 
-Put a business request in a JSON file, without sequence, for example:
+Put a business request in a JSON file, without sequence or timestamp, for example:
 
 ```json
 {"type":"setAlias","payload":{"alias":"event-state-model"}}
@@ -158,10 +162,14 @@ For metadata, submissions, and human decisions, bind the request to the
 observed log and primary:
 
 ```sh
-silvermoon event append <idea> --input request.json --expected-length <bytes> --expected-digest <oid> --expected-primary <commit> --audience agent
+silvermoon event append <idea> --input request.json --expected-digest <8+-hex-prefix> --expected-primary <commit> --audience agent
 ```
 
-The writer fetches primary, verifies the request, validates the entire project,
+`--expected-digest` is optional. When present it accepts 8 through the complete
+Git object-ID length and compares that prefix with the complete event-file blob
+OID reported by `whats-next`. Append does not accept `--expected-length`;
+length remains part of replay cursors only. The writer fetches primary, verifies
+the request, validates the entire project,
 acquires an exclusive project transaction, rechecks the source and world
 snapshot, refreshes primary again, and atomically replaces `events.jsonl`
 through a recoverable transaction. Project commands block while the
@@ -174,11 +182,13 @@ Do not concurrently hand-edit a target while its CLI transaction runs.
 
 For `ping`/`pong`, supply a request of the form
 `{"type":"pong","payload":{"message":"blocked"}}` to the same `event append`
-command, but pass only `--expected-length` and `--expected-digest` (no
-`--expected-primary`). The local write does not fetch, commit, or require a
+command, but pass only optional `--expected-digest` (no `--expected-primary`).
+The local write does not fetch, commit, or require a
 clean worktree. If the exact full observed log has changed, reobserve before
 responding. A local message is not synchronized to primary merely because
-it was appended.
+it was appended. If the observed prefix is followed immediately by the same
+business request, retry returns `already-present` with `written: false` and
+the original timestamp instead of appending a duplicate.
 
 An Agent may append the phase's `submit*` only after the exact current world
 tree is synchronized to primary. A submission needs no human confirmation and

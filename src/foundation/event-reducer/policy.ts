@@ -8,6 +8,7 @@ import {
   reduceIdeaEvent,
   replayIdeaEvents,
   serializeIdeaEvents,
+  validateIdeaEvent,
 } from "../event-codec/index.ts";
 import { deriveIdeaState } from "../idea-model/index.ts";
 
@@ -71,15 +72,91 @@ export function deriveEventIdeaState(
 export function parseRequest(
   input: object|null,
   sequence: number,
-  options?: EventCodecOptions,
+  options: EventCodecOptions | undefined,
+  timestamp: string,
 ) {
   if (input === null || typeof input !== "object" || Array.isArray(input)
-    || Object.hasOwn(input, "sequence")) {
-    throw new Error("Supply a business request object without sequence; the CLI assigns it.");
+    || Object.hasOwn(input, "sequence") || Object.hasOwn(input, "timestamp")) {
+    throw new Error(
+      "Supply a business request object without sequence or timestamp; the CLI assigns event metadata.",
+    );
   }
-  const event = { sequence, ...input };
-  // Round-trip through the strict parser rejects unknown/missing business fields.
-  return parseIdeaEvents(serializeIdeaEvents([event], options), options)[0];
+  const event = { sequence, ...input, timestamp };
+  return validateIdeaEvent(event, options);
+}
+
+/** @pure */
+export function matchesBusinessRequest(
+  event: IdeaEvent,
+  input: object | null,
+  options?: EventCodecOptions,
+) {
+  const proposed = parseRequest(
+    input,
+    event.sequence,
+    options,
+    event.timestamp ?? "1970-01-01T00:00:00.000Z",
+  );
+  if (proposed === undefined) return false;
+  const businessRecord = (value: IdeaEvent) => JSON.stringify({
+    type: value.type,
+    ...("payload" in value ? { payload: value.payload } : {}),
+  });
+  return businessRecord(event) === businessRecord(proposed);
+}
+
+/** @pure */
+export function assertAppendTimestamp(
+  events: readonly IdeaEvent[],
+  timestamp: string,
+) {
+  let latest: string | undefined;
+  for (const event of events) {
+    if (event.timestamp !== undefined) latest = event.timestamp;
+  }
+  if (latest !== undefined && timestamp < latest) {
+    throw new Error(
+      `Local clock timestamp ${timestamp} is earlier than latest event timestamp ${latest}; inspect the system clock or repair invalid event history before appending.`,
+    );
+  }
+}
+
+/** @pure */
+export function validateExpectedDigestPrefix(
+  expectedDigest: string | undefined,
+  objectIdLength: number,
+) {
+  if (expectedDigest === undefined) return;
+  if (!new RegExp(`^[0-9a-f]{8,${objectIdLength}}$`).test(expectedDigest)) {
+    throw new Error(
+      `Expected digest must be 8 to ${objectIdLength} lowercase hexadecimal characters.`,
+    );
+  }
+}
+
+/** @pure */
+export function retryEventAfterDigest(
+  bytes: Buffer,
+  expectedDigest: string,
+  options: EventCodecOptions & { objectIdLength: number },
+) {
+  const boundaries = [0];
+  for (let index = 0; index < bytes.length; index++) {
+    if (bytes[index] === 0x0a) boundaries.push(index + 1);
+  }
+  const matches = boundaries.filter((length) =>
+    gitContentDigest("blob", bytes.subarray(0, length), options)
+      .startsWith(expectedDigest)
+  );
+  if (matches.length > 1) {
+    throw new Error(
+      "Expected digest prefix matches multiple event boundaries; retry with a longer digest.",
+    );
+  }
+  const length = matches[0];
+  if (length === undefined || length === bytes.length) return undefined;
+  const prefixEvents = parseIdeaEvents(bytes.subarray(0, length), options);
+  return parseIdeaEvents(bytes, options)[prefixEvents.length];
 }
 
 /** @pure */
@@ -138,11 +215,12 @@ export function planProjectedAppend(
 
 /** @pure */
 export function planFullEventChange(
-  { operation, input, bytes, id }: {
+  { operation, input, bytes, id, timestamp }: {
     operation: string;
     input: object|null;
     bytes: Buffer;
     id: string;
+    timestamp: string;
   },
   options?: EventCodecOptions,
 ) {
@@ -153,11 +231,15 @@ export function planFullEventChange(
       `Current log reduction failed: ${before.code}; review the complete events.jsonl directly.`,
     );
   }
-  const proposed = [parseRequest(input, before.state.sequence + 1, options)];
+  const events = parseIdeaEvents(bytes, options);
+  assertAppendTimestamp(events, timestamp);
+  const proposed = [
+    parseRequest(input, before.state.sequence + 1, options, timestamp),
+  ];
   const candidate = Buffer.concat([bytes, Buffer.from(serializeIdeaEvents(proposed, options))]);
   const reduction = replayIdeaEvents(id, parseIdeaEvents(candidate, options), options);
 
-  return { candidate, reduction };
+  return { candidate, event: proposed[0], reduction, timestamp };
 }
 
 /** @pure */

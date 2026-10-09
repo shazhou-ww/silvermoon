@@ -8,7 +8,9 @@ import type { LifecycleDeployedParameters } from "../contract.ts";
 /** @pure */
 const submittedUpstream = ({
   action,
+  eventDigest,
   ideaId,
+  primaryCommit,
   revisionReference,
   submitAction,
 }: LifecycleDeployedParameters) =>
@@ -17,7 +19,10 @@ const submittedUpstream = ({
     `呈现 response.review，并请求 revision reference ${revisionReference}`,
     ` 对应的明确 ${action} 决定。`,
     `只有使用 response.review 中的完整 revision`,
-    ` 和 silvermoon event replay ${ideaId} --audience agent 的准确 cursor 才能记录验收。`,
+    ` 并通过 silvermoon event append ${ideaId}`,
+    ` --expected-digest ${eventDigest ?? "<event-digest>"}`,
+    ` --expected-primary ${primaryCommit} --audience agent 才能记录验收；`,
+    `无需 replay cursor。`,
   ].join("");
 
 /** @pure */

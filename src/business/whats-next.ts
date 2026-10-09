@@ -230,6 +230,9 @@ export async function whatsNextUseCase({
     ...(selected.submissions === undefined
       ? {}
       : { submissions: selected.submissions }),
+    ...(selected.eventDigest === undefined
+      ? {}
+      : { eventDigest: selected.eventDigest }),
   };
   const primary = readiness.primary
     ?? (() => {
@@ -290,6 +293,7 @@ export async function whatsNextUseCase({
         selected,
         observed.outputLanguage,
         observed.contentLanguage,
+        primary,
       ),
       ...(review === undefined ? {} : { review }),
     },

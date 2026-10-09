@@ -477,13 +477,13 @@ Examples:
       .description("replay or append v2 idea events")
       .option("--language <tag>", "use a built-in output language for this invocation", outputLanguageArgument)
       .option("--input <file>", "JSON business request for append")
-      .option("--expected-length <bytes>", "observed log byte length", (value: string) => {
+      .option("--expected-length <bytes>", "legacy append option; rejected (use replay --after-length)", (value: string) => {
         if (!/^(0|[1-9][0-9]*)$/.test(value) || !Number.isSafeInteger(Number(value))) {
           throw new InvalidArgumentError("expected length must be a nonnegative safe integer");
         }
         return Number(value);
       })
-      .option("--expected-digest <oid>", "observed canonical events-folder digest")
+      .option("--expected-digest <prefix>", "optional observed event digest prefix (minimum 8 hex characters)")
       .option("--after-length <bytes>", "return only events after this observed byte cursor", (value: string) => {
         if (!/^(0|[1-9][0-9]*)$/.test(value) || !Number.isSafeInteger(Number(value))) {
           throw new InvalidArgumentError("after length must be a nonnegative safe integer");
@@ -504,7 +504,8 @@ Examples:
         && (operation !== "replay" || options.afterLength === undefined || options.afterDigest === undefined))
       || (operation === "replay" && [
         options.expectedLength, options.expectedDigest, options.expectedPrimary, options.confirmDecision,
-      ].some((value) => value !== undefined))) {
+      ].some((value) => value !== undefined))
+      || (operation === "append" && options.expectedLength !== undefined)) {
       throw Object.assign(new Error("Use event replay|append <idea>; append requires --input."), { exitCode: 2 });
     }
     let input: unknown;

@@ -338,6 +338,7 @@ export function lifecycleInstruction(
   idea: LifecycleIdea,
   language: string,
   contentLanguage: string,
+  primaryCommit: string,
 ) {
   const name = ideaName(idea);
   const submission = currentSubmission(idea);
@@ -347,7 +348,9 @@ export function lifecycleInstruction(
       ? renderLifecyclePrepared(language, {
         action: "acceptIdeal",
         controlOwner: idea.control?.owner ?? null,
+        eventDigest: idea.eventDigest ?? null,
         ideaId: idea.id,
+        primaryCommit,
         revisionReference: revisionReference(idea.idealRevision),
         submitAction: "submitIdeal",
       })
@@ -355,9 +358,11 @@ export function lifecycleInstruction(
         action: "acceptIdeal",
         controlOwner: idea.control?.owner ?? null,
         documentPath: idea.worlds.idealRevision.documentPath,
+        eventDigest: idea.eventDigest ?? null,
         ideaId: idea.id,
         ledgerPath: idea.ledgerPath,
         name,
+        primaryCommit,
         submissionState,
         submitAction: "submitIdeal",
       })
@@ -366,7 +371,9 @@ export function lifecycleInstruction(
       ? renderLifecycleImplemented(language, {
         action: "acceptInner",
         controlOwner: idea.control?.owner ?? null,
+        eventDigest: idea.eventDigest ?? null,
         ideaId: idea.id,
+        primaryCommit,
         revisionReference: revisionReference(idea.implementationRevision),
         submitAction: "submitInner",
       })
@@ -374,10 +381,12 @@ export function lifecycleInstruction(
         action: "acceptInner",
         controlOwner: idea.control?.owner ?? null,
         documentPath: idea.worlds.implementationRevision.documentPath,
+        eventDigest: idea.eventDigest ?? null,
         ideaId: idea.id,
         idealPath: idea.worlds.idealRevision.path,
         ledgerPath: idea.ledgerPath,
         name,
+        primaryCommit,
         submissionState,
         submitAction: "submitInner",
         worldPath: idea.worlds.implementationRevision.path,
@@ -387,7 +396,9 @@ export function lifecycleInstruction(
       ? renderLifecycleDeployed(language, {
         action: "acceptOuter",
         controlOwner: idea.control?.owner ?? null,
+        eventDigest: idea.eventDigest ?? null,
         ideaId: idea.id,
+        primaryCommit,
         revisionReference: revisionReference(idea.deploymentRevision),
         submitAction: "submitOuter",
       })
@@ -395,17 +406,19 @@ export function lifecycleInstruction(
         action: "acceptOuter",
         controlOwner: idea.control?.owner ?? null,
         documentPath: idea.worlds.deploymentRevision.documentPath,
+        eventDigest: idea.eventDigest ?? null,
         ideaId: idea.id,
         ledgerPath: idea.ledgerPath,
         name,
+        primaryCommit,
         submissionState,
         submitAction: "submitOuter",
         worldPath: idea.worlds.deploymentRevision.path,
       })
     : renderLifecycleInactive(language, {
-      name,
-      state: idea.state,
-    });
+    name,
+    state: idea.state,
+  });
   return joinInstructions([
     instruction,
     idea.state === "preparing" ? preparationSeedInstruction(idea, language) : null,

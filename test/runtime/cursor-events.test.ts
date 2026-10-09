@@ -155,14 +155,19 @@ test("cursor replay returns only the verified suffix and never substitutes for f
   const appended = await eventCommand({
     root, operation: "append", idea: FIRST_ID,
     input: { type: "pong", payload: { message: "new event" } },
-    expectedLength: before.length, expectedDigest: before.digest,
+    expectedDigest: before.digest,
   });
   assert.equal(eventReceipt(appended).sequence, 1001);
   const commands: (readonly string[])[] = [];
   const report = await observeGitCommands((args) => commands.push(args), () => replay(root, before));
   const delta = report;
   assert.equal(delta.outcome, "delta-observed", JSON.stringify(report));
-  assert.deepEqual(delta.events, [{ sequence: 1001, type: "pong", payload: { message: "new event" } }]);
+  assert.deepEqual(delta.events, [{
+    sequence: 1001,
+    type: "pong",
+    timestamp: requiredString(eventReceipt(appended).timestamp, "timestamp"),
+    payload: { message: "new event" },
+  }]);
   assert.equal(delta.sequence, 1001);
   assert.equal(Object.hasOwn(delta, "reduction"), false);
   assert.equal(commands.some((args) => args[0] === "cat-file" && args.includes(sealed)), false);
@@ -194,7 +199,7 @@ test("cursor replay validates record boundaries and initial empty streams", asyn
   assert.match(firstProblem(invalid).summary, /not an event boundary/);
   await writeFile(
     join(root, paths.eventsPath),
-    source.toString("utf8").replace('"sequence":2', '"sequence":3'),
+    source.toString("utf8").replace('\n{"type":', '\n{"sequence":3,"type":'),
   );
   const discontinuous = await replayReport(root, cursor);
   assert.match(firstProblem(discontinuous).summary, /sequence is not continuous/);
