@@ -2,24 +2,42 @@
 
 ## Steps
 
-<!--
-为每个步骤分配稳定的 D-Sxx 标识符和三级标题。
-描述部署或现实世界验证工作。
-不要在本文档中使用任务列表复选框。
--->
+### D-S01: 固定 primary 部署对象
 
-### D-S01: 待主体世界验收后细化部署步骤
+将本部署契约同步到 configured primary，并重新观察稳定的
+`deploymentRevision`。证明已接受的 `implementationRevision`
+`78328ef4b60c054c529227ca8076cf5ce4af8c63` 及其状态提交均可从刷新后的
+`origin/main` 到达；本次部署对象仅为 GitHub 主分支源码，不创建 npm release。
 
-部署阶段制定验证步骤。
+### D-S02: 执行托管 CI 验证
+
+在契约同步后对 `main` 手动触发完整 `CI` workflow，核对实际 `headSha`
+包含本部署契约，并等待全部 required jobs 完成。验证范围包括 Node 22/24
+跨平台 unit matrix、contract、integration、package/pack 和 installed-package
+检查。
+
+### D-S03: 固化外部结果
+
+将 workflow run 的不可变 URL、实际 commit、最终结论及未触发 npm 发布的
+边界记录到同世界部署证据。同步证据和 ledger 到 primary，重新观察最终
+`deploymentRevision` 后请求 `acceptOuter`。
 
 ## Acceptance criteria
 
-<!--
-为每项标准分配稳定的 D-ACxx 标识符和三级标题。
-同时说明可观察的外部结果及其证明方法。
-不要创建单独的验证章节，也不要使用任务列表复选框。
--->
+### D-AC01: 部署对象已进入 primary
 
-### D-AC01: 待主体世界验收后细化部署验收标准
+刷新远端后，部署契约、已接受实现及状态提交均可从 `origin/main` 到达；
+以 exact commit、`deploymentRevision` 和 commit-pinned repository links
+证明。
 
-部署阶段制定验收标准。
+### D-AC02: 托管 CI 对部署对象全部通过
+
+一次 `workflow_dispatch` CI run 的 `headSha` 包含稳定部署契约，run 结论为
+`success`，且所有 required jobs 均成功；以固定 GitHub Actions run URL
+和 job 列表证明。
+
+### D-AC03: 部署证据完整且未越过发布边界
+
+Outer World 证据记录 primary commit、CI run、检查结论及本次未创建 npm tag、
+release 或 publish workflow；证据、契约和 ledger 均已同步到 primary，
+并通过 Silvermoon snapshot validation。
