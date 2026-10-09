@@ -37,3 +37,12 @@
   被 GitHub 以 HTTP 422 拒绝；[deployment 6958854727](https://api.github.com/repos/shazhou-ww/silvermoon/deployments/6958854727)
   正确绑定同一 tag 与 commit，但旧 tag 中没有对应 trigger，未创建
   workflow run，并已记录为 `failure`。
+- 当前发布身份约束下没有可继续执行的安全恢复路径。GitHub
+  [workflow rerun](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/re-run-workflows-and-jobs)
+  会保留原事件的 `GITHUB_SHA` 与 `GITHUB_REF`；从其他 revision 触发后
+  再 checkout 原 tag，则 npm provenance 会指向触发 revision，而不是原
+  tag。按照 [SLSA build provenance](https://slsa.dev/spec/v1.2/build-provenance)
+  的输入与 resolved dependency 语义，覆盖 provenance 环境以伪装原 tag
+  不可接受。若仍发布 `0.4.0`，只能显式授权一个新的受保护 recovery
+  revision 作为实际 source/provenance identity，并同步修改发布规则与
+  验证器；在该授权出现前，`D-S02` 与 `D-AC02` 保持 blocked。
