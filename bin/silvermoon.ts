@@ -144,6 +144,17 @@ function addCommonOptions(command: Command): Command {
     .option("-r, --root <path>", "repository root", process.cwd());
 }
 
+function eventLengthArgument(label: "after" | "expected") {
+  return (value: string) => {
+    if (!/^(0|[1-9][0-9]*)$/.test(value) || !Number.isSafeInteger(Number(value))) {
+      throw new InvalidArgumentError(
+        `${label} length must be a nonnegative safe integer`,
+      );
+    }
+    return Number(value);
+  };
+}
+
 export function selectOutputRenderer({
   audience = "human",
   json = false,
@@ -472,39 +483,14 @@ Examples:
     );
   });
 
-  addCommonOptions(
-    program.command("event <operation> [idea]")
-      .description("replay or append v2 idea events")
-      .option("--language <tag>", "use a built-in output language for this invocation", outputLanguageArgument)
-      .option("--input <file>", "JSON business request for append")
-      .option("--expected-length <bytes>", "observed log byte length", (value: string) => {
-        if (!/^(0|[1-9][0-9]*)$/.test(value) || !Number.isSafeInteger(Number(value))) {
-          throw new InvalidArgumentError("expected length must be a nonnegative safe integer");
-        }
-        return Number(value);
-      })
-      .option("--expected-digest <oid>", "observed canonical events-folder digest")
-      .option("--after-length <bytes>", "return only events after this observed byte cursor", (value: string) => {
-        if (!/^(0|[1-9][0-9]*)$/.test(value) || !Number.isSafeInteger(Number(value))) {
-          throw new InvalidArgumentError("after length must be a nonnegative safe integer");
-        }
-        return Number(value);
-      })
-      .option("--after-digest <oid>", "exact observed prefix folder digest for incremental replay")
-      .option("--full-history", "include complete historical reductions in an append receipt instead of the default summary")
-      .option("--expected-primary <commit>", "observed primary commit (never stored in events)")
-      .option("--confirm-decision", "assert an explicit human decision for this exact request"),
-  ).action(async (operation: string, idea: string | undefined, options: CliOptions) => {
-    if (!["replay", "append"].includes(operation)
-      || !idea
-      || (operation === "append" && !options.input)
-      || (operation === "replay" && options.input)
-      || (operation !== "append" && options.fullHistory)
-      || ((options.afterLength !== undefined || options.afterDigest !== undefined)
-        && (operation !== "replay" || options.afterLength === undefined || options.afterDigest === undefined))
-      || (operation === "replay" && [
-        options.expectedLength, options.expectedDigest, options.expectedPrimary, options.confirmDecision,
-      ].some((value) => value !== undefined))) {
+  const runEvent = async (
+    operation: "replay" | "append",
+    idea: string,
+    options: CliOptions,
+  ) => {
+    if ((operation === "append" && !options.input)
+      || (operation === "replay"
+        && (options.afterLength === undefined) !== (options.afterDigest === undefined))) {
       throw Object.assign(new Error("Use event replay|append <idea>; append requires --input."), { exitCode: 2 });
     }
     let input: unknown;
@@ -521,7 +507,56 @@ Examples:
       && receipt !== undefined
       && receipt.reduction?.ok !== false
       && receipt.format?.ok !== false ? 0 : 1);
-  });
+  };
+
+  const event = program.command("event")
+    .description("observe or append v2 idea events")
+    .addHelpCommand(false)
+    .configureHelp({ sortOptions: true, sortSubcommands: false });
+
+  addCommonOptions(
+    event.command("replay <idea>")
+      .description("observe a complete event stream or an exact cursor suffix")
+      .option("--language <tag>", "use a built-in output language for this invocation", outputLanguageArgument)
+      .option(
+        "--after-length <bytes>",
+        "return only events after this observed byte cursor",
+        eventLengthArgument("after"),
+      )
+      .option(
+        "--after-digest <oid>",
+        "exact observed prefix folder digest for incremental replay",
+      ),
+  ).action((idea: string, options: CliOptions) =>
+    runEvent("replay", idea, options)
+  );
+
+  addCommonOptions(
+    event.command("append <idea>")
+      .description("append one validated business or interaction event")
+      .option("--language <tag>", "use a built-in output language for this invocation", outputLanguageArgument)
+      .option("--input <file>", "JSON business request for append")
+      .option(
+        "--expected-length <bytes>",
+        "observed log byte length",
+        eventLengthArgument("expected"),
+      )
+      .option("--expected-digest <oid>", "observed canonical events-folder digest")
+      .option(
+        "--expected-primary <commit>",
+        "observed primary commit (never stored in events)",
+      )
+      .option(
+        "--confirm-decision",
+        "assert an explicit human decision for this exact request",
+      )
+      .option(
+        "--full-history",
+        "include complete historical reductions instead of the default summary",
+      ),
+  ).action((idea: string, options: CliOptions) =>
+    runEvent("append", idea, options)
+  );
   return program;
 }
 

@@ -3,6 +3,12 @@ import {
   contentLanguage as enContentLanguage,
   detachedHead as enDetachedHead,
   eventHistoryInvalid as enEventHistoryInvalid,
+  eventAcceptGuidance as enEventAcceptGuidance,
+  eventAppendCommand as enEventAppendCommand,
+  eventInteractionGuidance as enEventInteractionGuidance,
+  eventReplayCommand as enEventReplayCommand,
+  eventResumeGuidance as enEventResumeGuidance,
+  eventSubmitGuidance as enEventSubmitGuidance,
   headMissing as enHeadMissing,
   ideaMetadataUnavailable as enIdeaMetadataUnavailable,
   ideaNotFound as enIdeaNotFound,
@@ -34,6 +40,12 @@ import {
   contentLanguage as zhContentLanguage,
   detachedHead as zhDetachedHead,
   eventHistoryInvalid as zhEventHistoryInvalid,
+  eventAcceptGuidance as zhEventAcceptGuidance,
+  eventAppendCommand as zhEventAppendCommand,
+  eventInteractionGuidance as zhEventInteractionGuidance,
+  eventReplayCommand as zhEventReplayCommand,
+  eventResumeGuidance as zhEventResumeGuidance,
+  eventSubmitGuidance as zhEventSubmitGuidance,
   headMissing as zhHeadMissing,
   ideaMetadataUnavailable as zhIdeaMetadataUnavailable,
   ideaNotFound as zhIdeaNotFound,
@@ -65,6 +77,12 @@ import type {
   ContentLanguageParameters,
   DetachedHeadParameters,
   EventHistoryInvalidParameters,
+  EventAcceptGuidanceParameters,
+  EventAppendCommandParameters,
+  EventInteractionGuidanceParameters,
+  EventReplayCommandParameters,
+  EventResumeGuidanceParameters,
+  EventSubmitGuidanceParameters,
   IdeaNotFoundParameters,
   LifecycleDeployingParameters,
   LifecycleImplementingParameters,
@@ -172,6 +190,66 @@ export function renderPreparationSeed(
   return isChinese(language)
     ? zhPreparationSeed(parameters)
     : enPreparationSeed(parameters);
+}
+
+/** @pure */
+export function renderEventReplayCommand(
+  language: string,
+  parameters: EventReplayCommandParameters,
+) {
+  return isChinese(language)
+    ? zhEventReplayCommand(parameters)
+    : enEventReplayCommand(parameters);
+}
+
+/** @pure */
+export function renderEventAppendCommand(
+  language: string,
+  parameters: EventAppendCommandParameters,
+) {
+  return isChinese(language)
+    ? zhEventAppendCommand(parameters)
+    : enEventAppendCommand(parameters);
+}
+
+/** @pure */
+export function renderEventSubmitGuidance(
+  language: string,
+  parameters: EventSubmitGuidanceParameters,
+) {
+  return isChinese(language)
+    ? zhEventSubmitGuidance(parameters)
+    : enEventSubmitGuidance(parameters);
+}
+
+/** @pure */
+export function renderEventAcceptGuidance(
+  language: string,
+  parameters: EventAcceptGuidanceParameters,
+) {
+  return isChinese(language)
+    ? zhEventAcceptGuidance(parameters)
+    : enEventAcceptGuidance(parameters);
+}
+
+/** @pure */
+export function renderEventInteractionGuidance(
+  language: string,
+  parameters: EventInteractionGuidanceParameters,
+) {
+  return isChinese(language)
+    ? zhEventInteractionGuidance(parameters)
+    : enEventInteractionGuidance(parameters);
+}
+
+/** @pure */
+export function renderEventResumeGuidance(
+  language: string,
+  parameters: EventResumeGuidanceParameters,
+) {
+  return isChinese(language)
+    ? zhEventResumeGuidance(parameters)
+    : enEventResumeGuidance(parameters);
 }
 
 /** @pure */

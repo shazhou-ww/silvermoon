@@ -2,6 +2,12 @@ import { diagnosticInstruction } from "./dialogue.ts";
 import { resolveContentTemplateLanguage } from "../language/index.ts";
 import {
   renderContentLanguage,
+  renderEventAcceptGuidance,
+  renderEventAppendCommand,
+  renderEventInteractionGuidance,
+  renderEventReplayCommand,
+  renderEventResumeGuidance,
+  renderEventSubmitGuidance,
   renderLifecycleDeploying,
   renderLifecycleImplementing,
   renderLifecycleInactive,
@@ -332,6 +338,83 @@ function preparationSeedInstruction(idea: LifecycleIdea, language: string) {
   });
 }
 
+type EventPhaseGuidance = Readonly<{
+  action: "acceptIdeal" | "acceptInner" | "acceptOuter";
+  evidence: "Idea candidate" | "implementation evidence" | "external evidence";
+  revisionField: "idealRevision" | "implementationRevision" | "deploymentRevision";
+  revisionKind: "Idea" | "implementation" | "deployment";
+  revisionReference: string;
+  submitAction: "submitIdeal" | "submitInner" | "submitOuter";
+}>;
+
+/** @pure */
+function eventGuidanceInstruction(
+  idea: LifecycleIdea,
+  language: string,
+  phase: EventPhaseGuidance,
+) {
+  const submission = currentSubmission(idea);
+  const replayCommand = renderEventReplayCommand(language, {
+    audience: "agent",
+    ideaId: idea.id,
+  });
+  if (submission?.state === "submitted") {
+    if (idea.control?.owner === "upstream") {
+      return renderEventAcceptGuidance(language, {
+        action: phase.action,
+        appendCommand: renderEventAppendCommand(language, {
+          audience: "agent",
+          confirmDecision: true,
+          expectedDigest: "<oid>",
+          expectedLength: "<bytes>",
+          expectedPrimary: "<commit>",
+          ideaId: idea.id,
+          inputPath: "request.json",
+        }),
+        replayCommand,
+        revisionField: phase.revisionField,
+        revisionKind: phase.revisionKind,
+        revisionReference: phase.revisionReference,
+        submitAction: phase.submitAction,
+      });
+    }
+    return renderEventInteractionGuidance(language, {
+      action: phase.action,
+      appendCommand: renderEventAppendCommand(language, {
+        audience: "agent",
+        confirmDecision: false,
+        expectedDigest: "<oid>",
+        expectedLength: "<bytes>",
+        expectedPrimary: null,
+        ideaId: idea.id,
+        inputPath: "request.json",
+      }),
+      controlOwner: idea.control?.owner ?? null,
+      replayCommand,
+      revisionKind: phase.revisionKind,
+      submitAction: phase.submitAction,
+    });
+  }
+  return renderEventSubmitGuidance(language, {
+    acceptanceAction: phase.action,
+    action: phase.submitAction,
+    appendCommand: renderEventAppendCommand(language, {
+      audience: "agent",
+      confirmDecision: false,
+      expectedDigest: "<oid>",
+      expectedLength: "<bytes>",
+      expectedPrimary: "<commit>",
+      ideaId: idea.id,
+      inputPath: "request.json",
+    }),
+    controlOwner: idea.control?.owner ?? null,
+    evidence: phase.evidence,
+    replayCommand,
+    revisionKind: phase.revisionKind,
+    submissionState: submission?.state ?? null,
+  });
+}
+
 /** @pure */
 export function lifecycleInstruction(
   idea: LifecycleIdea,
@@ -341,49 +424,82 @@ export function lifecycleInstruction(
   const name = ideaName(idea);
   if (idea.statusPath.endsWith("/events.jsonl")) {
     const submission = currentSubmission(idea);
+    const eventInstruction = idea.state === "preparing"
+      ? eventGuidanceInstruction(idea, language, {
+        action: "acceptIdeal",
+        evidence: "Idea candidate",
+        revisionField: "idealRevision",
+        revisionKind: "Idea",
+        revisionReference: revisionReference(idea.idealRevision),
+        submitAction: "submitIdeal",
+      })
+      : idea.state === "implementing"
+      ? eventGuidanceInstruction(idea, language, {
+        action: "acceptInner",
+        evidence: "implementation evidence",
+        revisionField: "implementationRevision",
+        revisionKind: "implementation",
+        revisionReference: revisionReference(idea.implementationRevision),
+        submitAction: "submitInner",
+      })
+      : idea.state === "deploying"
+      ? eventGuidanceInstruction(idea, language, {
+        action: "acceptOuter",
+        evidence: "external evidence",
+        revisionField: "deploymentRevision",
+        revisionKind: "deployment",
+        revisionReference: revisionReference(idea.deploymentRevision),
+        submitAction: "submitOuter",
+      })
+      : renderEventResumeGuidance(language, {
+        appendCommand: renderEventAppendCommand(language, {
+          audience: "agent",
+          confirmDecision: true,
+          expectedDigest: "<oid>",
+          expectedLength: "<bytes>",
+          expectedPrimary: "<commit>",
+          ideaId: idea.id,
+          inputPath: "request.json",
+        }),
+        replayCommand: renderEventReplayCommand(language, {
+          audience: "agent",
+          ideaId: idea.id,
+        }),
+      });
     const instruction = idea.state === "preparing"
       ? renderLifecyclePreparing(language, {
         action: "acceptIdeal",
-        controlOwner: idea.control?.owner ?? null,
         documentPath: idea.worlds.idealRevision.documentPath,
         eventBacked: true,
-        ideaId: idea.id,
         ledgerPath: idea.ledgerPath,
         name,
         revisionReference: revisionReference(idea.idealRevision),
         statusPath: idea.statusPath,
         submissionState: submission?.state ?? null,
-        submitAction: "submitIdeal",
       })
       : idea.state === "implementing"
       ? renderLifecycleImplementing(language, {
         action: "acceptInner",
-        controlOwner: idea.control?.owner ?? null,
         documentPath: idea.worlds.implementationRevision.documentPath,
         eventBacked: true,
-        ideaId: idea.id,
         idealPath: idea.worlds.idealRevision.path,
         ledgerPath: idea.ledgerPath,
         name,
         revisionReference: revisionReference(idea.implementationRevision),
         statusPath: idea.statusPath,
         submissionState: submission?.state ?? null,
-        submitAction: "submitInner",
         worldPath: idea.worlds.implementationRevision.path,
       })
       : idea.state === "deploying"
       ? renderLifecycleDeploying(language, {
         action: "acceptOuter",
-        controlOwner: idea.control?.owner ?? null,
         documentPath: idea.worlds.deploymentRevision.documentPath,
         eventBacked: true,
-        ideaId: idea.id,
         ledgerPath: idea.ledgerPath,
         name,
         revisionReference: revisionReference(idea.deploymentRevision),
         statusPath: idea.statusPath,
         submissionState: submission?.state ?? null,
-        submitAction: "submitOuter",
         worldPath: idea.worlds.deploymentRevision.path,
       })
       : renderLifecycleInactive(language, {
@@ -395,6 +511,7 @@ export function lifecycleInstruction(
       });
     return joinInstructions([
       instruction,
+      eventInstruction,
       idea.state === "preparing" ? preparationSeedInstruction(idea, language) : null,
       idea.state === "preparing"
           || idea.state === "implementing"
@@ -408,16 +525,13 @@ export function lifecycleInstruction(
     return joinInstructions([
       renderLifecyclePreparing(language, {
         action: "acceptIdeal",
-        controlOwner: null,
         documentPath: idea.worlds.idealRevision.documentPath,
         eventBacked: false,
-        ideaId: idea.id,
         ledgerPath: idea.ledgerPath,
         name,
         revisionReference: revisionReference(idea.idealRevision),
         statusPath: idea.statusPath,
         submissionState: null,
-        submitAction: "submitIdeal",
       }),
       preparationSeedInstruction(idea, language),
       reviewPresentationInstruction(language),
@@ -428,17 +542,14 @@ export function lifecycleInstruction(
     return joinInstructions([
       renderLifecycleImplementing(language, {
         action: "acceptInner",
-        controlOwner: null,
         documentPath: idea.worlds.implementationRevision.documentPath,
         eventBacked: false,
-        ideaId: idea.id,
         idealPath: idea.worlds.idealRevision.path,
         ledgerPath: idea.ledgerPath,
         name,
         revisionReference: revisionReference(idea.implementationRevision),
         statusPath: idea.statusPath,
         submissionState: null,
-        submitAction: "submitInner",
         worldPath: idea.worlds.implementationRevision.path,
       }),
       reviewPresentationInstruction(language),
@@ -449,16 +560,13 @@ export function lifecycleInstruction(
     return joinInstructions([
       renderLifecycleDeploying(language, {
         action: "acceptOuter",
-        controlOwner: null,
         documentPath: idea.worlds.deploymentRevision.documentPath,
         eventBacked: false,
-        ideaId: idea.id,
         ledgerPath: idea.ledgerPath,
         name,
         revisionReference: revisionReference(idea.deploymentRevision),
         statusPath: idea.statusPath,
         submissionState: null,
-        submitAction: "submitOuter",
         worldPath: idea.worlds.deploymentRevision.path,
       }),
       reviewPresentationInstruction(language),

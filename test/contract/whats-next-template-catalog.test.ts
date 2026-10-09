@@ -70,3 +70,18 @@ test("what's next registries contain every catalog file exactly once", async () 
   assert.deepEqual([...WHATS_NEXT_TEMPLATE_IDS].sort(), fileIds);
   assert.equal(new Set(WHATS_NEXT_TEMPLATE_IDS).size, fileIds.length);
 });
+
+test("lifecycle templates do not assemble event commands or actions", async () => {
+  for (const locale of LOCALES) {
+    for (const phase of ["preparing", "implementing", "deploying", "inactive"]) {
+      const source = await readFile(
+        resolve(CATALOG_ROOT, locale, `lifecycle-${phase}.ts`),
+        "utf8",
+      );
+      assert.doesNotMatch(
+        source,
+        /silvermoon event|ping\/pong|submitIdeal|submitInner|submitOuter|idea\.resumed/,
+      );
+    }
+  }
+});

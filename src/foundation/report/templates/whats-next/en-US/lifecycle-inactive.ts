@@ -14,7 +14,7 @@ export default function lifecycleInactive({
   statusPath,
 }: LifecycleInactiveParameters) {
   if (eventBacked) {
-    return `Review ${name} (${state}); preserve decisions. Resume only through idea.resumed after an explicit human decision; revise world content for changed requirements.`;
+    return `Review ${name} (${state}); preserve decisions. Revise world content for changed requirements.`;
   }
   if (state === "abandoned") {
     return `Review abandoned idea ${name} at ${relativePath}. Keep abandoned: true in ${statusPath}, remove it only after an explicit decision to resume, or discuss a different goal and run silvermoon create-idea.`;
