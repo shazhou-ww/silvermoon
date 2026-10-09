@@ -1,1 +1,2 @@
 {"sequence":1,"type":"setAlias","payload":{"alias":"agent-session-eval-harness"}}
+{"sequence":2,"type":"acceptIdeal","payload":{"idealRevision":"b892b2961ac2f328b68bead5d852a37fc5c98a9e"}}
