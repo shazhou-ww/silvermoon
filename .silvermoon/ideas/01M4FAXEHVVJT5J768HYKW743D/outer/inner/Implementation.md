@@ -20,6 +20,14 @@ schema。future schema 必须触发即时 runtime freshness 刷新并保留准�
 文档、skill 和 release metadata，并把取消项目级 runtime 选择作为 `0.4.0`
 兼容边界。
 
+### I-S04: 将 Agent gate 指引收敛到 runtime report
+
+扩展 `whats-next` 的 `response.review`，由 runtime 按 effective content language
+提供结构化 gate presentation，包括本地化标签、文档角色和绑定准确 revision 的
+决定问题；`outputLanguage` 只控制当前命令的报告框架，不改变 gate 语言。同步精简
+canonical skill，使其遵循 report 指示并只补充宿主链接、审阅重点和必要证据选择，
+不再维护重复的固定语言 gate 模板。
+
 ## Acceptance criteria
 
 ### I-AC01: 唯一 runtime 与设备 skill
@@ -39,3 +47,11 @@ skill 链接、source checkout 例外和 24 小时 latest 缓存均属于设备�
 所有受支持历史 schema 都有经过 digest、恢复和语义守恒测试的连续迁移路径；
 package、manifest、公开 schema、文档和 release checks 一致声明 `0.4.0` 边界，
 并通过 release-grade `pnpm check`。
+
+### I-AC04: 内容语言驱动的单一 gate 契约
+
+契约测试证明中英文 idea 在相反 `outputLanguage` override 下仍分别得到由
+effective content language 驱动的 gate presentation，非内建内容语言具有显式
+localization fallback，而不会静默采用输出语言。skill contract 证明 Agent 直接
+采用 `response.review` 的 presentation，且不再复制英文或中文 gate 字面模板；
+完整 release-grade `pnpm check` 通过。

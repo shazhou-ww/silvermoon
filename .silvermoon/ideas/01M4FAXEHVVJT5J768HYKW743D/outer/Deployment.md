@@ -20,6 +20,13 @@
 无项目 dependency/skill 的普通项目，以及 current、历史和 future schema
 行为；对 remote/cloud Agent 记录其必须独立 provisioning 的明确边界。
 
+### D-S04: 验证真实 Agent gate 的内容语言
+
+在隔离环境用中英文 idea 分别运行默认输出和相反语言 override 的
+`whats-next`，再由 canonical skill 形成真实 review index。保留 report 与最终
+gate 作为持久证据，确认固定呈现文案来自 runtime、宿主链接由 Agent 补充，且临时
+输出语言不污染内容语言。
+
 ## Acceptance criteria
 
 ### D-AC01: 发布候选内部身份一致
@@ -39,3 +46,10 @@ fixture 独立证明。
 候选包能够验证 current 与受支持历史 schema、生成并应用迁移，同时对 future
 schema 给出准确 runtime freshness 诊断；以冻结 fixture 的 package-level smoke
 结果证明，且不宣称这些结果来自公开 registry。
+
+### D-AC04: Gate 在真实宿主中完整本地化
+
+同一候选在默认输出和相反语言 override 下形成的 review index，除 alias、ULID、
+revision、路径、schema 字段和代码标识等机器契约外，所有面向人的固定文本都遵循
+effective content language。证据同时证明 canonical skill 未保存另一份 gate
+模板，非内建内容语言的 fallback 明确可见。
