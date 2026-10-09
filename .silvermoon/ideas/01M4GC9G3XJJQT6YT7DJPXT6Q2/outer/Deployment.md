@@ -6,7 +6,7 @@
 
 在发布级检查与打包 smoke 中验证 optional digest 参数、冲突诊断和
 `what's-next` 指引、无 sequence 记录、optional timestamp 兼容与时钟回拨诊断
-可由安装包正常使用。
+以及 `already-present` 重试回执可由安装包正常使用。
 
 ### D-S02: 发布兼容说明
 

@@ -30,4 +30,5 @@ length/digest cursor 暴露给 Agent，混淆了增量读取与基础乐观锁�
 - 日志校验拒绝倒序 timestamp；新 append 的本机时间早于最近一个有 timestamp
   的事件时不写入，并给出可定位候选日志异常或本机时钟回拨的明确诊断。
 - 至少 8 位且匹配的 digest 前缀允许 append；短于下限或不匹配时不写入并给出
-  明确诊断，未提供 digest 时保持可用。
+  明确诊断，未提供 digest 时保持可用；原观察前缀后紧邻相同业务事件的重试
+  返回 `already-present` 和 `written: false`，不报错或重复写入。

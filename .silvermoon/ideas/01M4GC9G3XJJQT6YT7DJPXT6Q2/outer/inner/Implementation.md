@@ -12,7 +12,8 @@
 
 让 optional expected digest 接受至少 8 位的前缀匹配；拒绝调用方 timestamp，
 新 append 的本机时间早于最近一个有 timestamp 的事件时拒绝写入并区分日志
-异常与时钟回拨诊断；不确定重试保留首次 timestamp。sequence 仅由位置派生。
+异常与时钟回拨诊断；紧邻相同业务事件的重试返回 `already-present`、
+`written: false` 并保留首次 timestamp。sequence 仅由位置派生。
 
 ### I-S03: 同步验证面
 
@@ -34,4 +35,5 @@
 ### I-AC03: 重试与指引保持一致
 
 集成测试证明相等或递增时间可写入、倒序日志和本机时钟回拨均在写入前停止并
-给出准确诊断，且重试保留首次 timestamp、report 输出可执行 digest 指引。
+给出准确诊断；相同业务请求重试返回 `already-present` 且不重复写入，并保留
+首次 timestamp；report 输出可执行 digest 指引。
