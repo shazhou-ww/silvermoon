@@ -10,11 +10,12 @@ review，其余状态不能从代码修改或测试通过中推断。
 
 以 [review-status.md](./review-status.md) 作为完整 catalog 的 review 清单，逐项完成
 剩余模板 review，并只依据人工明确结论更新状态，最终得到无遗漏的已 review
-catalog。
+catalog。每一项按照 [review-method.md](./review-method.md) 的协作方法处理。
 
 ## 边界
 
 - 一个模板 ID 的 review 同时覆盖对应的 en-US 与 zh-CN 文件。
+- 每次只 review 一个 template ID，不批量推断其他模板的结论。
 - review 状态是人工事实；代码已修改、测试通过或 Agent 判断均不能自动标记完成。
 - 不借 review 工作改变 canonical template ID、机器字段、事件类型或 schema。
 
