@@ -8,7 +8,7 @@
 
 ### I-S02: 按提交状态路由下一步
 
-将当前 revision 的 Submit 状态接入 lifecycle 与 `whats-next` 报告：未提交时由 Agent 继续，已提交时等待对应 Accept 并提供权威 gate 呈现；revision 改变后回到未提交状态。
+保留 `interaction.lastSignal` 的原始含义，新增由 ping/pong、Submit、Accept 及终态共同归约的控制权投影，并将当前 revision 的 Submit 状态接入 lifecycle 与 `whats-next` 报告。
 
 ### I-S03: 固化兼容性与使用契约
 
@@ -22,7 +22,7 @@
 
 ### I-AC02: 报告明确区分推进与验收
 
-同一 lifecycle phase 在未提交、当前 revision 已提交以及提交后 revision 改变三种情况下产生不同且一致的结构化报告；通过 unit、contract 和 integration 测试证明 gate 仅在当前提交有效时可执行。
+同一 lifecycle phase 在 ping/pong 交接、未提交、当前 revision 已提交、对应 Accept 以及提交后 revision 改变时产生一致的控制权与下一步报告；通过 unit、contract 和 integration 测试证明 gate 仅在当前提交有效时可执行。
 
 ### I-AC03: 既有交互保持兼容
 
