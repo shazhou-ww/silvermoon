@@ -404,7 +404,7 @@ Every selected active idea adds a primary-bound `review` object to its
       "contentLanguage": "zh-CN",
       "templateLanguage": "zh-CN",
       "requiresLocalization": false,
-      "gateLabel": "理想世界批准",
+      "gateLabel": "构想验收",
       "candidateConnector": "位于 primary",
       "labels": {
         "idea": "构想",
@@ -419,7 +419,7 @@ Every selected active idea adds a primary-bound `review` object to its
         "current-contract": "构想契约",
         "ledger": "执行清单"
       },
-      "decisionQuestion": "是否批准 `idealRevision=<12-character-reference>` 作为该 IDEA 的理想世界？"
+      "decisionQuestion": "是否接受 `idealRevision=<12-character-reference>` 作为该 IDEA 的构想？"
     }
   }
 }

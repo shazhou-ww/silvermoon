@@ -127,7 +127,7 @@ test("renders primary-bound review context before lifecycle instructions", () =>
         contentLanguage: "en-US",
         templateLanguage: "en-US",
         requiresLocalization: false,
-        gateLabel: "Ideal World approval",
+        gateLabel: "Idea acceptance",
         candidateConnector: "on primary",
         labels: {
           idea: "Idea",
@@ -143,7 +143,7 @@ test("renders primary-bound review context before lifecycle instructions", () =>
           ledger: "Execution ledger",
         },
         decisionQuestion:
-          "Do you approve `idealRevision=aaaaaaaaaaaa` as the Ideal World for this IDEA?",
+          "Do you accept `idealRevision=aaaaaaaaaaaa` as the idea for this IDEA?",
       },
     },
     nextSteps: [{
@@ -162,7 +162,7 @@ test("renders primary-bound review context before lifecycle instructions", () =>
   assert.match(rendered, /Canonical review documents/);
   assert.match(rendered, /#### Gate presentation/);
   assert.match(rendered, /"contentLanguage": "en-US"/);
-  assert.match(rendered, /"gateLabel": "Ideal World approval"/);
+  assert.match(rendered, /"gateLabel": "Idea acceptance"/);
   assert.match(
     rendered,
     /\| Current contract \| \.silvermoon\/ideas\/fixture\/outer\/inner\/ideal\/Idea\.md \|/,

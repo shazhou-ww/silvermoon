@@ -553,7 +553,7 @@ decision, risk, or disagreement requires it.
 
 ## Next step
 
-<!-- Keep only the highest-priority preparation action or decision. Remove it before approval. -->
+<!-- Keep only the highest-priority preparation action or decision. Remove it before acceptance. -->
 `,
   );
   assert.match(

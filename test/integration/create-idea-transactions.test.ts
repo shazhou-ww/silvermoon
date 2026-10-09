@@ -416,7 +416,7 @@ test("attaches preparing guidance before creating a scaffold", async () => {
     report.response.guidance.content,
     "Prepare this project-specific contract.\n",
   );
-  assert.match(responseText(report), /Ideal World/);
+  assert.match(responseText(report), /Idea contract/);
   assert.doesNotMatch(responseText(report), /project-specific contract/);
 });
 
@@ -459,7 +459,7 @@ test("invalid preparing guidance stops before any scaffold write", async () => {
     await readdir(join(repository.root, ".silvermoon", "ideas")),
     ideasBefore,
   );
-  assert.doesNotMatch(responseText(report), /Ideal World/);
+  assert.doesNotMatch(responseText(report), /Idea contract/);
   assert.match(responseText(report), /preparing\.md/);
 });
 

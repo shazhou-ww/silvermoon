@@ -237,12 +237,12 @@ function reviewPresentation(
   const reference = `${revision.field}=${revisionReference(revision.value)}`;
   const phaseText = {
     preparing: {
-      gateLabel: localize(language, "Ideal World approval", "理想世界批准"),
+      gateLabel: localize(language, "Idea acceptance", "构想验收"),
       currentContract: localize(language, "Idea contract", "构想契约"),
       decisionQuestion: localize(
         language,
-        `Do you approve \`${reference}\` as the Ideal World for this IDEA?`,
-        `是否批准 \`${reference}\` 作为该 IDEA 的理想世界？`,
+        `Do you accept \`${reference}\` as the idea for this IDEA?`,
+        `是否接受 \`${reference}\` 作为该 IDEA 的构想？`,
       ),
     },
     implementing: {
@@ -377,8 +377,8 @@ function reviewPresentationInstruction(language: string) {
 function preparationSeedInstruction(idea: LifecycleIdea, language: string) {
   return localize(
     language,
-    `Before requesting Ideal approval, replace scaffold placeholders with lightweight first versions in ${idea.worlds.implementationRevision.documentPath} and ${idea.worlds.deploymentRevision.documentPath}, then mirror their stable IDs and short titles in ${idea.ledgerPath}. Keep each downstream contract to no more than three high-level steps and three observable criteria. These provisional versions test feasibility but are outside the acceptIdeal decision.`,
-    `请求 Ideal 批准前，把 ${idea.worlds.implementationRevision.documentPath} 和 ${idea.worlds.deploymentRevision.documentPath} 中的脚手架占位替换为轻量初版，并在 ${idea.ledgerPath} 中镜像其稳定 ID 与短标题。每份下游契约最多三个高层步骤和三个可观察标准。这些可调整的初版用于校验可行性，但不属于 acceptIdeal 决定范围。`,
+    `Before requesting Idea acceptance, replace scaffold placeholders with lightweight first versions in ${idea.worlds.implementationRevision.documentPath} and ${idea.worlds.deploymentRevision.documentPath}, then mirror their stable IDs and short titles in ${idea.ledgerPath}. Keep each downstream contract to no more than three high-level steps and three observable criteria. These provisional versions test feasibility but are outside the acceptIdeal decision.`,
+    `请求构想验收前，把 ${idea.worlds.implementationRevision.documentPath} 和 ${idea.worlds.deploymentRevision.documentPath} 中的脚手架占位替换为轻量初版，并在 ${idea.ledgerPath} 中镜像其稳定 ID 与短标题。每份下游契约最多三个高层步骤和三个可观察标准。这些可调整的初版用于校验可行性，但不属于 acceptIdeal 决定范围。`,
   );
 }
 
@@ -411,8 +411,8 @@ export function lifecycleInstruction(
   if (idea.state === "preparing") {
     return joinInstructions([localize(
       language,
-      `Continue idea ${name} in ${idea.worlds.idealRevision.documentPath} and ${idea.ledgerPath}. Preserve the other worlds. When the Ideal World is ready, ask the user to approve the candidate at revision reference ${revisionReference(idea.idealRevision)}; only after explicit approval write the full revision from response.review to approvedRevision in ${idea.statusPath}.`,
-      `继续在 ${idea.worlds.idealRevision.documentPath} 和 ${idea.ledgerPath} 推进 idea ${name}，并保留其他世界。理想契约就绪后，请用户明确批准 revision reference ${revisionReference(idea.idealRevision)} 对应的候选；只有获得明确批准后，才将 response.review 中的完整 revision 写入 ${idea.statusPath} 的 approvedRevision。`,
+      `Continue idea ${name} in ${idea.worlds.idealRevision.documentPath} and ${idea.ledgerPath}. Preserve the other worlds. When the Idea contract is ready, ask the user to accept the candidate at revision reference ${revisionReference(idea.idealRevision)}; only after explicit acceptance write the full revision from response.review to approvedRevision in ${idea.statusPath}.`,
+      `继续在 ${idea.worlds.idealRevision.documentPath} 和 ${idea.ledgerPath} 推进 idea ${name}，并保留其他世界。构想契约就绪后，请用户明确验收 revision reference ${revisionReference(idea.idealRevision)} 对应的候选；只有获得明确验收后，才将 response.review 中的完整 revision 写入 ${idea.statusPath} 的 approvedRevision。`,
     ), preparationSeedInstruction(idea, language), reviewPresentationInstruction(language), lifecycleContentLanguageInstruction(contentLanguage, language)]);
   }
   if (idea.state === "implementing") {

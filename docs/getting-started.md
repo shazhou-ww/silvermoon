@@ -192,19 +192,19 @@ scaffold path is written. The command never stages, commits, pushes, or records
 a human decision.
 
 Replace the guidance in the `Idea.md` ideal contract with the desired outcome,
-scope, and constraints. Before requesting Ideal approval, replace the
+scope, and constraints. Before requesting Idea acceptance, replace the
 `Implementation.md` and `Deployment.md` placeholders with lightweight first
 versions of no more than three high-level steps and three observable criteria
 each. Mirror their stable IDs and short titles in `ledger.md`, leaving every
 item unchecked. These downstream seeds establish a credible path without
-expanding the Ideal decision: approval still covers only `Idea.md`. Review
+expanding the Idea decision: acceptance still covers only `Idea.md`. Review
 every generated path, validate the complete candidate, and commit and publish
 the prepared idea to the configured primary through the repository's normal
 non-force publication path. Verify it is reachable from refreshed primary
-before asking the user to review or approve the reported ideal candidate. If
+before asking the user to review or accept the reported idea candidate. If
 publication requires a pull request, wait until it reaches primary; never ask
-for approval of an unpublished local candidate. Publication does not itself
-approve the idea.
+for acceptance of an unpublished local candidate. Publication does not itself
+accept the idea.
 
 Then ask what comes next with the generated ULID or an exact unique alias:
 
@@ -226,16 +226,16 @@ result.
 
 ## Make Decisions Explicit
 
-Silvermoon never infers approval or acceptance. After a person explicitly
-approves the current ideal, accepts the current implementation, or accepts the
-current deployment, record the exact revision reported by `whats-next` in the
+Silvermoon never infers a human decision. After a person explicitly accepts
+the current idea, current implementation, or current deployment, record the
+exact revision reported by `whats-next` in the
 corresponding `status.yaml` field. Validate the full candidate with
 `silvermoon check --worktree`, stage it, then run `silvermoon check --staged`
 to validate the index before publishing a normal non-force commit. Default
 `check` validates committed `HEAD`, not the pending commit; only a successful
 project validation exits `0`.
 
-When requesting any approval or acceptance, include the idea's alias and ULID,
+When requesting any acceptance, include the idea's alias and ULID,
 the decision, a 12-character revision reference, a linked 12-character primary
 reference, and one review-focus sentence. Provide both a host-clickable local
 link and an immutable primary link for substantive review files. Ideal review

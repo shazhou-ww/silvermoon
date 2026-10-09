@@ -25,8 +25,8 @@
 在隔离环境用中英文 idea 分别运行默认输出和相反语言 override 的
 `whats-next`，再由 canonical skill 形成真实 review index。保留 report 与最终
 gate 作为持久证据，确认固定呈现文案来自 runtime、宿主链接由 Agent 补充，且临时
-输出语言不污染内容语言；同时确认 deployment gate 使用“部署验收”“部署契约”
-和部署结果问题。
+输出语言不污染内容语言；同时确认三阶段 gate 分别使用“构想验收”“实现验收”
+与“部署验收”、匹配各自契约名称，并以构想、实现和部署结果作为决定对象。
 
 ## Acceptance criteria
 
@@ -53,4 +53,4 @@ schema 给出准确 runtime freshness 诊断；以冻结 fixture 的 package-lev
 同一候选在默认输出和相反语言 override 下形成的 review index，除 alias、ULID、
 revision、路径、schema 字段和代码标识等机器契约外，所有面向人的固定文本都遵循
 effective content language。证据同时证明 canonical skill 未保存另一份 gate
-模板，非内建内容语言的 fallback 明确可见，且部署阶段不再显示内部世界术语。
+模板，非内建内容语言的 fallback 明确可见，且三阶段均不再显示内部世界术语。

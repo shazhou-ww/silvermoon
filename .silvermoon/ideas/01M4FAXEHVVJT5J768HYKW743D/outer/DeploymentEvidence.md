@@ -73,6 +73,6 @@ canonical skill 不包含另一份固定 gate 模板，只指定
 `948515fdaaea4c49ad39118fdb5998beb6773620` 持久记录该决定。
 
 后续同一 IDEA 的措辞修订由三阶段 fixture 证明：`Idea.md`、`Implementation.md`
-和 `Deployment.md` 分别显示“构想契约”“实现契约”“部署契约”；deployment gate
-显示“部署验收”，决定问题使用“部署结果”。这些词仍来自 runtime presentation，
-没有写回 canonical skill 模板。
+和 `Deployment.md` 分别显示“构想契约”“实现契约”“部署契约”；三阶段 gate
+分别显示“构想验收”“实现验收”“部署验收”，决定问题分别使用构想、实现和部署
+结果。这些词仍来自 runtime presentation，没有写回 canonical skill 模板。

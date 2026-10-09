@@ -197,8 +197,8 @@ phase while preserving the nested worlds:
 
 - **Preparing:** Complete `Idea.md` and supporting Ideal World (理想世界) files.
   Keep the idea as a brief direction card and prepare the downstream seeds
-  defined below. The seeds are feasibility context, not part of the approval
-  scope. The human gate approves only the exact reported `idealRevision`.
+  defined below. The seeds are feasibility context, not part of the acceptance
+  scope. The human gate accepts only the exact reported `idealRevision`.
 - **Implementing:** Edit `Implementation.md`, supporting Inner World (主体世界)
   files, and repository deliverables by refining the preparation seed. Change
   the ideal only if it truly changed and the idea must return to preparing.
@@ -243,19 +243,19 @@ needed for the current gate, link existing context instead of copying it, and
 add supporting files only for a concrete decision, risk, disagreement, or
 proof that would make the canonical contract unclear. Preparation is the one
 exception to strict phase-local authoring: it seeds both downstream contracts
-at a high level so feasibility is visible before Ideal approval. Do not
+at a high level so feasibility is visible before Idea acceptance. Do not
 pre-author speculative architecture, exhaustive task trees, execution
 evidence, or detailed future-phase work.
 
 `Idea.md` is a short direction card: a concise title; a problem and outcome of
 one or two sentences each; one to three material boundaries and acceptance
-criteria; and at most one current preparation step, removed before approval.
+criteria; and at most one current preparation step, removed before acceptance.
 Keep implementation design out of the ideal contract.
 
 In `Implementation.md` and `Deployment.md`, put plans under `## Steps` and
 outcomes under `## Acceptance criteria`. Use stable level-three IDs: `I-Sxx`,
 `I-ACxx`, `D-Sxx`, and `D-ACxx`. Each criterion states an observable outcome
-and how to prove it. Before Ideal approval, replace every scaffold placeholder
+and how to prove it. Before Idea acceptance, replace every scaffold placeholder
 with a lightweight first version of no more than three high-level steps and
 three criteria per contract. Later phases refine these seeds and add another
 item only for independently necessary work or proof. Do not repeat the prior
@@ -274,8 +274,8 @@ their contract changes; add new items unchecked and reset completed items when
 requirements or proof change materially.
 
 Only the current phase's entries govern gate readiness. During preparation,
-all seeded `I-*` and `D-*` entries remain unchecked and do not block Ideal
-approval. During implementation, continue while a relevant `I-*` entry is
+all seeded `I-*` and `D-*` entries remain unchecked and do not block Idea
+acceptance. During implementation, continue while a relevant `I-*` entry is
 unchecked; during deployment, do the same for `D-*`. When the current phase's
 entries are complete, evidence remains valid, and the candidate is
 synchronized to primary, request the appropriate explicit human decision. A
@@ -382,7 +382,7 @@ For v1 projects there is no decision mutation command. After an explicit human
 decision, reconfirm the selected idea and exact revision from `whats-next`;
 change only the corresponding status fact:
 
-- ideal approval records `approvedRevision`;
+- idea acceptance records `approvedRevision`;
 - implementation acceptance records `implementationAcceptedRevision`;
 - deployment acceptance records `deploymentAcceptedRevision`;
 - abandonment or reversal changes only canonical `abandoned`.

@@ -590,12 +590,12 @@ test("uses a canonical output override without changing content language or pers
       contentLanguage: "fr-FR",
       templateLanguage: "en-US",
       requiresLocalization: true,
-      gateLabel: "Ideal World approval",
+      gateLabel: "Idea acceptance",
     },
   );
   assert.match(
     responseReview(selected).presentation.decisionQuestion,
-    /^Do you approve `idealRevision=[0-9a-f]{12}`/,
+    /^Do you accept `idealRevision=[0-9a-f]{12}` as the idea for this IDEA\?$/,
   );
   assert.match(responseText(selected), /^在 /);
   assert.match(responseText(selected), /requiresLocalization/);
@@ -652,7 +652,7 @@ test("drives gate presentation from content language instead of output language"
       contentLanguage: "zh-CN",
       templateLanguage: "zh-CN",
       requiresLocalization: false,
-      gateLabel: "理想世界批准",
+      gateLabel: "构想验收",
       candidateConnector: "位于 primary",
       labels: {
         idea: "构想",
@@ -671,7 +671,7 @@ test("drives gate presentation from content language instead of output language"
   );
   assert.match(
     presentation.decisionQuestion,
-    /^是否批准 `idealRevision=[0-9a-f]{12}` 作为该 IDEA 的理想世界？$/,
+    /^是否接受 `idealRevision=[0-9a-f]{12}` 作为该 IDEA 的构想？$/,
   );
   assert.match(responseText(selected), /^Continue /);
   assert.match(responseText(selected), /response\.review\.presentation/);
@@ -680,7 +680,7 @@ test("drives gate presentation from content language instead of output language"
   assert.match(rendered, /### Review candidate/);
   assert.match(rendered, /#### Gate presentation/);
   assert.match(rendered, /"contentLanguage": "zh-CN"/);
-  assert.match(rendered, /"gateLabel": "理想世界批准"/);
+  assert.match(rendered, /"gateLabel": "构想验收"/);
   assert.match(rendered, /"idea": "构想"/);
 });
 
@@ -716,9 +716,9 @@ test("names Chinese review contracts by their canonical artifacts", async () => 
   const cases = [
     {
       selector: "idea-contract",
-      gateLabel: "理想世界批准",
+      gateLabel: "构想验收",
       contractLabel: "构想契约",
-      question: /作为该 IDEA 的理想世界？$/,
+      question: /作为该 IDEA 的构想？$/,
     },
     {
       selector: "implementation-contract",

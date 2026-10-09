@@ -72,10 +72,10 @@ function englishReviewPresentation(
   const reference = `${field}=${revision.slice(0, 12)}`;
   const phaseText = {
     preparing: {
-      gateLabel: "Ideal World approval",
+      gateLabel: "Idea acceptance",
       currentContract: "Idea contract",
       decisionQuestion:
-        `Do you approve \`${reference}\` as the Ideal World for this IDEA?`,
+        `Do you accept \`${reference}\` as the idea for this IDEA?`,
     },
     implementing: {
       gateLabel: "Implementation acceptance",

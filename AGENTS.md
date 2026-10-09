@@ -30,7 +30,7 @@
   silently replay a stale decision.
 - Record approval, acceptance, and abandonment only as explicit status facts,
   validate the exact candidate, and synchronize through ordinary non-force Git.
-- Before Ideal approval, replace the Implementation and Deployment scaffold
+- Before Idea acceptance, replace the Implementation and Deployment scaffold
   placeholders with lightweight first versions of at most three high-level
   steps and three observable criteria each, mirrored unchecked in `ledger.md`.
   These seeds remain outside the `acceptIdeal` decision scope.

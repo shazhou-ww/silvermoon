@@ -107,7 +107,9 @@
   },
   "canonicalPhaseTerms": {
     "preparing": {
-      "contractLabel": "构想契约"
+      "gateLabel": "构想验收",
+      "contractLabel": "构想契约",
+      "decisionResult": "构想"
     },
     "implementing": {
       "gateLabel": "实现验收",

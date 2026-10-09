@@ -143,10 +143,10 @@ The generated files remain untracked for review. Complete `Idea.md`, optionally
 add a concise unique alias, inspect every path, and publish the initial idea
 through ordinary Git. Validate and commit the complete prepared idea, then make
 that commit reachable from configured primary using the repository's normal
-non-force publication path before asking the user to review or approve it. If
+non-force publication path before asking the user to review or accept it. If
 publication requires a pull request, wait until it reaches primary. Reobserve
-the exact `idealRevision` after publication; never ask for approval of an
-unpublished local candidate, and never treat publication as approval.
+the exact `idealRevision` after publication; never ask for acceptance of an
+unpublished local candidate, and never treat publication as acceptance.
 
 ## Follow One Report
 
@@ -199,8 +199,8 @@ it. World contracts do not use task-list checkboxes.
 During preparation, replace all scaffold placeholders in `Implementation.md`
 and `Deployment.md` with lightweight first versions of no more than three
 high-level steps and three observable criteria each. Mirror them unchecked in
-`ledger.md`. They provide a feasibility path before Ideal approval but remain
-provisional: `acceptIdeal` approves only the Ideal tree. Refine each seed during
+`ledger.md`. They provide a feasibility path before Idea acceptance but remain
+provisional: `acceptIdeal` accepts only the Ideal tree. Refine each seed during
 its own lifecycle phase rather than writing speculative architecture, detailed
 task trees, or execution evidence up front.
 
@@ -264,7 +264,7 @@ their mismatch is what derives the idea's earlier lifecycle state.
 Prefer a status-only decision commit, publish through the repository's normal
 non-force path, and verify the commit is reachable from refreshed primary.
 
-When asking for approval or acceptance, identify the idea by alias and ULID,
+When asking for acceptance, identify the idea by alias and ULID,
 follow the latest `response.nextSteps`, and seed the index from
 `response.review`. Its `presentation` object owns the fixed gate labels,
 document labels, primary connector, and exact decision question from the
@@ -274,7 +274,7 @@ reported `contentLanguage` without changing machine identifiers. Never use the
 temporary report output language for gate prose. State the exact reported world
 revision and primary commit internally, and show their 12-character references.
 Link the corresponding canonical entry: `Idea.md` for
-ideal approval, `Implementation.md` for implementation acceptance, or
+idea acceptance, `Implementation.md` for implementation acceptance, or
 `Deployment.md` for deployment acceptance. Provide a host-clickable local link
 for navigation and a commit-pinned web permalink for the immutable candidate;
 never substitute a moving branch URL. Complete this review index as a standalone
@@ -295,4 +295,4 @@ review context only; the user must still make the decision explicitly.
 Before publication, compare with the observed primary tip, run checks focused
 on the change, and inspect the exact diff. On push rejection, branch movement,
 or a newly discovered conflict, preserve both histories, fetch, and reobserve.
-Never replay approval or acceptance automatically against a new revision.
+Never replay acceptance automatically against a new revision.

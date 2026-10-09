@@ -156,7 +156,7 @@ push, approve, or accept. During initial preparation, complete `Idea.md`,
 replace the Implementation and Deployment placeholders with lightweight first
 versions of no more than three high-level steps and three observable criteria
 each, and mirror their stable IDs and short titles in the unchecked ledger.
-These downstream seeds remain provisional and outside Ideal approval. An Agent
+These downstream seeds remain provisional and outside Idea acceptance. An Agent
 may add a concise, unique alias derived from the user's request without asking
 the user to choose a name.
 

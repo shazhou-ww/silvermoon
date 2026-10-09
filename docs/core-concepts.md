@@ -8,7 +8,7 @@ repository-owned account of intent, implementation, and real-world truth.
 ### Less continuous supervision
 
 People should not have to shepherd every mechanical step. They define and
-approve the desired outcome, accept the implementation, and accept the
+accept the desired outcome, accept the implementation, and accept the
 real-world result. Between those decisions, an Agent can continue from
 repository facts and stop only when human judgment or an external result is
 required.
@@ -41,7 +41,7 @@ operate.
 Preparation completes the Ideal contract and seeds both downstream contracts
 with lightweight first versions: at most three high-level steps and three
 observable criteria each, mirrored unchecked in `ledger.md`. These seeds expose
-feasibility before Ideal approval, but that decision still approves only the
+feasibility before Idea acceptance, but that decision still accepts only the
 Ideal tree. Implementation and deployment phases progressively refine their
 respective seeds.
 
@@ -57,7 +57,7 @@ while it refers to the exact artifacts that were reviewed.
 
 ## Decisions And Continuation
 
-Humans own four decisions: approval of the ideal, acceptance of the
+Humans own four decisions: acceptance of the idea, acceptance of the
 implementation, acceptance of the deployment, and abandonment. Silvermoon never
 infers them from prose, checklists, Git activity, or silence. V1 records explicit
 decisions in canonical status YAML; v2 uses controlled event commands bound to
@@ -67,8 +67,7 @@ decision, not authorization by itself.
 Agents own continuation. The project skill combines `whats-next`,
 `response.nextSteps`, the world contracts, the idea ledger, and Git facts to
 choose one safe action. The ledger is operational memory: it mirrors stable
-contract IDs and records completed work, but a checked item is not approval or
-acceptance.
+contract IDs and records completed work, but a checked item is not acceptance.
 
 For each selected active idea, `response.review` supplies a primary-bound seed
 for the eventual review index: lifecycle phase, decision event, exact revision,
