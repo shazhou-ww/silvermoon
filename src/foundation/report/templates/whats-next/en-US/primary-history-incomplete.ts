@@ -9,16 +9,20 @@ import type {
 } from "../contract.ts";
 
 /** @pure */
-export default function primaryHistoryIncomplete({
+const primaryHistoryIncomplete = ({
   head,
   primary,
   recheckCommand,
   remote,
-}: PrimaryRelationParameters): SummaryAndInstructions {
-  return {
+}: PrimaryRelationParameters): SummaryAndInstructions =>
+  ({
     summary:
       `Local HEAD is ${head}; observed primary is ${primary}; relationship is unknown.`,
-    instructions:
-      `Deepen the shallow history from remote ${remote} until ${head} and ${primary} can be compared, then run ${recheckCommand} again.`,
-  };
-}
+    instructions: [
+      `Deepen the shallow history from remote ${remote}`,
+      `until ${head} and ${primary} can be compared,`,
+      `then run ${recheckCommand} again.`,
+    ].join(" "),
+  });
+
+export default primaryHistoryIncomplete;

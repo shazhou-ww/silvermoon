@@ -5,6 +5,7 @@
  */
 
 /** @pure */
-export default function worktreeChangesStep() {
-  return "检查全部 staged、unstaged 和 untracked 路径及其修改内容，不要只依据上述样例。保留未知工作，再逐项提交、隔离，或在获得明确授权后放弃。";
-}
+const worktreeChangesStep = () =>
+  `检查全部 staged、unstaged 和 untracked 路径及其修改内容，不要只依据上述样例。保留未知工作，再逐项提交、隔离，或在获得明确授权后放弃。`;
+
+export default worktreeChangesStep;

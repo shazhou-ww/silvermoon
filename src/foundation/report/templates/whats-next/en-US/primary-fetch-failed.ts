@@ -6,10 +6,14 @@
 import type { PrimaryFetchFailedParameters } from "../contract.ts";
 
 /** @pure */
-export default function primaryFetchFailed({
+const primaryFetchFailed = ({
   primaryBranch,
   primaryRepository,
   recheckCommand,
-}: PrimaryFetchFailedParameters) {
-  return `Check network access, authorization, ${primaryRepository}, and branch ${primaryBranch}; after an observable fix, run ${recheckCommand} again.`;
-}
+}: PrimaryFetchFailedParameters) =>
+  [
+    `Check network access, authorization, ${primaryRepository}, and branch ${primaryBranch};`,
+    `after an observable fix, run ${recheckCommand} again.`,
+  ].join(" ");
+
+export default primaryFetchFailed;

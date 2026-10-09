@@ -9,17 +9,20 @@ import type {
 } from "../contract.ts";
 
 /** @pure */
-export default function primaryBehind({
+const primaryBehind = ({
   branch,
   head,
   mergeCommand,
   primary,
   recheckCommand,
-}: PrimaryRelationParameters): SummaryAndInstructions {
-  return {
+}: PrimaryRelationParameters): SummaryAndInstructions =>
+  ({
     summary:
       `Local HEAD is ${head}; observed primary is ${primary}; relationship is behind.`,
-    instructions:
-      `Fast-forward branch ${branch} to observed primary ${primary} with ${mergeCommand} without rewriting history, then run ${recheckCommand} again.`,
-  };
-}
+    instructions: [
+      `Fast-forward branch ${branch} to observed primary ${primary} with ${mergeCommand}`,
+      `without rewriting history, then run ${recheckCommand} again.`,
+    ].join(" "),
+  });
+
+export default primaryBehind;

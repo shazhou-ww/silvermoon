@@ -6,10 +6,11 @@
 import type { PrimaryFetchFailedParameters } from "../contract.ts";
 
 /** @pure */
-export default function primaryFetchFailed({
+const primaryFetchFailed = ({
   primaryBranch,
   primaryRepository,
   recheckCommand,
-}: PrimaryFetchFailedParameters) {
-  return `检查网络、授权、${primaryRepository} 和分支 ${primaryBranch}；产生可观察修复后，再运行 ${recheckCommand}。`;
-}
+}: PrimaryFetchFailedParameters) =>
+  `检查网络、授权、${primaryRepository} 和分支 ${primaryBranch}；产生可观察修复后，再运行 ${recheckCommand}。`;
+
+export default primaryFetchFailed;

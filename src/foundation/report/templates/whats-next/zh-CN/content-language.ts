@@ -6,8 +6,9 @@
 import type { ContentLanguageParameters } from "../contract.ts";
 
 /** @pure */
-export default function contentLanguage({
+const contentLanguage = ({
   contentLanguage: language,
-}: ContentLanguageParameters) {
-  return `在当前世界、同世界辅助文件和 ledger 的自然语言内容中使用 ${language}。保留 canonical 标题、稳定 ID、路径和机器字段。`;
-}
+}: ContentLanguageParameters) =>
+  `在当前世界、同世界辅助文件和 ledger 的自然语言内容中使用 ${language}。保留 canonical 标题、稳定 ID、路径和机器字段。`;
+
+export default contentLanguage;

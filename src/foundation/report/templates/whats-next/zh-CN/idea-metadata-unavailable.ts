@@ -6,12 +6,13 @@
 import type { MetadataUnavailableParameters } from "../contract.ts";
 
 /** @pure */
-export default function ideaMetadataUnavailable({
+const ideaMetadataUnavailable = ({
   command,
   message,
-}: MetadataUnavailableParameters) {
-  return {
+}: MetadataUnavailableParameters) =>
+  ({
     summary: `无法读取 idea metadata：${message}`,
     nextSteps: `修复报告的 idea document 后，重新运行 \`${command}\`。`,
-  };
-}
+  });
+
+export default ideaMetadataUnavailable;

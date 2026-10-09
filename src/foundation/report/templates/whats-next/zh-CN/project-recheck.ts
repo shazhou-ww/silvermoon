@@ -6,8 +6,9 @@
 import type { RecheckParameters } from "../contract.ts";
 
 /** @pure */
-export default function projectRecheck({
+const projectRecheck = ({
   recheckCommand,
-}: RecheckParameters) {
-  return `完成适用步骤后，再运行 ${recheckCommand}。`;
-}
+}: RecheckParameters) =>
+  `完成适用步骤后，再运行 ${recheckCommand}。`;
+
+export default projectRecheck;

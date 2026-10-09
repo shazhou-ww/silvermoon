@@ -6,9 +6,10 @@
 import type { WorktreeConflictsParameters } from "../contract.ts";
 
 /** @pure */
-export default function worktreeConflicts({
+const worktreeConflicts = ({
   count,
   summary,
-}: WorktreeConflictsParameters) {
-  return `${count} 个冲突路径；${summary}`;
-}
+}: WorktreeConflictsParameters) =>
+  `${count} 个冲突路径；${summary}`;
+
+export default worktreeConflicts;

@@ -5,6 +5,10 @@
  */
 
 /** @pure */
-export default function worktreeConflictStep() {
-  return "Inspect every conflicted path and its contents, then resolve the conflicts without discarding either side.";
-}
+const worktreeConflictStep = () =>
+  [
+    `Inspect every conflicted path and its contents,`,
+    `then resolve the conflicts without discarding either side.`,
+  ].join(" ");
+
+export default worktreeConflictStep;

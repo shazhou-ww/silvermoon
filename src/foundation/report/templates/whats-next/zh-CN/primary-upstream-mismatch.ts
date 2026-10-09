@@ -9,7 +9,7 @@ import type {
 } from "../contract.ts";
 
 /** @pure */
-export default function primaryUpstreamMismatch({
+const primaryUpstreamMismatch = ({
   branch,
   expectedBranch,
   expectedRepository,
@@ -17,14 +17,19 @@ export default function primaryUpstreamMismatch({
   repository,
   upstreamBranch,
   verifyCommand,
-}: PrimaryUpstreamMismatchParameters): SummaryAndStep {
+}: PrimaryUpstreamMismatchParameters): SummaryAndStep => {
   const actual = remote === null
     ? "无"
     : `${repository ?? remote}#${upstreamBranch ?? "未知"}`;
   return {
     summary:
       `分支 ${branch} 的 upstream 是 ${actual}；预期为 ${expectedRepository}#${expectedBranch}。`,
-    step:
-      `为 ${expectedRepository} 配置 named remote，再将分支 ${branch} 的 upstream 设为该 remote 的 ${expectedBranch} 分支。使用 ${verifyCommand} 验证。`,
+    step: [
+      `为 ${expectedRepository} 配置 named remote，`,
+      `再将分支 ${branch} 的 upstream 设为该 remote 的 ${expectedBranch} 分支。`,
+      `使用 ${verifyCommand} 验证。`,
+    ].join(""),
   };
-}
+};
+
+export default primaryUpstreamMismatch;

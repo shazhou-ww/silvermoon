@@ -9,10 +9,10 @@ import type {
 } from "../contract.ts";
 
 /** @pure */
-export default function reviewPresentation({
+const reviewPresentation = ({
   phase,
   reference,
-}: ReviewPresentationParameters): ReviewPresentationText {
+}: ReviewPresentationParameters): ReviewPresentationText => {
   const phaseText = {
     preparing: {
       gateLabel: "Idea acceptance",
@@ -51,4 +51,6 @@ export default function reviewPresentation({
     },
     decisionQuestion: phaseText.decisionQuestion,
   };
-}
+};
+
+export default reviewPresentation;

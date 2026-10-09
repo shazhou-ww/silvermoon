@@ -6,12 +6,13 @@
 import type { MetadataUnavailableParameters } from "../contract.ts";
 
 /** @pure */
-export default function ideaMetadataUnavailable({
+const ideaMetadataUnavailable = ({
   command,
   message,
-}: MetadataUnavailableParameters) {
-  return {
+}: MetadataUnavailableParameters) =>
+  ({
     summary: message,
     nextSteps: `Repair the reported idea document and retry \`${command}\`.`,
-  };
-}
+  });
+
+export default ideaMetadataUnavailable;

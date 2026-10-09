@@ -6,9 +6,10 @@
 import type { SummaryAndStep } from "../contract.ts";
 
 /** @pure */
-export default function headMissing(): SummaryAndStep {
-  return {
+const headMissing = (): SummaryAndStep =>
+  ({
     summary: "repository 的 HEAD 尚无 commit。",
     step: "解决冲突并确认应保留的本地修改后，在预期分支创建初始 commit。",
-  };
-}
+  });
+
+export default headMissing;

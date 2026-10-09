@@ -74,12 +74,10 @@ interface LifecycleParameters {
   action: string;
   controlOwner: "upstream" | "downstream" | "none" | null;
   documentPath: string;
-  eventBacked: boolean;
   ideaId: string;
   ledgerPath: string;
   name: string;
   revisionReference: string;
-  statusPath: string;
   submissionState: "unsubmitted" | "submitted" | "accepted" | "stale" | null;
   submitAction: string;
 }
@@ -96,11 +94,8 @@ export interface LifecycleDeployingParameters extends LifecycleParameters {
 }
 
 export interface LifecycleInactiveParameters {
-  eventBacked: boolean;
   name: string;
-  relativePath: string;
   state: string;
-  statusPath: string;
 }
 
 export interface NavigationParameters {
