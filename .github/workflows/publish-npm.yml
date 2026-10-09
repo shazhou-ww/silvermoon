@@ -29,6 +29,7 @@ jobs:
       - name: Refresh primary branch and verify ancestry
         run: |
           git fetch --no-tags origin "+refs/heads/main:refs/remotes/origin/main"
+          git remote set-url origin "https://github.com/$GITHUB_REPOSITORY.git"
           git merge-base --is-ancestor "$GITHUB_SHA" refs/remotes/origin/main
 
       - name: Install pnpm

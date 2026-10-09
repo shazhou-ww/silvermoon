@@ -162,6 +162,10 @@ test("uses a protected, least-privilege trusted-publishing workflow", async () =
   assert.match(setupNpm.run, /npm install --global npm@11\.6\.2/);
   assert.match(setupNpm.run, /npm --version/);
   assert.match(ancestry.run, /refs\/heads\/main:refs\/remotes\/origin\/main/);
+  assert.match(
+    ancestry.run,
+    /git remote set-url origin "https:\/\/github\.com\/\$GITHUB_REPOSITORY\.git"/,
+  );
   assert.match(ancestry.run, /git merge-base --is-ancestor/);
   assert.equal(install.run, "pnpm install --frozen-lockfile");
   assert.equal(repositoryBuild.run, "pnpm build");
