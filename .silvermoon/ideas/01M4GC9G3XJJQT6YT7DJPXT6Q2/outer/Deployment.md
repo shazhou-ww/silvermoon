@@ -5,12 +5,13 @@
 ### D-S01: 验证发布接口
 
 在发布级检查与打包 smoke 中验证 optional digest 参数、冲突诊断和
-`what's-next` 指引、无 sequence 记录与 append timestamp 可由安装包正常使用。
+`what's-next` 指引、无 sequence 记录、optional timestamp 兼容与时钟回拨诊断
+可由安装包正常使用。
 
 ### D-S02: 发布兼容说明
 
 在直接相关文档中明确文件顺序与派生序号、timestamp 的来源和非排序语义、
-旧记录只读兼容边界、digest 前缀规则以及 replay 的调试/增量读取定位。
+非递减约束与旧记录兼容边界、digest 前缀规则以及 replay 的调试/增量读取定位。
 
 ## Acceptance criteria
 

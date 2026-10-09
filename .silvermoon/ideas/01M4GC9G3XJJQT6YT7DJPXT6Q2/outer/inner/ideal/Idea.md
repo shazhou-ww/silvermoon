@@ -16,8 +16,9 @@ length/digest cursor 暴露给 Agent，混淆了增量读取与基础乐观锁�
 
 - 文件顺序是 canonical 顺序；sequence 只可作为 replay/reducer 的派生投影，
   不再写入新事件或写入请求；含 sequence 的旧记录保持只读兼容。
-- timestamp 是 CLI 首次成功 append 时生成的 UTC 毫秒 RFC 3339 时间，不接受
-  调用方输入，也不替代文件顺序、授权或 commit 时间；旧事件不伪造时间。
+- timestamp 是 optional 的 UTC 毫秒 RFC 3339 时间；新 append 由 CLI 生成且
+  不接受调用方输入。存在的时间必须按事件顺序非递减，缺失项跳过且旧事件不
+  伪造时间；timestamp 不替代文件顺序、授权或 commit 时间。
 - length 仅服务 replay；digest 不要求固定为 40/64 位或完整 OID，达到 8 位
   下限的十六进制前缀均可匹配，且不改变 lifecycle 状态或事件类型。
 
@@ -26,7 +27,7 @@ length/digest cursor 暴露给 Agent，混淆了增量读取与基础乐观锁�
 - 新 append 的 canonical 记录包含规范 UTC timestamp 且不含 sequence；replay
   仍按文件位置提供稳定派生序号，含 sequence 或缺少 timestamp 的历史记录
   保持可读且不会被赋予虚假的创建时间。
+- 日志校验拒绝倒序 timestamp；新 append 的本机时间早于最近一个有 timestamp
+  的事件时不写入，并给出可定位候选日志异常或本机时钟回拨的明确诊断。
 - 至少 8 位且匹配的 digest 前缀允许 append；短于下限或不匹配时不写入并给出
   明确诊断，未提供 digest 时保持可用。
-- `what's-next --audience agent` 给出可直接使用的 digest append 指引；不确定重试
-  识别已写入事件并保留其原 timestamp，无需为新事件执行 Git blame。

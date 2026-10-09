@@ -5,13 +5,14 @@
 ### I-S01: 演进事件记录契约
 
 新 canonical 记录不再写 sequence，并由 CLI 增加 UTC 毫秒 RFC 3339 timestamp；
-读取层兼容含 sequence 或缺少 timestamp 的旧记录，不重写历史或伪造时间。
+读取层兼容含 sequence 或缺少 timestamp 的旧记录，不重写历史或伪造时间；
+校验层跳过缺失值并要求其余 timestamp 按事件顺序非递减。
 
 ### I-S02: 重构 append 并发与重试
 
 让 optional expected digest 接受至少 8 位的前缀匹配；拒绝调用方 timestamp，
-并按业务请求识别不确定重试，保留首次写入的 timestamp。sequence 仅由读取
-位置派生。
+新 append 的本机时间早于最近一个有 timestamp 的事件时拒绝写入并区分日志
+异常与时钟回拨诊断；不确定重试保留首次 timestamp。sequence 仅由位置派生。
 
 ### I-S03: 同步验证面
 
@@ -23,7 +24,7 @@
 ### I-AC01: 事件记录自描述
 
 自动化测试证明新记录包含 CLI 生成的 UTC 毫秒 timestamp 且不含 sequence，
-读取结果按文件位置派生序号，旧格式保持可读且不伪造未知时间。
+读取结果按文件位置派生序号，旧格式保持可读，缺失时间被跳过且不被伪造。
 
 ### I-AC02: Digest 前缀控制写入
 
@@ -32,5 +33,5 @@
 
 ### I-AC03: 重试与指引保持一致
 
-集成测试证明重试保留首次 timestamp，且 `what's-next` 输出可执行 digest 指引，
-不要求生产 Agent 先调用 `event replay` 或为新事件查询 Git 历史。
+集成测试证明相等或递增时间可写入、倒序日志和本机时钟回拨均在写入前停止并
+给出准确诊断，且重试保留首次 timestamp、report 输出可执行 digest 指引。
