@@ -33,3 +33,7 @@
 - [8c54d4fbe826](https://github.com/shazhou-ww/silvermoon/commit/8c54d4fbe826f56db37a006bf302181ff32fdb9f)
   已修复后续 tag checkout 的 canonical `origin` URL；该修复没有移动、
   删除或重建现有 `0.4.0` 标签。
+- 不移动标签的恢复入口也已验证：针对现有 tag 的 `workflow_dispatch`
+  被 GitHub 以 HTTP 422 拒绝；[deployment 6958854727](https://api.github.com/repos/shazhou-ww/silvermoon/deployments/6958854727)
+  正确绑定同一 tag 与 commit，但旧 tag 中没有对应 trigger，未创建
+  workflow run，并已记录为 `failure`。
