@@ -82,6 +82,50 @@ Do not import a directory's own index from its implementation files.
 Pure callers must not load a mixed runtime facade, and the presentation facade
 must not eagerly load TUI or the Copilot SDK.
 
+### Localized what's next templates
+
+Keep command-specific, user-visible `what's next` messages under
+`src/foundation/report/templates/whats-next/`. Do not add paired English and
+Chinese long-form strings to business orchestration. The template directory
+has four distinct responsibilities:
+
+- `contract.ts` defines stable kebab-case template IDs and typed dynamic
+  parameters.
+- `en-US/` and `zh-CN/` contain matching filenames, with one `@pure`
+  default-exported logical template per file.
+- Each locale's `index.ts` registers its complete catalog; `registry.ts`
+  selects a catalog without owning wording.
+- `renderers.ts` provides statically traceable locale routing for pure callers.
+
+Every locale template file starts with this review metadata:
+
+```ts
+/**
+ * @template primary-behind
+ * @when repository.primaryRelation=behind
+ * Used after observing primary when local HEAD is behind it.
+ */
+```
+
+The `@template` value must equal the filename without `.ts`. The `@when`
+expression must be machine-readable and identical in every locale; the
+explanatory sentence uses the file's locale. These comments document entry
+conditions only and never drive runtime routing.
+
+Pass all dynamic values through the template's typed parameter object. A
+template may format an already selected terminal scenario, but it must not
+read external state, perform I/O, or choose the business route. Preserve
+message structure and wording when extracting an existing template; make
+copy changes separately so their behavior is reviewable.
+
+Adding, renaming, or removing a template requires the same change in both
+locale directories, both locale indexes, the typed contract, and the static
+renderers used by pure callers. The catalog contract test enforces filename
+symmetry, header identity, registration completeness, and unique IDs.
+Run the focused template unit and contract tests, `pnpm typecheck`, and
+`pnpm check:pure`; run the relevant command integration tests whenever
+callers or wording change.
+
 Moving files also requires updating package-resource URLs, authenticated cache
 source coordinates, source tools, declarations, strict package contents and tests.
 Keep source-only maintenance tools out of installed facades and package

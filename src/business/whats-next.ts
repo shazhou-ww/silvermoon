@@ -2,7 +2,6 @@ import { resolve } from "node:path";
 
 import { createCommandRun } from "../foundation/command-message/index.ts";
 import { ACTIVE_STATES, diagnosticProblem, dialogueReadyObservation } from "../foundation/report/index.ts";
-import { localize } from "../foundation/language/index.ts";
 import { inspectPhaseGuidance } from "../foundation/guidance/index.ts";
 import {
   metadataFailureObservation,
@@ -11,7 +10,7 @@ import {
 import { canonicalizeOutputLanguage } from "../foundation/language/index.ts";
 import { observeSnapshot, withObservationLanguage } from "./shared/index.ts";
 
-import { joinInstructions, lifecycleInstruction, lifecycleReview, navigationInstruction, phaseGuidanceInstructions, projectInstructions, selectIdea } from "../foundation/report/index.ts";
+import { joinInstructions, lifecycleInstruction, lifecycleReview, navigationInstruction, phaseGuidanceInstructions, projectInstructions, renderIdeaNotFound, selectIdea } from "../foundation/report/index.ts";
 import { assessRepositoryReadiness } from "./shared/index.ts";
 import type { Diagnostic } from "./shared/business-types.ts";
 import { traceBusinessAsync } from "./shared/business-types.ts";
@@ -214,11 +213,9 @@ export async function whatsNextUseCase({
       notFoundObservation,
       {
         nextSteps: joinInstructions([
-          localize(
-            observed.outputLanguage,
-            `Idea ${selector} does not match an observed ULID or unique alias.`,
-            `Idea ${selector} 未匹配任何已观察到的 ULID 或唯一 alias。`,
-          ),
+          renderIdeaNotFound(observed.outputLanguage, {
+            selector,
+          }),
           navigationInstruction(observed.layout.ideas, observed.outputLanguage),
         ]),
       },

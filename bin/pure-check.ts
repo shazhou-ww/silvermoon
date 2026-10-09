@@ -32,6 +32,7 @@ const RULE_DEPENDENCIES = new Set([
   "foundation/event-history/index.ts", "foundation/idea-template/index.ts",
   "foundation/git/index.ts", "foundation/project-config/index.ts",
   "foundation/renderer/index.ts", "foundation/report/index.ts",
+  "foundation/report/templates/whats-next/index.ts",
   "business/shared/business-types.ts",
 ]);
 const EXTERNAL_FUNCTIONS = new Map([
@@ -134,6 +135,11 @@ export function inspectPureSources(
       if (ts.isFunctionDeclaration(node) && node.name) {
         functions.set(node.name.text, node);
         exports.set(node.name.text, { local: node.name.text });
+        if (node.modifiers?.some(({ kind }) =>
+          kind === ts.SyntaxKind.DefaultKeyword
+        )) {
+          exports.set("default", { local: node.name.text });
+        }
       }
       if (ts.isClassDeclaration(node) && node.name
         && node.heritageClauses?.some((clause) =>

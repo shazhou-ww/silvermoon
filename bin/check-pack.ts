@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 
 import { inspectNpmTarball } from "../src/foundation/package-resource/index.ts";
 import { npmCommand } from "../src/foundation/process/index.ts";
+import { WHATS_NEXT_TEMPLATE_IDS } from "../src/foundation/report/templates/whats-next/index.ts";
 
 const packageRoot = fileURLToPath(new URL("..", import.meta.url));
 type PackFile = { path: string; size: number };
@@ -113,6 +114,20 @@ if (packed.status !== 0) {
   const result = parsePackResults(packed.stdout)[0];
   if (!result) throw new Error("npm pack returned no package metadata.");
   const files = result.files.map(({ path }: PackFile) => path).sort();
+  const whatsNextTemplateModules = [
+    "contract",
+    "index",
+    "registry",
+    "renderers",
+    "en-US/index",
+    "zh-CN/index",
+    ...WHATS_NEXT_TEMPLATE_IDS.flatMap((id) => [
+      `en-US/${id}`,
+      `zh-CN/${id}`,
+    ]),
+  ].map((path) =>
+    `src/foundation/report/templates/whats-next/${path}.js`
+  );
   const maintained = [
     "LICENSE",
     "README.md",
@@ -269,6 +284,7 @@ if (packed.status !== 0) {
     "src/foundation/report/observation.js",
     "src/foundation/report/projection.js",
     "src/foundation/report/types.js",
+    ...whatsNextTemplateModules,
     "src/foundation/schema-capability/README.md",
     "src/foundation/schema-capability/index.js",
     "src/foundation/schema-capability/inspection.js",

@@ -15,5 +15,8 @@ Project explicit terminal facts into four report projections, diagnostics, and l
 - `diagnosticProblem`: maps a diagnostic to a stable public problem.
 - `respond`: selects a structured response without rendering it.
 - `projectInstructions`: derives localized instructions from explicit project findings.
+- `templates/whats-next/`: owns typed, locale-symmetric `what's next`
+  message templates; follow the
+  [template conventions](../../../docs/maintaining.md#localized-whats-next-templates).
 - Observations and responses preserve complete per-file schema readiness;
   renderers suppress current files.
