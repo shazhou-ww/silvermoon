@@ -27,11 +27,12 @@ entries, same-world supporting artifacts, and the ledger. A caller may use
 markers, and verbatim tool output retain their original form.
 
 Every `whats-next` invocation follows three strict layers. It first checks Git,
-configuration compatibility, and `.agents/skills/silvermoon`. It then checks
-local conflicts, changes, HEAD, and upstream identity before any remote access.
-Only after those checks pass does it fetch primary, compare ancestry, and
-route idea work. It never edits, checks out, merges, commits, stashes, deletes,
-resets, fast-forwards, or pushes.
+configuration compatibility, metadata schema, and layout. It then checks local
+conflicts, changes, HEAD, and upstream identity before any remote access. Only
+after those checks pass does it fetch primary, compare ancestry, and route idea
+work. Runtime and personal skill health belong to device readiness, never the
+project snapshot. `whats-next` never edits, checks out, merges, commits,
+stashes, deletes, resets, fast-forwards, or pushes.
 
 When a selector resolves to an actionable phase and synchronization is ready,
 Silvermoon reads only `.silvermoon/guidance/<phase>.md` from the same Git

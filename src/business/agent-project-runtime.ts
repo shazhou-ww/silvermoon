@@ -1,7 +1,8 @@
 import { execFile } from "node:child_process";
-import { mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 
 import { canonicalRoute, LocalProjectRegistry } from "./agent-project-registry.ts";
@@ -10,6 +11,12 @@ import type { IdeaRoute } from "./agent-copilot.ts";
 
 const execute = promisify(execFile);
 const PROTOCOL_VERSION = 1;
+const DEFAULT_RUNTIME_ENTRY = fileURLToPath(new URL(
+  import.meta.url.endsWith(".ts")
+    ? "../../bin/silvermoon.ts"
+    : "../../bin/silvermoon.js",
+  import.meta.url,
+));
 
 export interface ProjectReport {
   readonly intention: {
@@ -83,24 +90,6 @@ function decodeEventReceipt(value: unknown): EventReceipt | undefined {
   };
 }
 
-async function cliPath(projectRoot: string): Promise<string> {
-  const parsed: unknown = JSON.parse(await readFile(join(projectRoot, "package.json"), "utf8"));
-  if (!isRecord(parsed) || typeof parsed.name !== "string") {
-    throw new Error("Project package.json must contain a string name.");
-  }
-  const entry = parsed.name === "silvermoon"
-    ? join(projectRoot, "bin", "silvermoon.ts")
-    : join(projectRoot, "node_modules", "silvermoon", "dist", "bin", "silvermoon.js");
-  try {
-    return await realpath(entry);
-  } catch (error) {
-    if (errorCode(error) === "ENOENT") {
-      throw new Error(`Project version Silvermoon runtime is missing at ${entry}; install project dependencies.`);
-    }
-    throw error;
-  }
-}
-
 function decodeReport(
   output: string,
   command: string,
@@ -153,19 +142,34 @@ function decodeReport(
 }
 
 export class ProjectRuntime {
+  #entryPath: string;
   #registry: LocalProjectRegistry;
 
-  constructor({ registry = new LocalProjectRegistry() }: { registry?: LocalProjectRegistry } = {}) {
+  constructor({
+    entryPath = DEFAULT_RUNTIME_ENTRY,
+    registry = new LocalProjectRegistry(),
+  }: {
+    entryPath?: string;
+    registry?: LocalProjectRegistry;
+  } = {}) {
+    this.#entryPath = resolve(entryPath);
     this.#registry = registry;
   }
 
   async #run(route: IdeaRoute, command: string, args: string[]): Promise<RuntimeResult & { report: DecodedReport }> {
     const canonical = canonicalRoute(route);
-    const [root, worktree] = await Promise.all([
-      this.#registry.projectRoot(canonical),
-      this.#registry.resolve(canonical),
-    ]);
-    const entry = await cliPath(root);
+    const worktree = await this.#registry.resolve(canonical);
+    let entry;
+    try {
+      entry = await realpath(this.#entryPath);
+    } catch (error) {
+      if (errorCode(error) === "ENOENT") {
+        throw new Error(
+          `Silvermoon runtime is missing at ${this.#entryPath}; repair the device or host installation.`,
+        );
+      }
+      throw error;
+    }
     let stdout: string;
     let exitCode: 0 | 1 = 0;
     try {
@@ -188,7 +192,7 @@ export class ProjectRuntime {
     return decodeReport(stdout, command, command === "event" ? args[0] : undefined, canonical.ideaId, exitCode);
   }
 
-  /** The project version alone decides what should happen next. */
+  /** The host runtime interprets the registered project's schema. */
   next(route: IdeaRoute): Promise<RuntimeResult> {
     return this.#run(route, "whats-next", [canonicalRoute(route).ideaId]);
   }

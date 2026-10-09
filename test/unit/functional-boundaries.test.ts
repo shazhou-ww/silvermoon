@@ -12,7 +12,6 @@ import { evaluateLocalReadiness } from "../../src/business/shared/evaluate-local
 import { assessRepositoryReadinessWith } from "../../src/business/shared/assess-repository-readiness-with.ts";
 import { listIdeasUseCase } from "../../src/business/list-ideas.ts";
 import { buildIdeaScaffold } from "../../src/foundation/scaffold-plan/index.ts";
-import { evaluateNpmAdoption, skillInstruction } from "../../src/foundation/skill-registration/index.ts";
 import { encodeUlid } from "../../src/foundation/idea-model/index.ts";
 import { normalizeIdeaQuery, normalizeIdeaQueryCore, queryIdeaInventoryCore } from "../../src/foundation/idea-query/index.ts";
 import { IDEA_STATES } from "../../src/foundation/idea-model/index.ts";
@@ -271,27 +270,6 @@ test("scaffold planning keeps v1 status and v2 event files distinct", () => {
     assert.ok(finalFile);
     assert.equal(finalFile[0], formatVersion === 2 ? ideaPaths(id).eventsPath : ideaPaths(id).statusPath);
   }
-});
-
-test("adoption policy distinguishes bundled skills and the source runtime exemption", () => {
-  const packageManager: Parameters<typeof evaluateNpmAdoption>[0]["packageManager"] = {
-    manager: "pnpm",
-    workspace: false,
-    reason: null,
-  };
-  assert.equal(skillInstruction("/bundled/skills", packageManager, "/bundled/skills"),
-    'Run `npx skills add "/bundled/skills" --skill silvermoon --agent universal --yes --copy`.');
-  assert.match(skillInstruction("./node_modules/silvermoon/skills", packageManager, "/bundled/skills"),
-    /After you add the required Silvermoon devDependency/);
-  const facts = {
-    manifest: {}, packageManager, sourceCheckout: true, sameSourceRuntime: true,
-    expectedDependency: "^0.3.0", version: "0.3.0",
-  };
-  assert.deepEqual(evaluateNpmAdoption(facts), []);
-  const finding = evaluateNpmAdoption({ ...facts, sameSourceRuntime: false })[0];
-  assert.ok(finding);
-  assert.equal(finding.problem.type,
-    "source-checkout-runtime-required");
 });
 
 test("ULID encoding depends only on explicit time and random bytes", () => {

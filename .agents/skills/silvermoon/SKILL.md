@@ -71,24 +71,21 @@ uses the same four projections; only `check --remote` normally records an
 action. Exit `0` means valid, `1` invalid or unavailable, and `2` invalid
 usage. Never commit unless the relevant check exits `0`.
 
-A repository without a root `package.json` needs no package manager,
-Silvermoon dependency, or `node_modules`. When the root manifest exists, it
-must be valid JSON and declare `devDependencies.silvermoon` as exactly
-`^<running-version>`; follow the reported package-manager-specific
-remediation. Register npm projects' skill from
-`./node_modules/silvermoon/skills` after installing root dependencies. Other
-repositories use the skill bundled with the running installation. Snapshot
-checks do not require installed dependencies, and Silvermoon reports setup
-problems without modifying project files or registering skills. Register the
-canonical skill at `.agents/skills/silvermoon` with the supported
-`npx skills add` universal target.
+Silvermoon runtime and skill installation are device or host concerns, not
+project metadata. Never add Silvermoon to a target repository's dependency
+manifest, resolve a CLI from its `node_modules`, or create a repository-local
+Silvermoon skill. The host exposes the running installation's canonical skill
+through a personal discovery path such as `~/.agents/skills/silvermoon` or
+`~/.copilot/skills/silvermoon`; register it globally by link rather than copy.
+Project snapshot checks inspect Git, Silvermoon configuration, metadata schema,
+and layout only. They do not read `package.json`, `node_modules`, or repository
+skill paths.
 
 Silvermoon's own source repository is exempt from the dependency requirement.
 There, use `node bin/silvermoon.js` from the current checkout for every
 `silvermoon` command in this skill, preserving all arguments and options.
 Never add Silvermoon as its own dependency or use a globally installed,
-published, or different checkout's runtime. If an external runtime reports
-`source-checkout-runtime-required`, switch to that source entrypoint.
+published, or different checkout's runtime while working in this repository.
 Maintain its canonical skill in `skills/silvermoon` and refresh the registered
 copy with `pnpm sync:skills`, not from `node_modules`.
 

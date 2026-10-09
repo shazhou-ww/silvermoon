@@ -125,10 +125,10 @@ test("project setup uses cumulative observation variants and reports all setup f
   assert.equal(Object.hasOwn(missingGit.observation, "version"), false);
   assert.deepEqual(
     missingGit.observation.problems.map(({ type }: { type: string }) => type),
-    ["git-repository-missing", "config-missing", "canonical-skill-missing"],
+    ["git-repository-missing", "config-missing"],
   );
   assert.equal(missingGit.actions.length, 0);
-  assert.match(responseText(missingGit), /^1\. .*\n2\. .*\n3\. /);
+  assert.match(responseText(missingGit), /^1\. .*\n2\. /);
   assert.match(responseText(missingGit), /处理/);
 
   const configured = await fixture();
@@ -158,33 +158,34 @@ primaryBranch: main
     ),
   );
 
-  const missingSkill = await fixture({ preferredLanguage: "zh-CN" });
-  await rm(join(missingSkill.root, ".agents"), { recursive: true });
-  git(missingSkill.root, "add", "--all");
-  git(missingSkill.root, "commit", "-m", "Remove canonical skill");
+  const invalidLayout = await fixture({ preferredLanguage: "zh-CN" });
+  const paths = ideaPaths(FIRST_ID);
+  await rm(join(invalidLayout.root, ...paths.ledgerPath.split("/")));
   const observedIdeas = await whatsNext({
-    root: missingSkill.root,
-    userHome: missingSkill.base,
+    root: invalidLayout.root,
+    userHome: invalidLayout.base,
   });
   assert.ok("observedThrough" in observedIdeas.observation);
-  assert.ok("ideas" in observedIdeas.observation);
-  assert.equal(observedIdeas.observation.observedThrough, "ideas");
-  assert.equal(observedIdeas.observation.ideas.counts.preparing, 1);
+  assert.equal(Object.hasOwn(observedIdeas.observation, "ideas"), false);
+  assert.equal(observedIdeas.observation.observedThrough, "configuration");
   assert.equal(
     firstProblem(observedIdeas).type,
-    "canonical-skill-missing",
+    "idea-ledger-missing-file",
   );
-  assert.match(firstProblem(observedIdeas).summary, /^Silvermoon 发现/);
-  assert.match(responseText(observedIdeas), /^处理/);
+  assert.match(firstProblem(observedIdeas).summary, /^在 .*ledger\.md 发现/);
+  assert.match(responseText(observedIdeas), /^修复/);
   assert.doesNotMatch(responseText(observedIdeas), /^\d+\. /m);
 });
 
-test("npm dependency setup blocks lifecycle navigation before fetching primary", async () => {
+test("package metadata does not participate in lifecycle navigation", async () => {
   const repository = await fixture();
   await writeFile(
     join(repository.root, "package.json"),
     JSON.stringify({ name: "consumer" }, null, 2) + "\n",
   );
+  git(repository.root, "add", "package.json");
+  git(repository.root, "commit", "-m", "Add package metadata");
+  git(repository.root, "push", "origin", "main");
   const commands: string[][] = [];
 
   const report = await observeGitCommands(
@@ -196,11 +197,10 @@ test("npm dependency setup blocks lifecycle navigation before fetching primary",
     }),
   );
 
-  assert.equal(report.observation.state, "project-setup-required");
-  assert.equal(firstProblem(report).type, "npm-dependency-missing");
-  assert.equal(report.actions.length, 0);
-  assert.match(responseText(report), /silvermoon@\^[0-9]+\.[0-9]+\.[0-9]+/);
-  assert.equal(commands.some(([name]) => name === "fetch"), false);
+  assert.equal(report.observation.state, "idea-selected");
+  assert.deepEqual(report.observation.problems, []);
+  assert.equal(commands.some(([name]) => name === "fetch"), true);
+  assert.doesNotMatch(responseText(report), /silvermoon@\^[0-9]+\.[0-9]+\.[0-9]+/);
 });
 
 test("[selector-none] naked navigation lists one active idea without selecting it", async () => {

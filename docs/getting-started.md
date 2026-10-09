@@ -11,43 +11,34 @@ This guide is the authoritative setup and first-use path for Silvermoon.
 
 ## Run Silvermoon And Register Its Skill
 
-Install Silvermoon independently of the target project's dependency graph, or
-invoke a chosen version temporarily:
+Install the device's single Silvermoon runtime independently of every target
+project:
 
 ```sh
 npm install --global silvermoon
 silvermoon whats-next
-# or: npx silvermoon@<version> whats-next
 ```
 
-For repositories without a root `package.json`, the setup report gives the
-exact path for the running installation. Use it to register the bundled
-canonical skill through the universal `skills` target:
+Register the global package's canonical skill in a personal discovery path.
+Omit `--copy` so updates to the global package are visible through the same
+link:
 
 ```sh
-npx skills add <path-to-running-silvermoon>/skills --skill silvermoon --agent universal --yes --copy
+npx skills add <path-to-global-silvermoon>/skills --skill silvermoon --agent universal --global --yes
 ```
 
-If the repository root contains `package.json`, Silvermoon requires valid JSON
-and an exact `devDependencies.silvermoon` value of `^<running-version>`.
-Follow all commands in the setup report in order; then register the
-project-local canonical skill:
-
-```sh
-npx skills add ./node_modules/silvermoon/skills --skill silvermoon --agent universal --yes --copy
-```
-
-Only the tracked root manifest is part of readiness; installed dependencies
-and `node_modules` are not required for snapshot checks. Silvermoon checks the
-registration at `.agents/skills/silvermoon` against its running canonical
-skill, and never mutates the manifest, package-manager files, dependencies, or
-skill registration itself. Non-npm repositories remain free of npm setup.
+The personal registration may be discovered from
+`~/.agents/skills/silvermoon` or `~/.copilot/skills/silvermoon`, depending on
+the host. Target repositories never declare Silvermoon dependencies or store a
+Silvermoon skill copy. Snapshot checks ignore `package.json`, `node_modules`,
+and repository skill paths.
 
 Silvermoon's own source repository is the exception: it has no Silvermoon
 self-dependency and must run `node bin/silvermoon.js` from its current checkout.
-An external runtime directs contributors to that entrypoint rather than
-requiring the published package. See [Development](./maintaining.md#development)
-for the source CLI and skill workflow.
+It keeps a workspace skill for unpublished development through
+`pnpm sync:skills`; that copy is not installed into other projects. See
+[Development](./maintaining.md#development) for the source CLI and skill
+workflow.
 
 ## Configure The Shared Primary
 

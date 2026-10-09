@@ -114,6 +114,15 @@ try {
     "bin",
     "silvermoon.js",
   );
+  const installed = (args: string[], cwd: string) =>
+    run(process.execPath, [installedEntry, ...args], cwd);
+  const installedResult = (args: string[], cwd: string) =>
+    spawnSync(process.execPath, [installedEntry, ...args], {
+      cwd,
+      encoding: "utf8",
+      timeout: 120_000,
+      windowsHide: true,
+    });
   const installedEntryBefore = await readFile(installedEntry);
   for (const args of [
     ["list-ideas", "--root", packageRoot, "--json"],
@@ -128,22 +137,31 @@ try {
     assert.ok([0, 1].includes(result.status),
       result.stderr || result.error?.message || "npm exec failed");
     assert.notEqual(result.stdout.trim(), "", `npm exec produced no output for ${args[0]}`);
-    assert.equal(JSON.parse(result.stdout).observation.problems[0].type,
-      "source-checkout-runtime-required");
+    const report = JSON.parse(result.stdout);
+    assert.equal(
+      report.observation.problems.some(({ type }: { type: string }) =>
+        type === "source-checkout-runtime-required"
+        || type.startsWith("npm-dependency-")
+        || type.startsWith("canonical-skill-")
+      ),
+      false,
+    );
   }
   assert.deepEqual(await readFile(installedEntry), installedEntryBefore);
   const sourceObservation = spawnSync(process.execPath, [
     installedEntry,
     "list-ideas", "--root", packageRoot, "--json",
   ], { cwd: bootstrap, encoding: "utf8", timeout: 120_000, windowsHide: true });
-  assert.equal(sourceObservation.status, 1, sourceObservation.stderr);
+  assert.ok([0, 1].includes(sourceObservation.status ?? -1), sourceObservation.stderr);
   const sourceReport = JSON.parse(sourceObservation.stdout);
-  assert.equal(sourceReport.observation.problems[0].type, "source-checkout-runtime-required");
   assert.equal(
-    sourceReport.observation.problems.some(({ type }: { type: string }) => type.startsWith("npm-dependency-")),
+    sourceReport.observation.problems.some(({ type }: { type: string }) =>
+      type === "source-checkout-runtime-required"
+      || type.startsWith("npm-dependency-")
+      || type.startsWith("canonical-skill-")
+    ),
     false,
   );
-  assert.match(responseText(sourceReport), /node bin\/silvermoon\.js/);
   assert.equal(installedManifest.license, "MIT");
   assert.equal(
     installedManifest.homepage,
@@ -202,16 +220,9 @@ try {
   );
   assert.deepEqual(
     bootstrapReport.observation.problems.map(({ type }: { type: string }) => type),
-    [
-      "config-missing",
-      "npm-dependency-wrong-section",
-      "canonical-skill-missing",
-    ],
+    ["config-missing"],
   );
   assert.equal(bootstrapReport.observation.observedThrough, "version");
-  assert.match(responseText(bootstrapReport), /--agent universal/);
-  assert.match(responseText(bootstrapReport), /npm install --save-dev/);
-  assert.match(responseText(bootstrapReport), /\.\/node_modules\/silvermoon\/skills/);
   assert.doesNotMatch(
     JSON.stringify(bootstrapReport),
     /package\.manifest|execution-source|project-local/,
@@ -231,7 +242,7 @@ try {
   ));
   assert.deepEqual(
     nonNodeReport.observation.problems.map(({ type }: { type: string }) => type),
-    ["config-missing", "canonical-skill-missing"],
+    ["config-missing"],
   );
   await assert.rejects(readFile(join(nonNode, "package.json")), {
     code: "ENOENT",
@@ -266,41 +277,19 @@ try {
   run("git", ["add", "."], consumer);
   run("git", ["commit", "-m", "Initialize smoke fixture"], consumer);
 
-  npm(["install", "--ignore-scripts", "--no-audit", "--no-fund", tarball], consumer);
-  const consumerManifestPath = join(consumer, "package.json");
-  const consumerManifest = JSON.parse(await readFile(consumerManifestPath, "utf8"));
-  delete consumerManifest.dependencies;
-  consumerManifest.devDependencies = { silvermoon: `^${installedManifest.version}` };
-  await writeFile(consumerManifestPath, `${JSON.stringify(consumerManifest, null, 2)}\n`);
-  npm([
-    "exec",
-    "--yes",
-    "--package",
-    "skills",
-    "--",
-    "skills",
-    "add",
-    "./node_modules/silvermoon/skills",
-    "--skill",
-    "silvermoon",
-    "--agent",
-    "universal",
-    "--yes",
-    "--copy",
-  ], consumer);
   assert.match(
-    await readFile(join(consumer, "node_modules", "silvermoon", "README.zh-CN.md"), "utf8"),
+    await readFile(join(bootstrap, "node_modules", "silvermoon", "README.zh-CN.md"), "utf8"),
     /# Silvermoon（银月）/,
   );
   assert.match(
     await readFile(
-      join(consumer, "node_modules", "silvermoon", "docs", "getting-started.md"),
+      join(bootstrap, "node_modules", "silvermoon", "docs", "getting-started.md"),
       "utf8",
     ),
     /# Getting Started/,
   );
   await assert.rejects(
-    stat(join(consumer, "node_modules", "silvermoon", "assets")),
+    stat(join(bootstrap, "node_modules", "silvermoon", "assets")),
     { code: "ENOENT" },
   );
   for (const schema of [
@@ -310,21 +299,20 @@ try {
   ]) {
     JSON.parse(
       await readFile(
-        join(consumer, "node_modules", "silvermoon", "schema", "v1", schema),
+        join(bootstrap, "node_modules", "silvermoon", "schema", "v1", schema),
         "utf8",
       ),
     );
   }
   await assert.rejects(
-    readFile(join(consumer, "node_modules", ".bin", "repoledger"), "utf8"),
+    readFile(join(bootstrap, "node_modules", ".bin", "repoledger"), "utf8"),
     { code: "ENOENT" },
   );
-  run(
-    "git",
-    ["add", "package.json", "package-lock.json", ".gitignore", ".agents", "skills-lock.json"],
-    consumer,
-  );
-  run("git", ["commit", "-m", "Install packed Silvermoon"], consumer);
+  await assert.rejects(readFile(join(consumer, "package.json"), "utf8"), {
+    code: "ENOENT",
+  });
+  await assert.rejects(stat(join(consumer, "node_modules")), { code: "ENOENT" });
+  await assert.rejects(stat(join(consumer, ".agents")), { code: "ENOENT" });
   run("git", ["init", "--bare", "--initial-branch=main", primary], consumer);
   run(
     "git",
@@ -337,7 +325,7 @@ try {
     consumer,
   );
   run("git", ["push", "--set-upstream", "origin", "main"], consumer);
-  const help = npm(["exec", "--", "silvermoon", "--help"], consumer);
+  const help = installed(["--help"], consumer);
   assert.match(help, /silvermoon list-ideas/);
   assert.match(help, /silvermoon whats-next/);
   assert.match(help, /silvermoon create-idea/);
@@ -348,7 +336,7 @@ try {
     /silvermoon whatsnext|silvermoon task|silvermoon status|silvermoon init|silvermoon skill/,
   );
   assert.equal(
-    npm(["exec", "--", "silvermoon", "--version"], consumer),
+    installed(["--version"], consumer),
     installedManifest.version,
   );
   const exported = run(
@@ -358,7 +346,7 @@ try {
       "-e",
       "import * as silvermoon from 'silvermoon'; const names = ['CommandRun', 'checkRepository', 'createIdea', 'deriveIdeaState', 'driveCommand', 'generateUlid', 'listIdeas', 'normalizeIdeaQuery', 'parseIdeaStatus', 'queryIdeaInventory', 'renderResponse', 'respond', 'whatsNext']; console.log(`${names.map((name) => typeof silvermoon[name]).join(',')}|${silvermoon.DOMAIN_MESSAGE_SCHEMA_VERSION},${silvermoon.TRACE_SCHEMA_VERSION}|${Object.hasOwn(silvermoon, 'implementationCriterionIds')},${Object.hasOwn(silvermoon, 'verifyCriteriaEvidence')}`);",
     ],
-    consumer,
+    bootstrap,
   );
   assert.equal(
     exported,
@@ -372,15 +360,12 @@ try {
         "-e",
         "import { renderTuiMarkdown } from './node_modules/silvermoon/dist/src/foundation/tui/index.js'; console.log(typeof renderTuiMarkdown);",
       ],
-      consumer,
+      bootstrap,
     ),
     "function",
   );
   const inventory = JSON.parse(
-    npm(
-      ["exec", "--", "silvermoon", "list-ideas", "--all", "--json"],
-      consumer,
-    ),
+    installed(["list-ideas", "--all", "--json"], consumer),
   );
   assert.deepEqual(Object.keys(inventory), [
     "intention",
@@ -395,16 +380,8 @@ try {
   assert.equal(inventory.observation.ideas[0].alias, "installed-smoke");
   assert.equal(inventory.observation.ideas[0].title, "Installed package smoke");
   const localizedInventory = JSON.parse(
-    npm(
-      [
-        "exec",
-        "--",
-        "silvermoon",
-        "list-ideas",
-        "--language",
-        "ZH",
-        "--json",
-      ],
+    installed(
+      ["list-ideas", "--language", "ZH", "--json"],
       consumer,
     ),
   );
@@ -415,11 +392,8 @@ try {
     localizedInventory.observation.configuration.preferredLanguage,
     "en-US",
   );
-  const inventoryText = npm(
+  const inventoryText = installed(
     [
-      "exec",
-      "--",
-      "silvermoon",
       "list-ideas",
       "--state",
       "active",
@@ -431,11 +405,8 @@ try {
   assert.match(inventoryText, /^## Ideas/);
   assert.match(inventoryText, /installed-smoke/);
   assert.doesNotMatch(inventoryText, /Next steps/);
-  const localizedInventoryText = npm(
+  const localizedInventoryText = installed(
     [
-      "exec",
-      "--",
-      "silvermoon",
       "list-ideas",
       "--language",
       "zh-CN",
@@ -446,8 +417,8 @@ try {
   );
   assert.match(localizedInventoryText, /匹配 \d+ 个 idea，返回 \d+ 个。/);
   const localizedCheck = JSON.parse(
-    npm(
-      ["exec", "--", "silvermoon", "check", "--language", "ZH-cn", "--json"],
+    installed(
+      ["check", "--language", "ZH-cn", "--json"],
       consumer,
     ),
   );
@@ -458,8 +429,8 @@ try {
     "en-US",
   );
   const guidedLifecycle = JSON.parse(
-    npm(
-      ["exec", "--", "silvermoon", "whats-next", "installed-smoke", "--json"],
+    installed(
+      ["whats-next", "installed-smoke", "--json"],
       consumer,
     ),
   );
@@ -477,14 +448,14 @@ try {
     ...publicGuidance,
     content: "Installed preparing guidance.\n",
   });
-  const guidedLifecycleText = npm(
-    ["exec", "--", "silvermoon", "whats-next", "installed-smoke"],
+  const guidedLifecycleText = installed(
+    ["whats-next", "installed-smoke"],
     consumer,
   );
   assert.match(guidedLifecycleText, /## Project phase guidance/);
   assert.match(guidedLifecycleText, /> Installed preparing guidance\./);
-  const localizedCheckText = npm(
-    ["exec", "--", "silvermoon", "check", "--language", "zh-CN"],
+  const localizedCheckText = installed(
+    ["check", "--language", "zh-CN"],
     consumer,
   );
   assert.match(
@@ -497,20 +468,20 @@ try {
     ["status", "--porcelain=v1", "--untracked-files=all"],
     consumer,
   );
-  const invalidLanguage = npmResult(
-    ["exec", "--", "silvermoon", "check", "--language", "fr-FR"],
+  const invalidLanguage = installedResult(
+    ["check", "--language", "fr-FR"],
     consumer,
   );
   assert.equal(invalidLanguage.status, 2, invalidLanguage.stderr);
   assert.match(invalidLanguage.stderr, /unsupported output language/);
-  const conflictingOutput = npmResult(
-    ["exec", "--", "silvermoon", "check", "--json", "--audience", "agent"],
+  const conflictingOutput = installedResult(
+    ["check", "--json", "--audience", "agent"],
     consumer,
   );
   assert.equal(conflictingOutput.status, 2, conflictingOutput.stderr);
   assert.match(conflictingOutput.stderr, /cannot be used with option '--json'/);
-  const excessArguments = npmResult(
-    ["exec", "--", "silvermoon", "check", "unexpected"],
+  const excessArguments = installedResult(
+    ["check", "unexpected"],
     consumer,
   );
   assert.equal(excessArguments.status, 2, excessArguments.stderr);
@@ -523,7 +494,7 @@ try {
     statusBeforeInvalidLanguage,
   );
   const ideasBefore = await readdir(join(consumer, ".silvermoon", "ideas"));
-  const created = JSON.parse(npm(["exec", "--", "silvermoon", "create-idea", "--json"], consumer));
+  const created = JSON.parse(installed(["create-idea", "--json"], consumer));
   assert.deepEqual(Object.keys(created).sort(), [
     "actions",
     "intention",
@@ -592,9 +563,9 @@ decision, risk, or disagreement requires it.
     await readFile(join(consumer, createdPaths.status), "utf8"),
     `version: 1\nid: ${createdId}\n`,
   );
-  const legacy = npmResult(["exec", "--", "silvermoon", "whatsnext"], consumer);
+  const legacy = installedResult(["whatsnext"], consumer);
   assert.equal(legacy.status, 2, legacy.stderr);
-  const checked = JSON.parse(npm(["exec", "--", "silvermoon", "check", "--json"], consumer));
+  const checked = JSON.parse(installed(["check", "--json"], consumer));
   assert.deepEqual(Object.keys(checked).sort(), [
     "actions",
     "intention",
@@ -603,7 +574,7 @@ decision, risk, or disagreement requires it.
   ]);
   assert.equal(checked.observation.state, "project-ready");
   assert.equal(checked.observation.ideas.activeIdeas[0].alias, "installed-smoke");
-  const checkedText = npm(["exec", "--", "silvermoon", "check"], consumer);
+  const checkedText = installed(["check"], consumer);
   assert.match(
     checkedText,
     /^## Check\n\nThe requested Silvermoon snapshot is valid\.\n\n- Target: `head`/,
@@ -611,7 +582,7 @@ decision, risk, or disagreement requires it.
   assert.match(checkedText, /- Result: valid/);
   assert.doesNotMatch(checkedText, /## Suggested next steps|## Actions and results/);
   const worktree = JSON.parse(
-    npm(["exec", "--", "silvermoon", "check", "--worktree", "--json"], consumer),
+    installed(["check", "--worktree", "--json"], consumer),
   );
   const createdSummary = worktree.observation.ideas.activeIdeas.find(({ id: ideaId }: { id: string }) =>
     ideaId === createdId
@@ -619,11 +590,8 @@ decision, risk, or disagreement requires it.
   assert.equal(worktree.observation.state, "project-ready");
   assert.equal(Object.hasOwn(createdSummary, "alias"), false);
   const lifecycle = JSON.parse(
-    npm(
+    installed(
       [
-        "exec",
-        "--",
-        "silvermoon",
         "whats-next",
         "installed-smoke",
         "--language",
@@ -643,8 +611,8 @@ decision, risk, or disagreement requires it.
   assert.equal(lifecycle.observation.problems[0].type, "worktree-changes");
   assert.match(lifecycle.observation.problems[0].summary, /未跟踪=5/);
   assert.deepEqual(lifecycle.actions, []);
-  const lifecycleText = npm(
-    ["exec", "--", "silvermoon", "whats-next", "installed-smoke"],
+  const lifecycleText = installed(
+    ["whats-next", "installed-smoke"],
     consumer,
   );
   assert.match(
@@ -692,22 +660,23 @@ decision, risk, or disagreement requires it.
       .includes("installed-events"),
     true,
   );
+  await mkdir(
+    join(consumer, ".agents", "skills", "silvermoon"),
+    { recursive: true },
+  );
   await writeFile(
     join(consumer, ".agents", "skills", "silvermoon", "SKILL.md"),
     "drift\n",
   );
   const drift = JSON.parse(
-    npm(["exec", "--", "silvermoon", "whats-next", "installed-smoke", "--json"], consumer),
+    installed(["check", "--worktree", "--json"], consumer),
   );
+  assert.equal(drift.observation.state, "project-ready");
   assert.equal(
-    drift.observation.state,
-    "project-setup-required",
-  );
-  assert.equal(
-    drift.observation.problems.find(({ type }: { type: string }) =>
-      type === "canonical-skill-mismatched"
-    ).type,
-    "canonical-skill-mismatched",
+    drift.observation.problems.some(({ type }: { type: string }) =>
+      type.startsWith("canonical-skill-")
+    ),
+    false,
   );
   process.stdout.write(
     `PACK_SMOKE_OK name=${installedManifest.name} version=${installedManifest.version} tarball=${tarball}\n`,

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, rename, rm, symlink, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rename, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
@@ -60,19 +60,17 @@ function nextSteps(result: RuntimeResult): string[] {
   return value;
 }
 
-test("dispatches to each project's own isolated CLI and relays its report", async () => {
+test("dispatches every project through one host runtime and relays its report", async () => {
   const base = await mkdtemp(join(tmpdir(), "silvermoon-runtime-"));
-  const roots = [join(base, "source"), join(base, "installed")];
+  const roots = [join(base, "first"), join(base, "second")];
   try {
     const routes = roots.map((_, index) => ({
       ...ROUTE, projectUrl: `https://github.com/example/project-${index}.git`,
     }));
-    for (const [index, root] of roots.entries()) {
-      const entry = index === 0 ? join(root, "bin", "silvermoon.ts")
-        : join(root, "node_modules", "silvermoon", "dist", "bin", "silvermoon.js");
-      await mkdir(join(entry, ".."), { recursive: true });
-      await writeFile(join(root, "package.json"), JSON.stringify({ name: index === 0 ? "silvermoon" : "consumer" }));
-      await writeFile(entry, `
+    for (const root of roots) await mkdir(root, { recursive: true });
+    const entry = join(base, "runtime", "silvermoon.js");
+    await mkdir(join(entry, ".."), { recursive: true });
+    await writeFile(entry, `
 const args = process.argv.slice(2);
 const command = args[0];
 const content = args.includes("--input") ? JSON.parse(require("node:fs").readFileSync(args[args.indexOf("--input") + 1], "utf8")) : null;
@@ -90,55 +88,51 @@ console.log(JSON.stringify({
       id: idea, outcome: "observed", length: 0, digest: "0".repeat(64)
     } }
     : { state: "idea-selected" },
-  actions: [], response: { nextSteps: ["${index}"] }
+  actions: [], response: { nextSteps: [process.cwd()] }
 }));
 if (content?.payload?.message === "fail") process.exitCode = 1;
 `);
-    }
     class FixtureRegistry extends LocalProjectRegistry {
       constructor() {
         super({ root: join(base, "registry") });
       }
 
-      override async projectRoot({ projectUrl }: IdeaRoute) {
+      override async resolve({ projectUrl }: IdeaRoute) {
         const root = roots[routes.findIndex((route) => route.projectUrl === projectUrl)];
         assert.ok(root);
         return root;
       }
-
-      override async resolve(route: IdeaRoute) {
-        return this.projectRoot(route);
-      }
     }
-    const [sourceRoute, installedRoute] = routes;
-    assert.ok(sourceRoute && installedRoute);
+    const [firstRoute, secondRoute] = routes;
+    const [firstRoot, secondRoot] = roots;
+    assert.ok(firstRoute && secondRoute && firstRoot && secondRoot);
     const registry = new FixtureRegistry();
-    const runtime = new ProjectRuntime({ registry });
-    assert.equal(nextSteps(await runtime.next(sourceRoute))[0], "0");
-    assert.equal(nextSteps(await runtime.next(installedRoute))[0], "1");
-    const appended = await runtime.appendInteraction(sourceRoute, {
+    const runtime = new ProjectRuntime({ entryPath: entry, registry });
+    assert.equal(nextSteps(await runtime.next(firstRoute))[0], firstRoot);
+    assert.equal(nextSteps(await runtime.next(secondRoute))[0], secondRoot);
+    const appended = await runtime.appendInteraction(firstRoute, {
       type: "pong", message: "diagnose Git", expectedLength: 0, expectedDigest: "0".repeat(64),
     });
 
     assert.deepEqual(appended.report.observation.content, { type: "pong", payload: { message: "diagnose Git" } });
     assert.equal(appended.protocolVersion, 1);
     assert.equal(appended.exitCode, 0);
-    const unavailable = await runtime.appendInteraction(sourceRoute, {
+    const unavailable = await runtime.appendInteraction(firstRoute, {
       type: "pong", message: "fail", expectedLength: 0, expectedDigest: "0".repeat(64),
     });
-    assert.equal(nextSteps(unavailable)[0], "0");
+    assert.equal(nextSteps(unavailable)[0], firstRoot);
     assert.equal(unavailable.exitCode, 1);
-    await assert.rejects(runtime.appendInteraction(sourceRoute, {
+    await assert.rejects(runtime.appendInteraction(firstRoute, {
       type: "pong", message: "wrong-operation", expectedLength: 0, expectedDigest: "0".repeat(64),
     }), /does not support report protocol/);
-    await assert.rejects(runtime.appendInteraction(sourceRoute, {
+    await assert.rejects(runtime.appendInteraction(firstRoute, {
       type: "pong", message: "transport-failure", expectedLength: 0, expectedDigest: "0".repeat(64),
     }), /Project runtime event failed/);
-    await assert.rejects(runtime.appendInteraction(sourceRoute, {
+    await assert.rejects(runtime.appendInteraction(firstRoute, {
       type: "pong", message: "invalid-json", expectedLength: 0, expectedDigest: "0".repeat(64),
     }), /invalid JSON/);
     await assert.rejects(
-      Reflect.apply(runtime.appendInteraction, runtime, [sourceRoute, {
+      Reflect.apply(runtime.appendInteraction, runtime, [firstRoute, {
         type: "acceptIdeal",
         message: "yes",
         expectedLength: 0,
@@ -146,11 +140,11 @@ if (content?.payload?.message === "fail") process.exitCode = 1;
       }]),
       TypeError,
     );
-    const installedRoot = roots[1];
-    assert.ok(installedRoot);
-    const entry = join(installedRoot, "node_modules", "silvermoon", "dist", "bin", "silvermoon.js");
     await rename(entry, `${entry}.missing`);
-    await assert.rejects(runtime.next(installedRoute), /runtime is missing/);
+    await assert.rejects(
+      runtime.next(secondRoute),
+      /repair the device or host installation/,
+    );
   } finally {
     await rm(base, { recursive: true, force: true });
   }
@@ -184,10 +178,6 @@ test("real project CLI preserves exact interaction state across child processes"
   git(root, "add", ".");
   git(root, "commit", "-m", "Migrate fixture");
   git(root, "push", "origin", "HEAD:main");
-  await writeFile(join(root, "package.json"), JSON.stringify({ name: "consumer" }));
-  await mkdir(join(root, "node_modules"), { recursive: true });
-  await symlink(sourceRoot, join(root, "node_modules", "silvermoon"),
-    process.platform === "win32" ? "junction" : "dir");
   const registry = new LocalProjectRegistry({ root: join(base, "registry") });
   await registry.register(PRIMARY_REPOSITORY, root);
   const route = { projectUrl: PRIMARY_REPOSITORY, ideaId: FIRST_ID };
@@ -227,10 +217,6 @@ test("real project CLI preserves exact interaction state across child processes"
 test("the project CLI interprets legacy v1 schema without inventing event support", async (t) => {
   const { base, root } = await createRepository();
   t.after(() => rm(base, { recursive: true, force: true }));
-  await writeFile(join(root, "package.json"), JSON.stringify({ name: "consumer" }));
-  await mkdir(join(root, "node_modules"), { recursive: true });
-  await symlink(sourceRoot, join(root, "node_modules", "silvermoon"),
-    process.platform === "win32" ? "junction" : "dir");
   const registry = new LocalProjectRegistry({ root: join(base, "registry") });
   await registry.register(PRIMARY_REPOSITORY, root);
   const route = { projectUrl: PRIMARY_REPOSITORY, ideaId: FIRST_ID };

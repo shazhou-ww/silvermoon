@@ -4,7 +4,7 @@ import { after } from "node:test";
 import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { pathToFileURL } from "node:url";
 
 import { serializeIdeaStatus } from "../../src/foundation/idea-model/index.ts";
 import { ideaPaths } from "../../src/foundation/coordinates/index.ts";
@@ -31,9 +31,6 @@ export const FIRST_ID = "01M36QGPNTXEPP61DA4KP4AVZF";
 export const SECOND_ID = "01M36QGPNTXEPP61DA4KP4AVG0";
 
 const defaultIdeas = [{ id: FIRST_ID, status: { alias: "fixture" } }];
-const canonicalSkill = fileURLToPath(
-  new URL("../../skills/silvermoon", import.meta.url),
-);
 let templatePromise: ReturnType<typeof createTemplate> | undefined;
 let templateDirectory: string | undefined;
 
@@ -135,11 +132,6 @@ export async function createRepository({
       "",
     ].join("\n"),
   );
-  await cp(
-    canonicalSkill,
-    join(root, ".agents", "skills", "silvermoon"),
-    { recursive: true },
-  );
   for (const idea of ideas) {
     await writeIdea(root, idea.id, idea.status);
   }
@@ -194,11 +186,6 @@ async function createTemplate() {
       "primaryBranch: main",
       "",
     ].join("\n"),
-  );
-  await cp(
-    canonicalSkill,
-    join(root, ".agents", "skills", "silvermoon"),
-    { recursive: true },
   );
   for (const idea of defaultIdeas) {
     await writeIdea(root, idea.id, idea.status);

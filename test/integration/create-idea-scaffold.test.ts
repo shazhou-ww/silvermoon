@@ -64,7 +64,7 @@ function actionCreatedIdeaId(
 
 test("project setup reports no idea inventory and performs no repository access", async () => {
   const repository = await fixture();
-  await rm(join(repository.root, ".agents"), { recursive: true });
+  await rm(join(repository.root, ".silvermoon", "config.yaml"));
   const commands: (readonly string[])[] = [];
 
   const report = await observeGitCommands(
@@ -78,7 +78,7 @@ test("project setup reports no idea inventory and performs no repository access"
 
   assert.equal(report.observation.state, "project-setup-required");
   assert.equal(Object.hasOwn(report.observation, "ideas"), false);
-  assert.equal(report.observation.observedThrough, "configuration");
+  assert.equal(report.observation.observedThrough, "version");
   assert.equal(
     commands.some(([name]) =>
       name !== undefined
@@ -88,12 +88,15 @@ test("project setup reports no idea inventory and performs no repository access"
   );
 });
 
-test("npm dependency setup blocks idea creation before repository synchronization", async () => {
+test("package metadata does not block idea creation", async () => {
   const repository = await fixture();
   await writeFile(
     join(repository.root, "package.json"),
     JSON.stringify({ name: "consumer" }, null, 2) + "\n",
   );
+  git(repository.root, "add", "package.json");
+  git(repository.root, "commit", "-m", "Add package metadata");
+  git(repository.root, "push", "origin", "main");
   const commands: (readonly string[])[] = [];
 
   const report = await observeGitCommands(
@@ -105,16 +108,13 @@ test("npm dependency setup blocks idea creation before repository synchronizatio
     }),
   );
 
-  assert.equal(report.observation.state, "project-setup-required");
-  assert.equal(
-    report.observation.problems.at(0)?.type,
-    "npm-dependency-missing",
-  );
-  assert.equal(report.actions.length, 0);
+  assert.equal(report.observation.state, "idea-created");
+  assert.deepEqual(report.observation.problems, []);
+  assert.equal(report.actions.length, 1);
   assert.equal(commands.some(([name]) => name === "fetch"), false);
   assert.deepEqual(
     await readdir(join(repository.root, ".silvermoon", "ideas")),
-    [FIRST_ID],
+    [FIRST_ID, createdId],
   );
 });
 

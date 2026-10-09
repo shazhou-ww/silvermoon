@@ -23,7 +23,7 @@ Silvermoon 需要 Node.js 22 或更高版本，并且能通过 Git 访问仓库�
 
 ```text
 请在本项目中运行：
-`npx silvermoon whats-next --audience agent`
+`silvermoon whats-next --audience agent`
 
 遵循最高优先级指示并保留已有工作。
 每次产生可观察变更后重新运行，直到报告显示：
@@ -59,14 +59,14 @@ Silvermoon 需要 Node.js 22 或更高版本，并且能通过 Git 访问仓库�
 也可以直接在终端运行 Silvermoon：
 
 ```sh
-npx silvermoon whats-next
-npx silvermoon whats-next <ULID-or-alias>
-npx silvermoon create-idea
-npx silvermoon list-ideas
+silvermoon whats-next
+silvermoon whats-next <ULID-or-alias>
+silvermoon create-idea
+silvermoon list-ideas
 ```
 
-> **备注**：建议使用 `npx silvermoon`，而不是全局安装。这样无需单独维护全局版本；
-> 在 Node.js 项目中，lock file 会固定项目使用的版本。
+> **备注**：每台设备或 Agent host 只安装并更新一个全局 Silvermoon runtime。
+> 目标项目不固定 Silvermoon 版本，也不保存它的 skill。
 
 工作流见 [Operating Silvermoon](./docs/operations.md)，
 命令详情见 [Technical Reference](./docs/reference.md)。

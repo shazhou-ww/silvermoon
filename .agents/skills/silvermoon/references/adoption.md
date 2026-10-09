@@ -5,7 +5,7 @@
 Start with a complete diagnosis, even in an unfamiliar repository:
 
 ```sh
-npx silvermoon@<version> whats-next
+silvermoon whats-next
 ```
 
 Default output renders only the self-contained response. Add `--json` only
@@ -15,37 +15,31 @@ when a programmatic consumer needs the complete
 The command may fetch after local readiness passes, but it does not move the
 worktree, index, branches, or named refs.
 
-The target repository may use any language or build ecosystem. If it has no
-root `package.json`, it does not need a package manager, a Silvermoon
-dependency, or `node_modules`. If a root manifest exists, Silvermoon requires
-valid JSON and `devDependencies.silvermoon` exactly equal to
-`^<running-version>`. Follow every command in the setup report, in order; a
-manager-specific remediation may have separate manifest and install steps.
-After the dependencies are installed, register the canonical skill from the
-project-local package:
+Install one Silvermoon runtime for the device or Agent host, independently of
+every target repository:
 
 ```sh
-npx skills add ./node_modules/silvermoon/skills --skill silvermoon --agent universal --yes --copy
+npm install --global silvermoon
 ```
 
-Non-npm repositories register the skill bundled with their running Silvermoon
-installation:
+Register that installation's canonical skill in a personal discovery path.
+Omit `--copy` so the registration remains a link to the installed package:
 
 ```sh
-npx skills add <path-to-running-silvermoon>/skills --skill silvermoon --agent universal --yes --copy
+npx skills add <path-to-global-silvermoon>/skills --skill silvermoon --agent universal --global --yes
 ```
 
-This writes the single repository-local registration at
-`.agents/skills/silvermoon`. Registration and updates belong to `npx skills`;
-Silvermoon compares that path with its bundled canonical skill but never
-overwrites it.
+The target repository may use any language or build ecosystem. Silvermoon does
+not read or modify its `package.json`, dependency graph, `node_modules`, or
+repository skill paths. Project readiness depends only on Git, Silvermoon
+configuration, metadata schema, and layout. Runtime identity, latest-version
+checks, and personal skill registration belong to device readiness.
 
 Silvermoon's own source repository must not depend on its published package.
 Use `node bin/silvermoon.js` from that checkout instead of every `silvermoon`
 invocation below, and refresh its registered skill from the source using
-`pnpm sync:skills`. An external runtime reports
-`source-checkout-runtime-required`; switch to the source entrypoint rather
-than installing a self-dependency.
+`pnpm sync:skills`. Its repository-local skill is a development exception for
+unpublished changes and must not be propagated to other projects.
 
 Existing v1 projects keep the following configuration and storage contract.
 New projects may explicitly choose `version: 2` with the

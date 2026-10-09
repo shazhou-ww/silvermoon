@@ -6,10 +6,6 @@ import { afterEach, test } from "node:test";
 
 import { observeGitCommands } from "../../src/foundation/git/index.ts";
 import { checkRepository } from "../../src/index.ts";
-import {
-  REPOSITORY_SKILL_PATH,
-  SILVERMOON_VERSION,
-} from "../../src/foundation/skill-registration/index.ts";
 import { serializeIdeaStatus } from "../../src/foundation/idea-model/index.ts";
 import {
   GUIDANCE_ROOT,
@@ -82,34 +78,28 @@ test("validates every snapshot target in a SHA-256 repository", async () => {
   }
 });
 
-test("checks root npm dependency from each selected snapshot without node_modules", async () => {
+test("ignores package metadata in every selected snapshot", async () => {
   const repository = await fixture({ withRemote: true });
   const manifestPath = join(repository.root, "package.json");
-  const expectedRange = `^${SILVERMOON_VERSION}`;
-  const invalidRange = expectedRange === "^0.0.0" ? "^0.0.1" : "^0.0.0";
-  const validManifest = {
+  const manifest = {
     name: "consumer",
-    devDependencies: { silvermoon: expectedRange },
+    dependencies: { silvermoon: "0.0.1" },
   };
-  const invalidManifest = {
-    ...validManifest,
-    devDependencies: { silvermoon: invalidRange },
-  };
-  await writeFile(manifestPath, `${JSON.stringify(validManifest, null, 2)}\n`);
+  await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
   git(repository.root, "add", "package.json");
-  git(repository.root, "commit", "-m", "Add the root Silvermoon devDependency");
+  git(repository.root, "commit", "-m", "Add unrelated package metadata");
   git(repository.root, "push", "origin", "main");
-  const validCommit = git(repository.root, "rev-parse", "HEAD");
-  await writeFile(manifestPath, `${JSON.stringify(invalidManifest, null, 2)}\n`);
+  const committedManifest = git(repository.root, "rev-parse", "HEAD");
+  await writeFile(manifestPath, "{ invalid staged json");
   git(repository.root, "add", "package.json");
-  await writeFile(manifestPath, `${JSON.stringify(validManifest, null, 2)}\n`);
+  await writeFile(manifestPath, "worktree package contents are irrelevant\n");
 
   const head = await checkRepository({
     root: repository.root,
     userHome: repository.base,
   });
   const commit = await checkRepository({
-    commit: validCommit,
+    commit: committedManifest,
     root: repository.root,
     userHome: repository.base,
   });
@@ -131,11 +121,7 @@ test("checks root npm dependency from each selected snapshot without node_module
 
   assert.equal(head.observation.state, "project-ready");
   assert.equal(commit.observation.state, "project-ready");
-  assert.equal(staged.observation.state, "project-setup-required");
-  assert.equal(
-    staged.observation.problems.at(0)?.type,
-    "npm-dependency-version-mismatch",
-  );
+  assert.equal(staged.observation.state, "project-ready");
   assert.equal(worktree.observation.state, "project-ready");
   assert.equal(remote.observation.state, "project-ready");
   await assert.rejects(readFile(join(repository.root, "node_modules")), {
@@ -143,22 +129,17 @@ test("checks root npm dependency from each selected snapshot without node_module
   });
 });
 
-test("accepts canonical skill line endings across every snapshot target", async () => {
+test("ignores repository skill paths across every snapshot target", async () => {
   const repository = await fixture({ withRemote: true });
-  const skillPath = join(
-    repository.root,
-    ...REPOSITORY_SKILL_PATH.split("/"),
-    "SKILL.md",
-  );
-  const source = await readFile(skillPath, "utf8");
-  const lf = source.replaceAll("\r\n", "\n");
-  await writeFile(
-    skillPath,
-    source.includes("\r\n") ? lf : lf.replaceAll("\n", "\r\n"),
-  );
-  git(repository.root, "add", ".");
-  git(repository.root, "commit", "-m", "Use alternate skill line endings");
+  const skillPath = join(repository.root, ".agents", "skills", "silvermoon");
+  await mkdir(join(repository.root, ".agents", "skills"), { recursive: true });
+  await writeFile(skillPath, "repository-owned skill path\n");
+  git(repository.root, "add", skillPath);
+  git(repository.root, "commit", "-m", "Add unrelated repository skill path");
   git(repository.root, "push", "origin", "main");
+  await writeFile(skillPath, "staged drift\n");
+  git(repository.root, "add", skillPath);
+  await writeFile(skillPath, "worktree drift\n");
 
   for (const target of [
     {},

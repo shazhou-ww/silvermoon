@@ -1,6 +1,5 @@
 import { resolve } from "node:path";
 
-import { REPOSITORY_SKILL_PATH } from "../foundation/skill-registration/index.ts";
 import { createCommandRun } from "../foundation/command-message/index.ts";
 import { loadConfigSnapshot } from "../foundation/project-config/index.ts";
 import { diagnosticProblem } from "../foundation/report/index.ts";
@@ -75,8 +74,6 @@ interface CheckRepositoryOptions {
 function preloadCheckBlob({ name }: { name: string }): boolean {
   return (
     name === CONFIG_PATH
-    || name === "package.json"
-    || name.startsWith(`${REPOSITORY_SKILL_PATH}/`)
     || name.startsWith(`${GUIDANCE_ROOT}/`)
     || (
       name.startsWith(`${IDEAS_ROOT}/`)

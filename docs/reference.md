@@ -558,12 +558,11 @@ outside navigation; navigation enriches those references after readiness.
 Problems have only stable `type` and natural-language `summary`; remediation
 belongs in `response.nextSteps`.
 
-Project setup is ecosystem-neutral. It checks Git, configuration schema
-compatibility, and canonical skill content at `.agents/skills/silvermoon`.
-CRLF and LF are equivalent for valid UTF-8 skill text so Git checkout settings
-cannot create false drift; filenames and every other content change remain
-exact. The check does not inspect execution source or require a package manager,
-`package.json`, project-local Silvermoon dependency, or `node_modules`.
+Project setup is ecosystem-neutral. It checks Git, configuration schema,
+metadata schema, and layout. It does not inspect execution source, a package
+manager, `package.json`, project-local Silvermoon dependencies, `node_modules`,
+or repository skill paths. Runtime identity, update status, and personal skill
+registration are device facts and do not change a project snapshot result.
 
 `whats-next` checks local conflicts and changes before remote access, then HEAD
 and upstream identity, then fetch and ancestry. A local branch may have any

@@ -273,7 +273,7 @@ test("does not load guidance while setup, upstream, or fetch readiness is blocke
   };
 
   const setup = await fixture();
-  await rm(join(setup.root, ".agents"), { recursive: true });
+  await rm(join(setup.root, ".silvermoon", "config.yaml"));
   const setupReport = await whatsNext({
     guidanceReader,
     idea: FIRST_ID,

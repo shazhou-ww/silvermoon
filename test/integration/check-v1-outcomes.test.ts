@@ -7,10 +7,6 @@ import { afterEach, test } from "node:test";
 import { observeGitCommands } from "../../src/foundation/git/index.ts";
 import { checkRepository } from "../../src/index.ts";
 import { withTraceFile } from "../../src/foundation/trace/index.ts";
-import {
-  REPOSITORY_SKILL_PATH,
-  SILVERMOON_VERSION,
-} from "../../src/foundation/skill-registration/index.ts";
 import { serializeIdeaStatus } from "../../src/foundation/idea-model/index.ts";
 import {
   GUIDANCE_ROOT,
@@ -25,12 +21,13 @@ import { createCheckV1TestHelpers } from "../helpers/check-v1.ts";
 
 const { fixture, trackTemporaryDirectory } = createCheckV1TestHelpers(afterEach);
 
-test("valid remote snapshot is not blocked by unrelated local HEAD skill damage", async () => {
+test("valid remote snapshot is not blocked by an unrelated local skill path", async () => {
   const repository = await fixture({ withRemote: true });
   const skill = join(repository.root, ".agents", "skills", "silvermoon");
-  await rm(skill, { recursive: true });
+  await mkdir(join(repository.root, ".agents", "skills"), { recursive: true });
+  await writeFile(skill, "local-only skill\n");
   git(repository.root, "add", "--all");
-  git(repository.root, "commit", "-m", "Damage local skill");
+  git(repository.root, "commit", "-m", "Add local skill");
 
   const report = await checkRepository({
     remote: true,
@@ -240,7 +237,7 @@ test("uses the shared root-stage setup observation for every target outside Git"
     );
     assert.deepEqual(
       report.observation.problems.map(({ type }: { type: string }) => type),
-      ["git-repository-missing", "config-missing", "canonical-skill-missing"],
+      ["git-repository-missing", "config-missing"],
     );
   }
 });

@@ -1,10 +1,9 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { mkdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { test } from "node:test";
-import { fileURLToPath } from "node:url";
 import { CopilotClient, type Tool } from "@github/copilot-sdk";
 
 import {
@@ -18,8 +17,6 @@ import {
 } from "../../src/business/agent-project-runtime.ts";
 import { migrateEvents } from "../../src/business/migrate-v1-to-v2.ts";
 import { createRepository, FIRST_ID, git, PRIMARY_REPOSITORY } from "../helpers/repository.ts";
-
-const sourceRoot = fileURLToPath(new URL("../..", import.meta.url));
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -105,17 +102,13 @@ async function liveProject() {
   git(root, "add", ".");
   git(root, "commit", "-m", "Isolate live project identity");
   git(root, "push", "origin", "HEAD:main");
-  await writeFile(join(root, "package.json"), JSON.stringify({ name: "consumer" }));
-  await mkdir(join(root, "node_modules"), { recursive: true });
-  await symlink(sourceRoot, join(root, "node_modules", "silvermoon"),
-    process.platform === "win32" ? "junction" : "dir");
   const registry = new LocalProjectRegistry({ root: join(base, "registry") });
   await registry.register(projectUrl, root);
   const route = { projectUrl, ideaId: FIRST_ID };
   return { base, root, registry, route, runtime: new ProjectRuntime({ registry }) };
 }
 
-test("real Copilot replies through the project-version interaction boundary", {
+test("real Copilot replies through the host-runtime interaction boundary", {
   skip: process.env.SILVERMOON_REAL_COPILOT !== "1",
   timeout: 120_000,
 }, async (t) => {

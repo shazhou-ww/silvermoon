@@ -36,7 +36,7 @@ From the project directory, send this prompt to your coding agent:
 
 ```text
 In this project, run:
-`npx silvermoon whats-next --audience agent`
+`silvermoon whats-next --audience agent`
 
 Follow its highest-priority instruction and preserve existing work.
 After each observable change, run it again until it reports: `navigation-ready`
@@ -72,15 +72,14 @@ independent of the selected language.
 Or run Silvermoon straight from a terminal:
 
 ```sh
-npx silvermoon whats-next
-npx silvermoon whats-next <ULID-or-alias>
-npx silvermoon create-idea
-npx silvermoon list-ideas
+silvermoon whats-next
+silvermoon whats-next <ULID-or-alias>
+silvermoon create-idea
+silvermoon list-ideas
 ```
 
-> **Note:** We recommend `npx silvermoon` over a global install. It avoids
-> maintaining a separate global version; in Node.js projects, the lockfile keeps
-> the project-installed version consistent.
+> **Note:** Install and update one global Silvermoon runtime for the device or
+> Agent host. Target repositories do not pin Silvermoon or store its skill.
 
 For workflows, see [Operating Silvermoon](./docs/operations.md); for command
 details, see the [Technical Reference](./docs/reference.md).
