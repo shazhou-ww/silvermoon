@@ -10,7 +10,7 @@ length/digest cursor 暴露给 Agent，混淆了增量读取与基础乐观锁�
 
 新 append 的事件不再存储 sequence，而由读取顺序派生序号；CLI 在首次写入时
 记录规范 UTC timestamp。`what's-next` 直接输出完整 event digest，
-`event append` 可选接收不少于 12 位的 digest 前缀作为乐观锁。
+`event append` 可选接收不少于 8 位的 digest 前缀作为乐观锁。
 
 ## 边界
 
@@ -18,14 +18,14 @@ length/digest cursor 暴露给 Agent，混淆了增量读取与基础乐观锁�
   不再属于事件 schema 或写入请求。
 - timestamp 表示 CLI 首次成功 append 的本机 UTC 时间，不替代文件顺序、授权
   或 commit 时间；旧事件缺少可信时间时不伪造。
-- length 仅服务 replay；digest 不要求固定为 40/64 位或完整 OID，达到 12 位
+- length 仅服务 replay；digest 不要求固定为 40/64 位或完整 OID，达到 8 位
   下限的十六进制前缀均可匹配，且不改变 lifecycle 状态或事件类型。
 
 ## 验收标准
 
 - 新 append 的 canonical 记录包含规范 UTC timestamp 且不含 sequence；replay
   仍按文件位置提供稳定派生序号，历史记录不会被赋予虚假的创建时间。
-- 至少 12 位且匹配的 digest 前缀允许 append；短于下限或不匹配时不写入并给出
+- 至少 8 位且匹配的 digest 前缀允许 append；短于下限或不匹配时不写入并给出
   明确诊断，未提供 digest 时保持可用。
 - `what's-next --audience agent` 给出可直接使用的 digest append 指引；不确定重试
   识别已写入事件并保留其原 timestamp，无需为新事件执行 Git blame。

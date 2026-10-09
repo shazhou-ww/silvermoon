@@ -9,7 +9,7 @@ timestamp，并为无可信 timestamp 的历史记录定义兼容迁移。
 
 ### I-S02: 重构 append 并发与重试
 
-让 optional expected digest 接受至少 12 位的前缀匹配，并确保首次写入生成的
+让 optional expected digest 接受至少 8 位的前缀匹配，并确保首次写入生成的
 timestamp 在不确定重试中保持不变；sequence 仅由读取位置派生。
 
 ### I-S03: 同步验证面
@@ -26,8 +26,8 @@ timestamp 在不确定重试中保持不变；sequence 仅由读取位置派生�
 
 ### I-AC02: Digest 前缀控制写入
 
-自动化测试覆盖下限、中间长度与完整 digest 的成功匹配；短输入或不匹配时文件
-字节不变，省略 digest 时 append 仍正常执行。
+自动化测试证明 7 位前缀被拒绝，并覆盖 8 位、中间长度与完整 digest 的成功
+匹配；不匹配时文件字节不变，省略 digest 时 append 仍正常执行。
 
 ### I-AC03: 重试与指引保持一致
 
