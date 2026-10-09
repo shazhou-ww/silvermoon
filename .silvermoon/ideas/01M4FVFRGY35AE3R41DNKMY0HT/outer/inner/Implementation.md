@@ -6,6 +6,42 @@
 
 盘点 `what's next` 的用户可见文案，为每个逻辑模板分配稳定标识、类型化参数契约和统一的多语言目录结构。
 
+目标文件结构如下；两种语言使用完全相同的模板文件名，实际清单以盘点结果为准：
+
+```text
+src/foundation/report/templates/whats-next/
+├── index.ts
+├── contract.ts
+├── registry.ts
+├── en-US/
+│   ├── project-setup-required.ts
+│   ├── phase-guidance-invalid.ts
+│   ├── idea-metadata-unavailable.ts
+│   ├── worktree-conflicts.ts
+│   ├── worktree-changes.ts
+│   ├── detached-head.ts
+│   ├── primary-upstream-mismatch.ts
+│   ├── primary-fetch-failed.ts
+│   ├── primary-history-incomplete.ts
+│   ├── primary-behind.ts
+│   ├── primary-ahead.ts
+│   ├── primary-diverged.ts
+│   ├── navigation-ready.ts
+│   ├── idea-not-found.ts
+│   ├── lifecycle-preparing.ts
+│   ├── lifecycle-implementing.ts
+│   ├── lifecycle-deploying.ts
+│   └── lifecycle-inactive.ts
+└── zh-CN/
+    └── 与 en-US 相同的文件集合
+
+test/
+├── unit/whats-next-templates.test.ts
+└── contract/whats-next-template-catalog.test.ts
+```
+
+`contract.ts` 定义模板标识与参数类型，`registry.ts` 只负责完整注册和语言集合对称性，语言文件各自只导出一个纯模板函数；业务编排继续留在现有业务文件中。
+
 ### I-S02: 拆分并接入语言模板
 
 把英文与中文模板分别迁移到一个模板一个文件的语言目录，并让现有业务编排通过模板入口生成文案。
