@@ -2,7 +2,13 @@ import { lstat, readFile, readdir } from "node:fs/promises";
 import { relative, resolve } from "node:path";
 
 import { deriveIdeaState, isValidUlid, parseIdeaStatus } from "../../foundation/idea-model/index.ts";
-import { parseIdeaEvents, reduceIdeaEvent, replayIdeaEvents } from "../../foundation/event-codec/index.ts";
+import {
+  eventLifecycleStatus,
+  parseIdeaEvents,
+  reduceIdeaEvent,
+  replayIdeaEvents,
+} from "../../foundation/event-codec/index.ts";
+import type { IdeaEventState } from "../../foundation/event-codec/index.ts";
 import { detectEventFormat } from "../../foundation/event-history/index.ts";
 import { readEventStorage } from "../../foundation/event-store/index.ts";
 import { projectEventSnapshot } from "../../foundation/projection-cache/index.ts";
@@ -16,6 +22,11 @@ import {
   type ProjectConfig,
   errorMessage,
 } from "./business-types.ts";
+import type {
+  IdeaControlProjection,
+  IdeaSubmissionsProjection,
+  PhaseSubmissionProjection,
+} from "../../foundation/report/types.ts";
 
 const DEFAULT_FILESYSTEM = { lstat, readFile, readdir };
 
@@ -29,33 +40,6 @@ interface WorldRevision {
   displayName: string;
   path: string;
   documentPath: string;
-}
-
-function normalizedEventStatus(status: {
-  id: string;
-  alias?: string | undefined;
-  language?: string | undefined;
-  abandoned?: true | undefined;
-  approvedRevision?: string | undefined;
-  implementationAcceptedRevision?: string | undefined;
-  deploymentAcceptedRevision?: string | undefined;
-}): ReturnType<typeof parseIdeaStatus> {
-  return {
-    version: 1,
-    id: status.id,
-    ...(status.alias === undefined ? {} : { alias: status.alias }),
-    ...(status.language === undefined ? {} : { language: status.language }),
-    ...(status.abandoned === undefined ? {} : { abandoned: status.abandoned }),
-    ...(status.approvedRevision === undefined
-      ? {}
-      : { approvedRevision: status.approvedRevision }),
-    ...(status.implementationAcceptedRevision === undefined
-      ? {}
-      : { implementationAcceptedRevision: status.implementationAcceptedRevision }),
-    ...(status.deploymentAcceptedRevision === undefined
-      ? {}
-      : { deploymentAcceptedRevision: status.deploymentAcceptedRevision }),
-  };
 }
 
 export interface ObservedIdea {
@@ -73,12 +57,88 @@ export interface ObservedIdea {
   deploymentRevision: string;
   state: string;
   status: ReturnType<typeof parseIdeaStatus>;
+  control?: IdeaControlProjection;
+  submissions?: IdeaSubmissionsProjection;
   statusPath: string;
   ledgerPath: string;
   worlds: {
     idealRevision: WorldRevision;
     implementationRevision: WorldRevision;
     deploymentRevision: WorldRevision;
+  };
+}
+
+const SUBMISSION_PHASES = Object.freeze({
+  ideal: {
+    phase: "ideal",
+    submit: "submitIdeal",
+    decision: "acceptIdeal",
+    revision: "idealRevision",
+    submitted: "submittedIdealRevision",
+    accepted: "approvedRevision",
+  },
+  inner: {
+    phase: "inner",
+    submit: "submitInner",
+    decision: "acceptInner",
+    revision: "implementationRevision",
+    submitted: "submittedImplementationRevision",
+    accepted: "implementationAcceptedRevision",
+  },
+  outer: {
+    phase: "outer",
+    submit: "submitOuter",
+    decision: "acceptOuter",
+    revision: "deploymentRevision",
+    submitted: "submittedDeploymentRevision",
+    accepted: "deploymentAcceptedRevision",
+  },
+} as const);
+
+/** @pure */
+function projectSubmissions(
+  revisions: ObservedIdea["revisions"],
+  status: IdeaEventState["status"],
+  state: string,
+): IdeaSubmissionsProjection {
+  const phase = (
+    key: keyof typeof SUBMISSION_PHASES
+  ): PhaseSubmissionProjection => {
+    const definition = SUBMISSION_PHASES[key];
+    const currentRevision = revisions[definition.revision];
+    const submittedRevision = status[definition.submitted];
+    const acceptedRevision = status[definition.accepted];
+    const submissionState = acceptedRevision === currentRevision
+      ? "accepted"
+      : submittedRevision === currentRevision
+      ? "submitted"
+      : submittedRevision !== undefined || acceptedRevision !== undefined
+      ? "stale"
+      : "unsubmitted";
+    return {
+      phase: definition.phase,
+      submit: definition.submit,
+      decision: definition.decision,
+      state: submissionState,
+      revision: {
+        field: definition.revision,
+        value: currentRevision,
+      },
+      ...(submittedRevision === undefined ? {} : { submittedRevision }),
+      ...(acceptedRevision === undefined ? {} : { acceptedRevision }),
+    };
+  };
+  return {
+    current: state === "preparing"
+      ? "ideal"
+      : state === "implementing"
+      ? "inner"
+      : state === "deploying"
+      ? "outer"
+      : null,
+    ideal: phase("ideal"),
+    inner: phase("inner"),
+    outer: phase("outer"),
   };
 }
 
@@ -449,6 +509,7 @@ export async function inspectIdeaLayout({
     }
 
     let status;
+    let eventState: IdeaEventState | undefined;
     try {
       const options = { objectIdLength: repositoryObjectIdLength, legacy: legacyEvents };
       if (eventFormat && useProjections) {
@@ -479,7 +540,8 @@ export async function inspectIdeaLayout({
           throw new Error(`Event ${reduced.sequence}: ${reduced.code}`);
         }
         const reducedState = reduced && "state" in reduced ? reduced.state : projected.state;
-        status = normalizedEventStatus(reducedState.status);
+        eventState = reducedState;
+        status = eventLifecycleStatus(reducedState.status);
       } else if (eventFormat) {
         const store = eventOverrides?.get(entry.name)
           ?? await readEventStorage(root, paths, options, filesystem);
@@ -491,7 +553,8 @@ export async function inspectIdeaLayout({
           throw new Error(`Event ${result.sequence}: ${result.code}`);
         }
         if (!("state" in result)) throw new Error("Event replay did not return state.");
-        status = normalizedEventStatus(result.state.status);
+        eventState = result.state;
+        status = eventLifecycleStatus(result.state.status);
       } else {
         status = parseIdeaStatus(
           (await filesystem.readFile(resolve(root, statePath))).toString("utf8"),
@@ -583,17 +646,39 @@ export async function inspectIdeaLayout({
         documentPath: paths.deploymentDocumentPath,
       },
     };
+    const state = deriveIdeaState(revisions, status);
+    const submissions = eventState === undefined
+      ? undefined
+      : projectSubmissions(revisions, eventState.status, state);
+    const phaseSubmission = submissions === undefined
+      ? undefined
+      : state === "preparing"
+        ? submissions.ideal
+        : state === "implementing"
+          ? submissions.inner
+          : state === "deploying"
+            ? submissions.outer
+            : undefined;
+    const control = eventState?.control === undefined
+      ? undefined
+      : state === "completed" || state === "abandoned"
+        ? { ...eventState.control, owner: "none" as const }
+        : phaseSubmission?.state === "stale"
+          ? { ...eventState.control, owner: "downstream" as const }
+          : eventState.control;
     const idea: ObservedIdea = {
       id: entry.name,
       path: folderPath,
       relativePath: paths.ideaPath,
       revisions,
       ...revisions,
-      state: deriveIdeaState(revisions, status),
+      state,
       status,
       statusPath: statePath,
       ledgerPath: paths.ledgerPath,
       worlds,
+      ...(control === undefined ? {} : { control }),
+      ...(submissions === undefined ? {} : { submissions }),
     };
     if (status.alias !== undefined) idea.alias = status.alias;
     ideas.push(idea);

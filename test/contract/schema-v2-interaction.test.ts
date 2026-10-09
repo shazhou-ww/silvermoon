@@ -13,7 +13,7 @@ function isLegacyStatus(
     && "id" in value && typeof value.id === "string";
 }
 
-test("public v2 schema and reducer agree on nine minimal types", async () => {
+test("public v2 schema and reducer agree on twelve minimal types", async () => {
   const ajv = new Ajv2020({ strict: true, allErrors: true, formats: { uri: true } });
   for (const path of ["v1/definitions", "v1/idea-status", "v2/config", "v2/idea-event"]) {
     ajv.addSchema(JSON.parse(await readFile(new URL(`../../schema/${path}.schema.json`, import.meta.url), "utf8")));
@@ -23,8 +23,11 @@ test("public v2 schema and reducer agree on nine minimal types", async () => {
   const events = [
     ...eventsFromStatus(legacyStatus()),
     { sequence: 7, type: "resume" },
-    { sequence: 8, type: "ping", payload: { message: "objective" } },
-    { sequence: 9, type: "pong", payload: { message: "blocked" } },
+    { sequence: 8, type: "submitIdeal", payload: { idealRevision: "a".repeat(40) } },
+    { sequence: 9, type: "submitInner", payload: { implementationRevision: "b".repeat(64) } },
+    { sequence: 10, type: "submitOuter", payload: { deploymentRevision: "c".repeat(40) } },
+    { sequence: 11, type: "ping", payload: { message: "objective" } },
+    { sequence: 12, type: "pong", payload: { message: "blocked" } },
   ];
   for (const event of events) {
     assert.equal(validate(event), true, JSON.stringify(validate.errors));

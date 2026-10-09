@@ -37,6 +37,7 @@ function replayReceipt(receipt: EventReceipt) {
   const reduction = requiredRecord(receipt.reduction, "reduction");
   const state = requiredRecord(reduction.state, "reduction.state");
   const interaction = requiredRecord(state.interaction, "reduction.state.interaction");
+  const control = requiredRecord(state.control, "reduction.state.control");
   const messages = interaction.messages;
   assert.ok(Array.isArray(messages), "reduction.state.interaction.messages must be an array");
   return {
@@ -50,10 +51,11 @@ function replayReceipt(receipt: EventReceipt) {
         ...state,
         interaction: {
           ...interaction,
-          lastSignal: interaction.lastSignal === null
-            ? null
-            : requiredString(interaction.lastSignal, "reduction.state.interaction.lastSignal"),
           messages,
+        },
+        control: {
+          ...control,
+          owner: requiredString(control.owner, "reduction.state.control.owner"),
         },
       },
     },
@@ -97,7 +99,11 @@ test("local ping/pong append works offline, preserves blockers and rejects stale
   git(root, "update-ref", "-d", "refs/remotes/origin/main");
   const observed = await replay(root);
   assert.match(requiredString(observed.baseline.unavailable, "baseline.unavailable"), /tracking ref unavailable/);
-  assert.deepEqual(observed.reduction.state.interaction, { messages: [], lastSignal: null });
+  assert.deepEqual(observed.reduction.state.interaction, { messages: [] });
+  assert.deepEqual(observed.reduction.state.control, {
+    owner: "downstream",
+    lastTransfer: null,
+  });
   const pong = { type: "pong", payload: { message: "blocked" } };
   const request = {
     root, operation: "append", idea: FIRST_ID, input: pong,
@@ -126,7 +132,10 @@ test("local ping/pong append works offline, preserves blockers and rejects stale
   const current = await replay(root);
   assert.deepEqual(current.reduction.state.interaction.messages.map(({ message }: { message: string }) => message),
     ["blocked", "still blocked", "new objective"]);
-  assert.equal(current.reduction.state.interaction.lastSignal, "ping");
+  assert.deepEqual(current.reduction.state.control, {
+    owner: "downstream",
+    lastTransfer: { sequence: 4, type: "ping" },
+  });
   const next = await eventCommand({
     ...request, input: pong, expectedLength: current.length, expectedDigest: current.digest,
   });
@@ -174,5 +183,5 @@ test("v2 replay and interaction accept a SHA-256 repository's revisions", async 
     expectedLength: observed.length, expectedDigest: observed.digest,
   });
   assert.equal(eventReceipt(written).outcome, "candidate-written", JSON.stringify(written.observation));
-  assert.equal((await replay(root)).reduction.state.interaction.lastSignal, "ping");
+  assert.equal((await replay(root)).reduction.state.control.owner, "downstream");
 });

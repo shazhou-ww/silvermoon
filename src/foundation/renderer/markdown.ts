@@ -4,6 +4,7 @@ import type {
   DeviceAdvisory,
   Guidance,
   IdeaInventoryItem,
+  IdeaReference,
   IdeaListResponse,
   ProjectSchemaReadiness,
   ProjectVersion,
@@ -131,6 +132,47 @@ function renderReview(
     `- ${presentation.labels.decision}: ${presentation.decisionQuestion}`,
     "```",
   ];
+}
+
+/** @pure */
+function renderIdeaCoordination(idea: IdeaReference, language: string) {
+  const lines: string[] = [];
+  if (idea.control !== undefined) {
+    const transfer = idea.control.lastTransfer === null
+      ? localize(language, "initial assignment", "初始分配")
+      : `${idea.control.lastTransfer.type}#${idea.control.lastTransfer.sequence}`;
+    lines.push(
+      `- ${localize(language, "Control", "控制权")}: ${codeSpan(idea.control.owner)}`,
+      `- ${localize(language, "Last transfer", "最近交接")}: ${codeSpan(transfer)}`,
+    );
+  }
+  if (idea.submissions !== undefined) {
+    const submissions = [
+      idea.submissions.ideal,
+      idea.submissions.inner,
+      idea.submissions.outer,
+    ];
+    lines.push(
+      "",
+      `### ${localize(language, "Phase submissions", "阶段提交")}`,
+      "",
+      ...renderMarkdownTable(
+        [
+          localize(language, "Phase", "阶段"),
+          "Submit",
+          localize(language, "State", "状态"),
+          localize(language, "Revision reference", "修订引用"),
+        ],
+        submissions.map((submission) => [
+          submission.phase,
+          submission.submit,
+          submission.state,
+          `${submission.revision.field}=${objectReference(submission.revision.value)}`,
+        ]),
+      ),
+    );
+  }
+  return lines;
 }
 
 /** @pure */
@@ -398,6 +440,7 @@ export function renderMarkdownResponse(
         `- ${localize(language, "Alias", "Alias")}: ${codeSpan(response.idea.alias)}`,
       );
     }
+    lines.push(...renderIdeaCoordination(response.idea, language));
   }
 
   if (response.kind === "next-steps" && response.review !== undefined) {

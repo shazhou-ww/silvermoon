@@ -7,7 +7,11 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
 import { serializeIdeaStatus } from "../../src/foundation/idea-model/index.ts";
-import { serializeIdeaEvents } from "../../src/foundation/event-codec/index.ts";
+import {
+  parseIdeaEvents,
+  serializeIdeaEvents,
+  type IdeaEvent,
+} from "../../src/foundation/event-codec/index.ts";
 import { ideaPaths } from "../../src/foundation/coordinates/index.ts";
 
 type JsonPrimitive = boolean | null | number | string;
@@ -300,4 +304,64 @@ export async function setIdeaState(
       ? serializeIdeaStatus({ version: 1, id, ...nextStatus }, {})
       : serializeFixtureEvents(nextStatus),
   );
+}
+
+export async function submitIdeaState(
+  root: string,
+  id: string,
+  state: "preparing" | "implementing" | "deploying",
+) {
+  const paths = ideaPaths(id);
+  const eventsPath = join(root, ...paths.eventsPath.split("/"));
+  const events = [...parseIdeaEvents(await readFile(eventsPath))];
+  const sequence = events.length + 1;
+  let candidate: IdeaEvent;
+  if (state === "preparing") {
+    candidate = {
+      sequence,
+      type: "submitIdeal",
+      payload: {
+        idealRevision: git(root, "rev-parse", `HEAD:${paths.idealPath}`),
+      },
+    };
+  } else if (state === "implementing") {
+    candidate = {
+      sequence,
+      type: "submitInner",
+      payload: {
+        implementationRevision: git(
+          root,
+          "rev-parse",
+          `HEAD:${paths.innerPath}`,
+        ),
+      },
+    };
+  } else {
+    candidate = {
+      sequence,
+      type: "submitOuter",
+      payload: {
+        deploymentRevision: git(root, "rev-parse", `HEAD:${paths.outerPath}`),
+      },
+    };
+  }
+  events.push(candidate);
+  await writeFile(eventsPath, serializeIdeaEvents(events));
+}
+
+export async function appendIdeaSignal(
+  root: string,
+  id: string,
+  type: "ping" | "pong",
+  message: string,
+) {
+  const paths = ideaPaths(id);
+  const eventsPath = join(root, ...paths.eventsPath.split("/"));
+  const events = [...parseIdeaEvents(await readFile(eventsPath))];
+  events.push({
+    sequence: events.length + 1,
+    type,
+    payload: { message },
+  });
+  await writeFile(eventsPath, serializeIdeaEvents(events));
 }

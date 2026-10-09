@@ -1,14 +1,18 @@
 
 import { inspectProjectedEventHistory } from "../foundation/event-history/index.ts";
 import { readEventDelta } from "../foundation/event-cursor/index.ts";
-import { assertHumanGate, parseRequest, planProjectedAppend } from "../foundation/event-reducer/index.ts";
+import {
+  assertHumanGate,
+  deriveEventIdeaState,
+  parseRequest,
+  planProjectedAppend,
+} from "../foundation/event-reducer/index.ts";
 import { projectEventSnapshot } from "../foundation/projection-cache/index.ts";
 import { eventStorageChanges, readEventStorage, snapshotEventFileHead, storageDigest } from "../foundation/event-store/index.ts";
 import { createGitSnapshotFileSystem } from "../foundation/snapshot/index.ts";
 import { fetchPrimary, inspectTreePaths, worktreeSnapshot } from "../foundation/git/index.ts";
 import { parseIdeaEvents, replayIdeaEvents, serializeIdeaEvents } from "../foundation/event-codec/index.ts";
 import { inspectIdeaLayout } from "./shared/index.ts";
-import { deriveIdeaState } from "../foundation/idea-model/index.ts";
 import { stateTransaction } from "../foundation/state-transaction/index.ts";
 import type {
   BusinessFileSystem,
@@ -290,7 +294,9 @@ export async function appendProjectedMetadata({
   if (!history.supported) return history;
   const worlds = inspectTreePaths(root, primary, [paths.idealPath, paths.innerPath, paths.outerPath]);
   assertHumanGate(event, {
-    ...selected, state: deriveIdeaState(selected.revisions, { version: 1, ...before.state.status }),
+    ...selected,
+    state: deriveEventIdeaState(selected.revisions, before.state.status),
+    status: before.state.status,
   }, {
     idealRevision: worlds.get(paths.idealPath)?.object,
     implementationRevision: worlds.get(paths.innerPath)?.object,

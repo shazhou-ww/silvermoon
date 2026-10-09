@@ -25,12 +25,14 @@ import {
 } from "../../src/business/whats-next.ts";
 import { renderResponse } from "../../src/foundation/renderer/index.ts";
 import {
+  appendIdeaSignal,
   createRepository,
   FIRST_ID,
   git,
   PRIMARY_REPOSITORY,
   SECOND_ID,
   setIdeaState,
+  submitIdeaState,
 } from "../helpers/repository.ts";
 import { createWhatsNextTestHelpers } from "../helpers/whatsnext.ts";
 
@@ -62,6 +64,14 @@ function responseReview(report: WhatsNextReport) {
   }
   assert.ok(report.response.review);
   return report.response.review;
+}
+
+function selectedIdea(report: WhatsNextReport) {
+  assert.equal(report.observation.state, "idea-selected");
+  if (report.observation.state !== "idea-selected") {
+    assert.fail("expected a selected idea");
+  }
+  return report.observation.selectedIdea;
 }
 
 function firstProblem(report: WhatsNextReport) {
@@ -421,6 +431,7 @@ test("uses formal world and contract names in localized lifecycle instructions",
       { id: ABANDONED_ID, status: { alias: "abandoned" } },
     ],
   });
+
   await setIdeaState(repository.root, SECOND_ID, "implementing", {
     alias: "implementing",
   });
@@ -438,9 +449,9 @@ test("uses formal world and contract names in localized lifecycle instructions",
   git(repository.root, "push", "origin", "main");
 
   const localizedCases: ReadonlyArray<readonly [string, string]> = [
-    [FIRST_ID, "acceptIdeal 人工决定"],
-    [SECOND_ID, "acceptInner 人工决定"],
-    [DEPLOYING_ID, "acceptOuter 人工决定"],
+    [FIRST_ID, "记录 submitIdeal"],
+    [SECOND_ID, "记录 submitInner"],
+    [DEPLOYING_ID, "记录 submitOuter"],
     [COMPLETED_ID, "复查 completed（completed）"],
     [ABANDONED_ID, "复查 abandoned（abandoned）"],
   ];
@@ -464,8 +475,100 @@ test("uses formal world and contract names in localized lifecycle instructions",
         responseText(selected),
         /自然语言内容中使用 fr-FR/,
       );
+    } else {
+      assert.equal(selectedIdea(selected).control?.owner, "none");
     }
   }
+});
+
+test("projects submit readiness and phase-local control into whats-next", async () => {
+  const repository = await fixture({
+    ideas: [{ id: FIRST_ID, status: { alias: "submit-control" } }],
+  });
+
+  const unsubmitted = await whatsNext({
+    idea: "submit-control",
+    root: repository.root,
+    userHome: repository.base,
+  });
+  assert.equal(selectedIdea(unsubmitted).control?.owner, "downstream");
+  assert.equal(selectedIdea(unsubmitted).submissions?.ideal.state, "unsubmitted");
+  assert.equal(unsubmitted.response.kind, "next-steps");
+  if (unsubmitted.response.kind === "next-steps") {
+    assert.equal(unsubmitted.response.review, undefined);
+  }
+  assert.match(responseText(unsubmitted), /record submitIdeal/);
+
+  await submitIdeaState(repository.root, FIRST_ID, "preparing");
+  git(repository.root, "add", ".");
+  git(repository.root, "commit", "-m", "Submit ideal");
+  git(repository.root, "push", "origin", "main");
+  const submitted = await whatsNext({
+    idea: "submit-control",
+    root: repository.root,
+    userHome: repository.base,
+  });
+  assert.equal(selectedIdea(submitted).control?.owner, "upstream");
+  assert.equal(selectedIdea(submitted).submissions?.ideal.state, "submitted");
+  assert.equal(responseReview(submitted).decision, "acceptIdeal");
+
+  await appendIdeaSignal(
+    repository.root,
+    FIRST_ID,
+    "ping",
+    "Please revise the candidate.",
+  );
+  git(repository.root, "add", ".");
+  git(repository.root, "commit", "-m", "Return control downstream");
+  git(repository.root, "push", "origin", "main");
+  const returned = await whatsNext({
+    idea: "submit-control",
+    root: repository.root,
+    userHome: repository.base,
+  });
+  assert.equal(selectedIdea(returned).control?.owner, "downstream");
+  assert.equal(returned.response.kind, "next-steps");
+  if (returned.response.kind === "next-steps") {
+    assert.equal(returned.response.review, undefined);
+  }
+
+  await appendIdeaSignal(
+    repository.root,
+    FIRST_ID,
+    "pong",
+    "The requested revision is complete.",
+  );
+  git(repository.root, "add", ".");
+  git(repository.root, "commit", "-m", "Return control upstream");
+  git(repository.root, "push", "origin", "main");
+  const resumed = await whatsNext({
+    idea: "submit-control",
+    root: repository.root,
+    userHome: repository.base,
+  });
+  assert.equal(selectedIdea(resumed).control?.owner, "upstream");
+  assert.equal(responseReview(resumed).decision, "acceptIdeal");
+
+  const paths = ideaPaths(FIRST_ID);
+  await writeFile(
+    join(repository.root, ...paths.ideaDocumentPath.split("/")),
+    "# Changed candidate\n",
+  );
+  git(repository.root, "add", ".");
+  git(repository.root, "commit", "-m", "Change submitted ideal");
+  git(repository.root, "push", "origin", "main");
+  const stale = await whatsNext({
+    idea: "submit-control",
+    root: repository.root,
+    userHome: repository.base,
+  });
+  assert.equal(selectedIdea(stale).submissions?.ideal.state, "stale");
+  assert.equal(selectedIdea(stale).control?.owner, "downstream");
+  assert.equal(stale.response.kind, "next-steps");
+  if (stale.response.kind === "next-steps") {
+    assert.equal(stale.response.review, undefined);
+  }
+  assert.match(responseText(stale), /record submitIdeal/);
 });
 
 test("[selector-unknown] reports an unknown selector without guessing", async () => {
@@ -559,6 +662,10 @@ test("uses a canonical output override without changing content language or pers
     "events.jsonl",
   );
   const configPath = join(repository.root, ".silvermoon", "config.yaml");
+  await submitIdeaState(repository.root, FIRST_ID, "preparing");
+  git(repository.root, "add", ".");
+  git(repository.root, "commit", "-m", "Submit localized idea");
+  git(repository.root, "push", "origin", "main");
   const before = await readFile(statusPath, "utf8");
   const configBefore = await readFile(configPath, "utf8");
 
@@ -597,7 +704,7 @@ test("uses a canonical output override without changing content language or pers
     responseReview(selected).presentation.decisionQuestion,
     /^Do you accept `idealRevision=[0-9a-f]{12}` as the idea for this IDEA\?$/,
   );
-  assert.match(responseText(selected), /^在 /);
+  assert.match(responseText(selected), /^当前构想 revision/);
   assert.match(responseText(selected), /fenced 审阅模板/);
   assert.match(responseText(selected), /自然语言内容中使用 fr-FR/);
   assert.match(actionCommit(selected), /^[0-9a-f]{40}$/);
@@ -627,6 +734,10 @@ test("drives gate presentation from content language instead of output language"
       status: { alias: "localized", language: "zh-CN" },
     }],
   });
+  await submitIdeaState(repository.root, FIRST_ID, "preparing");
+  git(repository.root, "add", ".");
+  git(repository.root, "commit", "-m", "Submit localized idea");
+  git(repository.root, "push", "origin", "main");
 
   const selected = await whatsNext({
     idea: "localized",
@@ -673,7 +784,7 @@ test("drives gate presentation from content language instead of output language"
     presentation.decisionQuestion,
     /^是否接受 `idealRevision=[0-9a-f]{12}` 作为该 IDEA 的构想？$/,
   );
-  assert.match(responseText(selected), /^Continue /);
+  assert.match(responseText(selected), /^The current Idea revision/);
   assert.match(responseText(selected), /fenced review template/);
 
   const rendered = renderResponse(selected.response);
@@ -714,6 +825,12 @@ test("names Chinese review contracts by their canonical artifacts", async () => 
   });
   git(repository.root, "add", ".");
   git(repository.root, "commit", "-m", "Set localized review phases");
+  git(repository.root, "push", "origin", "main");
+  await submitIdeaState(repository.root, FIRST_ID, "preparing");
+  await submitIdeaState(repository.root, SECOND_ID, "implementing");
+  await submitIdeaState(repository.root, DEPLOYING_ID, "deploying");
+  git(repository.root, "add", ".");
+  git(repository.root, "commit", "-m", "Submit localized review phases");
   git(repository.root, "push", "origin", "main");
 
   const cases = [

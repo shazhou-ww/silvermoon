@@ -623,6 +623,9 @@ test("[inventory-cli] CLI renders complete local inventory without lifecycle ins
   assert.match(rendered, /\| alpha \| preparing \| .* \| Alpha inventory \|/);
   assert.match(rendered, new RegExp(`\\| ${ideaAt(2).id} \\| deploying \\|`));
   assert.doesNotMatch(rendered, /2026-09-25T00:00:00/);
-  assert.doesNotMatch(rendered, /Next steps|create-idea|whats-next/);
+  assert.doesNotMatch(
+    rendered,
+    /^## Next steps\b|`(?:silvermoon )?(?:create-idea|whats-next)\b/m,
+  );
   assert.deepEqual(text.errors, []);
 });

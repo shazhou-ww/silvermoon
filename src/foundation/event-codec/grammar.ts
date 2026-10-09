@@ -16,7 +16,9 @@ type SignalEvent = {
 };
 type FieldEvent = {
   sequence: number;
-  type: "setAlias"|"setLanguage"|"acceptIdeal"|"acceptInner"|"acceptOuter"
+  type: "setAlias"|"setLanguage"
+    |"submitIdeal"|"submitInner"|"submitOuter"
+    |"acceptIdeal"|"acceptInner"|"acceptOuter"
     |"alias.updated"|"language.updated"|"ideal.approved"
     |"implementation.accepted"|"deployment.accepted";
   payload: EventPayload;
@@ -35,20 +37,71 @@ export type IdeaEventStatus = Record<string, string|true|undefined> & {
   approvedRevision?: string;
   implementationAcceptedRevision?: string;
   deploymentAcceptedRevision?: string;
+  submittedIdealRevision?: string;
+  submittedImplementationRevision?: string;
+  submittedDeploymentRevision?: string;
 };
+
+export type IdeaControlOwner = "upstream"|"downstream"|"none";
+
+export interface IdeaControl {
+  owner: IdeaControlOwner;
+  lastTransfer: {
+    sequence: number;
+    type:
+      | "ping" | "pong"
+      | "submitIdeal" | "submitInner" | "submitOuter"
+      | "acceptIdeal" | "acceptInner" | "acceptOuter"
+      | "abandon" | "resume";
+  } | null;
+}
 
 export type IdeaEventState = {
   status: IdeaEventStatus;
   sequence: number;
   interaction?: {
     messages: Array<{ sequence: number; type: "ping"|"pong"; message: string }>;
-    lastSignal: "ping"|"pong"|null;
   };
+  control?: IdeaControl;
 };
 
 export type IdeaEventReduction =
   | { ok: false; code: string; sequence: number }
   | { ok: true; state: IdeaEventState };
+
+/** @pure */
+export function eventLifecycleStatus(status: IdeaEventStatus): {
+  version: 1;
+  id: string;
+  alias?: string;
+  language?: string;
+  abandoned?: true;
+  approvedRevision?: string;
+  implementationAcceptedRevision?: string;
+  deploymentAcceptedRevision?: string;
+} {
+  return validateIdeaStatus({
+    version: 1,
+    id: status.id,
+    ...(status.alias === undefined ? {} : { alias: status.alias }),
+    ...(status.language === undefined ? {} : { language: status.language }),
+    ...(status.abandoned === undefined ? {} : { abandoned: status.abandoned }),
+    ...(status.approvedRevision === undefined
+      ? {}
+      : { approvedRevision: status.approvedRevision }),
+    ...(status.implementationAcceptedRevision === undefined
+      ? {}
+      : {
+          implementationAcceptedRevision:
+            status.implementationAcceptedRevision,
+        }),
+    ...(status.deploymentAcceptedRevision === undefined
+      ? {}
+      : {
+          deploymentAcceptedRevision: status.deploymentAcceptedRevision,
+        }),
+  });
+}
 
 const LEGACY_FIELDS: Readonly<Record<string, readonly [string, string]>> = Object.freeze({
   "alias.updated": ["alias", "alias"],
@@ -56,6 +109,21 @@ const LEGACY_FIELDS: Readonly<Record<string, readonly [string, string]>> = Objec
   "ideal.approved": ["idealRevision", "approvedRevision"],
   "implementation.accepted": ["implementationRevision", "implementationAcceptedRevision"],
   "deployment.accepted": ["deploymentRevision", "deploymentAcceptedRevision"],
+});
+const SUBMISSION_FIELDS: Readonly<
+  Record<string, readonly [string, string, string]>
+> = Object.freeze({
+  submitIdeal: ["idealRevision", "submittedIdealRevision", "approvedRevision"],
+  submitInner: [
+    "implementationRevision",
+    "submittedImplementationRevision",
+    "implementationAcceptedRevision",
+  ],
+  submitOuter: [
+    "deploymentRevision",
+    "submittedDeploymentRevision",
+    "deploymentAcceptedRevision",
+  ],
 });
 export const EVENT_RENAMES: Readonly<Record<string, string>> = Object.freeze({
   "alias.updated": "setAlias",
@@ -69,7 +137,12 @@ export const EVENT_RENAMES: Readonly<Record<string, string>> = Object.freeze({
 export const LEGACY_EVENT_TYPES = Object.freeze([
   ...Object.keys(LEGACY_FIELDS), "idea.abandoned", "idea.resumed",
 ]);
-export const IDEA_EVENT_TYPES = Object.freeze([...Object.values(EVENT_RENAMES), "ping", "pong"]);
+export const IDEA_EVENT_TYPES = Object.freeze([
+  ...Object.values(EVENT_RENAMES),
+  ...Object.keys(SUBMISSION_FIELDS),
+  "ping",
+  "pong",
+]);
 /** @pure */
 export function renameLegacyEvents(events: unknown[]) {
   return events.map((event) => {
@@ -82,6 +155,9 @@ export function renameLegacyEvents(events: unknown[]) {
 export const EVENT_PERMISSIONS = Object.freeze({
   setAlias: "both",
   setLanguage: "both",
+  submitIdeal: "downstream",
+  submitInner: "downstream",
+  submitOuter: "downstream",
   acceptIdeal: "upstream",
   acceptInner: "upstream",
   acceptOuter: "upstream",
@@ -93,7 +169,29 @@ export const EVENT_PERMISSIONS = Object.freeze({
 const LEGACY_TYPES: Readonly<Record<string, string>> = Object.fromEntries(
   Object.entries(EVENT_RENAMES).map(([legacy, current]) => [current, legacy]),
 );
+const CONTROL_OWNERS: Readonly<Record<string, IdeaControlOwner>> = Object.freeze({
+  ping: "downstream",
+  pong: "upstream",
+  submitIdeal: "upstream",
+  submitInner: "upstream",
+  submitOuter: "upstream",
+  acceptIdeal: "downstream",
+  acceptInner: "downstream",
+  acceptOuter: "none",
+  abandon: "none",
+  resume: "downstream",
+});
 const VALIDATION_ID = "00000000000000000000000000";
+
+type FieldDefinition = readonly [string, string, string?];
+
+/** @pure */
+function fieldDefinition(type: string, legacy: boolean): FieldDefinition | undefined {
+  if (legacy) return LEGACY_FIELDS[type];
+  const legacyType = LEGACY_TYPES[type];
+  return (legacyType === undefined ? undefined : LEGACY_FIELDS[legacyType])
+    ?? SUBMISSION_FIELDS[type];
+}
 
 export class IdeaEventFormatError extends Error {
   constructor(message: string, options?: ErrorOptions) {
@@ -148,7 +246,7 @@ function assertValidIdeaEvent(
     || !(legacy ? LEGACY_EVENT_TYPES : IDEA_EVENT_TYPES).includes(type)) {
     throw new IdeaEventFormatError(`unsupported event type: ${String(type)}`);
   }
-  const field = LEGACY_FIELDS[legacy ? type : LEGACY_TYPES[type] ?? ""];
+  const field = fieldDefinition(type, legacy);
   const message = !legacy && (type === "ping" || type === "pong");
   keys(event, field || message ? ["sequence", "type", "payload"] : ["sequence", "type"], "event");
   if (!Number.isSafeInteger(event.sequence)
@@ -156,12 +254,16 @@ function assertValidIdeaEvent(
     throw new IdeaEventFormatError("sequence must be a positive safe integer");
   }
   if (field) {
-    const [input, output] = field;
+    const [input, output, validationOutput = output] = field;
     keys(event.payload, [input], "payload");
     const value = event.payload[input];
     if (value === null && (output === "alias" || output === "language")) return;
     try {
-      validateIdeaStatus({ version: 1, id: VALIDATION_ID, [output]: value }, options);
+      validateIdeaStatus({
+        version: 1,
+        id: VALIDATION_ID,
+        [validationOutput]: value,
+      }, options);
     } catch (cause) {
       throw new IdeaEventFormatError(errorMessage(cause), { cause });
     }
@@ -187,9 +289,7 @@ export function serializeIdeaEvent(event: unknown, options?: EventCodecOptions) 
     sequence: validated.sequence,
     type: validated.type,
   };
-  const field = LEGACY_FIELDS[
-    options?.legacy ? validated.type : LEGACY_TYPES[validated.type] ?? ""
-  ];
+  const field = fieldDefinition(validated.type, options?.legacy === true);
   if (field && "payload" in validated) {
     value.payload = { [field[0]]: payloadValue(validated, field[0]) };
   } else if (validated.type === "ping" || validated.type === "pong") {
@@ -240,7 +340,31 @@ export function initialEventState(
   if (!isValidUlid(ideaId)) throw new IdeaEventFormatError("invalid idea identity");
   return options?.legacy
     ? { status: { id: ideaId }, sequence: 0 }
-    : { status: { id: ideaId }, sequence: 0, interaction: { messages: [], lastSignal: null } };
+    : {
+        status: { id: ideaId },
+        sequence: 0,
+        interaction: { messages: [] },
+        control: { owner: "downstream", lastTransfer: null },
+      };
+}
+
+/** @pure */
+function nextControl(
+  before: IdeaEventState,
+  event: IdeaEvent,
+): IdeaControl {
+  if (!before.control) {
+    throw new IdeaEventFormatError("current events require control state");
+  }
+  const owner = CONTROL_OWNERS[event.type];
+  if (owner === undefined) return before.control;
+  return {
+    owner,
+    lastTransfer: {
+      sequence: event.sequence,
+      type: event.type as NonNullable<IdeaControl["lastTransfer"]>["type"],
+    },
+  };
 }
 
 /** @pure */
@@ -256,9 +380,7 @@ export function reduceIdeaEvent(
   const legacy = options?.legacy === true;
   if (!legacy && before.status.abandoned && validated.type !== "resume") return reject("abandoned");
   const status = { ...before.status };
-  const field = LEGACY_FIELDS[
-    legacy ? validated.type : LEGACY_TYPES[validated.type] ?? ""
-  ];
+  const field = fieldDefinition(validated.type, legacy);
   if (field && "payload" in validated) {
     const [input, output] = field;
     const value = payloadValue(validated, input);
@@ -281,8 +403,8 @@ export function reduceIdeaEvent(
           type: validated.type,
           message: validated.payload.message,
         }],
-        lastSignal: validated.type,
       },
+      control: nextControl(before, validated),
     } };
   }
   if (isDeepStrictEqual(status, before.status)) return reject("no-state-change");
@@ -294,6 +416,7 @@ export function reduceIdeaEvent(
     status,
     sequence: validated.sequence,
     interaction: before.interaction,
+    control: nextControl(before, validated),
   } };
 }
 

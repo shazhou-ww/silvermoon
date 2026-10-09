@@ -13,7 +13,7 @@ function isLegacyStatus(
     && "id" in value && typeof value.id === "string";
 }
 
-test("v2 persistence schemas compile and admit only the nine minimal events", async () => {
+test("v2 persistence schemas compile and admit all twelve minimal events", async () => {
   const ajv = new Ajv2020({ strict: true, allErrors: true, formats: { uri: true } });
   for (const path of ["v1/definitions", "v1/idea-status", "v2/config", "v2/idea-event"]) {
     ajv.addSchema(JSON.parse(await readFile(new URL(`../../schema/${path}.schema.json`, import.meta.url), "utf8")));
@@ -34,11 +34,20 @@ test("v2 persistence schemas compile and admit only the nine minimal events", as
       assert.equal(validate(invalid), false);
       assert.throws(() => validateIdeaEvent(invalid));
     }
+    for (const event of [
+      { sequence: 1, type: "submitIdeal", payload: { idealRevision: "a".repeat(40) } },
+      { sequence: 1, type: "submitInner", payload: { implementationRevision: "b".repeat(40) } },
+      { sequence: 1, type: "submitOuter", payload: { deploymentRevision: "c".repeat(40) } },
+    ]) {
+      assert.equal(validate(event), true, JSON.stringify(validate.errors));
+      validateIdeaEvent(event);
+    }
   }
   for (const event of [
     { sequence: 1, type: "idea.created" },
     { sequence: 1, type: "abandon", payload: {} },
     { sequence: 1, type: "acceptIdeal", payload: { idealRevision: null } },
+    { sequence: 1, type: "submitInner", payload: { idealRevision: "a".repeat(40) } },
     { sequence: 1, type: "setAlias", payload: { alias: "a", language: "en" } },
   ]) assert.equal(validate(event), false, JSON.stringify(event));
   const config = ajv.getSchema("https://github.com/shazhou-ww/silvermoon/raw/refs/heads/main/schema/v2/config.schema.json");

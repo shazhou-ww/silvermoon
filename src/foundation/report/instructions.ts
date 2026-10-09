@@ -59,6 +59,21 @@ interface LifecycleIdea extends IdeaReference {
 }
 
 /** @pure */
+function currentSubmission(idea: LifecycleIdea) {
+  const current = idea.submissions?.current;
+  return current === null || current === undefined
+    ? undefined
+    : idea.submissions?.[current];
+}
+
+/** @pure */
+function reviewReady(idea: LifecycleIdea) {
+  if (!idea.statusPath.endsWith("/events.jsonl")) return true;
+  return currentSubmission(idea)?.state === "submitted"
+    && idea.control?.owner === "upstream";
+}
+
+/** @pure */
 export function ideaName(idea: Pick<IdeaReference, "id" | "alias">) {
   return idea.alias ?? idea.id;
 }
@@ -231,6 +246,7 @@ export function lifecycleReview(
   primaryCommit: string,
   contentLanguage: string,
 ): ReviewContext | undefined {
+  if (!reviewReady(idea)) return undefined;
   if (idea.state === "preparing") {
     const revision: ReviewContext["revision"] = {
       field: "idealRevision",
@@ -324,9 +340,11 @@ export function lifecycleInstruction(
 ) {
   const name = ideaName(idea);
   if (idea.statusPath.endsWith("/events.jsonl")) {
+    const submission = currentSubmission(idea);
     const instruction = idea.state === "preparing"
       ? renderLifecyclePreparing(language, {
         action: "acceptIdeal",
+        controlOwner: idea.control?.owner ?? null,
         documentPath: idea.worlds.idealRevision.documentPath,
         eventBacked: true,
         ideaId: idea.id,
@@ -334,10 +352,13 @@ export function lifecycleInstruction(
         name,
         revisionReference: revisionReference(idea.idealRevision),
         statusPath: idea.statusPath,
+        submissionState: submission?.state ?? null,
+        submitAction: "submitIdeal",
       })
       : idea.state === "implementing"
       ? renderLifecycleImplementing(language, {
         action: "acceptInner",
+        controlOwner: idea.control?.owner ?? null,
         documentPath: idea.worlds.implementationRevision.documentPath,
         eventBacked: true,
         ideaId: idea.id,
@@ -346,11 +367,14 @@ export function lifecycleInstruction(
         name,
         revisionReference: revisionReference(idea.implementationRevision),
         statusPath: idea.statusPath,
+        submissionState: submission?.state ?? null,
+        submitAction: "submitInner",
         worldPath: idea.worlds.implementationRevision.path,
       })
       : idea.state === "deploying"
       ? renderLifecycleDeploying(language, {
         action: "acceptOuter",
+        controlOwner: idea.control?.owner ?? null,
         documentPath: idea.worlds.deploymentRevision.documentPath,
         eventBacked: true,
         ideaId: idea.id,
@@ -358,6 +382,8 @@ export function lifecycleInstruction(
         name,
         revisionReference: revisionReference(idea.deploymentRevision),
         statusPath: idea.statusPath,
+        submissionState: submission?.state ?? null,
+        submitAction: "submitOuter",
         worldPath: idea.worlds.deploymentRevision.path,
       })
       : renderLifecycleInactive(language, {
@@ -373,7 +399,7 @@ export function lifecycleInstruction(
       idea.state === "preparing"
           || idea.state === "implementing"
           || idea.state === "deploying"
-        ? reviewPresentationInstruction(language)
+        ? reviewReady(idea) ? reviewPresentationInstruction(language) : null
         : null,
       lifecycleContentLanguageInstruction(contentLanguage, language),
     ]);
@@ -382,6 +408,7 @@ export function lifecycleInstruction(
     return joinInstructions([
       renderLifecyclePreparing(language, {
         action: "acceptIdeal",
+        controlOwner: null,
         documentPath: idea.worlds.idealRevision.documentPath,
         eventBacked: false,
         ideaId: idea.id,
@@ -389,6 +416,8 @@ export function lifecycleInstruction(
         name,
         revisionReference: revisionReference(idea.idealRevision),
         statusPath: idea.statusPath,
+        submissionState: null,
+        submitAction: "submitIdeal",
       }),
       preparationSeedInstruction(idea, language),
       reviewPresentationInstruction(language),
@@ -399,6 +428,7 @@ export function lifecycleInstruction(
     return joinInstructions([
       renderLifecycleImplementing(language, {
         action: "acceptInner",
+        controlOwner: null,
         documentPath: idea.worlds.implementationRevision.documentPath,
         eventBacked: false,
         ideaId: idea.id,
@@ -407,6 +437,8 @@ export function lifecycleInstruction(
         name,
         revisionReference: revisionReference(idea.implementationRevision),
         statusPath: idea.statusPath,
+        submissionState: null,
+        submitAction: "submitInner",
         worldPath: idea.worlds.implementationRevision.path,
       }),
       reviewPresentationInstruction(language),
@@ -417,6 +449,7 @@ export function lifecycleInstruction(
     return joinInstructions([
       renderLifecycleDeploying(language, {
         action: "acceptOuter",
+        controlOwner: null,
         documentPath: idea.worlds.deploymentRevision.documentPath,
         eventBacked: false,
         ideaId: idea.id,
@@ -424,6 +457,8 @@ export function lifecycleInstruction(
         name,
         revisionReference: revisionReference(idea.deploymentRevision),
         statusPath: idea.statusPath,
+        submissionState: null,
+        submitAction: "submitOuter",
         worldPath: idea.worlds.deploymentRevision.path,
       }),
       reviewPresentationInstruction(language),

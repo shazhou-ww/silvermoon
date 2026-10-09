@@ -156,9 +156,10 @@ Project `version: 2` replaces mutable status with one required regular
 `events.jsonl` file at each idea root. The file may be empty; otherwise it is
 canonical UTF-8 JSONL with LF record endings, a final LF, consecutive sequence
 numbers beginning at 1, and a 1 MiB limit per record including LF. Its strict
-nine-event union updates the status facts and interaction
-projection; no observations, creation/import markers, or audit envelope are
-stored. The nested-world revisions and five lifecycle states are unchanged.
+twelve-event union updates accepted and submitted revision facts, interaction
+messages, and unified control; no observations, creation/import markers, or
+audit envelope are stored. The nested-world revisions and five lifecycle
+states are unchanged.
 
 Use `event replay` and `event append` for routine state. Exceptional history
 maintenance edits the complete `events.jsonl` file directly and validates it
@@ -208,14 +209,17 @@ The source checkout instead runs `node bin/migrate-v1-to-v2.ts` so it tests
 the unpublished implementation. No ordinary command automatically migrates a
 v1 project.
 
-V2's seven business types are `setAlias`, `setLanguage`, `acceptIdeal`,
-`acceptInner`, `acceptOuter`, `abandon`, and `resume`. The two interaction
-types, `ping` and `pong`, carry only a nonempty `message` string. Replay retains
-ordered messages and `lastSignal` without treating a reply as completion or
-removing older goals. After `abandon`, only `resume` is legal. Interaction
-appends need the local byte precondition but no primary fetch; decisions
-retain their primary and human revision gates. The CLI cannot authenticate
-upstream or downstream senders.
+V2's ten business types are `setAlias`, `setLanguage`, `submitIdeal`,
+`submitInner`, `submitOuter`, `acceptIdeal`, `acceptInner`, `acceptOuter`,
+`abandon`, and `resume`. The two interaction types, `ping` and `pong`, carry
+only a nonempty `message` string. Replay retains ordered messages and projects
+`control.owner` with its last transfer across messages, submissions,
+acceptances, and terminal events. Each phase's submitted revision is separate
+from its accepted revision. After `abandon`, only `resume` is legal.
+Interaction appends need the local byte precondition but no primary fetch;
+submissions need the exact current world on primary but no human confirmation;
+acceptances additionally require explicit confirmation and the same revision
+already submitted. The CLI cannot authenticate upstream or downstream senders.
 
 ## Experimental JavaScript Package API
 
@@ -380,8 +384,9 @@ These fields never enter `problems` or change command success. Snapshot-only
 `check` responses omit `device` so their result depends only on the selected
 project snapshot and explicit primary state.
 
-Every selected active idea adds a primary-bound `review` object to its
-`next-steps` response:
+A selected active v2 idea adds a primary-bound `review` object to its
+`next-steps` response only when the exact current phase revision has a matching
+`submit*` event and effective control is upstream:
 
 ```json
 {
@@ -427,16 +432,17 @@ Every selected active idea adds a primary-bound `review` object to its
 
 Implementation and deployment responses bind `acceptInner` or `acceptOuter`
 to their corresponding revision and list the current contract plus `ledger.md`.
-The field is an authoritative index seed, not an assertion that the contract
-or evidence is complete and not a human decision. Callers inspect `scopePath`
-and add only supporting files with substantive review content; placeholders are
-omitted. `presentation.contentLanguage` always follows the effective idea
-content language, not `response.language`. English and Chinese content receive
-complete built-in presentation strings. Other canonical BCP 47 tags use the
-explicit English `templateLanguage` fallback with `requiresLocalization: true`;
-the Agent localizes every human-visible presentation value before rendering and
-preserves machine identifiers. JSON retains full object IDs. Raw Markdown
-renders a 12-character revision reference, primary reference, and the complete
+The field is an authoritative index seed and proves only the event-backed
+submission/control precondition, not a human decision. Callers inspect
+`scopePath` and add only supporting files with substantive review content;
+placeholders are omitted. `presentation.contentLanguage` always follows the
+effective idea content language, not `response.language`. English and Chinese
+content receive complete built-in presentation strings. Other canonical BCP 47
+tags use the explicit English `templateLanguage` fallback with
+`requiresLocalization: true`; the Agent localizes every human-visible
+presentation value before rendering and preserves machine identifiers. JSON
+retains full object IDs. When review is actionable, raw Markdown renders a
+12-character revision reference, primary reference, and the complete
 presentation object in a **Review candidate** section before lifecycle
 instructions.
 
@@ -581,11 +587,16 @@ Observations are discriminated by command intent and `state`:
   current idea document; missing titles render as `-`. It never selects a
   candidate.
 - Selected `whats-next` returns `idea-selected` with only `selectedIdea`
-  (`id`, optional `alias`, lifecycle `state`), including terminal ideas.
-  Unknown selectors return `idea-not-found` with the same enriched active
-  `candidates`, not a fabricated selected idea. An actionable selection may
-  also contain snapshot-bound guidance provenance; captured content is in
-  the response.
+  (`id`, optional `alias`, lifecycle `state`), including terminal ideas. V2
+  selections also include `control` (`owner`, nullable `lastTransfer`) and
+  `submissions` (`current` plus `ideal`, `inner`, and `outer`). Each phase
+  projection identifies its submit/accept pair, current revision, optional
+  submitted/accepted revisions, and `unsubmitted`, `submitted`, `accepted`, or
+  `stale` state. Active stale submissions project downstream control; completed
+  and abandoned ideas project `none`. Unknown selectors return
+  `idea-not-found` with the same enriched active `candidates`, not a fabricated
+  selected idea. An actionable selection may also contain snapshot-bound
+  guidance provenance; captured content is in the response.
 - `phase-guidance-invalid` means command readiness reached the current
   actionable phase, but that phase's optional file exists and is invalid. It
   contains problems and repair instructions, not lifecycle instructions or

@@ -30,7 +30,7 @@ function eventReceipt(result: RuntimeResult) {
   return { length: receipt.length, digest: receipt.digest };
 }
 
-function interactionState(result: RuntimeResult) {
+function coordinationState(result: RuntimeResult) {
   const receipt = result.report.observation.receipt;
   assert.ok(isRecord(receipt));
   const reduction = receipt.reduction;
@@ -39,14 +39,16 @@ function interactionState(result: RuntimeResult) {
   assert.ok(isRecord(state));
   const interaction = state.interaction;
   assert.ok(isRecord(interaction));
-  assert.ok(typeof interaction.lastSignal === "string");
   assert.ok(Array.isArray(interaction.messages));
+  const control = state.control;
+  assert.ok(isRecord(control));
+  assert.ok(typeof control.owner === "string");
   const messages = interaction.messages.map((message) => {
     assert.ok(isRecord(message));
     assert.ok(typeof message.message === "string");
     return { message: message.message };
   });
-  return { lastSignal: interaction.lastSignal, messages };
+  return { owner: control.owner, messages };
 }
 
 async function within<T>(promise: Promise<T>, milliseconds: number): Promise<T> {
@@ -159,9 +161,9 @@ test("real Copilot replies through the host-runtime interaction boundary", {
   await adapter.start(route);
   replies = adapter.events(route)[Symbol.asyncIterator]();
   await round("SILVERMOON_TEST_RESUMED", { expectToken: false });
-  const final = interactionState(await runtime.replay(route));
+  const final = coordinationState(await runtime.replay(route));
   assert.deepEqual(final.messages.map(({ message }) => message), messages);
-  assert.equal(final.lastSignal, "pong");
+  assert.equal(final.owner, "upstream");
 });
 
 test("real Copilot receives a diagnostic ping while a Git commit is blocked", {
@@ -254,7 +256,7 @@ test("real Copilot receives a diagnostic ping while a Git commit is blocked", {
   assert.equal((await runtime.appendInteraction(route, {
     type: "pong", message: "old answer", expectedLength: observed.length, expectedDigest: observed.digest,
   })).exitCode, 1);
-  assert.equal(interactionState(await runtime.replay(route)).lastSignal, "ping");
+  assert.equal(coordinationState(await runtime.replay(route)).owner, "downstream");
   releaseTool?.();
   releaseTool = undefined;
   let diagnosis: string | undefined;
@@ -293,7 +295,7 @@ test("real Copilot receives a diagnostic ping while a Git commit is blocked", {
     type: "pong", message: diagnosis, expectedLength: after.length, expectedDigest: after.digest,
   })).exitCode, 0);
   assert.deepEqual(
-    interactionState(await runtime.replay(route)).messages.map(
+    coordinationState(await runtime.replay(route)).messages.map(
       ({ message }) => message,
     ),
     [first, followup, diagnosis],
@@ -305,7 +307,7 @@ test("real Copilot receives a diagnostic ping while a Git commit is blocked", {
   })).exitCode, 0);
   await client.forceStop();
   assert.deepEqual((await collect(adapter.send(route, pending))).map(({ state }) => state), ["unknown"]);
-  assert.equal(interactionState(await runtime.replay(route)).lastSignal, "ping");
+  assert.equal(coordinationState(await runtime.replay(route)).owner, "downstream");
   await assert.rejects(replies.next(), /delivery cannot be confirmed/);
 });
 
@@ -353,8 +355,8 @@ test("one real Copilot adapter keeps two project routes independent", {
     assert.equal((await runtime.appendInteraction(route, {
       type: "pong", message: answer, expectedLength: before.length, expectedDigest: before.digest,
     })).exitCode, 0);
-    const interaction = interactionState(await runtime.replay(route));
+    const interaction = coordinationState(await runtime.replay(route));
     assert.equal(interaction.messages.length, 2);
-    assert.equal(interaction.lastSignal, "pong");
+    assert.equal(interaction.owner, "upstream");
   }
 });

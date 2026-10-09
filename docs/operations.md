@@ -214,12 +214,19 @@ changes materially.
 
 ## Record A Human Decision
 
+For v2, finish and synchronize the current world before the human gate, append
+the matching `submitIdeal`, `submitInner`, or `submitOuter` for that exact
+revision, integrate the event, and reobserve. Only a current submission with
+upstream control produces the corresponding `response.review`; ping/pong may
+transfer control within the same phase without changing the submission fact.
+
 After an explicit decision, reconfirm that it applies to the selected idea and
 the current reported world revision. For v2, use the
 [event commands and recovery protocol](../skills/silvermoon/references/events.md)
 instead of editing JSONL; stage the changed canonical `events.jsonl` after a
 validated append. The expected digest is the Git blob OID of the complete
-file, while retries also require the exact record after that prefix.
+file, while retries also require the exact record after that prefix. An
+`accept*` append must match the already submitted revision.
 For v1, edit only the corresponding status fact:
 
 - `approvedRevision`

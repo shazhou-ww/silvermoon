@@ -31,6 +31,7 @@ import {
   PRIMARY_REPOSITORY,
   SECOND_ID,
   setIdeaState,
+  submitIdeaState,
 } from "../helpers/repository.ts";
 import { createWhatsNextTestHelpers } from "../helpers/whatsnext.ts";
 
@@ -184,6 +185,12 @@ test("attaches only the selected actionable phase guidance from primary", async 
   }
   git(repository.root, "add", ".");
   git(repository.root, "commit", "-m", "Add phase guidance");
+  git(repository.root, "push", "origin", "main");
+  await submitIdeaState(repository.root, FIRST_ID, "preparing");
+  await submitIdeaState(repository.root, SECOND_ID, "implementing");
+  await submitIdeaState(repository.root, DEPLOYING_ID, "deploying");
+  git(repository.root, "add", ".");
+  git(repository.root, "commit", "-m", "Submit phase candidates");
   git(repository.root, "push", "origin", "main");
 
   for (const [id, phase, content] of fixtures) {

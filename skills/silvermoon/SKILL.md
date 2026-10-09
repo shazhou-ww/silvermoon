@@ -159,9 +159,13 @@ Missing guidance is normal. A guidance problem blocks only the reported
 current action until repaired. `check` validates all three fixed guidance files
 in its selected snapshot but never returns their content.
 
-Every selected active report includes `response.review`. It is primary-bound
-metadata for the review workflow below; its presence does not mean the
-candidate is complete or ready for a human decision.
+Every selected v2 report projects `selectedIdea.control` and all three
+`selectedIdea.submissions`. Treat `downstream` as Agent-side control,
+`upstream` as upstream/user-side control, and `none` as terminal. A stale
+current-phase submission returns effective control downstream. `response.review`
+appears only when the exact current phase revision is submitted and control is
+upstream; before that, follow `response.nextSteps` instead of asking for the
+corresponding acceptance.
 
 ## Execute The Workflow
 
@@ -297,6 +301,10 @@ and synchronize it to the configured primary branch:
 7. Synchronize through ordinary non-force Git.
 8. Confirm the commit is reachable from refreshed primary.
 9. Reobserve the selected idea and exact world revision.
+10. In v2, when current-phase work and evidence are complete, append the
+    corresponding `submitIdeal`, `submitInner`, or `submitOuter` for that exact
+    synchronized revision, integrate the event normally, and reobserve before
+    entering the human gate.
 
 Do not ask the user whether to commit, push, or synchronize a candidate when
 those actions are required to reach its next lifecycle gate. They are Agent
@@ -319,11 +327,14 @@ recovery condition, and stop before the human gate.
 
 Enter a human gate only after the current phase's contract, ledger, and
 evidence are ready, the candidate is synchronized to primary, and a fresh
-`whats-next` reports its world revision, `primaryCommit`, and effective content
-language. Follow the latest `response.nextSteps` for the gate procedure and use
-`response.review` as the authority for full object IDs, minimum documents, and
-human-facing presentation. Show only 12-character revision and commit
-references to the user; retain the full values for decision recording.
+`whats-next` returns `response.review` for the current revision with upstream
+control. For v2, this requires the Agent's matching `submit*`; an absent or
+stale submission means continue downstream work and do not ask for acceptance.
+Follow the latest `response.nextSteps` for the gate procedure and use
+`response.review` as the authority for full object IDs, minimum documents,
+primary commit, and human-facing presentation. Show only 12-character revision
+and commit references to the user; retain the full values for decision
+recording.
 
 Before the gate, put review-relevant detail in durable current-phase artifacts
 and synchronize it. The review message is an index to that evidence, not the
@@ -371,12 +382,14 @@ Do not add lifecycle-policy essays, repeated gate rationale, test summaries, or
 deployment narration to the review message.
 
 For v2 projects, follow [events.md](./references/events.md): observe the exact
-log and primary, then use the project-version `event append` command after an
+log and primary, use the project-version `event append` command for the
+Agent-owned matching `submit*`, and use it again for `accept*` only after the
 explicit decision. Never infer authorization from a CLI flag, clear decisions,
-or append observations. Routine state changes use append only. Exceptional
-history maintenance edits the complete `events.jsonl` file directly, then uses
-ordinary Git review and snapshot/history checks; there is no revise or recover
-command. Keep selector, audience, and output language through conflicts and retries.
+or append observations. An acceptance must match the already submitted exact
+revision. Routine state changes use append only. Exceptional history
+maintenance edits the complete `events.jsonl` file directly, then uses ordinary
+Git review and snapshot/history checks; there is no revise or recover command.
+Keep selector, audience, and output language through conflicts and retries.
 
 For v1 projects there is no decision mutation command. After an explicit human
 decision, reconfirm the selected idea and exact revision from `whats-next`;

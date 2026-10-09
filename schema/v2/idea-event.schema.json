@@ -36,6 +36,36 @@
     },
     {
       "properties": {
+        "type": { "const": "submitIdeal" },
+        "payload": {
+          "type": "object", "additionalProperties": false, "required": ["idealRevision"],
+          "properties": { "idealRevision": { "$ref": "../v1/definitions.schema.json#/$defs/objectId" } }
+        }
+      },
+      "required": ["payload"]
+    },
+    {
+      "properties": {
+        "type": { "const": "submitInner" },
+        "payload": {
+          "type": "object", "additionalProperties": false, "required": ["implementationRevision"],
+          "properties": { "implementationRevision": { "$ref": "../v1/definitions.schema.json#/$defs/objectId" } }
+        }
+      },
+      "required": ["payload"]
+    },
+    {
+      "properties": {
+        "type": { "const": "submitOuter" },
+        "payload": {
+          "type": "object", "additionalProperties": false, "required": ["deploymentRevision"],
+          "properties": { "deploymentRevision": { "$ref": "../v1/definitions.schema.json#/$defs/objectId" } }
+        }
+      },
+      "required": ["payload"]
+    },
+    {
+      "properties": {
         "type": { "const": "acceptIdeal" },
         "payload": {
           "type": "object", "additionalProperties": false, "required": ["idealRevision"],

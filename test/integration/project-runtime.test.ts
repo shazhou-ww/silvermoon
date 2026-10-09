@@ -39,7 +39,7 @@ function eventReceipt(result: RuntimeResult) {
   };
 }
 
-function interactionState(result: RuntimeResult) {
+function controlState(result: RuntimeResult) {
   const receipt = result.report.observation.receipt;
   assert.ok(isRecord(receipt));
   const reduction = receipt.reduction;
@@ -48,9 +48,11 @@ function interactionState(result: RuntimeResult) {
   assert.ok(isRecord(state));
   const interaction = state.interaction;
   assert.ok(isRecord(interaction));
-  assert.equal(typeof interaction.lastSignal, "string");
   assert.ok(Array.isArray(interaction.messages));
-  return interaction;
+  const control = state.control;
+  assert.ok(isRecord(control));
+  assert.equal(typeof control.owner, "string");
+  return control;
 }
 
 function nextSteps(result: RuntimeResult): string[] {
@@ -195,7 +197,7 @@ test("real project CLI preserves exact interaction state across child processes"
   assert.equal(eventReceipt(written).outcome, "candidate-written");
   assert.equal(eventReceipt(await runtime.appendInteraction(route, request)).outcome, "already-present");
   const after = await runtime.replay(route);
-  assert.equal(interactionState(after).lastSignal, "ping");
+  assert.equal(controlState(after).owner, "downstream");
   const delta = await runtime.readSince(route, before);
   assert.equal(delta.exitCode, 0);
   const deltaReceipt = eventReceipt(delta);

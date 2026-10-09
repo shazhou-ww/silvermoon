@@ -72,6 +72,7 @@ export interface PreparationSeedParameters {
 
 interface LifecycleParameters {
   action: string;
+  controlOwner: "upstream" | "downstream" | "none" | null;
   documentPath: string;
   eventBacked: boolean;
   ideaId: string;
@@ -79,6 +80,8 @@ interface LifecycleParameters {
   name: string;
   revisionReference: string;
   statusPath: string;
+  submissionState: "unsubmitted" | "submitted" | "accepted" | "stale" | null;
+  submitAction: string;
 }
 
 export interface LifecyclePreparingParameters extends LifecycleParameters {}

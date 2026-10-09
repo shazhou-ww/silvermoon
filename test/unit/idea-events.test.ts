@@ -12,6 +12,7 @@ import type {
   IdeaEventState,
   IdeaEventStatus,
 } from "../../src/foundation/event-codec/index.ts";
+import { deriveEventIdeaState } from "../../src/foundation/event-reducer/index.ts";
 import { deriveIdeaState } from "../../src/foundation/idea-model/index.ts";
 
 const id = "01M3SJTKFRQ19DP0RPPJACKGMC";
@@ -49,8 +50,9 @@ test("internal legacy conversion retains status and final v2 retains ordered int
     assert.ok(renamed);
     return validateIdeaEvent({ ...event, type: renamed });
   });
-  assert.equal(IDEA_EVENT_TYPES.length, 9);
+  assert.equal(IDEA_EVENT_TYPES.length, 12);
   assert.equal(EVENT_PERMISSIONS.acceptIdeal, "upstream");
+  assert.equal(EVENT_PERMISSIONS.submitIdeal, "downstream");
   assert.equal(EVENT_PERMISSIONS.ping, "upstream");
   assert.equal(EVENT_PERMISSIONS.pong, "downstream");
   assert.equal(EVENT_PERMISSIONS.setAlias, "both");
@@ -72,7 +74,10 @@ test("internal legacy conversion retains status and final v2 retains ordered int
     messages: messages.map(({ sequence, type, payload }) => ({
       sequence, type, message: payload.message,
     })),
-    lastSignal: "pong",
+  });
+  assert.deepEqual(successfulState(replayIdeaEvents(id, events)).control, {
+    owner: "upstream",
+    lastTransfer: { sequence: 8, type: "pong" },
   });
   assert.equal(successfulState(replayIdeaEvents(id, events)).status.approvedRevision,
     revisions.idealRevision);
@@ -92,6 +97,7 @@ test("final v2 abandoned state accepts only resume, including metadata and messa
   for (const event of [
     { sequence: 2, type: "ping", payload: { message: "continue" } },
     { sequence: 2, type: "pong", payload: { message: "blocked" } },
+    { sequence: 2, type: "submitIdeal", payload: { idealRevision: revisions.idealRevision } },
     { sequence: 2, type: "setAlias", payload: { alias: "new-alias" } },
     { sequence: 2, type: "acceptIdeal", payload: { idealRevision: revisions.idealRevision } },
     { sequence: 2, type: "abandon" },
@@ -99,17 +105,20 @@ test("final v2 abandoned state accepts only resume, including metadata and messa
   assert.equal(reduceIdeaEvent(abandoned, { sequence: 2, type: "resume" }, options).ok, true);
 });
 
-test("serializes a minimal seven-event log and replays without mutating inputs", () => {
+test("serializes submit and accept pairs and replays without mutating inputs", () => {
   const events = [
     alias(1, "example"),
     { sequence: 2, type: "setLanguage", payload: { language: "zh-CN" } },
-    { sequence: 3, type: "acceptIdeal", payload: { idealRevision: revisions.idealRevision } },
-    { sequence: 4, type: "acceptInner", payload: { implementationRevision: revisions.implementationRevision } },
-    { sequence: 5, type: "acceptOuter", payload: { deploymentRevision: revisions.deploymentRevision } },
-    { sequence: 6, type: "abandon" },
-    { sequence: 7, type: "resume" },
-    alias(8, null),
-    { sequence: 9, type: "setLanguage", payload: { language: null } },
+    { sequence: 3, type: "submitIdeal", payload: { idealRevision: revisions.idealRevision } },
+    { sequence: 4, type: "acceptIdeal", payload: { idealRevision: revisions.idealRevision } },
+    { sequence: 5, type: "submitInner", payload: { implementationRevision: revisions.implementationRevision } },
+    { sequence: 6, type: "acceptInner", payload: { implementationRevision: revisions.implementationRevision } },
+    { sequence: 7, type: "submitOuter", payload: { deploymentRevision: revisions.deploymentRevision } },
+    { sequence: 8, type: "acceptOuter", payload: { deploymentRevision: revisions.deploymentRevision } },
+    { sequence: 9, type: "abandon" },
+    { sequence: 10, type: "resume" },
+    alias(11, null),
+    { sequence: 12, type: "setLanguage", payload: { language: null } },
   ];
   const saved = structuredClone(events);
   const source = serializeIdeaEvents(events);
@@ -117,10 +126,23 @@ test("serializes a minimal seven-event log and replays without mutating inputs",
   const result = replayIdeaEvents(id, events);
   assert.equal(result.ok, true);
   const state = successfulState(result);
-  assert.equal(deriveIdeaState(revisions, { version: 1, ...state.status }), "completed");
-  assert.equal(state.sequence, 9);
+  assert.equal(deriveEventIdeaState(revisions, state.status), "completed");
+  assert.equal(state.sequence, 12);
   assert.equal(state.status.alias, undefined);
   assert.equal(state.status.language, undefined);
+  assert.equal(state.status.submittedIdealRevision, revisions.idealRevision);
+  assert.equal(
+    state.status.submittedImplementationRevision,
+    revisions.implementationRevision,
+  );
+  assert.equal(
+    state.status.submittedDeploymentRevision,
+    revisions.deploymentRevision,
+  );
+  assert.deepEqual(state.control, {
+    owner: "downstream",
+    lastTransfer: { sequence: 10, type: "resume" },
+  });
   assert.deepEqual(events, saved);
   assert.deepEqual(replayIdeaEvents(id, []), { ok: true, state: initialEventState(id) });
 });
@@ -136,6 +158,7 @@ test("rejects malformed or noncanonical logs rather than treating them as repair
     '{"sequence":0,"type":"abandon"}\n',
     '{"sequence":1.5,"type":"abandon"}\n',
     '{"sequence":1,"type":"acceptIdeal","payload":{"idealRevision":null}}\n',
+    '{"sequence":1,"type":"submitIdeal","payload":{"idealRevision":null}}\n',
     '{"sequence":1,"type":"setAlias","payload":{"alias":" leading"}}\n',
     '{"sequence":1,"type":"setLanguage","payload":{"language":"zh-cn"}}\n',
     '{"sequence":1,"type":"setAlias","payload":{"alias":"a","alias":"a"}}\n',

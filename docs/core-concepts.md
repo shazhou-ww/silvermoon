@@ -69,11 +69,17 @@ Agents own continuation. The project skill combines `whats-next`,
 choose one safe action. The ledger is operational memory: it mirrors stable
 contract IDs and records completed work, but a checked item is not acceptance.
 
-For each selected active idea, `response.review` supplies a primary-bound seed
-for the eventual review index: lifecycle phase, decision event, exact revision,
-fetched primary commit, current-world scope, and canonical documents. It is
-context, not a readiness or authorization flag. Agents still inspect relevant
-supporting files and evidence. Its `presentation` object supplies the fixed
+Each selected v2 idea reports all three phase submissions and current control.
+An Agent-owned `submitIdeal`, `submitInner`, or `submitOuter` records that the
+exact world revision is complete without accepting it. The matching upstream
+`accept*` remains a separate human decision. Ping/pong continues to transfer
+control within a phase.
+
+Only a current-phase submission with upstream control adds `response.review`.
+That object supplies a primary-bound seed for the review index: lifecycle
+phase, decision event, exact revision, fetched primary commit, current-world
+scope, and canonical documents. Agents still inspect relevant supporting files
+and evidence before submitting. Its `presentation` object supplies the fixed
 gate labels, document labels, primary connector, and exact decision question
 from the effective content language, independently of the report's temporary
 output language. Unsupported built-in content locales carry an explicit
@@ -86,12 +92,15 @@ interactive decision.
 ## Persistent State Events
 
 In v2 projects, each idea's `events.jsonl` file is its sole durable state
-authority. Seven event kinds change alias, language, the three revision facts, or
-abandonment. Replay is pure; observation of real world trees is still read-only
-and separate. No-op events are rejected. Healthy primary prefixes are immutable;
-a definitively reduction-failed base may be repaired to a fully valid log.
-Old valid facts and concurrent candidates are preserved through ordinary Git.
-See the [event operations contract](../skills/silvermoon/references/events.md).
+authority. Ten business event kinds change metadata, three submitted revisions,
+three accepted revisions, or abandonment state; ping and pong carry interaction
+messages. Replay is pure; observation of real world trees is still read-only
+and separate. It projects ordered messages and unified control rather than a
+ping/pong-only last signal. No-op events are rejected. Healthy primary prefixes
+are immutable; a definitively reduction-failed base may be repaired to a fully
+valid log. Old valid facts and concurrent candidates are preserved through
+ordinary Git. See the
+[event operations contract](../skills/silvermoon/references/events.md).
 
 ## Command Event Model
 

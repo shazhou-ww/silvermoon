@@ -29,12 +29,15 @@ reduction validation and filesystem integrity audits read the log; do not
 describe them as constant-time operations.
 
 Every record has a consecutive positive safe-integer `sequence` and `type`.
-V2 defines seven business changes and two interaction messages:
+V2 defines ten business changes and two interaction messages:
 
 | Type | Payload |
 | --- | --- |
 | `setAlias` | `{"alias":"unique-name"}` or `{"alias":null}` |
 | `setLanguage` | `{"language":"zh-CN"}` or `{"language":null}` |
+| `submitIdeal` | `{"idealRevision":"<exact world tree OID>"}` |
+| `submitInner` | `{"implementationRevision":"<exact world tree OID>"}` |
+| `submitOuter` | `{"deploymentRevision":"<exact world tree OID>"}` |
 | `acceptIdeal` | `{"idealRevision":"<exact world tree OID>"}` |
 | `acceptInner` | `{"implementationRevision":"<exact world tree OID>"}` |
 | `acceptOuter` | `{"deploymentRevision":"<exact world tree OID>"}` |
@@ -43,15 +46,24 @@ V2 defines seven business changes and two interaction messages:
 | `ping` | `{"message":"nonempty string"}` |
 | `pong` | `{"message":"nonempty string"}` |
 
-Interaction messages occupy the same sequence
-and log as business events. Replay adds `interaction.messages` (ordered
-`sequence`, `type`, `message`) and `interaction.lastSignal` (`ping`, `pong`,
-or `null`). Only `ping` and `pong` change the last signal; neither represents
-completion or clears a previous goal. Consecutive `pong` events, including
-without a prior `ping`, are valid. After `abandon`, only `resume` is valid.
-The sender convention is upstream for decisions, `abandon`, `resume`, `ping`;
-downstream for `pong`; and both for metadata. The stateless CLI does not
-authenticate senders or reject messages based on the last signal.
+Interaction messages occupy the same sequence and log as business events.
+Replay retains ordered `interaction.messages` (`sequence`, `type`, `message`)
+and projects `control.owner` plus `control.lastTransfer`. Initial active
+control is `downstream`. `ping`, each `accept*`, and `resume` transfer control
+downstream; `pong` and each `submit*` transfer it upstream; `acceptOuter` and
+`abandon` end with `none`. Metadata does not transfer control. Selected idea
+reports force terminal ideas to `none` and a stale current-phase submission to
+`downstream`. Consecutive `pong` events, including without a prior `ping`, are
+valid. After `abandon`, only `resume` is valid.
+
+Each `submit*` records the Agent's completion claim for one exact world
+revision without advancing the lifecycle. Reports project every phase as
+`unsubmitted`, `submitted`, `accepted`, or `stale`. The corresponding
+`accept*` is the distinct upstream decision and advances the lifecycle only
+after the same revision was submitted. The sender convention is upstream for
+acceptance decisions, `abandon`, `resume`, and `ping`; downstream for
+submissions and `pong`; and both for metadata. The stateless CLI does not
+authenticate senders or reject messages based on current control.
 
 No timestamps, actors, repository commits, IDs, observations, imports,
 creation, arbitrary patches, or decision retractions belong in a record.
@@ -142,8 +154,8 @@ Put a business request in a JSON file, without sequence, for example:
 {"type":"setAlias","payload":{"alias":"event-state-model"}}
 ```
 
-For metadata and human decisions, bind the request to the observed log and
-primary:
+For metadata, submissions, and human decisions, bind the request to the
+observed log and primary:
 
 ```sh
 silvermoon event append <idea> --input request.json --expected-length <bytes> --expected-digest <oid> --expected-primary <commit> --audience agent
@@ -168,11 +180,17 @@ clean worktree. If the exact full observed log has changed, reobserve before
 responding. A local message is not synchronized to primary merely because
 it was appended.
 
-Only after an explicit human decision, add `--confirm-decision` for approval,
-acceptance, abandonment or resumption. This flag asserts authorization; it
-does not manufacture or prove it. Approvals/acceptances also require the
-correct lifecycle phase and exact world tree already on primary. Keep the
-review-and-synchronization human gate from the main skill.
+An Agent may append the phase's `submit*` only after the exact current world
+tree is synchronized to primary. A submission needs no human confirmation and
+does not accept the candidate. Reobserve after the append; `whats-next`
+provides the matching review template only while that submission is current
+and control is upstream.
+
+Only after an explicit human decision, add `--confirm-decision` for acceptance,
+abandonment, or resumption. This flag asserts authorization; it does not
+manufacture or prove it. Acceptance also requires the correct lifecycle phase,
+the exact world tree already on primary, and a prior `submit*` of that same
+revision. Keep the review-and-synchronization human gate from the main skill.
 
 Receipts distinguish `candidate-written`, `already-present` and
 `no-state-change`; none means integrated into primary. Retries recognize the

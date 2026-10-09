@@ -75,6 +75,40 @@ export interface IdeaReference {
   alias?: string;
   createdAt?: string;
   title?: string;
+  control?: IdeaControlProjection;
+  submissions?: IdeaSubmissionsProjection;
+}
+
+export interface IdeaControlProjection {
+  owner: "upstream" | "downstream" | "none";
+  lastTransfer: {
+    sequence: number;
+    type:
+      | "ping" | "pong"
+      | "submitIdeal" | "submitInner" | "submitOuter"
+      | "acceptIdeal" | "acceptInner" | "acceptOuter"
+      | "abandon" | "resume";
+  } | null;
+}
+
+export interface PhaseSubmissionProjection {
+  phase: "ideal" | "inner" | "outer";
+  submit: "submitIdeal" | "submitInner" | "submitOuter";
+  decision: "acceptIdeal" | "acceptInner" | "acceptOuter";
+  state: "unsubmitted" | "submitted" | "accepted" | "stale";
+  revision: {
+    field: "idealRevision" | "implementationRevision" | "deploymentRevision";
+    value: string;
+  };
+  submittedRevision?: string;
+  acceptedRevision?: string;
+}
+
+export interface IdeaSubmissionsProjection {
+  current: "ideal" | "inner" | "outer" | null;
+  ideal: PhaseSubmissionProjection;
+  inner: PhaseSubmissionProjection;
+  outer: PhaseSubmissionProjection;
 }
 
 export interface IdeaInventoryItem extends IdeaReference {

@@ -3,6 +3,7 @@ import {
   type EventCodecOptions,
   type IdeaEvent,
   type IdeaEventState,
+  eventLifecycleStatus,
   parseIdeaEvents,
   reduceIdeaEvent,
   replayIdeaEvents,
@@ -10,10 +11,45 @@ import {
 } from "../event-codec/index.ts";
 import { deriveIdeaState } from "../idea-model/index.ts";
 
-const DECISIONS: Readonly<Record<string, readonly [string, string]>> = {
-  acceptIdeal: ["idealRevision", "preparing"],
-  acceptInner: ["implementationRevision", "implementing"],
-  acceptOuter: ["deploymentRevision", "deploying"],
+const GATES: Readonly<
+  Record<string, readonly [string, string, string, "submit" | "accept"]>
+> = {
+  submitIdeal: [
+    "idealRevision",
+    "preparing",
+    "submittedIdealRevision",
+    "submit",
+  ],
+  submitInner: [
+    "implementationRevision",
+    "implementing",
+    "submittedImplementationRevision",
+    "submit",
+  ],
+  submitOuter: [
+    "deploymentRevision",
+    "deploying",
+    "submittedDeploymentRevision",
+    "submit",
+  ],
+  acceptIdeal: [
+    "idealRevision",
+    "preparing",
+    "submittedIdealRevision",
+    "accept",
+  ],
+  acceptInner: [
+    "implementationRevision",
+    "implementing",
+    "submittedImplementationRevision",
+    "accept",
+  ],
+  acceptOuter: [
+    "deploymentRevision",
+    "deploying",
+    "submittedDeploymentRevision",
+    "accept",
+  ],
 };
 
 type IdeaRevisions = {
@@ -22,6 +58,14 @@ type IdeaRevisions = {
   deploymentRevision: string;
   [key: string]: string;
 };
+
+/** @pure */
+export function deriveEventIdeaState(
+  revisions: IdeaRevisions,
+  status: IdeaEventState["status"],
+) {
+  return deriveIdeaState(revisions, eventLifecycleStatus(status));
+}
 
 /** @pure */
 export function parseRequest(
@@ -41,19 +85,32 @@ export function parseRequest(
 /** @pure */
 export function assertHumanGate(
   event: IdeaEvent,
-  idea: { revisions: IdeaRevisions; state: string },
+  idea: {
+    revisions: IdeaRevisions;
+    state: string;
+    status: Record<string, string | true | undefined>;
+  },
   primaryWorlds: Record<string, string|undefined>,
   confirmed: boolean,
 ) {
-  const decision = DECISIONS[event.type];
-  if (!decision && !["abandon", "resume"].includes(event.type)) return;
-  if (!confirmed) throw new Error("This event requires an explicit human decision; --confirm-decision asserts one, it does not create authorization.");
-  if (!decision) return;
-  const [revision, state] = decision;
+  const gate = GATES[event.type];
+  if (!gate && !["abandon", "resume"].includes(event.type)) return;
+  if (!gate) {
+    if (!confirmed) throw new Error("This event requires an explicit human decision; --confirm-decision asserts one, it does not create authorization.");
+    return;
+  }
+  const [revision, state, submission, kind] = gate;
   const eventRevision = "payload" in event ? event.payload[revision] : undefined;
   if (idea.state !== state || eventRevision !== idea.revisions[revision]
     || eventRevision !== primaryWorlds[revision]) {
-    throw new Error(`Decision requires ${state} and its exact world revision already synchronized to primary.`);
+    throw new Error(`${kind === "submit" ? "Submission" : "Decision"} requires ${state} and its exact world revision already synchronized to primary.`);
+  }
+  if (kind === "submit") return;
+  if (!confirmed) {
+    throw new Error("This event requires an explicit human decision; --confirm-decision asserts one, it does not create authorization.");
+  }
+  if (idea.status[submission] !== eventRevision) {
+    throw new Error("Decision requires the Agent to submit the same exact world revision first.");
   }
 }
 
@@ -137,7 +194,8 @@ export function assertIntroducedDecisions({
     const before = reduction.state;
     assertHumanGate(event, {
       revisions,
-      state: deriveIdeaState(revisions, { version: 1, ...before.status }),
+      state: deriveEventIdeaState(revisions, before.status),
+      status: before.status,
     }, primaryWorlds, confirmed);
   }
 

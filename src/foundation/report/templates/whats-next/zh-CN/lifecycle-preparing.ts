@@ -8,6 +8,7 @@ import type { LifecyclePreparingParameters } from "../contract.ts";
 /** @pure */
 export default function lifecyclePreparing({
   action,
+  controlOwner,
   documentPath,
   eventBacked,
   ideaId,
@@ -15,9 +16,16 @@ export default function lifecyclePreparing({
   name,
   revisionReference,
   statusPath,
+  submissionState,
+  submitAction,
 }: LifecyclePreparingParameters) {
   if (eventBacked) {
-    return `在 ${documentPath} 和 ${ledgerPath} 继续 ${name}。先同步候选到 primary，再请求 ${action} 人工决定（revision reference ${revisionReference}）；准确决定记录使用 response.review 中的完整 revision。之后用 silvermoon event replay ${ideaId} --audience agent 观察，并通过 silvermoon event append 绑定准确流长度、文件 digest 和刷新后的 primary 写入；不要直接编辑 events.jsonl。`;
+    if (submissionState === "submitted") {
+      return controlOwner === "upstream"
+        ? `当前构想 revision 已由 ${submitAction} 记录，控制权在 upstream。呈现 response.review，并请求 revision reference ${revisionReference} 对应的明确 ${action} 决定。只有使用 response.review 中的完整 revision 和 silvermoon event replay ${ideaId} --audience agent 的准确 cursor 才能记录验收。`
+        : `当前构想 revision 仍由 ${submitAction} 记录，但控制权在 ${controlOwner ?? "unknown"}。只继续把控制权交回 downstream 的阶段内回复或工作；该交流使用 ping/pong，在控制权重新回到 upstream 前不要请求 ${action}。`;
+    }
+    return `在 ${documentPath} 和 ${ledgerPath} 继续 ${name}。当前 revision 为 ${submissionState ?? "unsubmitted"}，控制权在 ${controlOwner ?? "unknown"}。构想候选就绪后先同步到 primary，再用 silvermoon event replay ${ideaId} --audience agent 和 silvermoon event append 为准确的当前 revision 记录 ${submitAction}；在该 Submit 对当前 revision 生效前不要请求 ${action}。不要直接编辑 events.jsonl。`;
   }
   return `继续在 ${documentPath} 和 ${ledgerPath} 推进 idea ${name}，并保留其他世界。构想契约就绪后，请用户明确验收 revision reference ${revisionReference} 对应的候选；只有获得明确验收后，才将 response.review 中的完整 revision 写入 ${statusPath} 的 approvedRevision。`;
 }

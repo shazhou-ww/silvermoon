@@ -5,6 +5,7 @@ export {
   IdeaEventFormatError,
   LEGACY_EVENT_TYPES,
   checkEventChange,
+  eventLifecycleStatus,
   eventsFromStatus,
   initialEventState,
   parseIdeaEvents,

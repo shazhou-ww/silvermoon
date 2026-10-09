@@ -217,6 +217,7 @@ test("event decisions require explicit authorization and the synchronized exact 
   };
   const idea = {
     state: "preparing",
+    status: { submittedIdealRevision: revision },
     revisions: {
       idealRevision: revision,
       implementationRevision: "",
@@ -225,6 +226,12 @@ test("event decisions require explicit authorization and the synchronized exact 
   };
   assert.throws(() => assertHumanGate(event, idea, { idealRevision: revision }, false), /explicit human decision/);
   assert.throws(() => assertHumanGate(event, idea, { idealRevision: "c".repeat(40) }, true), /exact world revision/);
+  assert.throws(() => assertHumanGate(
+    event,
+    { ...idea, status: {} },
+    { idealRevision: revision },
+    true,
+  ), /submit the same exact world revision/);
   assert.doesNotThrow(() => assertHumanGate(event, idea, { idealRevision: revision }, true));
 });
 

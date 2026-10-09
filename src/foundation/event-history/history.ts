@@ -325,7 +325,7 @@ function transition(
     if (legacy.id !== id || !result.ok || !("state" in result)
       || !isDeepStrictEqual(facts, result.state.status)
       || (!candidateOptions.legacy
-        && !isDeepStrictEqual(result.state.interaction, { messages: [], lastSignal: null }))
+        && !isDeepStrictEqual(result.state.interaction, { messages: [] }))
       || !next.equals(Buffer.from(
         serializeIdeaEvents(migrationEvents, candidateOptions),
       ))) {
@@ -361,7 +361,7 @@ function transition(
       old.state,
     ) || !isDeepStrictEqual(
       result.state.interaction,
-      { messages: [], lastSignal: null },
+      { messages: [] },
     )) {
       throw new Error(
         `${id}: internal migration changes historical facts or contains an invalid abandoned window`,

@@ -19,6 +19,7 @@ import type { RepositoryFixtureOptions } from "../helpers/repository.ts";
 import { createRepository, FIRST_ID, SECOND_ID, git } from "../helpers/repository.ts";
 
 type AppendRequest =
+  | { type: "submitIdeal"; payload: { idealRevision: string } }
   | { type: "acceptIdeal"; payload: { idealRevision: string } }
   | { type: "setLanguage"; payload: { language: string } };
 
@@ -210,6 +211,22 @@ test("human decisions require exact synchronized world, explicit confirmation an
   const paths = ideaPaths(FIRST_ID);
   const idealRevision = git(root, "rev-parse", `HEAD:${paths.idealPath}`);
   const request: AppendRequest = { type: "acceptIdeal", payload: { idealRevision } };
+  assert.equal(
+    (await append(root, request, { confirmDecision: true })).observation.state,
+    "check-unavailable",
+  );
+  assert.equal(
+    (await append(root, {
+      type: "submitIdeal",
+      payload: { idealRevision: "f".repeat(40) },
+    })).observation.state,
+    "check-unavailable",
+  );
+  const submitted = await append(root, {
+    type: "submitIdeal",
+    payload: { idealRevision },
+  });
+  assert.equal(eventReceipt(submitted).outcome, "candidate-written", JSON.stringify(submitted));
   assert.equal((await append(root, request)).observation.state, "check-unavailable");
   const accepted = await append(root, request, { confirmDecision: true });
   assert.equal(eventReceipt(accepted).outcome, "candidate-written", JSON.stringify(accepted));
@@ -357,6 +374,10 @@ test("world observation is read-only and primary movement invalidates a pending 
   const request: AppendRequest = {
     type: "acceptIdeal", payload: { idealRevision: git(root, "rev-parse", `HEAD:${paths.idealPath}`) },
   };
+  await append(root, {
+    type: "submitIdeal",
+    payload: request.payload,
+  });
   await append(root, request, { confirmDecision: true });
   publish(root, "Approve ideal");
   const before = await readFile(join(root, paths.eventsPath));

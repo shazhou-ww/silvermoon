@@ -226,6 +226,10 @@ export async function whatsNextUseCase({
     id: selected.id,
     ...(selected.alias === undefined ? {} : { alias: selected.alias }),
     state: selected.state,
+    ...(selected.control === undefined ? {} : { control: selected.control }),
+    ...(selected.submissions === undefined
+      ? {}
+      : { submissions: selected.submissions }),
   };
   const primary = readiness.primary
     ?? (() => {

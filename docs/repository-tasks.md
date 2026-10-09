@@ -70,6 +70,10 @@ Before requesting a human decision, validate the candidate, synchronize its
 normal non-force commit to primary, confirm reachability from the refreshed
 primary, and reobserve the exact world revision and effective content language.
 This synchronization is Agent work and does not require a lifecycle decision.
+For v2, append the current phase's matching `submitIdeal`, `submitInner`, or
+`submitOuter` for that exact synchronized revision, integrate the event through
+the same normal Git path, and reobserve. Do not request the matching acceptance
+while the submission is absent, stale, or effective control is downstream.
 Keep the review message short and follow the latest report's gate instruction.
 Use `response.review.presentation` verbatim when `requiresLocalization` is
 false; when true, localize every human-visible presentation value to its
@@ -78,11 +82,12 @@ output language never controls gate prose. Provide local plus commit-pinned
 remote links to the canonical contract, same-world supporting files, ledger,
 evidence, and key deliverables. Durable detail belongs in those repository
 files, not in the chat message. Seed the index from `response.review`, including
-its exact primary commit and canonical documents, without treating the field's
-presence as gate readiness. The Agent adds only identity values, a one-sentence
-review focus, selected review-file links, and host-specific link targets in the
-compact order directed by `response.nextSteps`. Keep the complete object IDs
-internally for event recording. Do not add
+its exact primary commit and canonical documents. In v2, its presence confirms
+that the current exact submission is active and control is upstream; it is
+still not the human decision itself. The Agent adds only identity values, a
+one-sentence review focus, selected review-file links, and host-specific link
+targets in the compact order directed by `response.nextSteps`. Keep the
+complete object IDs internally for event recording. Do not add
 repeated gate-policy explanations or inline inventories of test, CI, deployment,
 or SLO evidence; keep those details in the linked artifacts. List only files
 with substantive review content: Ideal uses `Idea.md` and substantive
