@@ -8,7 +8,7 @@
 
 ### I-S02: 按提交状态路由下一步
 
-保留 `interaction.lastSignal` 的原始含义，新增由 ping/pong、Submit、Accept 及终态共同归约的控制权投影，并将当前 revision 的 Submit 状态接入 lifecycle 与 `whats-next` 报告。
+删除冗余的 `interaction.lastSignal`，新增由 ping/pong、Submit、Accept 及终态共同归约的控制权与最近交接投影，并将当前 revision 的 Submit 状态接入 lifecycle 与 `whats-next` 报告。
 
 ### I-S03: 固化兼容性与使用契约
 
@@ -22,8 +22,8 @@
 
 ### I-AC02: 报告明确区分推进与验收
 
-同一 lifecycle phase 在 ping/pong 交接、未提交、当前 revision 已提交、对应 Accept 以及提交后 revision 改变时产生一致的控制权与下一步报告；通过 unit、contract 和 integration 测试证明 gate 仅在当前提交有效时可执行。
+同一 lifecycle phase 在 ping/pong 交接、未提交、当前 revision 已提交、对应 Accept 以及提交后 revision 改变时产生一致的 `owner`、最近交接与下一步报告，且不再暴露 `lastSignal`；通过 unit、contract 和 integration 测试证明 gate 仅在当前提交有效时可执行。
 
 ### I-AC03: 既有交互保持兼容
 
-现有 ping/pong 消息、Accept 决策、历史重放及迁移行为保持有效，canonical skill 与文档不再把 ping/pong 或 ledger 当作阶段完成标记；通过相关回归测试和 skill 检查证明。
+现有 ping/pong 事件与消息历史、Accept 决策、历史重放及迁移行为保持有效，消费者改用统一控制权投影，canonical skill 与文档不再把 ping/pong 或 ledger 当作阶段完成标记；通过相关回归测试和 skill 检查证明。
