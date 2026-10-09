@@ -1,2 +1,3 @@
 {"sequence":1,"type":"setAlias","payload":{"alias":"declarative-process-flows"}}
 {"sequence":2,"type":"setAlias","payload":{"alias":"whats-next-message-templates"}}
+{"sequence":3,"type":"acceptIdeal","payload":{"idealRevision":"d9c59102b53d6dc2bdb1e5cc15daf4680e2565d5"}}
