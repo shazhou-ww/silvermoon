@@ -103,7 +103,7 @@ function englishReviewPresentation(
       reviewFiles: "Review files",
       decision: "Decision",
       local: "local",
-      pinned: "pinned",
+      remote: "remote",
     },
     documentLabels: {
       "current-contract": phaseText.currentContract,

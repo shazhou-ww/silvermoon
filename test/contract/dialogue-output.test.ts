@@ -136,7 +136,7 @@ test("renders primary-bound review context before lifecycle instructions", () =>
           reviewFiles: "Review files",
           decision: "Decision",
           local: "local",
-          pinned: "pinned",
+          remote: "remote",
         },
         documentLabels: {
           "current-contract": "Ideal World contract",

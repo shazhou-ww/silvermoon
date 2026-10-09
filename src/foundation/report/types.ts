@@ -127,7 +127,7 @@ export interface ReviewPresentation {
     reviewFiles: string;
     decision: string;
     local: string;
-    pinned: string;
+    remote: string;
   };
   documentLabels: Record<ReviewDocument["role"], string>;
   decisionQuestion: string;

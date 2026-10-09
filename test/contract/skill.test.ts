@@ -197,7 +197,7 @@ test("exposes one consolidated silvermoon skill", async () => {
   }
   assert.doesNotMatch(
     source,
-    /silvermoon task |silvermoon status|silvermoon whatsnext|taskLanguage|criteriaEvidence|verifyCriteriaEvidence|implementationCriterionIds|ledger\.md \(optional\)|revision frontmatter|\*\*Candidate:\*\*|### Review files|### Decision|\[local\] \| \[pinned\]/,
+    /silvermoon task |silvermoon status|silvermoon whatsnext|taskLanguage|criteriaEvidence|verifyCriteriaEvidence|implementationCriterionIds|ledger\.md \(optional\)|revision frontmatter|\*\*Candidate:\*\*|### Review files|### Decision|\[local\] \| \[(?:pinned|remote)\]/,
   );
 
   for (const match of source.matchAll(/\[[^\]]+\]\((\.\/[^)#]+)(?:#[^)]+)?\)/g)) {

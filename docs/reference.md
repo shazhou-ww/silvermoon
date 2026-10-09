@@ -413,7 +413,7 @@ Every selected active idea adds a primary-bound `review` object to its
         "reviewFiles": "审阅文件",
         "decision": "决定",
         "local": "本地",
-        "pinned": "固定版本"
+        "remote": "线上"
       },
       "documentLabels": {
         "current-contract": "理想世界契约",

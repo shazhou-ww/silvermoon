@@ -277,7 +277,7 @@ function reviewPresentation(
       reviewFiles: localize(language, "Review files", "审阅文件"),
       decision: localize(language, "Decision", "决定"),
       local: localize(language, "local", "本地"),
-      pinned: localize(language, "pinned", "固定版本"),
+      remote: localize(language, "remote", "线上"),
     },
     documentLabels: {
       "current-contract": phaseText.currentContract,
