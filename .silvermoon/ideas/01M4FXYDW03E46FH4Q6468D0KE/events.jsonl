@@ -3,3 +3,4 @@
 {"sequence":3,"type":"submitInner","payload":{"implementationRevision":"499435a73d1cdc59b2d663b7cca1121f847de793"}}
 {"sequence":4,"type":"acceptInner","payload":{"implementationRevision":"499435a73d1cdc59b2d663b7cca1121f847de793"}}
 {"sequence":5,"type":"submitOuter","payload":{"deploymentRevision":"c3bc06ba48310b515bb8042fae3c51b597afd6cc"}}
+{"sequence":6,"type":"acceptOuter","payload":{"deploymentRevision":"c3bc06ba48310b515bb8042fae3c51b597afd6cc"}}
