@@ -147,6 +147,9 @@ export async function eventCommandUseCase({
       if (operation !== "replay" && (afterLength !== undefined || afterDigest !== undefined)) {
         throw new Error("Cursor options are only available for replay.");
       }
+      if (operation === "append" && expectedLength !== undefined) {
+        throw new Error("Append no longer accepts --expected-length; use an optional digest prefix.");
+      }
       if (fullHistory && operation !== "append") throw new Error("Full history output is only available for append.");
       const parsedInput = requestObject(input);
       const projectedInteraction = operation === "append" && ["ping", "pong"].includes(

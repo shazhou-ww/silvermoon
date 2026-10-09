@@ -241,19 +241,18 @@ export class ProjectRuntime {
 
   async appendInteraction(
     route: IdeaRoute,
-    { type, message, expectedLength, expectedDigest }: {
+    { type, message, expectedDigest }: {
       type: "ping" | "pong";
       message: string;
-      expectedLength: number;
-      expectedDigest: string;
+      expectedDigest?: string;
     },
   ): Promise<RuntimeResult> {
     if ((type !== "ping" && type !== "pong") || typeof message !== "string" || !message.trim()) {
       throw new TypeError("Only nonempty ping/pong messages can be appended through this boundary.");
     }
-    if (!Number.isSafeInteger(expectedLength) || expectedLength < 0
-      || typeof expectedDigest !== "string" || !/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(expectedDigest)) {
-      throw new TypeError("The exact local log length and digest are required.");
+    if (expectedDigest !== undefined
+      && !/^[a-f0-9]{8,64}$/.test(expectedDigest)) {
+      throw new TypeError("The optional event digest must be an 8 to 64 character hexadecimal prefix.");
     }
     const directory = await mkdtemp(join(tmpdir(), "silvermoon-interaction-"));
     const request = join(directory, "request.json");
@@ -262,8 +261,9 @@ export class ProjectRuntime {
       return await this.#run(route, "event", [
         "append", canonicalRoute(route).ideaId,
         "--input", request,
-        "--expected-length", String(expectedLength),
-        "--expected-digest", expectedDigest,
+        ...(expectedDigest === undefined
+          ? []
+          : ["--expected-digest", expectedDigest]),
       ]);
     } finally {
       await rm(directory, { recursive: true });

@@ -107,7 +107,7 @@ test("local ping/pong append works offline, preserves blockers and rejects stale
   const pong = { type: "pong", payload: { message: "blocked" } };
   const request = {
     root, operation: "append", idea: FIRST_ID, input: pong,
-    expectedLength: observed.length, expectedDigest: observed.digest,
+    expectedDigest: observed.digest,
   };
   const first = await eventCommand(request);
   assert.equal(eventReceipt(first).outcome, "candidate-written", JSON.stringify(first.observation));
@@ -115,18 +115,18 @@ test("local ping/pong append works offline, preserves blockers and rejects stale
   const after = await replay(root);
   const repeated = await eventCommand({
     ...request, input: { type: "pong", payload: { message: "still blocked" } },
-    expectedLength: after.length, expectedDigest: after.digest,
+    expectedDigest: after.digest,
   });
   assert.equal(eventReceipt(repeated).outcome, "candidate-written");
   const following = await replay(root);
   const ping = await eventCommand({
     ...request, input: { type: "ping", payload: { message: "new objective" } },
-    expectedLength: following.length, expectedDigest: following.digest,
+    expectedDigest: following.digest,
   });
   assert.equal(eventReceipt(ping).outcome, "candidate-written", JSON.stringify(ping.observation));
   const stale = await eventCommand({
     ...request, input: { type: "pong", payload: { message: "old blocker" } },
-    expectedLength: following.length, expectedDigest: following.digest,
+    expectedDigest: following.digest,
   });
   assert.equal(stale.observation.state, "check-unavailable");
   const current = await replay(root);
@@ -137,7 +137,7 @@ test("local ping/pong append works offline, preserves blockers and rejects stale
     lastTransfer: { sequence: 4, type: "ping" },
   });
   const next = await eventCommand({
-    ...request, input: pong, expectedLength: current.length, expectedDigest: current.digest,
+    ...request, input: pong, expectedDigest: current.digest,
   });
   assert.equal(eventReceipt(next).outcome, "candidate-written", JSON.stringify(next.observation));
   assert.equal((await checkRepository({ root, worktree: true })).observation.state, "check-unavailable");
@@ -151,14 +151,14 @@ test("v2 business events retain primary gate, and new ideas use final v2 records
   const metadata = await eventCommand({
     root, operation: "append", idea: FIRST_ID,
     input: { type: "setLanguage", payload: { language: "zh-CN" } },
-    expectedLength: observed.length, expectedDigest: observed.digest,
+    expectedDigest: observed.digest,
   });
 
   assert.equal(metadata.observation.state, "check-unavailable");
   const written = await eventCommand({
     root, operation: "append", idea: FIRST_ID,
     input: { type: "setLanguage", payload: { language: "zh-CN" } },
-    expectedLength: observed.length, expectedDigest: observed.digest,
+    expectedDigest: observed.digest,
     expectedPrimary: requiredString(observed.baseline.commit, "baseline.commit"),
   });
   assert.equal(eventReceipt(written).outcome, "candidate-written", JSON.stringify(written.observation));
@@ -180,7 +180,7 @@ test("v2 replay and interaction accept a SHA-256 repository's revisions", async 
   const written = await eventCommand({
     root, operation: "append", idea: FIRST_ID,
     input: { type: "ping", payload: { message: "new objective" } },
-    expectedLength: observed.length, expectedDigest: observed.digest,
+    expectedDigest: observed.digest,
   });
   assert.equal(eventReceipt(written).outcome, "candidate-written", JSON.stringify(written.observation));
   assert.equal((await replay(root)).reduction.state.control.owner, "downstream");

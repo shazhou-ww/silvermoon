@@ -691,7 +691,7 @@ decision, risk, or disagreement requires it.
   await writeFile(requestFile, JSON.stringify({ type: "setAlias", payload: { alias: "installed-events" } }));
   const appended = JSON.parse(run(process.execPath, [eventEntrypoint, "event", "append", id,
     "--root", eventConsumer, "--input", requestFile,
-    "--expected-length", String(observedEvents.length), "--expected-digest", observedEvents.digest,
+    "--expected-digest", observedEvents.digest,
     "--expected-primary", observedEvents.baseline.commit, "--json"], bootstrap));
   assert.equal(appended.observation.receipt.outcome, "candidate-written");
   assert.equal(

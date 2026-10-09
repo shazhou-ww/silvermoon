@@ -74,10 +74,12 @@ interface LifecycleParameters {
   action: string;
   controlOwner: "upstream" | "downstream" | "none" | null;
   documentPath: string;
+  eventDigest: string | null;
   eventBacked: boolean;
   ideaId: string;
   ledgerPath: string;
   name: string;
+  primaryCommit: string;
   revisionReference: string;
   statusPath: string;
   submissionState: "unsubmitted" | "submitted" | "accepted" | "stale" | null;
