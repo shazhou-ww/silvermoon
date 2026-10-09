@@ -4,8 +4,9 @@
 
 ### I-S01: 定义 digest CAS 契约
 
-调整 append 输入与业务边界，使 optional expected digest 只校验完整
-`events.jsonl` 的 Git blob digest，并返回稳定的冲突诊断。
+调整 append 输入与业务边界，使 optional expected digest 接受至少 12 位的
+十六进制前缀，并与完整 `events.jsonl` Git blob digest 执行前缀匹配，返回
+稳定的输入或冲突诊断。
 
 ### I-S02: 将 digest 接入 what's-next
 
@@ -21,7 +22,8 @@
 
 ### I-AC01: Digest 匹配控制写入
 
-自动化测试证明匹配 digest 时只追加一次，不匹配时文件字节不变并返回明确冲突。
+自动化测试覆盖 12 位、介于下限与完整 OID 之间以及完整 digest 的成功匹配；
+短于下限或前缀不匹配时文件字节不变并返回明确诊断。
 
 ### I-AC02: 无 digest 保持可用
 

@@ -9,8 +9,8 @@
 
 ### D-S02: 发布兼容说明
 
-在直接相关文档中明确 digest CAS 为可选保险、无 digest 行为以及 replay 的
-调试/增量读取定位。
+在直接相关文档中明确 digest CAS 为可选保险、至少 12 位的前缀匹配规则、
+无 digest 行为以及 replay 的调试/增量读取定位。
 
 ## Acceptance criteria
 
