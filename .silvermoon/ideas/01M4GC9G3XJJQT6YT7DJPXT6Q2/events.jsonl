@@ -1,3 +1,4 @@
 {"sequence":1,"type":"setAlias","payload":{"alias":"event-digest-optimistic-lock"}}
 {"sequence":2,"type":"submitIdeal","payload":{"idealRevision":"3aa6925bede8459b0eca86fcc76324a98fd3af3d"}}
 {"sequence":3,"type":"submitIdeal","payload":{"idealRevision":"ed10d5917a5c1b3be1e9d7ef3c9ffc0cb0bb2619"}}
+{"sequence":4,"type":"submitIdeal","payload":{"idealRevision":"ac27e82cf5de62286423c5d4eb3d5a052e80dd4a"}}
