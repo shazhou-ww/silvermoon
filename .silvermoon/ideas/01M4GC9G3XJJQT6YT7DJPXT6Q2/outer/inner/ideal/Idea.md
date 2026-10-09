@@ -12,6 +12,16 @@ length/digest cursor 暴露给 Agent，混淆了增量读取与基础乐观锁�
 记录规范 UTC timestamp。`what's-next` 直接输出完整 event digest，
 `event append` 可选接收不少于 8 位的 digest 前缀作为乐观锁。
 
+## 命令变化
+
+Before：生产 Agent 先运行 `event replay <idea>` 取得 length 和完整 digest，再把
+两者传给 `event append --expected-length <bytes> --expected-digest <full-oid>`。
+
+After：Agent 直接使用 `what's-next <idea>` 提供的 digest，按需执行
+`event append --expected-digest <8+-hex-prefix>`；不再传 expected length，也不必
+先 replay。请求只包含业务 type/payload，sequence 由读取位置派生，timestamp
+由 CLI 写入。
+
 ## 边界
 
 - 文件顺序是 canonical 顺序；sequence 只可作为 replay/reducer 的派生投影，
