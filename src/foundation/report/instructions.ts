@@ -2,9 +2,12 @@ import { diagnosticInstruction } from "./dialogue.ts";
 import { resolveContentTemplateLanguage } from "../language/index.ts";
 import {
   renderContentLanguage,
+  renderLifecycleDeployed,
   renderLifecycleDeploying,
+  renderLifecycleImplemented,
   renderLifecycleImplementing,
   renderLifecycleInactive,
+  renderLifecyclePrepared,
   renderLifecyclePreparing,
   renderNavigationReady,
   renderPhaseGuidanceInvalid,
@@ -338,45 +341,67 @@ export function lifecycleInstruction(
 ) {
   const name = ideaName(idea);
   const submission = currentSubmission(idea);
+  const submissionState = submission?.state ?? null;
   const instruction = idea.state === "preparing"
-    ? renderLifecyclePreparing(language, {
-      action: "acceptIdeal",
-      controlOwner: idea.control?.owner ?? null,
-      documentPath: idea.worlds.idealRevision.documentPath,
-      ideaId: idea.id,
-      ledgerPath: idea.ledgerPath,
-      name,
-      revisionReference: revisionReference(idea.idealRevision),
-      submissionState: submission?.state ?? null,
-      submitAction: "submitIdeal",
-    })
+    ? submissionState === "submitted"
+      ? renderLifecyclePrepared(language, {
+        action: "acceptIdeal",
+        controlOwner: idea.control?.owner ?? null,
+        ideaId: idea.id,
+        revisionReference: revisionReference(idea.idealRevision),
+        submitAction: "submitIdeal",
+      })
+      : renderLifecyclePreparing(language, {
+        action: "acceptIdeal",
+        controlOwner: idea.control?.owner ?? null,
+        documentPath: idea.worlds.idealRevision.documentPath,
+        ideaId: idea.id,
+        ledgerPath: idea.ledgerPath,
+        name,
+        submissionState,
+        submitAction: "submitIdeal",
+      })
     : idea.state === "implementing"
-    ? renderLifecycleImplementing(language, {
-      action: "acceptInner",
-      controlOwner: idea.control?.owner ?? null,
-      documentPath: idea.worlds.implementationRevision.documentPath,
-      ideaId: idea.id,
-      idealPath: idea.worlds.idealRevision.path,
-      ledgerPath: idea.ledgerPath,
-      name,
-      revisionReference: revisionReference(idea.implementationRevision),
-      submissionState: submission?.state ?? null,
-      submitAction: "submitInner",
-      worldPath: idea.worlds.implementationRevision.path,
-    })
+    ? submissionState === "submitted"
+      ? renderLifecycleImplemented(language, {
+        action: "acceptInner",
+        controlOwner: idea.control?.owner ?? null,
+        ideaId: idea.id,
+        revisionReference: revisionReference(idea.implementationRevision),
+        submitAction: "submitInner",
+      })
+      : renderLifecycleImplementing(language, {
+        action: "acceptInner",
+        controlOwner: idea.control?.owner ?? null,
+        documentPath: idea.worlds.implementationRevision.documentPath,
+        ideaId: idea.id,
+        idealPath: idea.worlds.idealRevision.path,
+        ledgerPath: idea.ledgerPath,
+        name,
+        submissionState,
+        submitAction: "submitInner",
+        worldPath: idea.worlds.implementationRevision.path,
+      })
     : idea.state === "deploying"
-    ? renderLifecycleDeploying(language, {
-      action: "acceptOuter",
-      controlOwner: idea.control?.owner ?? null,
-      documentPath: idea.worlds.deploymentRevision.documentPath,
-      ideaId: idea.id,
-      ledgerPath: idea.ledgerPath,
-      name,
-      revisionReference: revisionReference(idea.deploymentRevision),
-      submissionState: submission?.state ?? null,
-      submitAction: "submitOuter",
-      worldPath: idea.worlds.deploymentRevision.path,
-    })
+    ? submissionState === "submitted"
+      ? renderLifecycleDeployed(language, {
+        action: "acceptOuter",
+        controlOwner: idea.control?.owner ?? null,
+        ideaId: idea.id,
+        revisionReference: revisionReference(idea.deploymentRevision),
+        submitAction: "submitOuter",
+      })
+      : renderLifecycleDeploying(language, {
+        action: "acceptOuter",
+        controlOwner: idea.control?.owner ?? null,
+        documentPath: idea.worlds.deploymentRevision.documentPath,
+        ideaId: idea.id,
+        ledgerPath: idea.ledgerPath,
+        name,
+        submissionState,
+        submitAction: "submitOuter",
+        worldPath: idea.worlds.deploymentRevision.path,
+      })
     : renderLifecycleInactive(language, {
       name,
       state: idea.state,

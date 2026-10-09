@@ -15,8 +15,11 @@ export const WHATS_NEXT_TEMPLATE_IDS = Object.freeze([
   "review-presentation-instruction",
   "preparation-seed",
   "lifecycle-preparing",
+  "lifecycle-prepared",
   "lifecycle-implementing",
+  "lifecycle-implemented",
   "lifecycle-deploying",
+  "lifecycle-deployed",
   "lifecycle-inactive",
   "navigation-ready",
   "idea-not-found",
@@ -70,28 +73,41 @@ export interface PreparationSeedParameters {
   ledgerPath: string;
 }
 
-interface LifecycleParameters {
+interface LifecycleCurrentParameters {
   action: string;
   controlOwner: "upstream" | "downstream" | "none" | null;
   documentPath: string;
   ideaId: string;
   ledgerPath: string;
   name: string;
-  revisionReference: string;
-  submissionState: "unsubmitted" | "submitted" | "accepted" | "stale" | null;
+  submissionState: "unsubmitted" | "accepted" | "stale" | null;
   submitAction: string;
 }
 
-export interface LifecyclePreparingParameters extends LifecycleParameters {}
+interface LifecycleSubmittedParameters {
+  action: string;
+  controlOwner: "upstream" | "downstream" | "none" | null;
+  ideaId: string;
+  revisionReference: string;
+  submitAction: string;
+}
 
-export interface LifecycleImplementingParameters extends LifecycleParameters {
+export interface LifecyclePreparingParameters extends LifecycleCurrentParameters {}
+
+export interface LifecyclePreparedParameters extends LifecycleSubmittedParameters {}
+
+export interface LifecycleImplementingParameters extends LifecycleCurrentParameters {
   idealPath: string;
   worldPath: string;
 }
 
-export interface LifecycleDeployingParameters extends LifecycleParameters {
+export interface LifecycleImplementedParameters extends LifecycleSubmittedParameters {}
+
+export interface LifecycleDeployingParameters extends LifecycleCurrentParameters {
   worldPath: string;
 }
+
+export interface LifecycleDeployedParameters extends LifecycleSubmittedParameters {}
 
 export interface LifecycleInactiveParameters {
   name: string;
@@ -183,11 +199,20 @@ export interface WhatsNextTemplates {
   "lifecycle-preparing": (
     parameters: LifecyclePreparingParameters,
   ) => string;
+  "lifecycle-prepared": (
+    parameters: LifecyclePreparedParameters,
+  ) => string;
   "lifecycle-implementing": (
     parameters: LifecycleImplementingParameters,
   ) => string;
+  "lifecycle-implemented": (
+    parameters: LifecycleImplementedParameters,
+  ) => string;
   "lifecycle-deploying": (
     parameters: LifecycleDeployingParameters,
+  ) => string;
+  "lifecycle-deployed": (
+    parameters: LifecycleDeployedParameters,
   ) => string;
   "lifecycle-inactive": (
     parameters: LifecycleInactiveParameters,
