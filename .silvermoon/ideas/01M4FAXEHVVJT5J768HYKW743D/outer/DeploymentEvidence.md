@@ -71,3 +71,8 @@ canonical skill 不包含另一份固定 gate 模板，只指定
 与 primary `e8658043f270e7b038be0898817a339ea957b9f1`，随后得到明确验收；
 [events.jsonl](../events.jsonl) 的 sequence 5 和 primary commit
 `948515fdaaea4c49ad39118fdb5998beb6773620` 持久记录该决定。
+
+后续同一 IDEA 的措辞修订由三阶段 fixture 证明：`Idea.md`、`Implementation.md`
+和 `Deployment.md` 分别显示“构想契约”“实现契约”“部署契约”；deployment gate
+显示“部署验收”，决定问题使用“部署结果”。这些词仍来自 runtime presentation，
+没有写回 canonical skill 模板。

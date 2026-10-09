@@ -84,10 +84,10 @@ function englishReviewPresentation(
         `Do you accept \`${reference}\` as the implementation for this IDEA?`,
     },
     deploying: {
-      gateLabel: "Outer World acceptance",
+      gateLabel: "Deployment acceptance",
       currentContract: "Deployment contract",
       decisionQuestion:
-        `Do you accept \`${reference}\` as the Outer World outcome for this IDEA?`,
+        `Do you accept \`${reference}\` as the deployment result for this IDEA?`,
     },
   }[phase];
   return {

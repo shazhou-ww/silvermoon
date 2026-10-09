@@ -255,12 +255,12 @@ function reviewPresentation(
       ),
     },
     deploying: {
-      gateLabel: localize(language, "Outer World acceptance", "现实世界验收"),
+      gateLabel: localize(language, "Deployment acceptance", "部署验收"),
       currentContract: localize(language, "Deployment contract", "部署契约"),
       decisionQuestion: localize(
         language,
-        `Do you accept \`${reference}\` as the Outer World outcome for this IDEA?`,
-        `是否接受 \`${reference}\` 作为该 IDEA 的现实世界结果？`,
+        `Do you accept \`${reference}\` as the deployment result for this IDEA?`,
+        `是否接受 \`${reference}\` 作为该 IDEA 的部署结果？`,
       ),
     },
   }[phase];

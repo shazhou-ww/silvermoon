@@ -728,9 +728,9 @@ test("names Chinese review contracts by their canonical artifacts", async () => 
     },
     {
       selector: "deployment-contract",
-      gateLabel: "现实世界验收",
+      gateLabel: "部署验收",
       contractLabel: "部署契约",
-      question: /作为该 IDEA 的现实世界结果？$/,
+      question: /作为该 IDEA 的部署结果？$/,
     },
   ] as const;
 
