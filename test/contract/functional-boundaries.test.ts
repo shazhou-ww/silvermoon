@@ -63,7 +63,7 @@ test("every source directory has a concise responsibility README and explicit ex
   const foundationDirectories = (await readdir(foundationRoot, { withFileTypes: true }))
     .filter((entry) => entry.isDirectory())
     .map((entry) => resolve(foundationRoot, entry.name));
-  assert.equal(foundationDirectories.length, 30);
+  assert.equal(foundationDirectories.length, 31);
   const directories = [
     root,
     resolve(root, "business"),

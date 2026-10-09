@@ -341,7 +341,7 @@ test("does not retry after a concurrent file collision leaves another writer's p
   );
   await assert.rejects(
     readFile(
-      join(repository.root, ...ideaPaths(secondId).statusPath.split("/")),
+      join(repository.root, ...ideaPaths(secondId).eventsPath.split("/")),
     ),
     { code: "ENOENT" },
   );

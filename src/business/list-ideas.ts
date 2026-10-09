@@ -223,6 +223,7 @@ export async function listIdeasUseCase({
   const observed = await observeSnapshot({
     root,
     outputLanguage: canonicalLanguage,
+    requireCurrentSchemas: false,
     userHome,
     version: { type: "worktree" },
   });
@@ -270,6 +271,9 @@ export async function listIdeasUseCase({
     ...(observed.observation.device === undefined
       ? {}
       : { device: observed.observation.device }),
+    ...(observed.observation.schemas === undefined
+      ? {}
+      : { schemas: observed.observation.schemas }),
     outputLanguage,
     problems: [],
     summary: inventory.summary,

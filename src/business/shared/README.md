@@ -1,11 +1,14 @@
 # Shared business observations
 
-Provide the explicit `observeDevice` to `observeProject` to `observeIdea`
-observation chain and repository readiness shared by multiple business entries.
+Provide the explicit `observeProject` to project-schema inspection to
+`observeDevice` to `observeIdea` observation chain and repository readiness
+shared by multiple business entries.
 [index.ts](./index.ts) lists the supported shared surface.
 
 - `observeDevice` reports runtime source, global installation, and global config.
-- `observeProject` consumes device facts and reports project/config/snapshot facts.
+- `observeProject` reports repository, configuration, and snapshot facts.
+- `observeSnapshot` classifies every schema-bearing project file before an
+  older layout adapter can interpret future metadata.
 - `observeIdea` consumes project facts and reports selected idea/world facts.
 - readiness functions acquire repository facts but keep pure policy separate.
 

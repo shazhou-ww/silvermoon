@@ -25,7 +25,7 @@ function ideaPaths(ideaId: string) {
   const idea = join(".silvermoon", "ideas", ideaId);
   return {
     root: idea,
-    status: join(idea, "status.yaml"),
+    events: join(idea, "events.jsonl"),
     ledger: join(idea, "ledger.md"),
     outer: join(idea, "outer"),
     deployment: join(idea, "outer", "Deployment.md"),
@@ -254,7 +254,7 @@ try {
   await mkdir(join(consumer, paths.ideal), { recursive: true });
   await writeFile(
     join(consumer, ".silvermoon", "config.yaml"),
-    "version: 1\nprimaryRepository: https://example.com/owner/repository.git\nprimaryBranch: main\n",
+    "version: 2\nprimaryRepository: https://example.com/owner/repository.git\nprimaryBranch: main\n",
   );
   await mkdir(join(consumer, ".silvermoon", "guidance"));
   await writeFile(
@@ -262,13 +262,14 @@ try {
     "Installed preparing guidance.\n",
   );
   await writeFile(join(consumer, ".gitignore"), "node_modules/\n");
+  await writeFile(join(consumer, ".gitattributes"), "**/events.jsonl -text -filter\n");
   await writeFile(join(consumer, paths.idea), "# Installed package smoke\n");
   await writeFile(join(consumer, paths.implementation), "");
   await writeFile(join(consumer, paths.deployment), "");
   await writeFile(join(consumer, paths.ledger), "# Ledger\n");
   await writeFile(
-    join(consumer, paths.status),
-    `version: 1\nid: ${id}\nalias: installed-smoke\n`,
+    join(consumer, paths.events),
+    '{"sequence":1,"type":"setAlias","payload":{"alias":"installed-smoke"}}\n',
   );
   run("git", ["init", "--initial-branch=main"], consumer);
   run("git", ["config", "user.name", "silvermoon smoke"], consumer);
@@ -560,8 +561,8 @@ decision, risk, or disagreement requires it.
     /## Implementation[\s\S]*### Implementation steps[\s\S]*I-S01[\s\S]*### Implementation acceptance criteria[\s\S]*I-AC01[\s\S]*## Deployment[\s\S]*### Deployment steps[\s\S]*D-S01[\s\S]*### Deployment acceptance criteria[\s\S]*D-AC01/,
   );
   assert.equal(
-    await readFile(join(consumer, createdPaths.status), "utf8"),
-    `version: 1\nid: ${createdId}\n`,
+    await readFile(join(consumer, createdPaths.events), "utf8"),
+    "",
   );
   const legacy = installedResult(["whatsnext"], consumer);
   assert.equal(legacy.status, 2, legacy.stderr);
@@ -632,6 +633,19 @@ decision, risk, or disagreement requires it.
   run("git", ["config", "core.autocrlf", "false"], eventConsumer);
   run("git", ["remote", "set-url", "origin", "https://example.com/owner/repository.git"], eventConsumer);
   run("git", ["config", `url.${pathToFileURL(primary).href}.insteadOf`, "https://example.com/owner/repository.git"], eventConsumer);
+  await rm(join(eventConsumer, paths.events));
+  await rm(join(eventConsumer, ".gitattributes"));
+  await writeFile(
+    join(eventConsumer, ".silvermoon", "config.yaml"),
+    "version: 1\nprimaryRepository: https://example.com/owner/repository.git\nprimaryBranch: main\n",
+  );
+  await writeFile(
+    join(eventConsumer, paths.root, "status.yaml"),
+    `version: 1\nid: ${id}\nalias: installed-smoke\n`,
+  );
+  run("git", ["add", "-A"], eventConsumer);
+  run("git", ["commit", "-m", "Prepare legacy migration fixture"], eventConsumer);
+  run("git", ["push", "origin", "HEAD:main"], eventConsumer);
   const installedRoot = join(bootstrap, "node_modules", "silvermoon");
   const migrationEntrypoint = join(installedRoot, "dist", "bin", "migrate-v1-to-v2.js");
   const eventEntrypoint = join(installedRoot, "dist", "bin", "silvermoon.js");

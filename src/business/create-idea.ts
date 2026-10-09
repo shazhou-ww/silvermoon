@@ -92,6 +92,9 @@ function projectCreationObservation(observation: ProjectObservation): Observatio
     version: observation.version,
     configuration: observation.configuration,
     ...(observation.device === undefined ? {} : { device: observation.device }),
+    ...(observation.schemas === undefined
+      ? {}
+      : { schemas: observation.schemas }),
     outputLanguage: observation.outputLanguage,
     problems: observation.problems,
   };
@@ -312,6 +315,9 @@ export async function createIdeaUseCase({
     ...(readiness.observation.device === undefined
       ? {}
       : { device: readiness.observation.device }),
+    ...(readiness.observation.schemas === undefined
+      ? {}
+      : { schemas: readiness.observation.schemas }),
     outputLanguage: readiness.observation.outputLanguage,
     problems: readiness.observation.problems,
     createdIdea,

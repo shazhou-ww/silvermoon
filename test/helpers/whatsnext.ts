@@ -29,7 +29,10 @@ export function createWhatsNextTestHelpers(afterEach: typeof nodeAfterEach) {
   });
 
   async function fixture(options: RepositoryFixtureOptions = {}) {
-    const repository = await createRepository(options);
+    const repository = await createRepository({
+      schemaVersion: 2,
+      ...options,
+    });
     temporaryDirectories.push(repository.base);
     return repository;
   }

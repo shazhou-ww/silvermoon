@@ -1,0 +1,86 @@
+{
+  "$schema": "./capability-manifest.schema.json",
+  "manifestVersion": 1,
+  "releaseBoundary": "0.4.0",
+  "families": {
+    "project-config": {
+      "scope": "project",
+      "pathPatterns": [".silvermoon/config.yaml"],
+      "targetVersion": 2,
+      "readVersions": [1, 2],
+      "schemas": {
+        "1": "schema/v1/config.schema.json",
+        "2": "schema/v2/config.schema.json"
+      },
+      "migrations": [
+        {
+          "id": "project-v1-to-v2",
+          "fromVersion": 1,
+          "toVersion": 2,
+          "entrypoint": "dist/bin/migrate-v1-to-v2.js"
+        }
+      ]
+    },
+    "idea-state": {
+      "scope": "project",
+      "pathPatterns": [
+        ".silvermoon/ideas/<ULID>/status.yaml",
+        ".silvermoon/ideas/<ULID>/events.jsonl"
+      ],
+      "targetVersion": 2,
+      "readVersions": [1, 2],
+      "schemas": {
+        "1": "schema/v1/idea-status.schema.json",
+        "2": "schema/v2/idea-event.schema.json"
+      },
+      "migrations": [
+        {
+          "id": "project-v1-to-v2",
+          "fromVersion": 1,
+          "toVersion": 2,
+          "entrypoint": "dist/bin/migrate-v1-to-v2.js"
+        }
+      ]
+    },
+    "user-config": {
+      "scope": "device",
+      "pathPatterns": ["~/.config/silvermoon/config.yaml"],
+      "targetVersion": 1,
+      "readVersions": [1],
+      "schemas": {
+        "1": "schema/v1/user-config.schema.json"
+      },
+      "migrations": []
+    },
+    "command-report": {
+      "scope": "runtime",
+      "pathPatterns": ["runtime://command-report"],
+      "targetVersion": 1,
+      "readVersions": [1],
+      "schemas": {
+        "1": "schema/v1/command-report.schema.json"
+      },
+      "migrations": []
+    },
+    "domain-message": {
+      "scope": "runtime",
+      "pathPatterns": ["runtime://domain-message"],
+      "targetVersion": 1,
+      "readVersions": [1],
+      "schemas": {
+        "1": "schema/v1/domain-message.schema.json"
+      },
+      "migrations": []
+    },
+    "trace-event": {
+      "scope": "runtime",
+      "pathPatterns": ["runtime://trace-event"],
+      "targetVersion": 2,
+      "readVersions": [2],
+      "schemas": {
+        "2": "schema/v2/trace-event.schema.json"
+      },
+      "migrations": []
+    }
+  }
+}

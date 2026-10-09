@@ -214,7 +214,7 @@ test("real project CLI preserves exact interaction state across child processes"
   );
 });
 
-test("the project CLI interprets legacy v1 schema without inventing event support", async (t) => {
+test("the project CLI requests v1 migration without inventing event support", async (t) => {
   const { base, root } = await createRepository();
   t.after(() => rm(base, { recursive: true, force: true }));
   const registry = new LocalProjectRegistry({ root: join(base, "registry") });
@@ -223,7 +223,15 @@ test("the project CLI interprets legacy v1 schema without inventing event suppor
   const runtime = new ProjectRuntime({ registry });
   const selected = await runtime.next(route);
   assert.equal(selected.exitCode, 0);
-  assert.equal(selected.report.observation.state, "idea-selected");
+  assert.equal(selected.report.observation.state, "project-setup-required");
+  const problems: unknown = selected.report.observation.problems;
+  assert.ok(Array.isArray(problems));
+  assert.ok(problems.every((problem) =>
+    problem !== null
+    && typeof problem === "object"
+    && "type" in problem
+    && problem.type === "schema-migration-required"
+  ));
   const unsupported = await runtime.replay(route);
   assert.equal(unsupported.exitCode, 1);
   assert.equal(unsupported.report.response.kind, "blocked");

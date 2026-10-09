@@ -8,12 +8,14 @@ import { loadUserConfig } from "../../foundation/device-config/index.ts";
 export async function observeDevice({
   entryPath,
   env,
+  forceRuntimeRefresh = false,
   includeReadiness = true,
   platform,
   userHome,
 }: {
   entryPath?: string;
   env?: NodeJS.ProcessEnv;
+  forceRuntimeRefresh?: boolean;
   includeReadiness?: boolean;
   platform?: NodeJS.Platform;
   userHome?: string | undefined;
@@ -48,6 +50,7 @@ export async function observeDevice({
     runtime.source === "global"
       ? inspectRuntimeUpdate({
         currentVersion: runtime.version,
+        force: forceRuntimeRefresh,
         ...(userHome === undefined ? {} : { home: userHome }),
       })
       : Promise.resolve({

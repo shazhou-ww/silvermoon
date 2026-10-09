@@ -218,7 +218,7 @@ test("[branch-mismatch] accepts any local branch with the configured primary ups
   );
 
   assert.equal(report.observation.state, "idea-selected");
-  assert.match(responseText(report), /approvedRevision/);
+  assert.match(responseText(report), /event replay/);
   const readinessCommands = alignedCommands.filter(([name, option]) =>
     name !== undefined
     && (["config", "status", "symbolic-ref"].includes(name)
@@ -226,7 +226,7 @@ test("[branch-mismatch] accepts any local branch with the configured primary ups
   );
   assert.deepEqual(
     readinessCommands.map(([name]) => name),
-    ["status", "config"],
+    ["status", "config", "rev-parse", "rev-parse"],
   );
   assert.equal(
     alignedCommands.filter(([name]) => name === "fetch").length,
@@ -268,7 +268,7 @@ test("[primary-relocation] follows newly configured primary coordinates after pu
   git(repository.root, "remote", "set-url", "origin", configured);
   await writeFile(
     join(repository.root, ".silvermoon", "config.yaml"),
-    `version: 1
+    `version: 2
 primaryRepository: ${configured}
 primaryBranch: main
 `,

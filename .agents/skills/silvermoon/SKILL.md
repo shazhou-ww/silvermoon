@@ -88,6 +88,15 @@ npm `latest` observations may be reused for less than 24 hours; registry
 failure never makes a valid project snapshot fail. Snapshot-only `check`
 commands intentionally omit device readiness.
 
+Read `observation.schemas` as two independent axes. `validity` says whether
+the running runtime can validate the file; `readiness` says whether the file
+is at that runtime's current write target. A valid historical file may pass
+snapshot `check` and remain readable through `list-ideas`, while
+`whats-next` and write preparation require its declared migration first.
+Never edit or guess a future schema. Project preparation forces one
+latest-runtime refresh and reports whether an update exists, the confirmed
+latest still lacks support, or registry freshness is unavailable.
+
 Silvermoon's own source repository is exempt from the dependency requirement.
 There, use `node bin/silvermoon.js` from the current checkout for every
 `silvermoon` command in this skill, preserving all arguments and options.

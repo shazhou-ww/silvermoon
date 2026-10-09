@@ -1,3 +1,11 @@
+import type {
+  ProjectSchemaReadiness,
+} from "../schema-capability/index.ts";
+export type {
+  ProjectSchemaReadiness,
+  SchemaFileReadiness,
+} from "../schema-capability/index.ts";
+
 export interface Problem {
   type: string;
   summary: string;
@@ -137,6 +145,7 @@ interface ObservationBase {
   device?: DeviceAdvisory;
   version?: ProjectVersion;
   configuration?: ProjectConfiguration;
+  schemas?: ProjectSchemaReadiness;
 }
 
 export interface ProjectSetupObservation extends ObservationBase {
@@ -275,6 +284,7 @@ interface ResponseBase {
   summary: string;
   device?: DeviceAdvisory;
   details?: ResponseDetails;
+  schemas?: ProjectSchemaReadiness;
 }
 
 export interface ValidationResponse extends ResponseBase {

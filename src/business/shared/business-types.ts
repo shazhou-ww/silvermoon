@@ -184,6 +184,7 @@ export interface ReadyObservation {
   outputLanguageOverride?: string;
   findings: { instruction: string }[];
   projectReady: true;
+  schemas?: import("../../foundation/schema-capability/index.ts").ProjectSchemaReadiness;
 }
 
 export interface UnreadyObservation {
@@ -195,6 +196,7 @@ export interface UnreadyObservation {
   outputLanguage: string;
   outputLanguageOverride?: string;
   projectReady: false;
+  schemas?: import("../../foundation/schema-capability/index.ts").ProjectSchemaReadiness;
 }
 
 export type SnapshotObservation = ReadyObservation | UnreadyObservation;

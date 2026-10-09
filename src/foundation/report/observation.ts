@@ -13,6 +13,7 @@ interface ProjectObservationInput {
   outputLanguage: string;
   problems: Problem[];
   root: string;
+  schemas?: import("../schema-capability/index.ts").ProjectSchemaReadiness;
   version?: ProjectVersion;
 }
 
@@ -24,6 +25,7 @@ export function projectObservation({
   outputLanguage,
   problems,
   root,
+  schemas,
   version,
 }: ProjectObservationInput): Observation {
   if (version === undefined) {
@@ -34,6 +36,7 @@ export function projectObservation({
       outputLanguage,
       problems,
       ...(device === undefined ? {} : { device }),
+      ...(schemas === undefined ? {} : { schemas }),
     };
   }
   if (configuration === undefined) {
@@ -45,6 +48,7 @@ export function projectObservation({
       outputLanguage,
       problems,
       ...(device === undefined ? {} : { device }),
+      ...(schemas === undefined ? {} : { schemas }),
     };
   }
   if (ideas === undefined) {
@@ -57,6 +61,7 @@ export function projectObservation({
       outputLanguage,
       problems,
       ...(device === undefined ? {} : { device }),
+      ...(schemas === undefined ? {} : { schemas }),
     };
   }
   return {
@@ -69,6 +74,7 @@ export function projectObservation({
     outputLanguage,
     problems,
     ...(device === undefined ? {} : { device }),
+    ...(schemas === undefined ? {} : { schemas }),
   };
 }
 
@@ -80,6 +86,7 @@ export function incompleteObservation({
   outputLanguage,
   problem,
   root,
+  schemas,
   version,
 }: Omit<ProjectObservationInput, "problems"> & { problem: Problem }): Observation {
   return projectObservation({
@@ -89,6 +96,7 @@ export function incompleteObservation({
     outputLanguage,
     problems: [problem],
     root,
+    ...(schemas === undefined ? {} : { schemas }),
     ...(version === undefined ? {} : { version }),
   });
 }

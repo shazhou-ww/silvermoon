@@ -154,7 +154,8 @@ primaryBranch: main
   );
   assert.ok(
     invalidConfig.observation.problems.some(
-      ({ type }: { type: string }) => type === "config-unsupported-version",
+      ({ type }: { type: string }) =>
+        type === "schema-runtime-upgrade-required",
     ),
   );
 
@@ -330,7 +331,7 @@ test("resolves the repository root when invoked from a nested directory", async 
   assert.equal(report.observation.selectedIdea.state, "preparing");
   assert.equal(Object.hasOwn(report.observation, "ideas"), false);
   assert.equal(Object.hasOwn(report.observation, "guidance"), false);
-  assert.match(responseText(report), /approvedRevision/);
+  assert.match(responseText(report), /event replay/);
   assert.doesNotMatch(responseText(report), /道心|内景|现世/);
 });
 
@@ -380,11 +381,11 @@ test("default navigation excludes completed and abandoned ideas while counting t
   assert.doesNotMatch(responseText(report), new RegExp(ABANDONED_ID));
 
   const lifecycleCases: ReadonlyArray<readonly [string, string]> = [
-    [FIRST_ID, "approvedRevision"],
-    [SECOND_ID, "implementationAcceptedRevision"],
-    [DEPLOYING_ID, "deploymentAcceptedRevision"],
-    [COMPLETED_ID, "completed idea"],
-    [ABANDONED_ID, "abandoned idea"],
+    [FIRST_ID, "acceptIdeal"],
+    [SECOND_ID, "acceptInner"],
+    [DEPLOYING_ID, "acceptOuter"],
+    [COMPLETED_ID, "Review completed \\(completed\\)"],
+    [ABANDONED_ID, "Review abandoned \\(abandoned\\)"],
   ];
   for (const [id, phrase] of lifecycleCases) {
     const selected = await whatsNext({
@@ -428,11 +429,11 @@ test("uses formal world and contract names in localized lifecycle instructions",
   git(repository.root, "push", "origin", "main");
 
   const localizedCases: ReadonlyArray<readonly [string, string]> = [
-    [FIRST_ID, "理想契约就绪"],
-    [SECOND_ID, "除非理想契约确实需要变化"],
-    [DEPLOYING_ID, "保留内层世界"],
-    [COMPLETED_ID, "已完成 idea"],
-    [ABANDONED_ID, "已放弃 idea"],
+    [FIRST_ID, "acceptIdeal 人工决定"],
+    [SECOND_ID, "acceptInner 人工决定"],
+    [DEPLOYING_ID, "acceptOuter 人工决定"],
+    [COMPLETED_ID, "复查 completed（completed）"],
+    [ABANDONED_ID, "复查 abandoned（abandoned）"],
   ];
   for (const [id, phrase] of localizedCases) {
     const selected = await whatsNext({
@@ -546,7 +547,7 @@ test("uses a canonical output override without changing content language or pers
     ".silvermoon",
     "ideas",
     FIRST_ID,
-    "status.yaml",
+    "events.jsonl",
   );
   const configPath = join(repository.root, ".silvermoon", "config.yaml");
   const before = await readFile(statusPath, "utf8");
@@ -568,7 +569,7 @@ test("uses a canonical output override without changing content language or pers
     configuration(selected).preferredLanguage,
     "fr-FR",
   );
-  assert.match(responseText(selected), /^继续在 /);
+  assert.match(responseText(selected), /^在 /);
   assert.match(responseText(selected), /自然语言内容中使用 fr-FR/);
   assert.match(actionCommit(selected), /^[0-9a-f]{40}$/);
   assert.equal(await readFile(statusPath, "utf8"), before);

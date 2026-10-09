@@ -132,7 +132,7 @@ test("direct snapshot checks preserve Git symlink modes", async () => {
   assert.equal(invalidConfig.observation.state, "project-setup-required");
   assert.equal(
     invalidConfig.observation.problems.at(0)?.type,
-    "config-invalid-file",
+    "schema-invalid",
   );
 });
 

@@ -58,6 +58,9 @@ function checkFailureObservation(
     ...("ideas" in observed.observation && observed.observation.ideas !== undefined
       ? { ideas: observed.observation.ideas }
       : {}),
+    ...(observed.observation.schemas === undefined
+      ? {}
+      : { schemas: observed.observation.schemas }),
   };
 }
 

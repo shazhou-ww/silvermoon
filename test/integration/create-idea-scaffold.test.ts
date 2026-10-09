@@ -25,6 +25,7 @@ import {
   ideaPaths,
   phaseGuidancePath,
 } from "../../src/foundation/coordinates/index.ts";
+import { serializeIdeaEvents } from "../../src/foundation/event-codec/index.ts";
 import {
   createRepository,
   FIRST_ID,
@@ -176,8 +177,8 @@ test("[unrelated-active-create] [create-no-remote] creates an exact scaffold wit
     assert.equal(await readFile(join(repository.root, ...path.split("/")), "utf8"), source);
   }
   assert.equal(
-    await readFile(join(repository.root, ...paths.statusPath.split("/")), "utf8"),
-    `version: 1\nid: ${createdId}\n`,
+    await readFile(join(repository.root, ...paths.eventsPath.split("/")), "utf8"),
+    "",
   );
   const after = repositoryState(repository.root, repository.repository);
   assert.deepEqual(after, before);
@@ -217,10 +218,10 @@ test("creates the first idea when the ideas directory does not yet exist", async
   assert.equal(report.actions.at(-1)?.status, "success");
   assert.equal(
     await readFile(
-      join(repository.root, ...ideaPaths(createdId).statusPath.split("/")),
+      join(repository.root, ...ideaPaths(createdId).eventsPath.split("/")),
       "utf8",
     ),
-    `version: 1\nid: ${createdId}\n`,
+    "",
   );
 });
 
@@ -241,7 +242,7 @@ test("creates at the Git root when invoked from a nested directory", async () =>
   );
   assert.equal(report.actions.at(-1)?.status, "success");
   await readFile(
-    join(repository.root, ...ideaPaths(createdId).statusPath.split("/")),
+    join(repository.root, ...ideaPaths(createdId).eventsPath.split("/")),
     "utf8",
   );
 });
@@ -283,10 +284,14 @@ test("normalizes and persists an explicit idea language", async () => {
   }
   assert.equal(
     await readFile(
-      join(repository.root, ...paths.statusPath.split("/")),
+      join(repository.root, ...paths.eventsPath.split("/")),
       "utf8",
     ),
-    `version: 1\nid: ${createdId}\nlanguage: zh-CN\n`,
+    serializeIdeaEvents([{
+      sequence: 1,
+      type: "setLanguage",
+      payload: { language: "zh-CN" },
+    }]),
   );
 });
 
@@ -317,10 +322,14 @@ test("keeps arbitrary canonical content languages outside the output allowlist",
   );
   assert.equal(
     await readFile(
-      join(repository.root, ...ideaPaths(createdId).statusPath.split("/")),
+      join(repository.root, ...ideaPaths(createdId).eventsPath.split("/")),
       "utf8",
     ),
-    `version: 1\nid: ${createdId}\nlanguage: fr-FR\n`,
+    serializeIdeaEvents([{
+      sequence: 1,
+      type: "setLanguage",
+      payload: { language: "fr-FR" },
+    }]),
   );
 });
 
@@ -351,7 +360,7 @@ test("preserves create intent and does not mutate a dirty repository", async () 
   );
   await assert.rejects(
     readFile(
-      join(repository.root, ...ideaPaths(createdId).statusPath.split("/")),
+      join(repository.root, ...ideaPaths(createdId).eventsPath.split("/")),
     ),
     { code: "ENOENT" },
   );
@@ -361,7 +370,7 @@ test("[ulid-collision] retries without changing the colliding idea", async () =>
   const repository = await fixture();
   const existingStatus = join(
     repository.root,
-    ...ideaPaths(FIRST_ID).statusPath.split("/"),
+    ...ideaPaths(FIRST_ID).eventsPath.split("/"),
   );
   const original = await readFile(existingStatus, "utf8");
   const ids = [FIRST_ID, secondId];

@@ -41,6 +41,20 @@ source checkouts and embedding hosts do not perform that registry query.
 Registry or skill failures remain device diagnostics and do not replace
 project problems or lifecycle instructions.
 
+Project schema readiness is reported per schema-bearing file. A valid file at
+the runtime's write target is `current`; a valid readable historical file is
+`migration-required`; a declaration above the runtime's read capability is
+`runtime-upgrade-required`; malformed content is `invalid`. `whats-next` and
+write preparation stop on historical metadata until its declared migration is
+run. `list-ideas` may continue to read a valid historical project, and
+snapshot-only `check` validates it without requiring migration.
+
+When project preparation encounters a future schema, it bypasses the 24-hour
+runtime freshness cache once for that observation. The report distinguishes a
+new runtime being available, the confirmed latest runtime still lacking the
+capability, and an unavailable registry. Snapshot-only `check` remains
+deterministic and performs no registry access.
+
 When a selector resolves to an actionable phase and synchronization is ready,
 Silvermoon reads only `.silvermoon/guidance/<phase>.md` from the same Git
 snapshot. Missing guidance preserves the previous report shape. Valid guidance

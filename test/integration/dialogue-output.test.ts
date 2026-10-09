@@ -8,7 +8,10 @@ import { whatsNext } from "../../src/business/whats-next.ts";
 import { createRepository } from "../helpers/repository.ts";
 
 test("all public commands return exactly four projections", async () => {
-  const repository = await createRepository({ prefix: "silvermoon-output-contract-" });
+  const repository = await createRepository({
+    prefix: "silvermoon-output-contract-",
+    schemaVersion: 2,
+  });
   try {
     const options = { root: repository.root, userHome: repository.base };
     const navigation = await whatsNext(options);

@@ -43,17 +43,27 @@ repair but do not turn a valid project snapshot into
 `project-setup-required`. Snapshot-only `check` commands do not perform these
 device checks.
 
+Project observations report every discovered schema-bearing file under
+`observation.schemas`. Validity and current-target readiness are independent:
+a valid v1 file is readable but requires migration before `whats-next` or a
+write workflow continues. `list-ideas` and snapshot-only `check` may read valid
+historical metadata. A future version is never parsed or modified; project
+preparation bypasses the 24-hour latest-runtime cache once and reports the
+runtime freshness outcome.
+
 Silvermoon's own source repository must not depend on its published package.
 Use `node bin/silvermoon.js` from that checkout instead of every `silvermoon`
 invocation below, and refresh its registered skill from the source using
 `pnpm sync:skills`. Its repository-local skill is a development exception for
 unpublished changes and must not be propagated to other projects.
 
-Existing v1 projects keep the following configuration and storage contract.
-New projects may explicitly choose `version: 2` with the
-[event storage and command rules](./events.md); create the canonical `events.jsonl` file rather
-than status YAML and configure a named-primary tracking ref before checking.
-Never convert an existing project by editing only its version.
+Existing v1 projects remain readable and snapshot-valid, but lifecycle
+preparation requires the declared `project-v1-to-v2` migration. New projects
+use `version: 2` with the
+[event storage and command rules](./events.md); create the canonical
+`events.jsonl` file rather than status YAML and configure a named-primary
+tracking ref before checking. Never convert an existing project by editing
+only its version.
 
 The compatible version 1 configuration is:
 

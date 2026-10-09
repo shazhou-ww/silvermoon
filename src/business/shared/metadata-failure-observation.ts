@@ -25,6 +25,9 @@ export function metadataFailureObservation(
       ...(observed.observation.device === undefined
         ? {}
         : { device: observed.observation.device }),
+      ...(observed.observation.schemas === undefined
+        ? {}
+        : { schemas: observed.observation.schemas }),
       outputLanguage: observed.observation.outputLanguage,
       observedThrough: "configuration",
       problems: [problem],

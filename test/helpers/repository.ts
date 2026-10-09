@@ -7,6 +7,7 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
 import { serializeIdeaStatus } from "../../src/foundation/idea-model/index.ts";
+import { serializeIdeaEvents } from "../../src/foundation/event-codec/index.ts";
 import { ideaPaths } from "../../src/foundation/coordinates/index.ts";
 
 type JsonPrimitive = boolean | null | number | string;
@@ -21,6 +22,7 @@ export interface RepositoryFixtureOptions {
   objectFormat?: string;
   preferredLanguage?: string;
   prefix?: string;
+  schemaVersion?: 1 | 2;
   withRemote?: boolean;
   withUpstream?: boolean;
 }
@@ -53,6 +55,7 @@ export async function writeIdea(
   root: string,
   id: string,
   status: IdeaStatusFixture = {},
+  schemaVersion: 1 | 2 = 1,
 ) {
   const paths = ideaPaths(id);
   await mkdir(join(root, ...paths.idealPath.split("/")), { recursive: true });
@@ -60,11 +63,51 @@ export async function writeIdea(
   await writeFile(join(root, ...paths.implementationDocumentPath.split("/")), "");
   await writeFile(join(root, ...paths.deploymentDocumentPath.split("/")), "");
   await writeFile(join(root, ...paths.ledgerPath.split("/")), "# Ledger\n");
-  await writeFile(
-    join(root, ...paths.statusPath.split("/")),
-    serializeIdeaStatus({ version: 1, id, ...status }, {}),
-  );
+  if (schemaVersion === 1) {
+    await writeFile(
+      join(root, ...paths.statusPath.split("/")),
+      serializeIdeaStatus({ version: 1, id, ...status }, {}),
+    );
+  } else {
+    await writeFile(
+      join(root, ...paths.eventsPath.split("/")),
+      serializeFixtureEvents(status),
+    );
+  }
   return paths;
+}
+
+function serializeFixtureEvents(status: IdeaStatusFixture) {
+  const events: Array<{
+    sequence: number;
+    type: string;
+    payload?: Record<string, JsonValue | undefined>;
+  }> = [];
+  const fields = [
+    ["alias", "setAlias", "alias"],
+    ["language", "setLanguage", "language"],
+    ["approvedRevision", "acceptIdeal", "idealRevision"],
+    [
+      "implementationAcceptedRevision",
+      "acceptInner",
+      "implementationRevision",
+    ],
+    ["deploymentAcceptedRevision", "acceptOuter", "deploymentRevision"],
+  ] as const;
+  for (const [field, type, payloadField] of fields) {
+    const value = status[field];
+    if (typeof value === "string" || value === null) {
+      events.push({
+        sequence: events.length + 1,
+        type,
+        payload: { [payloadField]: value },
+      });
+    }
+  }
+  if (status.abandoned === true) {
+    events.push({ sequence: events.length + 1, type: "abandon" });
+  }
+  return serializeIdeaEvents(events);
 }
 
 export async function createRepository({
@@ -72,6 +115,7 @@ export async function createRepository({
   objectFormat,
   preferredLanguage,
   prefix = "silvermoon-fixture-",
+  schemaVersion = 1,
   withRemote = true,
   withUpstream = false,
 }: RepositoryFixtureOptions = {}) {
@@ -82,6 +126,7 @@ export async function createRepository({
     ideas === defaultIdeas
     && objectFormat === undefined
     && preferredLanguage === undefined
+    && schemaVersion === 1
   ) {
     const template = await getTemplate();
     if (withRemote) {
@@ -122,10 +167,16 @@ export async function createRepository({
   git(root, "config", "user.email", "silvermoon@example.invalid");
   git(root, "config", "core.autocrlf", "false");
   await mkdir(join(root, ".silvermoon", "ideas"), { recursive: true });
+  if (schemaVersion === 2) {
+    await writeFile(
+      join(root, ".gitattributes"),
+      "**/events.jsonl -text -filter\n",
+    );
+  }
   await writeFile(
     join(root, ".silvermoon", "config.yaml"),
     [
-      "version: 1",
+      `version: ${schemaVersion}`,
       `primaryRepository: ${PRIMARY_REPOSITORY}`,
       "primaryBranch: main",
       ...(preferredLanguage ? [`preferredLanguage: ${preferredLanguage}`] : []),
@@ -133,7 +184,7 @@ export async function createRepository({
     ].join("\n"),
   );
   for (const idea of ideas) {
-    await writeIdea(root, idea.id, idea.status);
+    await writeIdea(root, idea.id, idea.status, schemaVersion);
   }
   git(root, "add", ".");
   git(root, "commit", "-m", "Create Silvermoon fixture");
@@ -234,8 +285,19 @@ export async function setIdeaState(
     completed: revisions,
     abandoned: { abandoned: true },
   }[state];
+  const config = await readFile(
+    join(root, ".silvermoon", "config.yaml"),
+    "utf8",
+  );
+  const schemaVersion = /^version: 2$/m.test(config) ? 2 : 1;
+  const nextStatus = { ...status, ...lifecycle };
   await writeFile(
-    join(root, ...paths.statusPath.split("/")),
-    serializeIdeaStatus({ version: 1, id, ...status, ...lifecycle }, {}),
+    join(
+      root,
+      ...(schemaVersion === 1 ? paths.statusPath : paths.eventsPath).split("/"),
+    ),
+    schemaVersion === 1
+      ? serializeIdeaStatus({ version: 1, id, ...nextStatus }, {})
+      : serializeFixtureEvents(nextStatus),
   );
 }

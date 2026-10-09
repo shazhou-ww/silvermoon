@@ -5,6 +5,7 @@ import type {
   Guidance,
   IdeaInventoryItem,
   IdeaListResponse,
+  ProjectSchemaReadiness,
   ProjectVersion,
   ReportResponse,
   ReviewContext,
@@ -286,6 +287,45 @@ function renderDeviceAdvisory(
 }
 
 /** @pure */
+function renderSchemaReadiness(
+  schemas: ProjectSchemaReadiness,
+  language: string,
+) {
+  const files = schemas.files.filter(({ readiness, validity }) =>
+    readiness !== "current" || validity !== "valid"
+  );
+  if (files.length === 0) return [];
+  return [
+    `### ${localize(
+      language,
+      "Project schema preparation",
+      "项目 schema 整备",
+    )}`,
+    "",
+    ...renderMarkdownTable(
+      [
+        localize(language, "Path", "路径"),
+        localize(language, "Family", "Schema family"),
+        localize(language, "Declared", "声明版本"),
+        localize(language, "Target", "目标版本"),
+        localize(language, "Validity", "有效性"),
+        localize(language, "Readiness", "整备状态"),
+        localize(language, "Details", "详情"),
+      ],
+      files.map((file) => [
+        file.path,
+        file.family,
+        file.schemaVersion,
+        file.targetVersion,
+        file.validity,
+        file.readiness,
+        file.message ?? file.migration?.id,
+      ]),
+    ),
+  ];
+}
+
+/** @pure */
 export function renderMarkdownResponse(
   response: ReportResponse,
   { now, dateFacts }: { now: Date; dateFacts: Map<string, DateFacts> },
@@ -297,12 +337,20 @@ export function renderMarkdownResponse(
       "",
       renderIdeaList(response, language, now, dateFacts),
     ];
+    if (response.schemas !== undefined) {
+      const readiness = renderSchemaReadiness(response.schemas, language);
+      if (readiness.length > 0) sections.push("", ...readiness);
+    }
     if (response.device !== undefined) {
       sections.push("", ...renderDeviceAdvisory(response.device, language));
     }
     return sections.join("\n");
   }
   const lines = [`## ${responseTitle(response)}`, "", response.summary];
+  if (response.schemas !== undefined) {
+    const readiness = renderSchemaReadiness(response.schemas, language);
+    if (readiness.length > 0) lines.push("", ...readiness);
+  }
   if (response.device !== undefined) {
     lines.push("", ...renderDeviceAdvisory(response.device, language));
   }

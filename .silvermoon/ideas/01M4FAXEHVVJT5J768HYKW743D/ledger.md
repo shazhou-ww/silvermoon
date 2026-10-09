@@ -5,13 +5,13 @@
 ### Implementation steps
 
 - [x] **I-S01:** 分离设备与项目整备
-- [ ] **I-S02:** 建立 Schema capability 与准备流程
+- [x] **I-S02:** 建立 Schema capability 与准备流程
 - [ ] **I-S03:** 完成迁移链与 0.4.0 契约
 
 ### Implementation acceptance criteria
 
 - [x] **I-AC01:** 唯一 runtime 与设备 skill
-- [ ] **I-AC02:** 完整且可解释的 Schema readiness
+- [x] **I-AC02:** 完整且可解释的 Schema readiness
 - [ ] **I-AC03:** 可迁移的 0.4.0 候选
 
 ## Deployment

@@ -573,6 +573,21 @@ manager, `package.json`, project-local Silvermoon dependencies, `node_modules`,
 or repository skill paths. Runtime identity, update status, and personal skill
 registration are device facts and do not change a project snapshot result.
 
+Complete project observations expose `schemas`, containing the runtime
+capability-manifest version, its release boundary, and one record for every
+discovered config or idea-state file. Each record keeps `validity`
+(`valid`, `invalid`, or `unsupported`) independent from `readiness`
+(`current`, `migration-required`, `migration-unavailable`,
+`runtime-upgrade-required`, or `unknown`). It also names the schema family,
+declared and target versions, and any migration edge. JSON retains current
+records; human-readable output lists only files needing attention.
+
+`whats-next` and project writes require the current target. Read-only
+`list-ideas` may inspect a valid historical schema. Snapshot `check` treats a
+valid readable historical schema as valid while still returning its readiness
+record; future or malformed schemas fail validation without guessing their
+contents.
+
 `whats-next` checks local conflicts and changes before remote access, then HEAD
 and upstream identity, then fetch and ancestry. A local branch may have any
 name, but its upstream must identify the configured repository and primary
@@ -734,6 +749,8 @@ neither format treats a Git diff as proof of human authorization.
 
 ## Schemas
 
+- [Capability manifest](../schema/capabilities.json)
+- [Capability manifest schema](../schema/capability-manifest.schema.json)
 - [Command report](../schema/v1/command-report.schema.json)
 - [Domain message](../schema/v1/domain-message.schema.json)
 - [Repository configuration](../schema/v1/config.schema.json)

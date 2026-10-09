@@ -25,6 +25,7 @@ export function createCreateIdeaTestHelpers(afterEach: typeof nodeAfterEach) {
   async function fixture(options: RepositoryFixtureOptions = {}) {
     const repository = await createRepository({
       prefix: "silvermoon-create-",
+      schemaVersion: 2,
       ...options,
     });
     temporaryDirectories.push(repository.base);

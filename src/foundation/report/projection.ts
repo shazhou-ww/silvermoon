@@ -138,6 +138,9 @@ function validationResponse(
         : { version: clone(observation.version) }),
     },
     problems: clone(observation.problems ?? []),
+    ...(observation.schemas === undefined
+      ? {}
+      : { schemas: clone(observation.schemas) }),
   };
 }
 
@@ -158,6 +161,9 @@ function dialogueResponse(
     ...(observation.device === undefined
       ? {}
       : { device: clone(observation.device) }),
+    ...(observation.schemas === undefined
+      ? {}
+      : { schemas: clone(observation.schemas) }),
   };
   const nextSteps = normalizeNextSteps(context.nextSteps);
 

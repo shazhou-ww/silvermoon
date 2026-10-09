@@ -59,7 +59,7 @@ async function fixture(t: test.TestContext) {
       serializeIdeaEvents(events.slice(index, index + 1000)),
     );
   }
-  for (const path of ["src", "bin", "tools", "skills", "package.json"]) {
+  for (const path of ["src", "bin", "tools", "skills", "schema", "package.json"]) {
     await cp(join(sourceRoot, path), join(root, path), { recursive: true });
   }
   await symlink(join(sourceRoot, "node_modules"), join(root, "node_modules"), "dir");

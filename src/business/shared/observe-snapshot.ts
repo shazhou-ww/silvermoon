@@ -16,6 +16,11 @@ import { errorMessage, traceBusinessAsync } from "./business-types.ts";
 import type { IdeaLayout } from "./idea-layout.ts";
 import type { ProjectVersion } from "../../foundation/report/types.ts";
 import type { DeviceAdvisory } from "../../foundation/report/types.ts";
+import {
+  inspectProjectSchemas,
+  type ProjectSchemaReadiness,
+  type SchemaFileReadiness,
+} from "../../foundation/schema-capability/index.ts";
 
 interface Finding {
   priority: number;
@@ -29,6 +34,20 @@ interface SnapshotFilesystem extends BusinessFileSystem {
   snapshotEntries(path: string): import("./business-types.ts").SnapshotEntry[];
   snapshotFile(path: string): Promise<Buffer>;
 }
+
+interface SnapshotDeviceObservation {
+  readiness?: DeviceAdvisory;
+  user: {
+    config: { preferredLanguage?: string } | null;
+    diagnostics: Diagnostic[];
+  };
+}
+
+type SnapshotDeviceObserver = (options: {
+  forceRuntimeRefresh: boolean;
+  includeReadiness: boolean;
+  userHome?: string;
+}) => Promise<SnapshotDeviceObservation>;
 
 function requireFinding(value: {
   priority: number;
@@ -167,14 +186,173 @@ function localizeDeviceAdvisory(
   };
 }
 
+function futureSchemaDiagnostic(
+  file: SchemaFileReadiness,
+  device: DeviceAdvisory | undefined,
+): Diagnostic {
+  const update = device?.update;
+  if (update?.status === "available") {
+    return {
+      code: "schema.runtime-update-available",
+      level: "error",
+      path: file.path,
+      message: `Schema version ${String(file.schemaVersion)} is newer than this runtime can read; Silvermoon ${update.latestVersion ?? "latest"} is available.`,
+      remediation: `Upgrade the global Silvermoon runtime, then prepare ${file.path} again.`,
+    };
+  }
+  if (update?.status === "current") {
+    return {
+      code: "schema.runtime-latest-unsupported",
+      level: "error",
+      path: file.path,
+      message: `Schema version ${String(file.schemaVersion)} is newer than the confirmed latest Silvermoon runtime can read.`,
+      remediation: "Do not modify this project with the current runtime; obtain a runtime that declares this schema capability.",
+    };
+  }
+  if (update?.status === "unavailable") {
+    return {
+      code: "schema.runtime-freshness-unavailable",
+      level: "error",
+      path: file.path,
+      message: `Schema version ${String(file.schemaVersion)} is newer than this runtime can read, and npm latest could not be confirmed.`,
+      remediation: "Restore registry access, confirm the latest global Silvermoon runtime, and retry without modifying project metadata.",
+    };
+  }
+  return {
+    code: "schema.runtime-upgrade-required",
+    level: "error",
+    path: file.path,
+    message: `Schema version ${String(file.schemaVersion)} is newer than this runtime can read.`,
+    remediation: update?.status === "source-checkout"
+      ? "Update this Silvermoon source checkout to a revision that declares the required schema capability."
+      : update?.status === "managed-by-host"
+        ? "Update the host-provided Silvermoon runtime before modifying this project."
+        : "Upgrade the Silvermoon runtime before modifying this project.",
+  };
+}
+
+function projectSchemaDiagnostics({
+  device,
+  projectOnly,
+  requireCurrentSchemas,
+  schemas,
+}: {
+  device: DeviceAdvisory | undefined;
+  projectOnly: boolean;
+  requireCurrentSchemas: boolean;
+  schemas: ProjectSchemaReadiness | undefined;
+}): Diagnostic[] {
+  if (schemas === undefined) return [];
+  const diagnostics: Diagnostic[] = [];
+  for (const file of schemas.files) {
+    if (file.validity === "invalid") {
+      diagnostics.push({
+        code: "schema.invalid",
+        level: "error",
+        path: file.path,
+        message: file.message
+          ?? `The ${file.family} schema declaration is invalid.`,
+        remediation: `Repair ${file.path} to satisfy ${file.family} schema version ${String(file.schemaVersion ?? "unknown")}.`,
+      });
+      continue;
+    }
+    if (file.validity === "unsupported") {
+      diagnostics.push(futureSchemaDiagnostic(file, device));
+      continue;
+    }
+    if (
+      projectOnly
+      || !requireCurrentSchemas
+      || file.readiness === "current"
+    ) continue;
+    if (file.readiness === "migration-required") {
+      diagnostics.push({
+        code: "schema.migration-required",
+        level: "error",
+        path: file.path,
+        message: `${file.family} schema version ${String(file.schemaVersion)} is valid but the current write target is version ${file.targetVersion}.`,
+        remediation: file.migration === undefined
+          ? `Migrate ${file.path} before continuing.`
+          : `Run the ${file.migration.id} migration before continuing.`,
+      });
+    } else if (file.readiness === "migration-unavailable") {
+      diagnostics.push({
+        code: "schema.migration-unavailable",
+        level: "error",
+        path: file.path,
+        message: file.message
+          ?? `No migration reaches ${file.family} schema version ${file.targetVersion}.`,
+        remediation: "Use a Silvermoon runtime that provides a migration path; do not modify the file manually.",
+      });
+    }
+  }
+  return diagnostics;
+}
+
+function schemaOwnsConfigDiagnostic(
+  _diagnostic: Diagnostic,
+  schemas: ProjectSchemaReadiness | undefined,
+) {
+  return schemas?.files.some(({ family, validity }) =>
+    family === "project-config" && validity !== "valid"
+  ) === true;
+}
+
+function schemaOwnsLayoutDiagnostic(
+  diagnostic: Diagnostic,
+  schemas: ProjectSchemaReadiness | undefined,
+  projectOnly: boolean,
+) {
+  if (schemas === undefined || diagnostic.path === undefined) return false;
+  if (
+    diagnostic.code === "idea.events.format-invalid"
+    && schemas.files.some(({ family, path, readiness }) =>
+      family === "idea-state"
+      && path.endsWith("/status.yaml")
+      && readiness !== "current"
+    )
+  ) {
+    return true;
+  }
+  const path = diagnostic.path.split("#", 1)[0] ?? diagnostic.path;
+  for (const file of schemas.files) {
+    if (file.family !== "idea-state") continue;
+    const ideaRoot = file.path.slice(0, file.path.lastIndexOf("/"));
+    if (!path.startsWith(`${ideaRoot}/`)) continue;
+    if (
+      file.validity !== "valid"
+      && (
+        diagnostic.code === "idea.status.invalid"
+        || diagnostic.code === "idea.status.invalid-file"
+        || diagnostic.code === "idea.status.unexpected-file"
+      )
+    ) {
+      return true;
+    }
+    if (
+      !projectOnly
+      && file.readiness === "migration-required"
+      && (
+        diagnostic.code === "idea.status.invalid-file"
+        || diagnostic.code === "idea.status.unexpected-file"
+      )
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
 async function observeSnapshotInternal({
   allowMissingIdeas = false,
   contentRoot,
   filesystem,
   gitRoot,
   ideaLanguage,
+  deviceObserver = observeDevice,
   outputLanguage: requestedOutputLanguage,
   projectOnly = false,
+  requireCurrentSchemas = true,
   root,
   snapshotTree,
   userHome,
@@ -185,8 +363,10 @@ async function observeSnapshotInternal({
   filesystem?: BusinessFileSystem | undefined;
   gitRoot?: string | undefined;
   ideaLanguage?: string | undefined;
+  deviceObserver?: SnapshotDeviceObserver;
   outputLanguage?: string | undefined;
   projectOnly?: boolean;
+  requireCurrentSchemas?: boolean;
   root: string;
   snapshotTree?: string | undefined;
   userHome?: string | undefined;
@@ -195,23 +375,49 @@ async function observeSnapshotInternal({
   const outputLanguageOverride = requestedOutputLanguage === undefined
     ? undefined
     : resolveOutputLanguage({ override: requestedOutputLanguage }).tag;
-  const device = await traceBusinessAsync(
-    "device.observe",
-    {},
-    () => observeDevice({ includeReadiness: !projectOnly, userHome }),
-  );
-  const rawDeviceAdvisory = device.readiness;
   const adoption = await traceBusinessAsync(
     "project.observe",
     {},
     () => observeProject({
       contentRoot,
-      device,
       filesystem,
       gitRoot,
       root,
     }),
   );
+  let schemas: ProjectSchemaReadiness | undefined;
+  let schemaInspectionDiagnostic: Diagnostic | undefined;
+  try {
+    schemas = await traceBusinessAsync(
+      "schema.inspect",
+      {},
+      () => inspectProjectSchemas({
+        ...(filesystem === undefined ? {} : { filesystem }),
+        root: contentRoot ?? adoption.root,
+      }),
+    );
+  } catch (caught) {
+    schemaInspectionDiagnostic = {
+      code: "schema.inspection-failed",
+      level: "error",
+      path: ".silvermoon",
+      message: `Cannot inspect project schemas: ${errorMessage(caught)}`,
+      remediation: "Repair the Silvermoon runtime schema manifest and retry.",
+    };
+  }
+  const futureSchema = schemas?.files.some(
+    ({ readiness }) => readiness === "runtime-upgrade-required",
+  ) === true;
+  const device = await traceBusinessAsync(
+    "device.observe",
+    {},
+    () => deviceObserver({
+      forceRuntimeRefresh: !projectOnly && futureSchema,
+      includeReadiness: !projectOnly,
+      ...(userHome === undefined ? {} : { userHome }),
+    }),
+  );
+  const rawDeviceAdvisory = device.readiness;
   const user = device.user;
   const userFindings: Finding[] = user.diagnostics.map((diagnostic: Diagnostic) => ({
     priority: 30,
@@ -219,11 +425,39 @@ async function observeSnapshotInternal({
     instruction: diagnostic.remediation,
     sourceDiagnostic: diagnostic,
   }));
-  const baseFindings = [...adoption.findings, ...userFindings]
+  const rawSchemaDiagnostics = [
+    ...(schemaInspectionDiagnostic === undefined
+      ? []
+      : [schemaInspectionDiagnostic]),
+    ...projectSchemaDiagnostics({
+      device: rawDeviceAdvisory,
+      projectOnly,
+      requireCurrentSchemas,
+      schemas,
+    }),
+  ];
+  const schemaFindings: Finding[] = rawSchemaDiagnostics.map((diagnostic) => ({
+    priority: 25,
+    problem: diagnosticProblem(diagnostic),
+    instruction: diagnostic.remediation,
+    sourceDiagnostic: diagnostic,
+  }));
+  const adoptionFindings = adoption.findings.filter(
+    ({ sourceDiagnostic }: { sourceDiagnostic?: Diagnostic }) =>
+      sourceDiagnostic === undefined
+      || !schemaOwnsConfigDiagnostic(sourceDiagnostic, schemas),
+  );
+  const baseFindings = [
+    ...adoptionFindings,
+    ...schemaFindings,
+    ...userFindings,
+  ]
     .map(requireFinding)
     .sort((left, right) => left.priority - right.priority);
   const fallbackContentLanguage = resolveLanguage({
-    global: user.config?.preferredLanguage,
+    ...(user.config?.preferredLanguage === undefined
+      ? {}
+      : { global: user.config.preferredLanguage }),
   }).tag;
   const fallbackOutputLanguage = resolveOutputLanguage({
     content: fallbackContentLanguage,
@@ -245,6 +479,7 @@ async function observeSnapshotInternal({
       outputLanguage: fallbackOutputLanguage,
       problems: findings.map(({ problem }) => problem),
       root: adoption.root,
+      ...(schemas === undefined ? {} : { schemas }),
     });
     return {
       config: null,
@@ -255,6 +490,7 @@ async function observeSnapshotInternal({
       outputLanguage: fallbackOutputLanguage,
       ...(outputLanguageOverride === undefined ? {} : { outputLanguageOverride }),
       projectReady: false,
+      ...(schemas === undefined ? {} : { schemas }),
     };
   }
 
@@ -269,6 +505,7 @@ async function observeSnapshotInternal({
       outputLanguage: fallbackOutputLanguage,
       problems: findings.map(({ problem }) => problem),
       root: adoption.root,
+      ...(schemas === undefined ? {} : { schemas }),
       ...(version === undefined ? {} : { version }),
     });
     return {
@@ -280,6 +517,7 @@ async function observeSnapshotInternal({
       outputLanguage: fallbackOutputLanguage,
       ...(outputLanguageOverride === undefined ? {} : { outputLanguageOverride }),
       projectReady: false,
+      ...(schemas === undefined ? {} : { schemas }),
     };
   }
 
@@ -336,6 +574,13 @@ async function observeSnapshotInternal({
       ({ code }: Diagnostic) => code !== "layout.ideas.missing",
     );
   }
+  layout.diagnostics = layout.diagnostics.filter(
+    (diagnostic) => !schemaOwnsLayoutDiagnostic(
+      diagnostic,
+      schemas,
+      projectOnly,
+    ),
+  );
 
   const guidanceDiagnostics = projectOnly
     ? diagnosticsFrom(await inspectAllGuidance({
@@ -369,6 +614,7 @@ async function observeSnapshotInternal({
       outputLanguage,
       problems: findings.map(({ problem }) => problem),
       root: adoption.root,
+      ...(schemas === undefined ? {} : { schemas }),
       ...(version === undefined ? {} : { version }),
     });
     return {
@@ -380,6 +626,7 @@ async function observeSnapshotInternal({
       outputLanguage,
       ...(outputLanguageOverride === undefined ? {} : { outputLanguageOverride }),
       projectReady: false,
+      ...(schemas === undefined ? {} : { schemas }),
     };
   }
 
@@ -392,6 +639,7 @@ async function observeSnapshotInternal({
       outputLanguage,
       problems: findings.map(({ problem }) => problem),
       root: adoption.root,
+      ...(schemas === undefined ? {} : { schemas }),
       ...(version === undefined ? {} : { version }),
     });
     return {
@@ -403,6 +651,7 @@ async function observeSnapshotInternal({
       outputLanguage,
       ...(outputLanguageOverride === undefined ? {} : { outputLanguageOverride }),
       projectReady: false,
+      ...(schemas === undefined ? {} : { schemas }),
     };
   }
 
@@ -420,10 +669,12 @@ async function observeSnapshotInternal({
       ideas,
       outputLanguage,
       problems: [],
+      ...(schemas === undefined ? {} : { schemas }),
     },
     outputLanguage,
     ...(outputLanguageOverride === undefined ? {} : { outputLanguageOverride }),
     projectReady: true,
+    ...(schemas === undefined ? {} : { schemas }),
   };
 }
 

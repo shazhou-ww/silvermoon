@@ -4,7 +4,8 @@ Project explicit terminal facts into four report projections, diagnostics, and l
 
 ## Capability boundary
 
-- Allowed dependencies: idea-model, coordinates, language, and pure facts.
+- Allowed dependencies: idea-model, coordinates, language, schema-capability
+  types, and pure facts.
 - Does not own: repository reads, action execution, and terminal rendering.
 - Cross-module callers use [index.ts](./index.ts); sibling implementations do not import their own index.
 
@@ -14,3 +15,5 @@ Project explicit terminal facts into four report projections, diagnostics, and l
 - `diagnosticProblem`: maps a diagnostic to a stable public problem.
 - `respond`: selects a structured response without rendering it.
 - `projectInstructions`: derives localized instructions from explicit project findings.
+- Observations and responses preserve complete per-file schema readiness;
+  renderers suppress current files.

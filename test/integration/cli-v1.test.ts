@@ -87,6 +87,7 @@ test("returns one when check cannot validate a commit", async () => {
 test("writes schema-valid domain and telemetry events without changing the report", async () => {
   const repository = await createRepository({
     prefix: "silvermoon-cli-trace-",
+    schemaVersion: 2,
     withRemote: true,
   });
   const requestedTracePath = join(repository.root, "whats-next");
