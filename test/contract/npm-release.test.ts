@@ -40,6 +40,7 @@ test("uses a protected, least-privilege trusted-publishing workflow", async () =
 
   const workflow = document.toJS();
   assert.deepEqual(workflow.on.push.tags, ["npm/**"]);
+  assert.equal(workflow.on.workflow_dispatch, null);
   assert.deepEqual(workflow.permissions, {});
 
   const publish = workflow.jobs.publish;
