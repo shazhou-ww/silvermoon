@@ -6,5 +6,5 @@
 
 /** @pure */
 export default function reviewPresentationInstruction() {
-  return "At the human gate, send the fenced review template rendered from response.review.presentation as one standalone, completed assistant message. Replace only its brace-delimited placeholders and link targets, following its localization instruction exactly. Do not open an interactive decision in that same turn.";
+  return "Send the fenced review template as a standalone assistant message, then end the turn. Do not open an interactive decision in that same turn.";
 }

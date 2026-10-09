@@ -674,7 +674,7 @@ test("drives gate presentation from content language instead of output language"
     /^是否接受 `idealRevision=[0-9a-f]{12}` 作为该 IDEA 的构想？$/,
   );
   assert.match(responseText(selected), /^Continue /);
-  assert.match(responseText(selected), /response\.review\.presentation/);
+  assert.match(responseText(selected), /fenced review template/);
 
   const rendered = renderResponse(selected.response);
   assert.match(rendered, /### Review request template/);

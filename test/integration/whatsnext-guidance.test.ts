@@ -258,8 +258,7 @@ test("attaches only the selected actionable phase guidance from primary", async 
     );
     assert.match(responseText(report), /revision/);
     assert.match(responseText(report), /fenced 审阅模板/);
-    assert.match(responseText(report), /独立且完整的 assistant 消息/);
-    assert.match(responseText(report), /response\.review\.presentation/);
+    assert.match(responseText(report), /发送后结束当前 turn/);
     assert.match(responseText(report), /不要在同一 turn 打开交互决定/);
     if (phase === "preparing") {
       const paths = ideaPaths(id);
