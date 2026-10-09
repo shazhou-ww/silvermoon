@@ -7,6 +7,8 @@
 ## 结果
 
 所有项目统一使用环境中可用的 Silvermoon，并在不是最新版本时始终得到明确的升级提示。项目只声明其 schema 契约；Silvermoon 按契约校验元数据，并通过兼容规则与迁移能力承接 schema 演进。
+具体影响面、兼容术语与既有契约冲突见
+[全局运行时与 Schema 演进影响面调研](./RuntimeSchemaImpact.md)。
 
 ## 边界
 
