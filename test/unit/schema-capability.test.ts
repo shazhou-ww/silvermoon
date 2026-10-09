@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, test } from "node:test";
@@ -9,8 +9,10 @@ import {
 } from "../../src/foundation/event-codec/index.ts";
 import {
   classifySchemaVersion,
+  findSchemaMigrationPath,
   inspectProjectSchemas,
   loadSchemaCapabilityManifest,
+  validateSchemaCapabilityManifest,
 } from "../../src/foundation/schema-capability/index.ts";
 
 const temporaryDirectories: string[] = [];
@@ -46,32 +48,71 @@ test("loads the packaged schema capability contract", async () => {
   assert.equal(manifest.releaseBoundary, "0.4.0");
   assert.deepEqual(manifest.families["project-config"]?.readVersions, [1, 2]);
   assert.equal(manifest.families["project-config"]?.targetVersion, 2);
-  assert.deepEqual(manifest.families["idea-state"]?.migrations, [{
+  assert.deepEqual(
+    manifest.families["idea-state"]?.migrations,
+    ["project-v1-to-v2"],
+  );
+  assert.deepEqual(manifest.migrations["project-v1-to-v2"], {
     id: "project-v1-to-v2",
-    fromVersion: 1,
-    toVersion: 2,
+    kind: "schema",
+    fromVersions: {
+      "project-config": 1,
+      "idea-state": 1,
+    },
+    toVersions: {
+      "project-config": 2,
+      "idea-state": 2,
+    },
     entrypoint: "dist/bin/migrate-v1-to-v2.js",
-  }]);
+    sourceEntrypoint: "bin/migrate-v1-to-v2.ts",
+    executable: "silvermoon-migrate-v1-to-v2",
+    guarantees: [
+      "read-only-plan",
+      "exact-digest-apply",
+      "resume",
+      "rollback",
+      "semantic-projection-equivalence",
+    ],
+  });
 });
 
 test("classifies current, historical, future and unknown schema versions", async () => {
-  const family = (await loadSchemaCapabilityManifest()).families["idea-state"];
-  assert.ok(family);
+  const manifest = await loadSchemaCapabilityManifest();
 
-  assert.deepEqual(classifySchemaVersion(family, 2), {
+  assert.deepEqual(classifySchemaVersion(manifest, "idea-state", 2), {
     validity: "valid",
     readiness: "current",
   });
   assert.equal(
-    classifySchemaVersion(family, 1).readiness,
+    classifySchemaVersion(manifest, "idea-state", 1).readiness,
     "migration-required",
   );
-  assert.deepEqual(classifySchemaVersion(family, 3), {
+  assert.deepEqual(
+    findSchemaMigrationPath(manifest, "idea-state", 1)?.map(({ id }) => id),
+    ["project-v1-to-v2"],
+  );
+  assert.deepEqual(classifySchemaVersion(manifest, "idea-state", 3), {
     validity: "unsupported",
     readiness: "runtime-upgrade-required",
     message: "Runtime read capability ends at schema version 2.",
   });
-  assert.equal(classifySchemaVersion(family, 0).readiness, "unknown");
+  assert.equal(
+    classifySchemaVersion(manifest, "idea-state", 0).readiness,
+    "unknown",
+  );
+});
+
+test("rejects a manifest that breaks a historical migration path", async () => {
+  const manifest = JSON.parse(await readFile(
+    new URL("../../schema/capabilities.json", import.meta.url),
+    "utf8",
+  ));
+  manifest.families["idea-state"].migrations = [];
+
+  assert.throws(
+    () => validateSchemaCapabilityManifest(manifest),
+    /no continuous migration from version 1/,
+  );
 });
 
 test("accumulates per-file validity and readiness across mixed project schemas", async () => {

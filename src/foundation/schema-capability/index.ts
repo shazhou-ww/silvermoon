@@ -13,11 +13,13 @@ export {
 
 export {
   classifySchemaVersion,
+  findSchemaMigrationPath,
   validateSchemaCapabilityManifest,
 } from "./rules.ts";
 export type {
   SchemaCapabilityManifest,
   SchemaFamilyCapability,
+  SchemaMigrationGuarantee,
   SchemaMigrationCapability,
   SchemaVersionClassification,
 } from "./rules.ts";

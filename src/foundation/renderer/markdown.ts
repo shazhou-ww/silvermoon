@@ -319,7 +319,7 @@ function renderSchemaReadiness(
         file.targetVersion,
         file.validity,
         file.readiness,
-        file.message ?? file.migration?.id,
+        file.message ?? file.migrationPath?.map(({ id }) => id).join(" -> "),
       ]),
     ),
   ];

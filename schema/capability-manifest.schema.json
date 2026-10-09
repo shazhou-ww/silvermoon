@@ -4,7 +4,7 @@
   "title": "Silvermoon schema capability manifest",
   "type": "object",
   "additionalProperties": false,
-  "required": ["manifestVersion", "releaseBoundary", "families"],
+  "required": ["manifestVersion", "releaseBoundary", "families", "migrations"],
   "properties": {
     "$schema": { "type": "string" },
     "manifestVersion": { "const": 1 },
@@ -16,6 +16,10 @@
       "type": "object",
       "minProperties": 1,
       "additionalProperties": { "$ref": "#/$defs/family" }
+    },
+    "migrations": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/migration" }
     }
   },
   "$defs": {
@@ -63,31 +67,73 @@
         },
         "migrations": {
           "type": "array",
-          "items": { "$ref": "#/$defs/migration" }
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+          }
         }
       }
     },
     "migration": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "fromVersion", "toVersion", "entrypoint"],
+      "required": [
+        "kind",
+        "fromVersions",
+        "toVersions",
+        "entrypoint",
+        "sourceEntrypoint",
+        "executable",
+        "guarantees"
+      ],
       "properties": {
-        "id": {
+        "kind": { "const": "schema" },
+        "fromVersions": { "$ref": "#/$defs/versionSet" },
+        "toVersions": { "$ref": "#/$defs/versionSet" },
+        "entrypoint": { "type": "string", "minLength": 1 },
+        "sourceEntrypoint": { "type": "string", "minLength": 1 },
+        "executable": {
           "type": "string",
           "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
         },
-        "fromVersion": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 9007199254740991
-        },
-        "toVersion": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 9007199254740991
-        },
-        "entrypoint": { "type": "string", "minLength": 1 }
+        "guarantees": {
+          "type": "array",
+          "uniqueItems": true,
+          "contains": { "const": "read-only-plan" },
+          "allOf": [
+            { "contains": { "const": "exact-digest-apply" } },
+            { "contains": { "const": "resume" } },
+            { "contains": { "const": "rollback" } },
+            {
+              "contains": {
+                "const": "semantic-projection-equivalence"
+              }
+            }
+          ],
+          "items": {
+            "enum": [
+              "read-only-plan",
+              "exact-digest-apply",
+              "resume",
+              "rollback",
+              "semantic-projection-equivalence"
+            ]
+          }
+        }
       }
+    },
+    "versionSet": {
+      "type": "object",
+      "minProperties": 1,
+      "patternProperties": {
+        "^[a-z0-9]+(?:-[a-z0-9]+)*$": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        }
+      },
+      "additionalProperties": false
     }
   }
 }

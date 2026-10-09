@@ -331,7 +331,7 @@ test("documents trusted-publisher setup and the protected release procedure", as
     "MIT license",
     "homepage",
     "bugs",
-    "gh release create npm/silvermoon/v0.3.0",
+    "gh release create npm/silvermoon/v0.4.0",
     "--verify-tag",
   ]) {
     assert.ok(guide.includes(required), `Release guide is missing: ${required}`);

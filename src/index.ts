@@ -7,8 +7,11 @@ export { extractIdeaTitle, ideaCreatedAt, ideaInventoryItem, normalizeIdeaQuery,
 export { listIdeas } from "./business/index.ts";
 export { createIdea, generateUlid } from "./business/index.ts";
 export { inspectAdoption, SILVERMOON_VERSION } from "./foundation/skill-registration/index.ts";
+export { findSchemaMigrationPath, loadSchemaCapabilityManifest } from "./foundation/schema-capability/index.ts";
+export type { SchemaCapabilityManifest, SchemaMigrationCapability } from "./foundation/schema-capability/index.ts";
 export { CommandRun, DOMAIN_MESSAGE_SCHEMA_VERSION, DomainInvariantError, driveCommand, initialInternalObservation, projectActions, projectIntention, projectPublicObservation, projectReport, reduceObservation, replayObservation } from "./foundation/command-message/index.ts";
 export { renderResponse } from "./foundation/renderer/index.ts";
 export { respond } from "./foundation/report/index.ts";
 export { TRACE_SCHEMA_VERSION } from "./foundation/trace/index.ts";
 export { whatsNext } from "./business/index.ts";
+export { IMPLEMENTED_SCHEMA_MIGRATIONS, runSchemaMigration } from "./business/index.ts";

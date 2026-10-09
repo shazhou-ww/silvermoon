@@ -20,6 +20,11 @@ export {
 } from "./list-ideas.ts";
 
 export {
+  IMPLEMENTED_SCHEMA_MIGRATIONS,
+  runSchemaMigration,
+} from "./schema-migration.ts";
+
+export {
   CHANGE_SAMPLE_BYTE_LIMIT,
   CHANGE_SAMPLE_ITEM_LIMIT,
   assessIdeaCreationReadiness,

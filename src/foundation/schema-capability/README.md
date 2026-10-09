@@ -7,8 +7,8 @@ schema-bearing files without selecting a project runtime or mutating metadata.
 
 - Allowed dependencies: filesystem primitives and existing immutable
   validators for project config, idea status and idea events.
-- Does not own: migration execution, npm freshness, repository hygiene, or
-  lifecycle routing.
+- Owns migration graph validation and path discovery, but not migration
+  execution, npm freshness, repository hygiene, or lifecycle routing.
 - Cross-module callers use [index.ts](./index.ts); sibling implementations do
   not import their own index.
 
@@ -19,3 +19,5 @@ schema-bearing files without selecting a project runtime or mutating metadata.
   readiness.
 - `classifySchemaVersion`: separates current, migratable, future and
   unsupported declarations.
+- `findSchemaMigrationPath`: proves the continuous declared edge sequence from
+  any readable version to the family target.

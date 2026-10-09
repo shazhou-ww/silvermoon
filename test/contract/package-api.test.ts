@@ -17,6 +17,16 @@ test("does not expose the removed criteria evidence contract", () => {
   assert.equal(Object.hasOwn(silvermoon, "verifyCriteriaEvidence"), false);
 });
 
+test("exports schema migration discovery and dispatch", () => {
+  assert.deepEqual(
+    silvermoon.IMPLEMENTED_SCHEMA_MIGRATIONS,
+    ["project-v1-to-v2"],
+  );
+  assert.equal(typeof silvermoon.findSchemaMigrationPath, "function");
+  assert.equal(typeof silvermoon.loadSchemaCapabilityManifest, "function");
+  assert.equal(typeof silvermoon.runSchemaMigration, "function");
+});
+
 test("exports the versioned command event model and pure response API", () => {
   assert.equal(silvermoon.DOMAIN_MESSAGE_SCHEMA_VERSION, 1);
   assert.equal(silvermoon.TRACE_SCHEMA_VERSION, 2);

@@ -12,14 +12,7 @@
         "1": "schema/v1/config.schema.json",
         "2": "schema/v2/config.schema.json"
       },
-      "migrations": [
-        {
-          "id": "project-v1-to-v2",
-          "fromVersion": 1,
-          "toVersion": 2,
-          "entrypoint": "dist/bin/migrate-v1-to-v2.js"
-        }
-      ]
+      "migrations": ["project-v1-to-v2"]
     },
     "idea-state": {
       "scope": "project",
@@ -33,14 +26,7 @@
         "1": "schema/v1/idea-status.schema.json",
         "2": "schema/v2/idea-event.schema.json"
       },
-      "migrations": [
-        {
-          "id": "project-v1-to-v2",
-          "fromVersion": 1,
-          "toVersion": 2,
-          "entrypoint": "dist/bin/migrate-v1-to-v2.js"
-        }
-      ]
+      "migrations": ["project-v1-to-v2"]
     },
     "user-config": {
       "scope": "device",
@@ -81,6 +67,29 @@
         "2": "schema/v2/trace-event.schema.json"
       },
       "migrations": []
+    }
+  },
+  "migrations": {
+    "project-v1-to-v2": {
+      "kind": "schema",
+      "fromVersions": {
+        "project-config": 1,
+        "idea-state": 1
+      },
+      "toVersions": {
+        "project-config": 2,
+        "idea-state": 2
+      },
+      "entrypoint": "dist/bin/migrate-v1-to-v2.js",
+      "sourceEntrypoint": "bin/migrate-v1-to-v2.ts",
+      "executable": "silvermoon-migrate-v1-to-v2",
+      "guarantees": [
+        "read-only-plan",
+        "exact-digest-apply",
+        "resume",
+        "rollback",
+        "semantic-projection-equivalence"
+      ]
     }
   }
 }

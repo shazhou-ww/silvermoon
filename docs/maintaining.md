@@ -84,7 +84,10 @@ must not eagerly load TUI or the Copilot SDK.
 
 Moving files also requires updating package-resource URLs, authenticated cache
 source coordinates, source tools, declarations, strict package contents and tests.
-Keep source-only migration tools out of installed facades and package contents.
+Keep source-only maintenance tools out of installed facades and package
+contents. A schema migration declared in `schema/capabilities.json` is
+different: it must have a packaged executable and a runtime router
+implementation, and both must remain covered by the strict package contract.
 
 Keep public export assembly in `src/index.ts` and preserve the existing command
 and Agent package entrypoints. Internal use cases receive narrow sets of function

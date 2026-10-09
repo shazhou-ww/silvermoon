@@ -187,8 +187,26 @@ Default metadata append receipts contain exact historical validation summaries;
 `--full-history` preserves complete historical reduction output. Alias and
 metadata paths retain layout, prefix and explicit human-gate checks.
 Full replay and history audits are not advertised as constant-time operations.
-That contract also documents the separate `dist/bin/migrate-v1-to-v2.js` package entrypoint.
-No command automatically migrates a v1 project.
+The runtime-owned `schema/capabilities.json` manifest declares every readable
+schema version, current write target, and continuous schema migration path.
+The `project-v1-to-v2` edge covers project configuration and idea state
+together. It names the installed `silvermoon-migrate-v1-to-v2` executable,
+the packaged `dist/bin/migrate-v1-to-v2.js` entrypoint, and the source-checkout
+`bin/migrate-v1-to-v2.ts` entrypoint. Its declared guarantees require a
+read-only plan, exact-digest apply, resume, rollback, and semantic projection
+equivalence.
+
+Use the installed global runtime to plan and apply the edge:
+
+```sh
+silvermoon-migrate-v1-to-v2 --root <project>
+silvermoon-migrate-v1-to-v2 --root <project> --apply --expected-digest <plan-digest>
+```
+
+Embedding hosts may call the experimental `runSchemaMigration` package API.
+The source checkout instead runs `node bin/migrate-v1-to-v2.ts` so it tests
+the unpublished implementation. No ordinary command automatically migrates a
+v1 project.
 
 V2's seven business types are `setAlias`, `setLanguage`, `acceptIdeal`,
 `acceptInner`, `acceptOuter`, `abandon`, and `resume`. The two interaction

@@ -647,12 +647,37 @@ decision, risk, or disagreement requires it.
   run("git", ["commit", "-m", "Prepare legacy migration fixture"], eventConsumer);
   run("git", ["push", "origin", "HEAD:main"], eventConsumer);
   const installedRoot = join(bootstrap, "node_modules", "silvermoon");
-  const migrationEntrypoint = join(installedRoot, "dist", "bin", "migrate-v1-to-v2.js");
   const eventEntrypoint = join(installedRoot, "dist", "bin", "silvermoon.js");
-  const migrationPlan = JSON.parse(run(process.execPath, [migrationEntrypoint, "--root", eventConsumer], bootstrap));
+  const preparation = JSON.parse(installed([
+    "whats-next",
+    "--root",
+    eventConsumer,
+    "--json",
+  ], bootstrap));
+  assert.equal(preparation.observation.state, "project-setup-required");
+  assert.match(
+    JSON.stringify(preparation.response),
+    /silvermoon-migrate-v1-to-v2/,
+  );
+  const migrationPlan = JSON.parse(npm([
+    "exec",
+    "--",
+    "silvermoon-migrate-v1-to-v2",
+    "--root",
+    eventConsumer,
+  ], bootstrap));
+  assert.equal(migrationPlan.migrationId, "project-v1-to-v2");
   assert.equal(migrationPlan.outcome, "migration-planned");
-  const migrated = JSON.parse(run(process.execPath, [migrationEntrypoint, "--root", eventConsumer,
-    "--apply", "--expected-digest", migrationPlan.digest], bootstrap));
+  const migrated = JSON.parse(npm([
+    "exec",
+    "--",
+    "silvermoon-migrate-v1-to-v2",
+    "--root",
+    eventConsumer,
+    "--apply",
+    "--expected-digest",
+    migrationPlan.digest,
+  ], bootstrap));
   assert.equal(migrated.outcome, "migrated");
   const migrationCheck = JSON.parse(run(process.execPath, [eventEntrypoint, "check",
     "--root", eventConsumer, "--worktree", "--json"], bootstrap));

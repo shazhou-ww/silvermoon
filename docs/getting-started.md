@@ -55,7 +55,7 @@ workflow.
 Create `.silvermoon/config.yaml`:
 
 ```yaml
-version: 1
+version: 2
 primaryRepository: https://github.com/example/repository.git
 primaryBranch: main
 preferredLanguage: en
@@ -184,8 +184,8 @@ The command requires a local branch whose upstream identifies the configured
 primary repository and branch, plus a clean local worktree. The local branch
 name is unrestricted. It does not fetch or require local HEAD to match the remote
 tip. When those checks pass, it creates one untracked idea scaffold with
-`Idea.md`, `Implementation.md`, `Deployment.md`, `ledger.md`, and
-v1 `status.yaml` or an initially empty v2 `events.jsonl` file.
+`Idea.md`, `Implementation.md`, `Deployment.md`, `ledger.md`, and an initially
+empty v2 `events.jsonl` file.
 If valid preparing guidance exists, the success report includes
 its snapshot-bound content. Invalid preparing guidance stops before any
 scaffold path is written. The command never stages, commits, pushes, or records

@@ -142,13 +142,13 @@ duplicate publication without replacing the existing version.
 
 Prepare release notes in the repository before creating the immutable tag.
 After the trusted-publishing workflow succeeds and its verifier proves the npm
-result, create the GitHub Release from the already-existing tag. For `0.3.0`:
+result, create the GitHub Release from the already-existing tag. For `0.4.0`:
 
 ```sh
-gh release create npm/silvermoon/v0.3.0 \
+gh release create npm/silvermoon/v0.4.0 \
   --verify-tag \
-  --title "Silvermoon 0.3.0" \
-  --notes-file .github/release-notes/0.3.0.md
+  --title "Silvermoon 0.4.0" \
+  --notes-file .github/release-notes/0.4.0.md
 ```
 
 Do not let a release command create, move, or replace the tag. The GitHub

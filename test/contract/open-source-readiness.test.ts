@@ -21,7 +21,10 @@ test("develops Silvermoon with the source CLI and no published self-dependency",
     "npm run clean && tsc -p tsconfig.build.json && node tools/write-cli-shim.ts",
   );
   assert.equal(manifest.types, "./dist/src/index.d.ts");
-  assert.deepEqual(manifest.bin, { silvermoon: "dist/bin/silvermoon.js" });
+  assert.deepEqual(manifest.bin, {
+    silvermoon: "dist/bin/silvermoon.js",
+    "silvermoon-migrate-v1-to-v2": "dist/bin/migrate-v1-to-v2.js",
+  });
   assert.deepEqual(manifest.exports, {
     ".": {
       types: "./dist/src/index.d.ts",
@@ -147,7 +150,7 @@ test("publishes explicit metadata and a pre-1.0 experimental API contract", asyn
     url: "https://github.com/shazhou-ww",
   };
 
-  assert.equal(manifest.version, "0.3.0");
+  assert.equal(manifest.version, "0.4.0");
   assert.equal(manifest.license, "MIT");
   assert.equal(
     manifest.homepage,
@@ -164,35 +167,42 @@ test("publishes explicit metadata and a pre-1.0 experimental API contract", asyn
   assert.match(reference, /does not yet promise stable\s+TypeScript declarations/);
 });
 
-test("prepares complete stable 0.3.0 changelog and GitHub Release materials", async () => {
-  const [changelog, stableReleaseNotes, rc2ReleaseNotes, rc1ReleaseNotes] =
+test("prepares complete stable 0.4.0 changelog and GitHub Release materials", async () => {
+  const [
+    changelog,
+    stableReleaseNotes,
+    previousReleaseNotes,
+    rc2ReleaseNotes,
+    rc1ReleaseNotes,
+  ] =
     await Promise.all([
       read("CHANGELOG.md"),
+      read(".github/release-notes/0.4.0.md"),
       read(".github/release-notes/0.3.0.md"),
       read(".github/release-notes/0.3.0-rc.2.md"),
       read(".github/release-notes/0.3.0-rc.1.md"),
     ]);
 
+  assert.match(changelog, /## \[0\.4\.0\]/);
   assert.match(changelog, /## \[0\.3\.0\]/);
   assert.match(changelog, /## \[0\.3\.0-rc\.2\]/);
   assert.match(changelog, /## \[0\.3\.0-rc\.1\]/);
   assert.doesNotMatch(changelog, /## Unreleased/);
   for (const required of [
-    "Audience-aware CLI output",
-    "MIT licensing",
-    "Dependabot",
+    "Global runtime boundary",
+    "capability manifest",
+    "migration graph",
     "experimental before",
-    "Required checks",
     "provenance",
   ]) {
     assert.ok(changelog.includes(required), `Changelog is missing: ${required}`);
   }
   for (const required of [
-    "Silvermoon 0.3.0",
-    "silvermoon@0.3.0",
+    "Silvermoon 0.4.0",
+    "silvermoon@0.4.0",
     "npm dist-tag: `latest`",
-    "npm/silvermoon/v0.3.0",
-    "npm/silvermoon/v0.2.2...npm/silvermoon/v0.3.0",
+    "npm/silvermoon/v0.4.0",
+    "npm/silvermoon/v0.3.0...npm/silvermoon/v0.4.0",
     "GitHub release type: stable",
     "License: MIT",
     "Node.js 22",
@@ -204,6 +214,7 @@ test("prepares complete stable 0.3.0 changelog and GitHub Release materials", as
       `Release notes are missing: ${required}`,
     );
   }
+  assert.match(previousReleaseNotes, /^# Silvermoon 0\.3\.0$/m);
   assert.match(rc1ReleaseNotes, /^# Silvermoon 0\.3\.0-rc\.1$/m);
   assert.match(rc2ReleaseNotes, /^# Silvermoon 0\.3\.0-rc\.2$/m);
 });

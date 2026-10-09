@@ -63,7 +63,9 @@ use `version: 2` with the
 [event storage and command rules](./events.md); create the canonical
 `events.jsonl` file rather than status YAML and configure a named-primary
 tracking ref before checking. Never convert an existing project by editing
-only its version.
+only its version. Plan the declared edge from the installed runtime with
+`silvermoon-migrate-v1-to-v2 --root <project>`; review its digest before
+applying it as described in the event contract.
 
 The compatible version 1 configuration is:
 

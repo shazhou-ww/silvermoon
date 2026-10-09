@@ -3,6 +3,43 @@
 This changelog starts with the Silvermoon 0.3.0 release series. Earlier release
 history remains available through npm and Git tags.
 
+## [0.4.0]
+
+### Global runtime boundary
+
+- Uses one device- or host-owned Silvermoon runtime for every target
+  repository. Project dependencies, project `node_modules`, and
+  repository-local Silvermoon skills no longer select or pin the runtime.
+- Reports runtime identity, personal skill-link health, and npm `latest`
+  freshness as device advisories. Successful latest checks are cached for less
+  than 24 hours, while a future project schema forces an immediate refresh.
+
+### Schema compatibility and migration
+
+- Packages a machine-readable capability manifest for every schema family and
+  reports validity and write readiness for each discovered metadata file.
+- Keeps valid historical schemas readable for deterministic checks and
+  inventory queries, blocks lifecycle writes until migration, and distinguishes
+  future-schema update, latest-unsupported, and registry-unavailable outcomes.
+- Declares one continuous cross-family migration graph. The existing
+  v1-to-v2 transaction is available from the global
+  `silvermoon-migrate-v1-to-v2` executable and experimental package router,
+  preserving read-only planning, exact digests, resume/rollback, idempotence,
+  and semantic projection equivalence.
+
+### Runtime compatibility and packaging
+
+- New projects use project schema version 2. The `0.4.0` runtime continues to
+  validate project and idea-state schema versions 1 and 2 and provides the
+  explicit v1-to-v2 path without conflating schema versions with package
+  SemVer or Git snapshot revisions.
+- Keeps the root JavaScript package API experimental before `1.0.0`; consumers
+  should pin an exact package version when importing migration discovery or
+  dispatch APIs.
+- Publishes only through the immutable `npm/silvermoon/v0.4.0` tag and the
+  existing GitHub OIDC trusted-publishing workflow with provenance and
+  post-publication verification.
+
 ## [0.3.0]
 
 ### Stable release
@@ -91,6 +128,7 @@ history remains available through npm and Git tags.
   GitHub OIDC trusted publishing, provenance, and post-publication identity
   verification, now including MIT and public package metadata.
 
+[0.4.0]: https://github.com/shazhou-ww/silvermoon/compare/npm/silvermoon/v0.3.0...npm/silvermoon/v0.4.0
 [0.3.0]: https://github.com/shazhou-ww/silvermoon/compare/npm/silvermoon/v0.2.2...npm/silvermoon/v0.3.0
 [0.3.0-rc.2]: https://github.com/shazhou-ww/silvermoon/compare/npm/silvermoon/v0.3.0-rc.1...npm/silvermoon/v0.3.0-rc.2
 [0.3.0-rc.1]: https://github.com/shazhou-ww/silvermoon/compare/npm/silvermoon/v0.2.2...npm/silvermoon/v0.3.0-rc.1

@@ -13,7 +13,6 @@ import { parseStrictYaml } from "../schema/index.ts";
 import {
   classifySchemaVersion,
   type SchemaCapabilityManifest,
-  type SchemaFamilyCapability,
   type SchemaMigrationCapability,
 } from "./rules.ts";
 import { loadSchemaCapabilityManifest } from "./manifest.ts";
@@ -46,7 +45,7 @@ export interface SchemaFileReadiness {
     | "migration-unavailable"
     | "runtime-upgrade-required"
     | "unknown";
-  migration?: SchemaMigrationCapability;
+  migrationPath?: SchemaMigrationCapability[];
   message?: string;
 }
 
@@ -108,16 +107,17 @@ function readinessRecord({
   family,
   path,
   schemaVersion,
-  capability,
+  manifest,
   validation,
 }: {
   family: string;
   path: string;
   schemaVersion: unknown;
-  capability: SchemaFamilyCapability;
+  manifest: SchemaCapabilityManifest;
   validation?: () => void;
 }): SchemaFileReadiness {
-  const classified = classifySchemaVersion(capability, schemaVersion);
+  const capability = familyCapability(manifest, family);
+  const classified = classifySchemaVersion(manifest, family, schemaVersion);
   let validity = classified.validity;
   let message = classified.message;
   if (validity !== "unsupported" && validation !== undefined) {
@@ -138,9 +138,9 @@ function readinessRecord({
     targetVersion: capability.targetVersion,
     validity,
     readiness: classified.readiness,
-    ...(classified.migration === undefined
+    ...(classified.migrationPath === undefined
       ? {}
-      : { migration: classified.migration }),
+      : { migrationPath: classified.migrationPath }),
     ...(message === undefined ? {} : { message }),
   };
 }
@@ -192,13 +192,12 @@ async function inspectConfig(
   const path = ".silvermoon/config.yaml";
   const file = await metadata(resolve(root, path), filesystem);
   if (file === null) return null;
-  const capability = familyCapability(manifest, "project-config");
   if (!file.isFile() || file.isSymbolicLink()) {
     return readinessRecord({
       family: "project-config",
       path,
       schemaVersion: null,
-      capability,
+      manifest,
       validation: () => {
         throw new TypeError("Configuration must be a repository-owned regular file.");
       },
@@ -214,7 +213,7 @@ async function inspectConfig(
       family: "project-config",
       path,
       schemaVersion: null,
-      capability,
+      manifest,
       validation: () => {
         throw cause;
       },
@@ -224,7 +223,7 @@ async function inspectConfig(
     family: "project-config",
     path,
     schemaVersion: version,
-    capability,
+    manifest,
     validation: () => validateConfig(root, path, source),
   });
 }
@@ -237,7 +236,6 @@ async function inspectIdeaState(
   manifest: SchemaCapabilityManifest,
   filesystem: SchemaFileSystem,
 ) {
-  const capability = familyCapability(manifest, "idea-state");
   const file = await metadata(resolve(root, path), filesystem);
   if (file === null) return null;
   if (!file.isFile() || file.isSymbolicLink()) {
@@ -245,7 +243,7 @@ async function inspectIdeaState(
       family: "idea-state",
       path,
       schemaVersion: null,
-      capability,
+      manifest,
       validation: () => {
         throw new TypeError("Idea state must be a repository-owned regular file.");
       },
@@ -259,7 +257,7 @@ async function inspectIdeaState(
       family: "idea-state",
       path,
       schemaVersion: null,
-      capability,
+      manifest,
       validation: () => {
         throw cause;
       },
@@ -270,7 +268,7 @@ async function inspectIdeaState(
       family: "idea-state",
       path,
       schemaVersion: projectSchemaVersion,
-      capability,
+      manifest,
       validation: () => {
         if (projectSchemaVersion !== 2) {
           throw new TypeError(
@@ -289,7 +287,7 @@ async function inspectIdeaState(
       family: "idea-state",
       path,
       schemaVersion: null,
-      capability,
+      manifest,
       validation: () => {
         throw cause;
       },
@@ -299,7 +297,7 @@ async function inspectIdeaState(
     family: "idea-state",
     path,
     schemaVersion: version,
-    capability,
+    manifest,
     validation: () => {
       if (version !== 1) {
         throw new TypeError(

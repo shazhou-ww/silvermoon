@@ -10,7 +10,7 @@ import { CONFIG_PATH, ideaPaths } from "../foundation/coordinates/index.ts";
 import { digest, recoverStateTransaction, regularBytes, stateTransaction } from "../foundation/state-transaction/index.ts";
 import { isDeepStrictEqual } from "node:util";
 
-interface MigrationOptions {
+export interface MigrationOptions {
   root?: string;
   apply?: boolean;
   expectedDigest?: string;

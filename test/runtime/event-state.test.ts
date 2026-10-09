@@ -8,6 +8,7 @@ import { pathToFileURL } from "node:url";
 
 import { eventCommand } from "../../src/business/event-command.ts";
 import { migrateEvents } from "../../src/business/migrate-v1-to-v2.ts";
+import { runSchemaMigration } from "../../src/business/schema-migration.ts";
 import { checkRepository } from "../../src/index.ts";
 import { createIdea } from "../../src/business/create-idea.ts";
 import { listIdeas } from "../../src/business/list-ideas.ts";
@@ -146,10 +147,22 @@ test("explicit migration preserves inventory and supplies check evidence for all
   const { root } = await fixture(t);
   const before = await listIdeas({ root });
   const status = await readFile(join(root, ideaPaths(FIRST_ID).statusPath));
-  const plan = await migrateEvents({ root });
+  const plan = await runSchemaMigration("project-v1-to-v2", { root });
+  assert.equal(plan.migrationId, "project-v1-to-v2");
   assert.deepEqual(await readFile(join(root, ideaPaths(FIRST_ID).statusPath)), status);
-  await assert.rejects(migrateEvents({ root, apply: true, expectedDigest: "0".repeat(64) }), /plan changed/);
-  await migrateEvents({ root, apply: true, expectedDigest: migrationDigest(plan) });
+  await assert.rejects(
+    runSchemaMigration("project-v1-to-v2", {
+      root,
+      apply: true,
+      expectedDigest: "0".repeat(64),
+    }),
+    /plan changed/,
+  );
+  await runSchemaMigration("project-v1-to-v2", {
+    root,
+    apply: true,
+    expectedDigest: migrationDigest(plan),
+  });
   const after = await listIdeas({ root });
   assert.deepEqual(listedIdeas(after), listedIdeas(before));
   assert.equal((await checkRepository({ root, worktree: true })).observation.state, "project-ready");
@@ -161,7 +174,10 @@ test("explicit migration preserves inventory and supplies check evidence for all
   const remote = await checkRepository({ root, remote: true });
   assert.equal(remote.observation.state, "project-ready", JSON.stringify(remote));
   assert.ok(validationResults(remote).some(({ mode }) => mode === "migration"));
-  assert.equal((await migrateEvents({ root })).outcome, "already-v2");
+  assert.equal(
+    (await runSchemaMigration("project-v1-to-v2", { root })).outcome,
+    "already-v2",
+  );
 });
 
 test("append uses exact CAS, reports retries and rejects no-op duplicates without writing", async (t) => {

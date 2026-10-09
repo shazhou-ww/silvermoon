@@ -266,14 +266,22 @@ function projectSchemaDiagnostics({
       || file.readiness === "current"
     ) continue;
     if (file.readiness === "migration-required") {
+      const migration = file.migrationPath?.[0];
+      const command = migration === undefined
+        ? undefined
+        : device?.runtime.source === "source-checkout"
+        ? `node ${migration.sourceEntrypoint}`
+        : device?.runtime.source === "host"
+        ? `the host-managed ${migration.id} migration`
+        : migration.executable;
       diagnostics.push({
         code: "schema.migration-required",
         level: "error",
         path: file.path,
         message: `${file.family} schema version ${String(file.schemaVersion)} is valid but the current write target is version ${file.targetVersion}.`,
-        remediation: file.migration === undefined
+        remediation: command === undefined
           ? `Migrate ${file.path} before continuing.`
-          : `Run the ${file.migration.id} migration before continuing.`,
+          : `Run ${command} to plan the migration before continuing.`,
       });
     } else if (file.readiness === "migration-unavailable") {
       diagnostics.push({

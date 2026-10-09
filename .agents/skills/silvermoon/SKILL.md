@@ -97,6 +97,14 @@ Never edit or guess a future schema. Project preparation forces one
 latest-runtime refresh and reports whether an update exists, the confirmed
 latest still lacks support, or registry freshness is unavailable.
 
+When preparation reports `migration-required`, use the exact migration path
+declared in `observation.schemas`; do not edit only a version field. With an
+installed global runtime, plan `project-v1-to-v2` through
+`silvermoon-migrate-v1-to-v2 --root <project>`, then apply only the returned
+digest after explicit upgrade authorization. In this source checkout, use
+`node bin/migrate-v1-to-v2.ts` instead. Migration never commits, pushes, or
+records a lifecycle decision.
+
 Silvermoon's own source repository is exempt from the dependency requirement.
 There, use `node bin/silvermoon.js` from the current checkout for every
 `silvermoon` command in this skill, preserving all arguments and options.
