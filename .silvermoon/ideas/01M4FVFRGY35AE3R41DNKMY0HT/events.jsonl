@@ -1,3 +1,4 @@
 {"sequence":1,"type":"setAlias","payload":{"alias":"declarative-process-flows"}}
 {"sequence":2,"type":"setAlias","payload":{"alias":"whats-next-message-templates"}}
 {"sequence":3,"type":"acceptIdeal","payload":{"idealRevision":"d9c59102b53d6dc2bdb1e5cc15daf4680e2565d5"}}
+{"sequence":4,"type":"acceptInner","payload":{"implementationRevision":"8a495113debe6c99f4610d75adfba314b164262f"}}
