@@ -138,28 +138,19 @@ Missing guidance is normal. A guidance problem blocks only the reported
 current action until repaired. `check` validates all three fixed guidance files
 in its selected snapshot but never returns their content.
 
-Every selected active report includes `response.review`, rendered as the
-review candidate in Agent Markdown. It binds the eventual decision and exact
-world revision to the fetched `primaryCommit`, identifies the current-world
-`scopePath`, and lists the phase's minimum `canonicalDocuments`. The structured
-field retains full object IDs for exact decision recording; user-facing review
-messages show only a 12-character revision reference and commit reference. Use
-it as the authoritative seed for the review index, then inspect the scope and
-add only substantive same-world supporting files, evidence files, key
-deliverables, or diffs.
-Its presence does not mean the candidate is complete or ready for a human
-decision; the world contract, ledger, evidence, synchronization, and canonical
-`response.nextSteps` still determine readiness.
+Every selected active report includes `response.review`. It is primary-bound
+metadata for the review workflow below; its presence does not mean the
+candidate is complete or ready for a human decision.
 
 ## Execute The Workflow
 
 ### Create A New Idea
 
 `create-idea` creates only the scaffold: `Idea.md`, `Implementation.md`,
-`Deployment.md`, `ledger.md`, and either v1 `status.yaml` or a v2 `events.jsonl` file.
-It never stages, commits,
-pushes, or records a decision. Preserve explicit creation intent through
-hygiene retries: retry `create-idea`, not bare `whats-next`.
+`Deployment.md`, `ledger.md`, and either v1 `status.yaml` or v2
+`events.jsonl`. It never stages, commits, pushes, or records a decision.
+Preserve explicit creation intent through hygiene retries: retry
+`create-idea`, not bare `whats-next`.
 
 When creating a new idea, proactively assign a concise, unique alias: edit
 v1 `status.yaml`, or use v2 `event append` with `setAlias`.
@@ -173,14 +164,10 @@ language without a built-in template, replace every natural-language
 placeholder with the exact reported content language before treating the
 contract as ready.
 
-During preparation, complete `Idea.md` and replace the scaffold placeholders in
-`Implementation.md` and `Deployment.md` with lightweight first versions. Give
-each downstream contract no more than three high-level steps and three
-observable criteria, then mirror their stable IDs and short titles in
-`ledger.md` with every item unchecked. These seeds test whether the direction
-has a credible path; they remain provisional and are not accepted by Ideal
-approval. Treat scaffold sections as prompts, not invitations to speculate or
-fill space.
+During preparation, turn the scaffold into the preparation candidate defined
+under **Maintain The Artifacts**. Treat scaffold sections as prompts, not
+invitations to fill space, then validate and synchronize the candidate before
+moving to unrelated work.
 
 ### Continue A Selected Idea
 
@@ -188,12 +175,9 @@ Use the reported `ledgerPath` after lifecycle hygiene and continue the selected
 phase while preserving the nested worlds:
 
 - **Preparing:** Complete `Idea.md` and supporting Ideal World (理想世界) files.
-  Keep the idea as a brief direction card. Also author lightweight,
-  high-level first versions of `Implementation.md` and `Deployment.md` and
-  mirror them in `ledger.md`; do not expand them into detailed design, task
-  trees, or execution evidence. The seeds are feasibility context, not part of
-  the human approval scope. The human gate approves only the exact reported
-  `idealRevision`.
+  Keep the idea as a brief direction card and prepare the downstream seeds
+  defined below. The seeds are feasibility context, not part of the approval
+  scope. The human gate approves only the exact reported `idealRevision`.
 - **Implementing:** Edit `Implementation.md`, supporting Inner World (主体世界)
   files, and repository deliverables by refining the preparation seed. Change
   the ideal only if it truly changed and the idea must return to preparing.
@@ -268,18 +252,20 @@ Implementation and Deployment steps and criteria. Update ledger entries with
 their contract changes; add new items unchecked and reset completed items when
 requirements or proof change materially.
 
-If relevant entries remain unchecked, continue the reported work. If they are
-all checked, evidence remains valid, and the candidate is synchronized to
-primary, stop and request the appropriate explicit human decision. A checked
-box records Agent work only; it never approves, accepts, changes status, or
-authorizes synchronization.
+Only the current phase's entries govern gate readiness. During preparation,
+all seeded `I-*` and `D-*` entries remain unchecked and do not block Ideal
+approval. During implementation, continue while a relevant `I-*` entry is
+unchecked; during deployment, do the same for `D-*`. When the current phase's
+entries are complete, evidence remains valid, and the candidate is
+synchronized to primary, request the appropriate explicit human decision. A
+checked box records Agent work only; it never approves, accepts, changes
+status, or authorizes synchronization.
 
 ## Validate And Synchronize To Primary
 
-Every successfully created idea must be completed, validated, committed, and
-synchronized to the configured primary branch before requesting review or
-approval, or moving on to unrelated work. Apply the same sequence to every
-lifecycle candidate:
+Before requesting review or moving to unrelated work, make every created or
+updated lifecycle candidate ready for its current gate, then validate, commit,
+and synchronize it to the configured primary branch:
 
 1. Inspect the complete candidate and preserve unrelated work.
 2. Run `silvermoon check --worktree`.
@@ -310,104 +296,67 @@ recovery condition, and stop before the human gate.
 
 ## Request Focused Review And Record Decisions
 
-Enter a human gate only after the candidate is synchronized to primary and
-`whats-next` has reported its exact world revision and effective content
-language.
+Enter a human gate only after the current phase's contract, ledger, and
+evidence are ready, the candidate is synchronized to primary, and a fresh
+`whats-next` reports its world revision, `primaryCommit`, and effective content
+language. Use `response.review` as the source for full object IDs and minimum
+documents. Show only 12-character revision and commit references to the user;
+retain the full values for decision recording.
 
-Keep the human review message short. Treat it as an index to durable
-repository artifacts, not as the evidence container. Before requesting a
-decision, record review-relevant details in the current world or `ledger.md`,
-then synchronize those files to primary.
-
-The review index must:
-
-- identify the idea by alias and ULID, the requested decision, a 12-character
-  revision reference, and a linked 12-character primary commit reference;
-- state the review focus in one short sentence;
-- list the current contract and only directly relevant substantive same-world
-  supporting files, evidence files, ledger, key deliverables, or candidate
-  diff;
-- provide a host-clickable local link and an immutable remote link for each
-  item when available;
-- end with one explicit decision question for the candidate identified by the
-  revision reference. Retain the full revision from `response.review` when
-  recording that decision.
-
-Use this compact field order for every gate. Localize prose headings and labels
-to the effective content language, but preserve the field order and machine
-identifiers:
+Before the gate, put review-relevant detail in durable current-phase artifacts
+and synchronize it. The review message is an index to that evidence, not the
+evidence container. Use exactly this compact structure in ordinary assistant
+Markdown, localizing prose labels to the effective content language:
 
 ```text
-Title (level 2): <alias> - <gate label>
+## <alias> - <gate label>
+**Idea:** <alias> (<ULID>)
+**Candidate:** <12-character revision reference> on primary [<12-character commit reference>](<commit URL>)
+**Review focus:** <one short sentence>
 
-- Idea: <alias> (<ULID>)
-- Decision: <acceptIdeal | acceptInner | acceptOuter>
-- Revision reference: <12-character prefix>
-- Primary reference: <linked 12-character prefix>
-- Review focus: <one sentence>
+### Review files
+- <document>: [local] | [pinned]
 
-Review files (level 3):
-
-- <description>: <local link> | <immutable remote link>
-
-Decision (level 3):
-
-<one explicit question for the exact revision>
+### Decision
+<one explicit question for this candidate>
 ```
 
-Do not add lifecycle-policy essays, repeated statements that the Agent cannot
-decide, or inventories of completed checks to this message. Put durable test,
-CI, deployment, and SLO evidence in linked artifacts. If material work remains,
-continue that work instead of presenting a gate.
-Do not list placeholders, empty evidence files, or future-world contracts
-solely because they exist in the canonical layout.
+Choose links by gate:
 
-Render the review index in ordinary assistant Markdown as a standalone,
-completed assistant message, then end that turn. Never invoke an interactive
-decision tool in the same assistant turn: a host can defer or replace queued
-assistant prose with the tool surface, leaving the review links invisible while
-the decision is open. If the user has not already answered the exact question,
-an interactive decision tool may be invoked only in a later turn after the
-review index is visibly present in completed conversation history. Keep its
-question and choices limited to the exact decision. Do not put local file links
-in tool-owned question or choice surfaces; those surfaces may report valid
-workspace paths as unresolved resources.
+- **Ideal:** `Idea.md` and only substantive Ideal World supporting files. Do
+  not list placeholders, downstream seeds, or `ledger.md`.
+- **Implementation:** always `Implementation.md` and `ledger.md`, plus only
+  substantive Inner World support, key source or test files, durable evidence,
+  or a candidate diff that materially helps the decision.
+- **Deployment:** always `Deployment.md` and `ledger.md`, plus only substantive
+  Outer World evidence or relevant external results.
 
-If the decision tool is unavailable, cancelled, or returns no explicit choice,
-do not retry it or repeat the gate rationale against an unchanged observation.
-The already-rendered index remains the request; stop with at most one short
-sentence that the exact decision is still pending. A direct user answer to the
-index's exact question is itself an explicit decision and needs no tool retry.
+Give every listed file a host-clickable local link and immutable,
+commit-pinned remote link when available. A local link is only a navigation
+convenience if the checkout has moved. Never use a moving branch URL. If no
+reliable permalink can be formed, provide the full primary commit and
+repository-relative path and explain why.
+
+Follow the host's file-link convention. In VS Code on Windows, use an absolute
+drive path with forward slashes, such as
+`[Implementation.md](C:/repo/Implementation.md)`; never use backslashes or a
+`file://` URI. Do not put local file links in tool-owned questions or choices.
 
 Use the latest report's effective content language for the review focus, link
 descriptions, and decision question. A temporary output language does not
-change this rule. Preserve aliases, ULIDs, revisions, paths, stable IDs, and
-other machine identifiers unchanged.
+change this rule. Preserve aliases, ULIDs, paths, stable IDs, and other machine
+identifiers.
 
-For ideal approval, link `Idea.md` and only substantive Ideal World supporting
-files. Do not link the provisional downstream seeds or their ledger: they are
-required preparation inputs but remain outside `acceptIdeal` scope. For
-implementation acceptance, always link `Implementation.md` and
-`ledger.md`; add Inner World supporting files, key source and test files,
-durable evidence, or the candidate diff only when they contain material review
-content. For deployment acceptance, always link `Deployment.md` and
-`ledger.md`; add substantive Outer World evidence or external results when
-relevant.
-
-Local links are navigation conveniences and must not be described as the exact
-candidate if the local checkout has moved. Remote links should be a
-commit-pinned web URL to the primary candidate, not a moving branch URL. If no
-reliable remote permalink can be formed, provide the primary commit and
-repository-relative path and explain why.
-
-Follow the host's file-link convention in ordinary assistant Markdown. In
-VS Code on Windows, use an absolute drive path with forward slashes, such as
-`[Implementation.md](C:/repo/Implementation.md)`; never use backslashes or a
-`file://` URI. Filesystem existence alone does not prove that a tool-owned
-surface can resolve the link.
-
-Synchronization and links make review possible; neither constitutes a human
-decision.
+Deliver the index as a standalone, completed assistant message and end that
+turn. Never invoke an interactive decision tool in the same assistant turn:
+the host may prioritize its card and hide queued Markdown. Only a later turn
+may open the tool, with one question and choices limited to the exact decision.
+If the user answers the index directly, record that decision without reopening
+the tool.
+If the tool is unavailable, cancelled, or returns no explicit choice, stop
+after one concise wait statement; do not retry it or repeat the gate rationale.
+Do not add lifecycle-policy essays, repeated gate rationale, test summaries, or
+deployment narration to the review message.
 
 For v2 projects, follow [events.md](./references/events.md): observe the exact
 log and primary, then use the project-version `event append` command after an
@@ -426,22 +375,14 @@ change only the corresponding status fact:
 - deployment acceptance records `deploymentAcceptedRevision`;
 - abandonment or reversal changes only canonical `abandoned`.
 
-Never infer a decision from silence, prose, Git activity, ledger checkboxes, or
-an outer command. Validate a status change with `silvermoon check --worktree`,
-stage it, run `silvermoon check --staged`, commit it separately when practical,
-synchronize it to primary, and reobserve the resulting lifecycle state.
+Validate a status change with `silvermoon check --worktree`, stage it, run
+`silvermoon check --staged`, commit it separately when practical, synchronize
+it to primary, and reobserve the resulting lifecycle state.
 
 Follow [adoption.md](./references/adoption.md) when creating or explicitly
 converting a repository to Silvermoon.
 
-Hosts integrating Copilot may use `silvermoon/agents/copilot` and
-`silvermoon/agents/project-runtime` as separate experimental package
-subpaths; see `docs/reference.md` in the Silvermoon source repository.
-Register a canonical credential-free project URL locally and route by that
-URL plus idea ID. Only the project's own Silvermoon process decides
-`whats-next` and appends interaction events. The adapter's delivery and
-activity streams are observations, never authoritative event history.
-An SDK send acknowledgment is not proof of processing. After a lost
-connection or uncertain send, reobserve the exact event log and session
-state; never resend, append a stale reply, or replace a bound session merely
-because a completion event was not observed.
+Experimental Copilot adapters are documented in `docs/reference.md` in the
+Silvermoon source repository. Their delivery streams are observations, not
+event history; after uncertain delivery, reobserve the exact project log and
+session before retrying or appending any reply.
