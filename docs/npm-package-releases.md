@@ -175,6 +175,35 @@ workflow job when GitHub offers that option; the planner recognizes the
 existing version, skips `npm publish`, and performs the same complete
 verification again.
 
+### 0.4.0 one-time recovery
+
+The immutable `npm/silvermoon/v0.4.0` tag remains the failed original release
+instruction and must not be moved, deleted, or recreated. The only authorized
+recovery source is the protected `npm/silvermoon-recovery/v0.4.0` tag. Its
+commit must descend from the original release commit and be reachable from
+`origin/main`.
+
+The workflow maps the exact recovery tag to `npm/silvermoon/v0.4.0` only for
+package selection and version validation. It builds and archives the recovery
+commit itself; the tarball `gitHead`, generated README links, npm provenance
+source, post-publication verifier, and GitHub Release all use the actual
+recovery tag and commit. Do not override `GITHUB_REF`, `GITHUB_SHA`, or any
+provenance environment value.
+
+After the trusted-publishing workflow and verifier succeed, create the
+`0.4.0` GitHub Release from the recovery tag:
+
+```sh
+gh release create npm/silvermoon-recovery/v0.4.0 \
+  --verify-tag \
+  --title "Silvermoon 0.4.0" \
+  --notes-file .github/release-notes/0.4.0.md
+```
+
+This is a one-time recovery for an unpublished version, not a second general
+release key. Future source, manifest, or validation failures still require a
+new version.
+
 ## Add another package
 
 1. Give the package a committed canonical `name`, SemVer `version`, and

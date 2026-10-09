@@ -17,6 +17,9 @@ history remains available through npm and Git tags.
   structured review context follows effective content language independently
   of temporary output language, while the canonical skill only adds
   host-specific links, review focus, and substantive evidence.
+- Adds explicit Agent-owned `submitIdeal`, `submitInner`, and `submitOuter`
+  events so each human acceptance is bound to an exact synchronized candidate
+  rather than inferred from repository activity.
 
 ### Schema compatibility and migration
 
@@ -40,9 +43,10 @@ history remains available through npm and Git tags.
 - Keeps the root JavaScript package API experimental before `1.0.0`; consumers
   should pin an exact package version when importing migration discovery or
   dispatch APIs.
-- Publishes only through the immutable `npm/silvermoon/v0.4.0` tag and the
-  existing GitHub OIDC trusted-publishing workflow with provenance and
-  post-publication verification.
+- Preserves the failed immutable `npm/silvermoon/v0.4.0` instruction and
+  publishes the still-unreleased version through the protected one-time
+  `npm/silvermoon-recovery/v0.4.0` source tag, with GitHub OIDC provenance and
+  post-publication verification bound to that recovery revision.
 
 ## [0.3.0]
 

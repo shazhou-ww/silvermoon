@@ -79,6 +79,16 @@ test("uses a protected, least-privilege trusted-publishing workflow", async () =
       `${name} must run before publication`,
     );
   }
+  assert.ok(
+    stepNames.indexOf("Resolve release source tag") <
+      stepNames.indexOf("Validate release instruction"),
+    "the source tag must be resolved before release planning",
+  );
+  assert.ok(
+    stepNames.indexOf("Verify 0.4.0 recovery ancestry") <
+      stepNames.indexOf("Validate release instruction"),
+    "recovery ancestry must be verified before release planning",
+  );
 
   const generateReadmeIndex = stepNames.indexOf("Generate immutable npm README");
   const stageIndex = stepNames.indexOf("Stage selected package");
@@ -112,6 +122,9 @@ test("uses a protected, least-privilege trusted-publishing workflow", async () =
   }
 
   const checkout = publish.steps.find(({ name }: { name: string }) => name === "Check out full history");
+  const sourceTag = publish.steps.find(
+    ({ name }: { name: string }) => name === "Resolve release source tag",
+  );
   const setupPnpm = publish.steps.find(({ name }: { name: string }) => name === "Install pnpm");
   const setupNode = publish.steps.find(({ name }: { name: string }) => name === "Set up Node.js");
   const setupNpm = publish.steps.find(
@@ -120,7 +133,13 @@ test("uses a protected, least-privilege trusted-publishing workflow", async () =
   const ancestry = publish.steps.find(
     ({ name }: { name: string }) => name === "Refresh primary branch and verify ancestry",
   );
+  const recoveryAncestry = publish.steps.find(
+    ({ name }: { name: string }) => name === "Verify 0.4.0 recovery ancestry",
+  );
   const install = publish.steps.find(({ name }: { name: string }) => name === "Install frozen dependencies");
+  const release = publish.steps.find(
+    ({ name }: { name: string }) => name === "Validate release instruction",
+  );
   const repositoryBuild = publish.steps.find(({ name }: { name: string }) => name === "Build repository");
   const unit = publish.steps.find(({ name }: { name: string }) => name === "Run unit tests");
   const contract = publish.steps.find(({ name }: { name: string }) => name === "Run contract tests");
@@ -148,6 +167,18 @@ test("uses a protected, least-privilege trusted-publishing workflow", async () =
     checkout.uses,
     "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
   );
+  assert.equal(sourceTag.id, "source");
+  assert.equal(
+    sourceTag.env.RELEASE_SOURCE_TAG,
+    "${{ github.ref_name }}",
+  );
+  assert.match(
+    sourceTag.run,
+    /RELEASE_SOURCE_TAG" = "npm\/silvermoon-recovery\/v0\.4\.0"/,
+  );
+  assert.match(sourceTag.run, /PLANNER_TAG=npm\/silvermoon\/v0\.4\.0/);
+  assert.match(sourceTag.run, /planner_tag=\$PLANNER_TAG/);
+  assert.match(sourceTag.run, /recovery_state=\$RECOVERY_STATE/);
   assert.equal(
     setupPnpm.uses,
     "pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413",
@@ -167,7 +198,28 @@ test("uses a protected, least-privilege trusted-publishing workflow", async () =
     /git remote set-url origin "https:\/\/github\.com\/\$GITHUB_REPOSITORY\.git"/,
   );
   assert.match(ancestry.run, /git merge-base --is-ancestor/);
+  assert.equal(
+    recoveryAncestry.if,
+    "steps.source.outputs.recovery_state == '0.4.0'",
+  );
+  assert.equal(
+    recoveryAncestry.env.ORIGINAL_RELEASE_COMMIT,
+    "9501f2f4887c360f0902f559e7c6456ffe72b43d",
+  );
+  assert.match(
+    recoveryAncestry.run,
+    /refs\/tags\/npm\/silvermoon\/v0\.4\.0:refs\/tags\/npm\/silvermoon\/v0\.4\.0/,
+  );
+  assert.match(
+    recoveryAncestry.run,
+    /git merge-base --is-ancestor "\$ORIGINAL_RELEASE_COMMIT" "\$GITHUB_SHA"/,
+  );
   assert.equal(install.run, "pnpm install --frozen-lockfile");
+  assert.equal(release.env.RELEASE_COMMIT, "${{ github.sha }}");
+  assert.equal(
+    release.env.RELEASE_TAG,
+    "${{ steps.source.outputs.planner_tag }}",
+  );
   assert.equal(repositoryBuild.run, "pnpm build");
   assert.equal(unit.run, "pnpm test:unit");
   assert.equal(contract.run, "pnpm test:contract");
@@ -286,6 +338,7 @@ test("uses a protected, least-privilege trusted-publishing workflow", async () =
     verification.env.SILVERMOON_TARBALL,
     "${{ steps.package.outputs.tarball_path }}",
   );
+  assert.equal(verification.env.RELEASE_TAG, "${{ github.ref_name }}");
   assert.match(verification.run, /verify-npm-release\.ts/);
   assert.match(verification.run, /--commit "\$RELEASE_COMMIT"/);
   assert.match(verification.run, /--tag "\$RELEASE_TAG"/);
@@ -336,6 +389,8 @@ test("documents trusted-publisher setup and the protected release procedure", as
     "homepage",
     "bugs",
     "gh release create npm/silvermoon/v0.4.0",
+    "npm/silvermoon-recovery/v0.4.0",
+    "one-time recovery",
     "--verify-tag",
   ]) {
     assert.ok(guide.includes(required), `Release guide is missing: ${required}`);
