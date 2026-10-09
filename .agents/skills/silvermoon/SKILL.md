@@ -81,6 +81,13 @@ Project snapshot checks inspect Git, Silvermoon configuration, metadata schema,
 and layout only. They do not read `package.json`, `node_modules`, or repository
 skill paths.
 
+Treat `response.device` as a non-blocking execution-environment advisory, not a
+project finding. Surface an available global-runtime update and repair missing,
+broken, or stale personal skill links at the device or Agent host. Successful
+npm `latest` observations may be reused for less than 24 hours; registry
+failure never makes a valid project snapshot fail. Snapshot-only `check`
+commands intentionally omit device readiness.
+
 Silvermoon's own source repository is exempt from the dependency requirement.
 There, use `node bin/silvermoon.js` from the current checkout for every
 `silvermoon` command in this skill, preserving all arguments and options.

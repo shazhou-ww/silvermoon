@@ -78,13 +78,14 @@ export function dialogueReadyObservation<
     root: string;
     version: ProjectVersion;
     configuration: ProjectConfiguration;
+    device?: import("./types.ts").DeviceAdvisory;
     outputLanguage: string;
     problems: Problem[];
   },
   state: State,
   details?: Details,
 ) {
-  const { root, version, configuration, outputLanguage, problems } = observation;
+  const { root, version, configuration, device, outputLanguage, problems } = observation;
   return {
     state,
     root,
@@ -92,6 +93,7 @@ export function dialogueReadyObservation<
     configuration,
     outputLanguage,
     problems,
+    ...(device === undefined ? {} : { device }),
     ...details,
   };
 }

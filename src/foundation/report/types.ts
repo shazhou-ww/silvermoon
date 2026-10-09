@@ -22,6 +22,45 @@ export interface ProjectConfiguration {
   preferredLanguage?: string;
 }
 
+export interface DeviceAdvisory {
+  runtime: {
+    source: "global" | "host" | "source-checkout";
+    version: string | null;
+    summary?: string;
+  };
+  skill: {
+    status:
+      | "ready"
+      | "missing"
+      | "mismatched"
+      | "invalid"
+      | "managed-by-host"
+      | "source-checkout";
+    expectedRoot: string;
+    paths: string[];
+    invalidPaths?: string[];
+    remediation?: string;
+    summary?: string;
+  };
+  update: {
+    status:
+      | "available"
+      | "current"
+      | "unavailable"
+      | "managed-by-host"
+      | "source-checkout";
+    currentVersion: string | null;
+    source: "cache" | "registry" | "runtime";
+    latestVersion?: string;
+    checkedAt?: string;
+    lastSuccessfulCheck?: {
+      checkedAt: string;
+      latestVersion: string;
+    };
+    summary?: string;
+  };
+}
+
 export interface IdeaReference {
   id: string;
   state: string;
@@ -95,6 +134,7 @@ interface ObservationBase {
   root: string;
   outputLanguage: string;
   problems: Problem[];
+  device?: DeviceAdvisory;
   version?: ProjectVersion;
   configuration?: ProjectConfiguration;
 }
@@ -233,6 +273,7 @@ interface ResponseBase {
   kind: string;
   language: string;
   summary: string;
+  device?: DeviceAdvisory;
   details?: ResponseDetails;
 }
 

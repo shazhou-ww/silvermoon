@@ -35,6 +35,14 @@ repository skill paths. Project readiness depends only on Git, Silvermoon
 configuration, metadata schema, and layout. Runtime identity, latest-version
 checks, and personal skill registration belong to device readiness.
 
+Read a dialogue report's device advisory separately from its project
+observation. A global runtime reuses a successful npm `latest` result for less
+than 24 hours and validates personal discovery links against the running
+package. Missing, broken, or stale links and registry failures require device
+repair but do not turn a valid project snapshot into
+`project-setup-required`. Snapshot-only `check` commands do not perform these
+device checks.
+
 Silvermoon's own source repository must not depend on its published package.
 Use `node bin/silvermoon.js` from that checkout instead of every `silvermoon`
 invocation below, and refresh its registered skill from the source using

@@ -353,6 +353,15 @@ projections:
   and any ordered `nextSteps`, choices, items, validation result, review
   context, or guidance needed by the caller.
 
+Dialogue observations and responses also carry the same optional `device`
+advisory. `device.runtime` identifies the running package as `global`, `host`,
+or `source-checkout`; `device.skill` reports personal-link health; and
+`device.update` reports `current`, `available`, `unavailable`,
+`managed-by-host`, or `source-checkout` with cache or registry provenance.
+These fields never enter `problems` or change command success. Snapshot-only
+`check` responses omit `device` so their result depends only on the selected
+project snapshot and explicit primary state.
+
 Every selected active idea adds a primary-bound `review` object to its
 `next-steps` response:
 
@@ -591,13 +600,15 @@ creation bounds use `[created-since, created-before)` against the timestamp
 encoded in each ULID. Sorting defaults to stable newest-first, and limit is
 applied after filtering and sorting without changing matched counts.
 
-The query validates Git presence, configuration, canonical skill, and the
-complete idea layout before filtering. It reads staged, unstaged, and
+The query validates Git presence, configuration, and the complete idea layout
+before filtering. It reads staged, unstaged, and
 untracked idea changes from the current worktree snapshot but never checks
 worktree hygiene, branch, upstream, or primary ancestry, and never fetches or
-accesses the network. `list-ideas --language <en|en-US|zh|zh-CN>` overrides only
-Silvermoon-owned output for that invocation; without it, the project's
-resolved output language is used.
+accesses the project remote. Its independent device advisory may query npm
+`latest` only when the successful device cache is at least 24 hours old.
+`list-ideas --language <en|en-US|zh|zh-CN>` overrides only Silvermoon-owned
+output for that invocation; without it, the project's resolved output
+language is used.
 
 ## Validation Targets
 
@@ -615,9 +626,10 @@ resolved output language is used.
 
 Targets are mutually exclusive and never change the caller's branch, index, or
 worktree. `--remote` may fetch Git objects and records that attempt as an
-action. `check` validates the selected snapshot's project contract:
-Git, configuration, canonical skill, idea layout, world revisions, status, and
-the complete optional phase guidance directory.
+action. `check` validates the selected snapshot's project contract: Git,
+configuration, idea layout, world revisions, status, and the complete optional
+phase guidance directory. It does not inspect personal skill registration or
+query npm for runtime freshness.
 For v1 its result depends on the materialized tree, not commit parents, parent
 order, branch, merge/cherry-pick path, or retained decision reachability. A canonical
 decision revision that differs from the current world is a valid historical

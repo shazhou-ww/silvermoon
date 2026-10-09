@@ -1,6 +1,7 @@
 import { DEFAULT_LANGUAGE, localize } from "../language/index.ts";
 import type {
   DateFacts,
+  DeviceAdvisory,
   Guidance,
   IdeaInventoryItem,
   IdeaListResponse,
@@ -221,19 +222,90 @@ function renderIdeaList(
 }
 
 /** @pure */
+function renderDeviceAdvisory(
+  device: DeviceAdvisory,
+  language: string,
+) {
+  const skillDetails = device.skill.summary
+    ?? (device.skill.invalidPaths?.length
+      ? device.skill.invalidPaths.join(", ")
+      : device.skill.paths.length > 0
+        ? device.skill.paths.join(", ")
+        : device.skill.expectedRoot);
+  const skillDescription = device.skill.remediation === undefined
+    ? skillDetails
+    : `${skillDetails}; ${device.skill.remediation}`;
+  const updateDetails = [
+    device.update.currentVersion === null
+      ? null
+      : `current=${device.update.currentVersion}`,
+    device.update.latestVersion === undefined
+      ? null
+      : `latest=${device.update.latestVersion}`,
+    device.update.checkedAt === undefined
+      ? null
+      : `checked=${device.update.checkedAt}`,
+    `source=${device.update.source}`,
+    device.update.summary,
+  ].filter((value): value is string => value !== null && value !== undefined);
+  return [
+    `### ${localize(
+      language,
+      "Device advisory (does not affect the project result)",
+      "设备提示（不影响项目判断）",
+    )}`,
+    "",
+    ...renderMarkdownTable(
+      [
+        localize(language, "Check", "检查项"),
+        localize(language, "Status", "状态"),
+        localize(language, "Details", "详情"),
+      ],
+      [
+        [
+          localize(language, "Runtime", "Runtime"),
+          device.runtime.source,
+          [
+            device.runtime.version ?? "-",
+            device.runtime.summary,
+          ].filter(Boolean).join("; "),
+        ],
+        [
+          localize(language, "Personal skill", "个人级 skill"),
+          device.skill.status,
+          skillDescription,
+        ],
+        [
+          localize(language, "Latest runtime", "最新 runtime"),
+          device.update.status,
+          updateDetails.join("; "),
+        ],
+      ],
+    ),
+  ];
+}
+
+/** @pure */
 export function renderMarkdownResponse(
   response: ReportResponse,
   { now, dateFacts }: { now: Date; dateFacts: Map<string, DateFacts> },
 ) {
   const language = response.language ?? DEFAULT_LANGUAGE;
   if (response.kind === "idea-list") {
-    return [
+    const sections = [
       `## ${responseTitle(response)}`,
       "",
       renderIdeaList(response, language, now, dateFacts),
-    ].join("\n");
+    ];
+    if (response.device !== undefined) {
+      sections.push("", ...renderDeviceAdvisory(response.device, language));
+    }
+    return sections.join("\n");
   }
   const lines = [`## ${responseTitle(response)}`, "", response.summary];
+  if (response.device !== undefined) {
+    lines.push("", ...renderDeviceAdvisory(response.device, language));
+  }
 
   if (response.kind === "event-result") {
     lines.push("", "```json", JSON.stringify(response.receipt, null, 2), "```");

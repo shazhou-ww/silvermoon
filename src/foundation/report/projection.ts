@@ -155,6 +155,9 @@ function dialogueResponse(
   const base = {
     language,
     details: observationDetails(observation),
+    ...(observation.device === undefined
+      ? {}
+      : { device: clone(observation.device) }),
   };
   const nextSteps = normalizeNextSteps(context.nextSteps);
 

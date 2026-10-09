@@ -22,6 +22,9 @@ export function metadataFailureObservation(
       root: observed.observation.root,
       version: observed.observation.version,
       configuration: observed.observation.configuration,
+      ...(observed.observation.device === undefined
+        ? {}
+        : { device: observed.observation.device }),
       outputLanguage: observed.observation.outputLanguage,
       observedThrough: "configuration",
       problems: [problem],

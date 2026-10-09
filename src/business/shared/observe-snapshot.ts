@@ -15,6 +15,7 @@ import type {
 import { errorMessage, traceBusinessAsync } from "./business-types.ts";
 import type { IdeaLayout } from "./idea-layout.ts";
 import type { ProjectVersion } from "../../foundation/report/types.ts";
+import type { DeviceAdvisory } from "../../foundation/report/types.ts";
 
 interface Finding {
   priority: number;
@@ -118,6 +119,54 @@ function localizeFinding(finding: Finding, language: string): Finding {
   };
 }
 
+function localizeDeviceAdvisory(
+  device: DeviceAdvisory | undefined,
+  language: string,
+) {
+  if (device === undefined || !language.toLowerCase().startsWith("zh")) {
+    return device;
+  }
+  const skillRemediation = device.skill.remediation === undefined
+    ? undefined
+    : device.skill.status === "missing"
+      ? `在个人级 skill discovery 路径中，将 ${device.skill.expectedRoot} 注册为链接。`
+      : device.skill.status === "mismatched"
+        ? `把报告的个人级 skill 注册替换为指向 ${device.skill.expectedRoot} 的链接。`
+        : `修复 Silvermoon 安装，确保 ${device.skill.expectedRoot} 包含可读的 SKILL.md。`;
+  const updateSummary = device.update.status === "available"
+    ? `将全局 Silvermoon runtime 升级到 ${device.update.latestVersion}。`
+    : device.update.status === "source-checkout"
+      ? "当前使用源码 checkout 开发 runtime；npm latest 状态只适用于全局安装。"
+      : device.update.status === "managed-by-host"
+        ? "Silvermoon runtime 更新由嵌入它的 host 管理。"
+        : device.update.summary === undefined
+          ? undefined
+          : device.update.status === "unavailable"
+            ? `无法确认最新 Silvermoon runtime：${device.update.summary}`
+            : `Silvermoon runtime freshness cache 提示：${device.update.summary}`;
+  return {
+    runtime: {
+      ...device.runtime,
+      ...(device.runtime.summary === undefined
+        ? {}
+        : { summary: `无法完整检查 Silvermoon runtime：${device.runtime.summary}` }),
+    },
+    skill: {
+      ...device.skill,
+      ...(device.skill.summary === undefined
+        ? {}
+        : { summary: `无法完整检查个人级 Silvermoon skill：${device.skill.summary}` }),
+      ...(skillRemediation === undefined
+        ? {}
+        : { remediation: skillRemediation }),
+    },
+    update: {
+      ...device.update,
+      ...(updateSummary === undefined ? {} : { summary: updateSummary }),
+    },
+  };
+}
+
 async function observeSnapshotInternal({
   allowMissingIdeas = false,
   contentRoot,
@@ -149,8 +198,9 @@ async function observeSnapshotInternal({
   const device = await traceBusinessAsync(
     "device.observe",
     {},
-    () => observeDevice({ userHome }),
+    () => observeDevice({ includeReadiness: !projectOnly, userHome }),
   );
+  const rawDeviceAdvisory = device.readiness;
   const adoption = await traceBusinessAsync(
     "project.observe",
     {},
@@ -179,12 +229,19 @@ async function observeSnapshotInternal({
     content: fallbackContentLanguage,
     ...(outputLanguageOverride === undefined ? {} : { override: outputLanguageOverride }),
   }).tag;
+  const fallbackDeviceAdvisory = localizeDeviceAdvisory(
+    rawDeviceAdvisory,
+    fallbackOutputLanguage,
+  );
 
   if (!adoption.gitReady) {
     const findings = baseFindings.map((finding) =>
       localizeFinding(finding, fallbackOutputLanguage)
     );
     const observation = projectObservation({
+      ...(fallbackDeviceAdvisory === undefined
+        ? {}
+        : { device: fallbackDeviceAdvisory }),
       outputLanguage: fallbackOutputLanguage,
       problems: findings.map(({ problem }) => problem),
       root: adoption.root,
@@ -206,6 +263,9 @@ async function observeSnapshotInternal({
       localizeFinding(finding, fallbackOutputLanguage)
     );
     const observation = projectObservation({
+      ...(fallbackDeviceAdvisory === undefined
+        ? {}
+        : { device: fallbackDeviceAdvisory }),
       outputLanguage: fallbackOutputLanguage,
       problems: findings.map(({ problem }) => problem),
       root: adoption.root,
@@ -238,6 +298,10 @@ async function observeSnapshotInternal({
   }).tag;
   const config = adoption.config;
   const configuration = resolvedConfiguration(config, contentLanguage);
+  const deviceAdvisory = localizeDeviceAdvisory(
+    rawDeviceAdvisory,
+    outputLanguage,
+  );
   const findings = baseFindings.map((finding) =>
     localizeFinding(finding, outputLanguage)
   );
@@ -301,6 +365,7 @@ async function observeSnapshotInternal({
   if (layout.diagnostics.length > 0) {
     const observation = projectObservation({
       configuration,
+      ...(deviceAdvisory === undefined ? {} : { device: deviceAdvisory }),
       outputLanguage,
       problems: findings.map(({ problem }) => problem),
       root: adoption.root,
@@ -322,6 +387,7 @@ async function observeSnapshotInternal({
   if (findings.length > 0) {
     const observation = projectObservation({
       configuration,
+      ...(deviceAdvisory === undefined ? {} : { device: deviceAdvisory }),
       ideas,
       outputLanguage,
       problems: findings.map(({ problem }) => problem),
@@ -350,6 +416,7 @@ async function observeSnapshotInternal({
       root: adoption.root,
       version: version ?? { type: "worktree" },
       configuration,
+      ...(deviceAdvisory === undefined ? {} : { device: deviceAdvisory }),
       ideas,
       outputLanguage,
       problems: [],

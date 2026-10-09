@@ -20,9 +20,10 @@ pnpm silvermoon list-ideas --audience agent
 ```
 
 Use this entrypoint for all repository idea and check commands, not a global
-installation or `npx silvermoon`. An external runtime observing this source
-project reports `source-checkout-runtime-required`, not a missing or outdated
-self-dependency.
+installation or `npx silvermoon`. The source checkout is a development runtime
+and uses its synchronized workspace skill; it neither requires a
+self-dependency nor rewrites the personal skill for a published global
+installation.
 
 Use the smallest check that covers a change:
 

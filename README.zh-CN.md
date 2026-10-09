@@ -66,6 +66,7 @@ silvermoon list-ideas
 ```
 
 > **备注**：每台设备或 Agent host 只安装并更新一个全局 Silvermoon runtime。
+> 对话命令会把带缓存的最新 runtime 状态和个人级 skill 健康度作为设备提示。
 > 目标项目不固定 Silvermoon 版本，也不保存它的 skill。
 
 工作流见 [Operating Silvermoon](./docs/operations.md)，

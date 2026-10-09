@@ -267,6 +267,9 @@ export async function listIdeasUseCase({
     root: repositoryRoot,
     version,
     configuration,
+    ...(observed.observation.device === undefined
+      ? {}
+      : { device: observed.observation.device }),
     outputLanguage,
     problems: [],
     summary: inventory.summary,

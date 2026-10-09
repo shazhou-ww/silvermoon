@@ -8,6 +8,7 @@ import type {
 
 interface ProjectObservationInput {
   configuration?: ProjectConfiguration;
+  device?: import("./types.ts").DeviceAdvisory;
   ideas?: IdeaSummary;
   outputLanguage: string;
   problems: Problem[];
@@ -18,6 +19,7 @@ interface ProjectObservationInput {
 /** @pure */
 export function projectObservation({
   configuration,
+  device,
   ideas,
   outputLanguage,
   problems,
@@ -31,6 +33,7 @@ export function projectObservation({
       root,
       outputLanguage,
       problems,
+      ...(device === undefined ? {} : { device }),
     };
   }
   if (configuration === undefined) {
@@ -41,6 +44,7 @@ export function projectObservation({
       version,
       outputLanguage,
       problems,
+      ...(device === undefined ? {} : { device }),
     };
   }
   if (ideas === undefined) {
@@ -52,6 +56,7 @@ export function projectObservation({
       configuration,
       outputLanguage,
       problems,
+      ...(device === undefined ? {} : { device }),
     };
   }
   return {
@@ -63,12 +68,14 @@ export function projectObservation({
     ideas,
     outputLanguage,
     problems,
+    ...(device === undefined ? {} : { device }),
   };
 }
 
 /** @pure */
 export function incompleteObservation({
   configuration,
+  device,
   ideas,
   outputLanguage,
   problem,
@@ -77,6 +84,7 @@ export function incompleteObservation({
 }: Omit<ProjectObservationInput, "problems"> & { problem: Problem }): Observation {
   return projectObservation({
     ...(configuration === undefined ? {} : { configuration }),
+    ...(device === undefined ? {} : { device }),
     ...(ideas === undefined ? {} : { ideas }),
     outputLanguage,
     problems: [problem],

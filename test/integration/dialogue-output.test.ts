@@ -32,7 +32,9 @@ test("all public commands return exactly four projections", async () => {
 
     assert.equal(navigation.observation.state, "navigation-ready");
     assert.equal(navigation.observation.version.type, "worktree");
+    assert.equal(navigation.observation.device?.runtime.source, "source-checkout");
     assert.equal(navigation.response.kind, "choice-required");
+    assert.equal(navigation.response.device?.update.status, "source-checkout");
     assert.deepEqual(navigation.intention.args, {
       idea: null,
       language: null,
@@ -46,11 +48,15 @@ test("all public commands return exactly four projections", async () => {
     assert.equal(check.observation.version.type, "commit");
     assert.equal(check.response.kind, "validation-result");
     assert.equal(check.response.validation.valid, true);
+    assert.equal(Object.hasOwn(check.observation, "device"), false);
+    assert.equal(Object.hasOwn(check.response, "device"), false);
     assert.deepEqual(check.actions, []);
 
     assert.equal(creation.observation.state, "idea-created");
     assert.equal(creation.observation.version.type, "worktree");
+    assert.equal(creation.observation.device?.skill.status, "source-checkout");
     assert.equal(creation.response.kind, "idea-created");
+    assert.equal(creation.response.device?.runtime.source, "source-checkout");
     assert.equal(creation.observation.createdIdea.state, "preparing");
     assert.equal(
       creation.response.createdIdea.id,

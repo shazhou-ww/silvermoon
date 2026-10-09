@@ -33,10 +33,20 @@ the host. Target repositories never declare Silvermoon dependencies or store a
 Silvermoon skill copy. Snapshot checks ignore `package.json`, `node_modules`,
 and repository skill paths.
 
+Dialogue commands report device readiness separately from project readiness.
+For a global installation, Silvermoon verifies that every present personal
+registration resolves to the running package's canonical skill and checks the
+npm `latest` channel. A successful latest result is reused from
+`~/.cache/silvermoon/runtime-latest.json` for less than 24 hours. An unavailable
+registry or an invalid skill link is an explicit, non-blocking device advisory;
+it never changes a project snapshot result. Snapshot-only `check` commands do
+not perform either device check.
+
 Silvermoon's own source repository is the exception: it has no Silvermoon
 self-dependency and must run `node bin/silvermoon.js` from its current checkout.
 It keeps a workspace skill for unpublished development through
-`pnpm sync:skills`; that copy is not installed into other projects. See
+`pnpm sync:skills`; that copy is not installed into other projects, and source
+commands do not query npm for a global-runtime update. See
 [Development](./maintaining.md#development) for the source CLI and skill
 workflow.
 

@@ -129,6 +129,9 @@ export async function whatsNextUseCase({
     root: readyObservation.root,
     version: readyObservation.version,
     configuration: readyObservation.configuration,
+    ...(readyObservation.device === undefined
+      ? {}
+      : { device: readyObservation.device }),
     outputLanguage: readyObservation.outputLanguage,
     problems: readyObservation.problems,
     ideas: {
@@ -194,6 +197,9 @@ export async function whatsNextUseCase({
       root: navigationObservation.root,
       version: navigationObservation.version,
       configuration: navigationObservation.configuration,
+      ...(navigationObservation.device === undefined
+        ? {}
+        : { device: navigationObservation.device }),
       outputLanguage: navigationObservation.outputLanguage,
       problems: navigationObservation.problems,
       candidates: navigationObservation.ideas.activeIdeas,
@@ -259,6 +265,9 @@ export async function whatsNextUseCase({
     root: readyObservation.root,
     version: readyObservation.version,
     configuration: readyObservation.configuration,
+    ...(readyObservation.device === undefined
+      ? {}
+      : { device: readyObservation.device }),
     outputLanguage: readyObservation.outputLanguage,
     problems: readyObservation.problems,
     selectedIdea,

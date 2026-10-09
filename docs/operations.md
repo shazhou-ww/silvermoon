@@ -6,10 +6,10 @@ publishing Silvermoon ideas.
 ## Navigate
 
 ```sh
-npx silvermoon whats-next
-npx silvermoon whats-next 01M36QGPNTXEPP61DA4KP4AVZF
-npx silvermoon whats-next publish-documentation --json
-npx silvermoon whats-next publish-documentation --language zh-CN
+silvermoon whats-next
+silvermoon whats-next 01M36QGPNTXEPP61DA4KP4AVZF
+silvermoon whats-next publish-documentation --json
+silvermoon whats-next publish-documentation --language zh-CN
 ```
 
 Without a selector, Silvermoon asks for a choice among multiple active ideas,
@@ -33,6 +33,13 @@ after those checks pass does it fetch primary, compare ancestry, and route idea
 work. Runtime and personal skill health belong to device readiness, never the
 project snapshot. `whats-next` never edits, checks out, merges, commits,
 stashes, deletes, resets, fast-forwards, or pushes.
+
+Dialogue reports expose runtime source/version, personal skill health, and
+latest-runtime status under the non-blocking device advisory. Global
+installations reuse a successful npm `latest` result for less than 24 hours;
+source checkouts and embedding hosts do not perform that registry query.
+Registry or skill failures remain device diagnostics and do not replace
+project problems or lifecycle instructions.
 
 When a selector resolves to an actionable phase and synchronization is ready,
 Silvermoon reads only `.silvermoon/guidance/<phase>.md` from the same Git
@@ -58,11 +65,12 @@ silvermoon list-ideas --sort oldest --limit 25 --json
 ```
 
 The command reads one valid local worktree snapshot. It checks the project
-configuration, canonical skill, and complete idea layout, but deliberately
+configuration and complete idea layout, but deliberately
 does not check conflicts, cleanliness, current branch, upstream, primary
-ancestry, or network availability. It never fetches. Filters cannot hide an
-invalid idea; setup or layout failures return a `blocked` four-projection
-report and exit `1`.
+ancestry, or primary network availability. The project query never fetches;
+the independent device advisory may refresh npm `latest` when its cache is
+expired. Filters cannot hide an invalid idea; setup or layout failures return
+a `blocked` four-projection report and exit `1`.
 
 The default state set is `preparing`, `implementing`, and `deploying`.
 Repeated `--state` values form a deduplicated union, `active` expands to those

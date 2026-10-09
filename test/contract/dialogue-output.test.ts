@@ -143,3 +143,41 @@ test("renders primary-bound review context before lifecycle instructions", () =>
     /\| Current contract \| \.silvermoon\/ideas\/fixture\/outer\/inner\/ideal\/Idea\.md \|/,
   );
 });
+
+test("renders device readiness as a non-blocking advisory", () => {
+  const response: Parameters<typeof renderResponse>[0] = {
+    kind: "choice-required",
+    language: "en-US",
+    summary: "No active ideas are available.",
+    choices: [],
+    nextSteps: [],
+    device: {
+      runtime: {
+        source: "global",
+        version: "0.3.0",
+      },
+      skill: {
+        status: "missing",
+        expectedRoot: "C:\\runtime\\skills\\silvermoon",
+        paths: [],
+      },
+      update: {
+        status: "available",
+        currentVersion: "0.3.0",
+        latestVersion: "0.4.0",
+        checkedAt: "2026-01-01T00:00:00.000Z",
+        source: "cache",
+      },
+    },
+  };
+
+  const rendered = renderResponse(response);
+
+  assert.match(
+    rendered,
+    /Device advisory \(does not affect the project result\)/,
+  );
+  assert.match(rendered, /\| Runtime \| global \| 0\.3\.0 \|/);
+  assert.match(rendered, /\| Personal skill \| missing \|/);
+  assert.match(rendered, /\| Latest runtime \| available \| current=0\.3\.0; latest=0\.4\.0;/);
+});

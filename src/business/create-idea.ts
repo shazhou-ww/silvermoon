@@ -91,6 +91,7 @@ function projectCreationObservation(observation: ProjectObservation): Observatio
     root: observation.root,
     version: observation.version,
     configuration: observation.configuration,
+    ...(observation.device === undefined ? {} : { device: observation.device }),
     outputLanguage: observation.outputLanguage,
     problems: observation.problems,
   };
@@ -308,6 +309,9 @@ export async function createIdeaUseCase({
     root: readiness.observation.root,
     version: readiness.observation.version,
     configuration: readiness.observation.configuration,
+    ...(readiness.observation.device === undefined
+      ? {}
+      : { device: readiness.observation.device }),
     outputLanguage: readiness.observation.outputLanguage,
     problems: readiness.observation.problems,
     createdIdea,
