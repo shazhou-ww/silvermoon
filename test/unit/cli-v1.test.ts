@@ -346,3 +346,25 @@ test("rejects conflicting targets, output modes, and invalid values as usage err
     assert.ok(result.errors.length > 0);
   }
 });
+
+test("preserves Commander conflict and excess-argument diagnostics", async () => {
+  for (const [args, expected] of [
+    [
+      ["check", "--remote", "--staged"],
+      /option '--remote' cannot be used with option '--staged'/,
+    ],
+    [
+      ["whats-next", "--json", "--audience", "agent"],
+      /option '--audience <audience>' cannot be used with option '--json'/,
+    ],
+    [
+      ["check", "unexpected"],
+      /too many arguments for 'check'\. Expected 0 arguments but got 1: unexpected\./,
+    ],
+  ] as const) {
+    const result = capture();
+    assert.equal(await runCli(args, result.io), 2);
+    assert.equal(result.logs.length, 0);
+    assert.match(result.errors.map(String).join("\n"), expected);
+  }
+});

@@ -176,6 +176,8 @@ test("Unicode tables use terminal-cell widths without altering Markdown or narro
     "| Alias / ID | 状态 | 创建时间 | 标题 |",
     "| --- | --- | --- | --- |",
     "| a\\|b | implementing | 18小时前 | 中文标题 |",
+    "| ANSI | \u001B[31m古\u001B[39m | 👨‍👩‍👧‍👦 | e\u0301 |",
+    "| keycap | 1\u20E3 | \u1100\u1161 | a\tb |",
     "",
     "### 下一步",
   ].join("\n");
@@ -194,6 +196,12 @@ test("Unicode tables use terminal-cell widths without altering Markdown or narro
   const dataLine = table.lines[3];
   assert.ok(dataLine);
   assert.match(dataLine, /a\|b.*18小时前.*中文标题/);
+  assert.ok(table.lines.some((line) => line.includes("\u001B[31m古\u001B[39m")));
+  assert.ok(table.lines.some((line) => line.includes("👨‍👩‍👧‍👦")));
+  assert.ok(table.lines.some((line) => line.includes("1\u20E3")));
+  assert.ok(table.lines.some((line) => line.includes("\u1100\u1161")));
+  assert.ok(table.lines.some((line) => line.includes("a    b")));
+  assert.ok(table.lines.every((line) => !line.includes("\t")));
   assert.equal(trailing.content, "\n\n### 下一步");
   assert.deepEqual(
     tuiMarkdownBlocks(content, 35),

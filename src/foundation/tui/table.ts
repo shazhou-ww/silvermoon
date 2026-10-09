@@ -54,9 +54,13 @@ function cellText(node: MarkdownNode): string {
   return node.children?.map(cellText).join("") ?? "";
 }
 
+function terminalCellText(node: MarkdownNode): string {
+  return cellText(node).replaceAll("\t", "    ");
+}
+
 function tableLines(node: TableNode) {
   const rows = node.children.map((row) => row.children.map((cell) =>
-    cell.children.map(cellText).join("")
+    cell.children.map(terminalCellText).join("")
   ));
   const firstRow = rows[0] ?? [];
   const widths = firstRow.map((_, column) =>
@@ -104,7 +108,7 @@ export function tuiMarkdownBlocks(
     const table = tableLines(node);
     const hasWideText = node.children.some((row) =>
       row.children.some((cell) => {
-        const text = cell.children.map(cellText).join("");
+        const text = cell.children.map(terminalCellText).join("");
         return stringWidth(text) > text.length;
       })
     );

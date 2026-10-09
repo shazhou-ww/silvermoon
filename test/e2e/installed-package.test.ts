@@ -171,7 +171,9 @@ try {
     "@opentui/core",
     "@opentui/react",
     "react",
+    "react-devtools-core",
     "tui-md",
+    "ws",
   ]) {
     assert.equal(typeof installedManifest.dependencies[dependency], "string");
   }
@@ -507,6 +509,15 @@ try {
   );
   assert.equal(conflictingOutput.status, 2, conflictingOutput.stderr);
   assert.match(conflictingOutput.stderr, /cannot be used with option '--json'/);
+  const excessArguments = npmResult(
+    ["exec", "--", "silvermoon", "check", "unexpected"],
+    consumer,
+  );
+  assert.equal(excessArguments.status, 2, excessArguments.stderr);
+  assert.match(
+    excessArguments.stderr,
+    /too many arguments for 'check'\. Expected 0 arguments but got 1: unexpected\./,
+  );
   assert.equal(
     run("git", ["status", "--porcelain=v1", "--untracked-files=all"], consumer),
     statusBeforeInvalidLanguage,
