@@ -15,7 +15,7 @@
 | `detached-head` | reviewed |
 | `event-history-invalid` | reviewed |
 | `head-missing` | reviewed |
-| `idea-metadata-unavailable` | pending |
+| `idea-metadata-unavailable` | reviewed |
 | `idea-not-found` | pending |
 | `lifecycle-deployed` | pending |
 | `lifecycle-deploying` | pending |

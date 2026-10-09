@@ -14,7 +14,10 @@ import { afterEach, test } from "node:test";
 
 import { runCli } from "../../bin/silvermoon.ts";
 import { observeGitCommands } from "../../src/foundation/git/index.ts";
-import { readIdeaInventoryItem } from "../../src/business/shared/read-idea-inventory-item.ts";
+import {
+  IdeaMetadataReadError,
+  readIdeaInventoryItem,
+} from "../../src/business/shared/read-idea-inventory-item.ts";
 import { serializeIdeaStatus } from "../../src/foundation/idea-model/index.ts";
 import { listIdeas } from "../../src/business/list-ideas.ts";
 import { ideaPaths } from "../../src/foundation/coordinates/index.ts";
@@ -224,6 +227,39 @@ test("[inventory-default] lists active ideas from the local snapshot with four p
       && ["fetch", "ls-remote", "status", "merge-base"].includes(subcommand)
     ),
     false,
+  );
+});
+
+test("[inventory-metadata-error] reports the canonical Idea.md template", async () => {
+  const repository = await fixture();
+  const target = IDEAS[2];
+  assert.ok(target);
+  const documentPath =
+    `.silvermoon/ideas/${target.id}/outer/inner/ideal/Idea.md`;
+  const report = await listIdeas({
+    metadataReader: async (root, idea) => {
+      if (idea.id !== target.id) return readIdeaInventoryItem(root, idea);
+      throw new IdeaMetadataReadError(
+        idea.id,
+        idea.worlds.idealRevision.documentPath,
+        new Error("fixture read failure"),
+      );
+    },
+    root: repository.root,
+    userHome: repository.base,
+  });
+  assert.equal(report.response.kind, "blocked");
+  assert.equal(report.observation.problems[0]?.type, "idea-metadata-unavailable");
+  assert.equal(report.observation.problems[0]?.type, "idea-metadata-unavailable");
+  assert.match(
+    report.response.nextSteps[0]?.text ?? "",
+    new RegExp(
+      `Restore ${documentPath.replaceAll(".", "\\.")} as the current idea's canonical Idea.md`,
+    ),
+  );
+  assert.match(
+    report.response.nextSteps[0]?.text ?? "",
+    /```markdown\n# <title>\n\n## Problem\n\n## Outcome\n\n## Boundaries\n\n## Acceptance criteria\n```/,
   );
 });
 

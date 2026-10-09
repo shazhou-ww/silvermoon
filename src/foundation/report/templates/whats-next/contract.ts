@@ -173,6 +173,7 @@ export interface PrimaryRelationParameters extends RecheckParameters {
 
 export interface MetadataUnavailableParameters {
   command: string;
+  documentPath?: string;
   message: string;
 }
 

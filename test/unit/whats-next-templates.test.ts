@@ -228,6 +228,69 @@ test("content language templates name concrete idea files", () => {
   );
 });
 
+test("idea metadata templates provide the canonical Idea.md structure", () => {
+  const parameters = {
+    command: 'silvermoon whats-next "checkout-flow" --audience agent',
+    documentPath: ".silvermoon/ideas/01ABC/outer/inner/ideal/Idea.md",
+    message: "Idea document is missing",
+  };
+  assert.deepEqual(
+    whatsNextTemplates("en-US")["idea-metadata-unavailable"](parameters),
+    {
+      summary: "Idea document is missing",
+      nextSteps: [
+        `Restore .silvermoon/ideas/01ABC/outer/inner/ideal/Idea.md as the current idea's canonical Idea.md.`,
+        `Use this canonical template:`,
+        "```markdown",
+        "# <title>",
+        "",
+        "## Problem",
+        "",
+        "## Outcome",
+        "",
+        "## Boundaries",
+        "",
+        "## Acceptance criteria",
+        "```",
+        `Then retry \`silvermoon whats-next "checkout-flow" --audience agent\`.`,
+      ].join("\n"),
+    },
+  );
+  assert.deepEqual(
+    whatsNextTemplates("zh-CN")["idea-metadata-unavailable"](parameters),
+    {
+      summary: "无法读取 idea metadata：Idea document is missing",
+      nextSteps: [
+        `把 .silvermoon/ideas/01ABC/outer/inner/ideal/Idea.md 恢复为当前 idea 的 canonical Idea.md。`,
+        `使用以下 canonical template：`,
+        "```markdown",
+        "# <标题>",
+        "",
+        "## 问题",
+        "",
+        "## 结果",
+        "",
+        "## 边界",
+        "",
+        "## 验收标准",
+        "```",
+        `然后重新运行 \`silvermoon whats-next "checkout-flow" --audience agent\`。`,
+      ].join("\n"),
+    },
+  );
+  assert.deepEqual(
+    whatsNextTemplates("en-US")["idea-metadata-unavailable"]({
+      command: "silvermoon list-ideas --audience agent",
+      message: "Missing observed idea metadata",
+    }),
+    {
+      summary: "Missing observed idea metadata",
+      nextSteps:
+        "Repair the reported idea document and retry `silvermoon list-ideas --audience agent`.",
+    },
+  );
+});
+
 test("lifecycle instructions route all six derived template phases", () => {
   const cases = [
     {

@@ -20,6 +20,7 @@ const expected = [
   "inventory-filters",
   "inventory-language",
   "inventory-layout",
+  "inventory-metadata-error",
   "inventory-readiness",
   "inventory-title-budget",
   "inventory-usage",
