@@ -7,14 +7,14 @@
 - [x] **I-S01:** 分离设备与项目整备
 - [x] **I-S02:** 建立 Schema capability 与准备流程
 - [x] **I-S03:** 完成迁移链与 0.4.0 契约
-- [ ] **I-S04:** 将 Agent gate 指引收敛到 runtime report
+- [x] **I-S04:** 将 Agent gate 指引收敛到 runtime report
 
 ### Implementation acceptance criteria
 
 - [x] **I-AC01:** 唯一 runtime 与设备 skill
 - [x] **I-AC02:** 完整且可解释的 Schema readiness
 - [x] **I-AC03:** 可迁移的 0.4.0 候选
-- [ ] **I-AC04:** 内容语言驱动的单一 gate 契约
+- [x] **I-AC04:** 内容语言驱动的单一 gate 契约
 
 ## Deployment
 

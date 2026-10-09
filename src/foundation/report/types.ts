@@ -114,6 +114,25 @@ export interface ReviewDocument {
   path: string;
 }
 
+export interface ReviewPresentation {
+  contentLanguage: string;
+  templateLanguage: "en-US" | "zh-CN";
+  requiresLocalization: boolean;
+  gateLabel: string;
+  candidateConnector: string;
+  labels: {
+    idea: string;
+    candidate: string;
+    reviewFocus: string;
+    reviewFiles: string;
+    decision: string;
+    local: string;
+    pinned: string;
+  };
+  documentLabels: Record<ReviewDocument["role"], string>;
+  decisionQuestion: string;
+}
+
 export interface ReviewContext {
   phase: "preparing" | "implementing" | "deploying";
   decision: "acceptIdeal" | "acceptInner" | "acceptOuter";
@@ -124,6 +143,7 @@ export interface ReviewContext {
   primaryCommit: string;
   scopePath: string;
   canonicalDocuments: ReviewDocument[];
+  presentation: ReviewPresentation;
 }
 
 export interface CreatedIdea {

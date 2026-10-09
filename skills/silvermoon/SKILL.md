@@ -320,27 +320,22 @@ recovery condition, and stop before the human gate.
 Enter a human gate only after the current phase's contract, ledger, and
 evidence are ready, the candidate is synchronized to primary, and a fresh
 `whats-next` reports its world revision, `primaryCommit`, and effective content
-language. Use `response.review` as the source for full object IDs and minimum
-documents. Show only 12-character revision and commit references to the user;
-retain the full values for decision recording.
+language. Follow the latest `response.nextSteps` for the gate procedure and use
+`response.review` as the authority for full object IDs, minimum documents, and
+human-facing presentation. Show only 12-character revision and commit
+references to the user; retain the full values for decision recording.
 
 Before the gate, put review-relevant detail in durable current-phase artifacts
 and synchronize it. The review message is an index to that evidence, not the
-evidence container. Use exactly this compact structure in ordinary assistant
-Markdown, localizing prose labels to the effective content language:
-
-```text
-## <alias> - <gate label>
-**Idea:** <alias> (<ULID>)
-**Candidate:** <12-character revision reference> on primary [<12-character commit reference>](<commit URL>)
-**Review focus:** <one short sentence>
-
-### Review files
-- <document>: [local] | [pinned]
-
-### Decision
-<one explicit question for this candidate>
-```
+evidence container. Do not maintain or infer a second gate template in the
+skill. `response.review.presentation` owns every fixed gate label, document
+label, primary connector, and exact decision question. Apply its
+`requiresLocalization` instruction exactly: preserve supplied strings verbatim
+when false, or localize all human-visible presentation strings to its
+`contentLanguage` when true while preserving machine identifiers. Never derive
+gate prose from the report's output language. The Agent supplies only idea
+identity values, one short review focus, selected review links, and
+host-specific link targets in the compact order directed by `response.nextSteps`.
 
 Choose links by gate:
 
@@ -363,13 +358,9 @@ drive path with forward slashes, such as
 `[Implementation.md](C:/repo/Implementation.md)`; never use backslashes or a
 `file://` URI. Do not put local file links in tool-owned questions or choices.
 
-Use the latest report's effective content language for the review focus, link
-descriptions, and decision question. A temporary output language does not
-change this rule. Preserve aliases, ULIDs, paths, stable IDs, and other machine
-identifiers.
-
-Deliver the index as a standalone, completed assistant message and end that
-turn. Never invoke an interactive decision tool in the same assistant turn:
+Deliver the index as a standalone, completed ordinary assistant Markdown
+message and end that turn. Never invoke an interactive decision tool in the
+same assistant turn:
 the host may prioritize its card and hide queued Markdown. Only a later turn
 may open the tool, with one question and choices limited to the exact decision.
 If the user answers the index directly, record that decision without reopening

@@ -265,21 +265,26 @@ Prefer a status-only decision commit, publish through the repository's normal
 non-force path, and verify the commit is reachable from refreshed primary.
 
 When asking for approval or acceptance, identify the idea by alias and ULID,
-seed the index from `response.review`, state the exact reported world revision
-and primary commit internally, and show their 12-character references. Link the
-corresponding canonical entry: `Idea.md` for
+follow the latest `response.nextSteps`, and seed the index from
+`response.review`. Its `presentation` object owns the fixed gate labels,
+document labels, primary connector, and exact decision question from the
+effective content language. Preserve those strings when `requiresLocalization`
+is false; otherwise localize all human-visible presentation values to the
+reported `contentLanguage` without changing machine identifiers. Never use the
+temporary report output language for gate prose. State the exact reported world
+revision and primary commit internally, and show their 12-character references.
+Link the corresponding canonical entry: `Idea.md` for
 ideal approval, `Implementation.md` for implementation acceptance, or
 `Deployment.md` for deployment acceptance. Provide a host-clickable local link
 for navigation and a commit-pinned web permalink for the immutable candidate;
 never substitute a moving branch URL. Complete this review index as a standalone
 assistant message. Do not open an interactive decision in the same turn because
 the tool surface may hide the links; a later decision interaction contains only
-the exact question and choices. Use the same compact order for all three gates:
-identity, decision, revision reference, primary reference, one-sentence focus,
-review links, then one exact candidate question. Ideal review omits downstream
-placeholders. Implementation and Deployment always link their corresponding
-contract and `ledger.md`; other files appear only when they contain substantive
-review material. Keep test, CI, deployment, and SLO detail in the
+the exact question and choices. Use the compact order directed by the report
+for all three gates. Ideal review omits downstream placeholders. Implementation
+and Deployment always link their corresponding contract and `ledger.md`; other
+files appear only when they contain substantive review material. Keep test,
+CI, deployment, and SLO detail in the
 linked evidence instead of repeating policy or completion narration. If the
 later decision interaction is unavailable or returns no explicit choice, do not
 retry or restate the unchanged gate. The linked revision and publication are

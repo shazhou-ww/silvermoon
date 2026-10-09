@@ -1,8 +1,10 @@
 import { diagnosticInstruction, localize } from "./dialogue.ts";
+import { resolveContentTemplateLanguage } from "../language/index.ts";
 import type {
   Diagnostic,
   IdeaReference,
   ReviewContext,
+  ReviewPresentation,
 } from "./types.ts";
 
 export const CHANGE_SAMPLE_ITEM_LIMIT = 12;
@@ -225,18 +227,81 @@ function revisionReference(revision: string) {
 }
 
 /** @pure */
+function reviewPresentation(
+  phase: ReviewContext["phase"],
+  revision: ReviewContext["revision"],
+  contentLanguage: string,
+): ReviewPresentation {
+  const template = resolveContentTemplateLanguage(contentLanguage);
+  const language = template.tag;
+  const reference = `${revision.field}=${revisionReference(revision.value)}`;
+  const phaseText = {
+    preparing: {
+      gateLabel: localize(language, "Ideal World approval", "理想世界批准"),
+      currentContract: localize(language, "Ideal World contract", "理想世界契约"),
+      decisionQuestion: localize(
+        language,
+        `Do you approve \`${reference}\` as the Ideal World for this IDEA?`,
+        `是否批准 \`${reference}\` 作为该 IDEA 的理想世界？`,
+      ),
+    },
+    implementing: {
+      gateLabel: localize(language, "Inner World acceptance", "主体世界验收"),
+      currentContract: localize(language, "Inner World contract", "主体世界契约"),
+      decisionQuestion: localize(
+        language,
+        `Do you accept \`${reference}\` as the Inner World implementation for this IDEA?`,
+        `是否接受 \`${reference}\` 作为该 IDEA 的主体世界实现？`,
+      ),
+    },
+    deploying: {
+      gateLabel: localize(language, "Outer World acceptance", "现实世界验收"),
+      currentContract: localize(language, "Outer World contract", "现实世界契约"),
+      decisionQuestion: localize(
+        language,
+        `Do you accept \`${reference}\` as the Outer World outcome for this IDEA?`,
+        `是否接受 \`${reference}\` 作为该 IDEA 的现实世界结果？`,
+      ),
+    },
+  }[phase];
+  return {
+    contentLanguage,
+    templateLanguage: template.tag,
+    requiresLocalization: !template.localized,
+    gateLabel: phaseText.gateLabel,
+    candidateConnector: localize(language, "on primary", "位于 primary"),
+    labels: {
+      idea: localize(language, "Idea", "构想"),
+      candidate: localize(language, "Candidate", "候选版本"),
+      reviewFocus: localize(language, "Review focus", "审阅重点"),
+      reviewFiles: localize(language, "Review files", "审阅文件"),
+      decision: localize(language, "Decision", "决定"),
+      local: localize(language, "local", "本地"),
+      pinned: localize(language, "pinned", "固定版本"),
+    },
+    documentLabels: {
+      "current-contract": phaseText.currentContract,
+      ledger: localize(language, "Execution ledger", "执行清单"),
+    },
+    decisionQuestion: phaseText.decisionQuestion,
+  };
+}
+
+/** @pure */
 export function lifecycleReview(
   idea: LifecycleIdea,
   primaryCommit: string,
+  contentLanguage: string,
 ): ReviewContext | undefined {
   if (idea.state === "preparing") {
+    const revision: ReviewContext["revision"] = {
+      field: "idealRevision",
+      value: idea.idealRevision,
+    };
     return {
       phase: "preparing",
       decision: "acceptIdeal",
-      revision: {
-        field: "idealRevision",
-        value: idea.idealRevision,
-      },
+      revision,
       primaryCommit,
       scopePath: idea.worlds.idealRevision.path,
       canonicalDocuments: [
@@ -245,16 +310,18 @@ export function lifecycleReview(
           path: idea.worlds.idealRevision.documentPath,
         },
       ],
+      presentation: reviewPresentation("preparing", revision, contentLanguage),
     };
   }
   if (idea.state === "implementing") {
+    const revision: ReviewContext["revision"] = {
+      field: "implementationRevision",
+      value: idea.implementationRevision,
+    };
     return {
       phase: "implementing",
       decision: "acceptInner",
-      revision: {
-        field: "implementationRevision",
-        value: idea.implementationRevision,
-      },
+      revision,
       primaryCommit,
       scopePath: idea.worlds.implementationRevision.path,
       canonicalDocuments: [
@@ -267,16 +334,18 @@ export function lifecycleReview(
           path: idea.ledgerPath,
         },
       ],
+      presentation: reviewPresentation("implementing", revision, contentLanguage),
     };
   }
   if (idea.state === "deploying") {
+    const revision: ReviewContext["revision"] = {
+      field: "deploymentRevision",
+      value: idea.deploymentRevision,
+    };
     return {
       phase: "deploying",
       decision: "acceptOuter",
-      revision: {
-        field: "deploymentRevision",
-        value: idea.deploymentRevision,
-      },
+      revision,
       primaryCommit,
       scopePath: idea.worlds.deploymentRevision.path,
       canonicalDocuments: [
@@ -289,6 +358,7 @@ export function lifecycleReview(
           path: idea.ledgerPath,
         },
       ],
+      presentation: reviewPresentation("deploying", revision, contentLanguage),
     };
   }
   return undefined;
@@ -298,8 +368,8 @@ export function lifecycleReview(
 function reviewPresentationInstruction(language: string) {
   return localize(
     language,
-    "At the human gate, first render the reported review candidate as a standalone, completed assistant message with host-clickable local links and immutable primary links. Use the canonical compact gate format: identity and exact primary-bound revision, one-sentence focus, review links, and one exact question. Do not open an interactive decision in that same turn; its tool surface can hide the review index.",
-    "到达人工门时，先把报告中的审阅候选作为一条独立且已完成的 assistant 消息呈现，并提供宿主可点击的本地链接与不可变 primary 链接。使用 canonical 紧凑门格式：身份与绑定 primary 的准确 revision、一句审阅重点、审阅链接，以及一个准确问题。不要在同一 turn 打开交互决定；工具界面可能隐藏审阅索引。",
+    "At the human gate, first render the reported review candidate as a standalone, completed assistant message with host-clickable local links and immutable primary links. Treat response.review.presentation as authoritative for every fixed gate label, document label, primary connector, and the exact decision question. When requiresLocalization is false, preserve those strings verbatim; when it is true, localize every human-visible presentation string into contentLanguage while preserving machine identifiers. Add only the idea identity, one-sentence focus, and selected review links in the reported compact order. Do not open an interactive decision in that same turn; its tool surface can hide the review index.",
+    "到达人工门时，先把报告中的审阅候选作为一条独立且已完成的 assistant 消息呈现，并提供宿主可点击的本地链接与不可变 primary 链接。所有固定 gate 标签、文档标签、primary 连接语和准确决定问题都以 response.review.presentation 为准；requiresLocalization 为 false 时逐字保留这些字符串，为 true 时把所有面向人的呈现字符串本地化为 contentLanguage，同时保留机器标识。仅按报告的紧凑顺序补充 idea 身份、一句审阅重点和选定的审阅链接。不要在同一 turn 打开交互决定；工具界面可能隐藏审阅索引。",
   );
 }
 

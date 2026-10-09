@@ -234,7 +234,7 @@ export async function whatsNextUseCase({
     ?? (() => {
       throw new TypeError("Repository readiness omitted the primary revision.");
     })();
-  const review = lifecycleReview(selected, primary);
+  const review = lifecycleReview(selected, primary, observed.contentLanguage);
   let guidance;
   if (ACTIVE_STATES.has(selected.state)) {
     const inspected = await guidanceReader({

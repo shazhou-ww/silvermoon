@@ -6,6 +6,8 @@ export {
   isCanonicalLanguageTag,
   isChinese,
   localize,
+  resolveContentTemplateLanguage,
   resolveLanguage,
   resolveOutputLanguage,
 } from "./language.ts";
+export type { OutputLanguage } from "./language.ts";

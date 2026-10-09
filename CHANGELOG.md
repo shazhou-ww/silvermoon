@@ -13,6 +13,10 @@ history remains available through npm and Git tags.
 - Reports runtime identity, personal skill-link health, and npm `latest`
   freshness as device advisories. Successful latest checks are cached for less
   than 24 hours, while a future project schema forces an immediate refresh.
+- Makes `whats-next` the single source for human-gate presentation. Its
+  structured review context follows effective content language independently
+  of temporary output language, while the canonical skill only adds
+  host-specific links, review focus, and substantive evidence.
 
 ### Schema compatibility and migration
 

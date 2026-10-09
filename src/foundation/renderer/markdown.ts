@@ -103,18 +103,18 @@ function renderReview(
 ) {
   const roles: Record<ReviewContext["canonicalDocuments"][number]["role"], string> = {
     "current-contract": localize(language, "Current contract", "当前契约"),
-    ledger: "Ledger",
+    ledger: localize(language, "Ledger", "执行清单"),
   };
   return [
     `### ${localize(language, "Review candidate", "审阅候选")}`,
     "",
     `- ${localize(language, "Phase", "阶段")}: ${codeSpan(review.phase)}`,
     `- ${localize(language, "Decision", "决定")}: ${codeSpan(review.decision)}`,
-    `- ${localize(language, "Revision reference", "Revision reference")}: ${codeSpan(`${review.revision.field}=${objectReference(review.revision.value)}`)}`,
-    `- ${localize(language, "Primary reference", "Primary reference")}: ${codeSpan(objectReference(review.primaryCommit))}`,
+    `- ${localize(language, "Revision reference", "修订引用")}: ${codeSpan(`${review.revision.field}=${objectReference(review.revision.value)}`)}`,
+    `- ${localize(language, "Primary reference", "主分支引用")}: ${codeSpan(objectReference(review.primaryCommit))}`,
     `- ${localize(language, "Review scope", "审阅范围")}: ${codeSpan(review.scopePath)}`,
     "",
-    `#### ${localize(language, "Canonical review documents", "Canonical 审阅文档")}`,
+    `#### ${localize(language, "Canonical review documents", "规范审阅文档")}`,
     "",
     ...renderMarkdownTable(
       [
@@ -123,6 +123,12 @@ function renderReview(
       ],
       review.canonicalDocuments.map(({ role, path }) => [roles[role], path]),
     ),
+    "",
+    `#### ${localize(language, "Gate presentation", "人工门呈现")}`,
+    "",
+    "```json",
+    JSON.stringify(review.presentation, null, 2),
+    "```",
   ];
 }
 

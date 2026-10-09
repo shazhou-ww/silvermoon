@@ -123,6 +123,28 @@ test("renders primary-bound review context before lifecycle instructions", () =>
           path: ".silvermoon/ideas/fixture/outer/inner/ideal/Idea.md",
         },
       ],
+      presentation: {
+        contentLanguage: "en-US",
+        templateLanguage: "en-US",
+        requiresLocalization: false,
+        gateLabel: "Ideal World approval",
+        candidateConnector: "on primary",
+        labels: {
+          idea: "Idea",
+          candidate: "Candidate",
+          reviewFocus: "Review focus",
+          reviewFiles: "Review files",
+          decision: "Decision",
+          local: "local",
+          pinned: "pinned",
+        },
+        documentLabels: {
+          "current-contract": "Ideal World contract",
+          ledger: "Execution ledger",
+        },
+        decisionQuestion:
+          "Do you approve `idealRevision=aaaaaaaaaaaa` as the Ideal World for this IDEA?",
+      },
     },
     nextSteps: [{
       type: "instruction",
@@ -138,6 +160,9 @@ test("renders primary-bound review context before lifecycle instructions", () =>
   assert.match(rendered, /Primary reference: `b{12}`/);
   assert.doesNotMatch(rendered, /a{13}|b{13}/);
   assert.match(rendered, /Canonical review documents/);
+  assert.match(rendered, /#### Gate presentation/);
+  assert.match(rendered, /"contentLanguage": "en-US"/);
+  assert.match(rendered, /"gateLabel": "Ideal World approval"/);
   assert.match(
     rendered,
     /\| Current contract \| \.silvermoon\/ideas\/fixture\/outer\/inner\/ideal\/Idea\.md \|/,

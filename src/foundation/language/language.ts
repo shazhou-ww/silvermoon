@@ -1,7 +1,9 @@
 export const DEFAULT_LANGUAGE = "en-US";
-export const OUTPUT_LANGUAGES = Object.freeze(["en-US", "zh-CN"]);
+export const OUTPUT_LANGUAGES = Object.freeze(["en-US", "zh-CN"] as const);
 
-const OUTPUT_LANGUAGE_SET = new Set(OUTPUT_LANGUAGES);
+export type OutputLanguage = (typeof OUTPUT_LANGUAGES)[number];
+
+const OUTPUT_LANGUAGE_SET = new Set<string>(OUTPUT_LANGUAGES);
 
 /** @pure */
 export function isChinese(language: string) {
@@ -89,4 +91,19 @@ export function resolveOutputLanguage({
     tag: DEFAULT_LANGUAGE,
     source: content === undefined ? "default" : "content",
   };
+}
+
+/** @pure */
+export function resolveContentTemplateLanguage(contentLanguage: string): {
+  tag: OutputLanguage;
+  localized: boolean;
+} {
+  const normalized = contentLanguage.toLowerCase();
+  if (normalized === "zh" || normalized.startsWith("zh-")) {
+    return { tag: "zh-CN", localized: true };
+  }
+  if (normalized === "en" || normalized.startsWith("en-")) {
+    return { tag: "en-US", localized: true };
+  }
+  return { tag: "en-US", localized: false };
 }

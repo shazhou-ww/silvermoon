@@ -74,10 +74,15 @@ For each selected active idea, `response.review` supplies a primary-bound seed
 for the eventual review index: lifecycle phase, decision event, exact revision,
 fetched primary commit, current-world scope, and canonical documents. It is
 context, not a readiness or authorization flag. Agents still inspect relevant
-supporting files and evidence. JSON retains complete object IDs while the
-human-facing index uses 12-character references. The index includes only
-substantive review material, with clickable local and immutable remote links,
-in a completed assistant message before any later interactive decision.
+supporting files and evidence. Its `presentation` object supplies the fixed
+gate labels, document labels, primary connector, and exact decision question
+from the effective content language, independently of the report's temporary
+output language. Unsupported built-in content locales carry an explicit
+fallback that the Agent must localize. JSON retains complete object IDs while
+the human-facing index uses 12-character references. The Agent adds only the
+review focus, substantive review material, and host-specific clickable local
+and immutable remote links in a completed assistant message before any later
+interactive decision.
 
 ## Persistent State Events
 

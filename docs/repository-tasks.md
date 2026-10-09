@@ -70,16 +70,18 @@ Before requesting a human decision, validate the candidate, synchronize its
 normal non-force commit to primary, confirm reachability from the refreshed
 primary, and reobserve the exact world revision and effective content language.
 This synchronization is Agent work and does not require a lifecycle decision.
-Keep the review message short: use that language to state the review focus and
-exact decision question, and provide local plus commit-pinned remote links to
-the canonical contract, same-world supporting files, ledger, evidence, and key
-deliverables. Durable detail belongs in those repository files, not in the
-chat message. Seed the index from the selected report's `response.review`,
-including its exact primary commit and canonical documents, without treating
-the field's presence as gate readiness. Use one compact format in this order:
-idea identity, decision, 12-character revision reference, linked 12-character
-primary reference, one-sentence review focus, review-file links, and one exact
-candidate question. Keep the complete object IDs from `response.review`
+Keep the review message short and follow the latest report's gate instruction.
+Use `response.review.presentation` verbatim when `requiresLocalization` is
+false; when true, localize every human-visible presentation value to its
+`contentLanguage` while preserving machine identifiers. A temporary report
+output language never controls gate prose. Provide local plus commit-pinned
+remote links to the canonical contract, same-world supporting files, ledger,
+evidence, and key deliverables. Durable detail belongs in those repository
+files, not in the chat message. Seed the index from `response.review`, including
+its exact primary commit and canonical documents, without treating the field's
+presence as gate readiness. The Agent adds only identity values, a one-sentence
+review focus, selected review-file links, and host-specific link targets in the
+compact order directed by `response.nextSteps`. Keep the complete object IDs
 internally for event recording. Do not add
 repeated gate-policy explanations or inline inventories of test, CI, deployment,
 or SLO evidence; keep those details in the linked artifacts. List only files

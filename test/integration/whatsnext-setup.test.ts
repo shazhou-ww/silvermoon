@@ -55,6 +55,15 @@ function responseText(report: WhatsNextReport) {
   return report.response.nextSteps.map(({ text }) => text).join("\n");
 }
 
+function responseReview(report: WhatsNextReport) {
+  assert.equal(report.response.kind, "next-steps");
+  if (report.response.kind !== "next-steps") {
+    assert.fail("selected idea must return next steps");
+  }
+  assert.ok(report.response.review);
+  return report.response.review;
+}
+
 function firstProblem(report: WhatsNextReport) {
   const [problem] = report.observation.problems;
   assert.ok(problem);
@@ -569,7 +578,27 @@ test("uses a canonical output override without changing content language or pers
     configuration(selected).preferredLanguage,
     "fr-FR",
   );
+  assert.deepEqual(
+    {
+      contentLanguage: responseReview(selected).presentation.contentLanguage,
+      templateLanguage: responseReview(selected).presentation.templateLanguage,
+      requiresLocalization:
+        responseReview(selected).presentation.requiresLocalization,
+      gateLabel: responseReview(selected).presentation.gateLabel,
+    },
+    {
+      contentLanguage: "fr-FR",
+      templateLanguage: "en-US",
+      requiresLocalization: true,
+      gateLabel: "Ideal World approval",
+    },
+  );
+  assert.match(
+    responseReview(selected).presentation.decisionQuestion,
+    /^Do you approve `idealRevision=[0-9a-f]{12}`/,
+  );
   assert.match(responseText(selected), /^在 /);
+  assert.match(responseText(selected), /requiresLocalization/);
   assert.match(responseText(selected), /自然语言内容中使用 fr-FR/);
   assert.match(actionCommit(selected), /^[0-9a-f]{40}$/);
   assert.equal(await readFile(statusPath, "utf8"), before);
@@ -589,4 +618,68 @@ test("uses a canonical output override without changing content language or pers
     responseText(blocked),
     /silvermoon whats-next "localized" --language zh-CN/,
   );
+});
+
+test("drives gate presentation from content language instead of output language", async () => {
+  const repository = await fixture({
+    ideas: [{
+      id: FIRST_ID,
+      status: { alias: "localized", language: "zh-CN" },
+    }],
+  });
+
+  const selected = await whatsNext({
+    idea: "localized",
+    language: "en-US",
+    root: repository.root,
+    userHome: repository.base,
+  });
+  const presentation = responseReview(selected).presentation;
+
+  assert.equal(selected.observation.outputLanguage, "en-US");
+  assert.equal(configuration(selected).preferredLanguage, "zh-CN");
+  assert.deepEqual(
+    {
+      contentLanguage: presentation.contentLanguage,
+      templateLanguage: presentation.templateLanguage,
+      requiresLocalization: presentation.requiresLocalization,
+      gateLabel: presentation.gateLabel,
+      candidateConnector: presentation.candidateConnector,
+      labels: presentation.labels,
+      documentLabels: presentation.documentLabels,
+    },
+    {
+      contentLanguage: "zh-CN",
+      templateLanguage: "zh-CN",
+      requiresLocalization: false,
+      gateLabel: "理想世界批准",
+      candidateConnector: "位于 primary",
+      labels: {
+        idea: "构想",
+        candidate: "候选版本",
+        reviewFocus: "审阅重点",
+        reviewFiles: "审阅文件",
+        decision: "决定",
+        local: "本地",
+        pinned: "固定版本",
+      },
+      documentLabels: {
+        "current-contract": "理想世界契约",
+        ledger: "执行清单",
+      },
+    },
+  );
+  assert.match(
+    presentation.decisionQuestion,
+    /^是否批准 `idealRevision=[0-9a-f]{12}` 作为该 IDEA 的理想世界？$/,
+  );
+  assert.match(responseText(selected), /^Continue /);
+  assert.match(responseText(selected), /response\.review\.presentation/);
+
+  const rendered = renderResponse(selected.response);
+  assert.match(rendered, /### Review candidate/);
+  assert.match(rendered, /#### Gate presentation/);
+  assert.match(rendered, /"contentLanguage": "zh-CN"/);
+  assert.match(rendered, /"gateLabel": "理想世界批准"/);
+  assert.match(rendered, /"idea": "构想"/);
 });

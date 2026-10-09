@@ -399,7 +399,28 @@ Every selected active idea adds a primary-bound `review` object to its
         "role": "current-contract",
         "path": ".silvermoon/ideas/<ULID>/outer/inner/ideal/Idea.md"
       }
-    ]
+    ],
+    "presentation": {
+      "contentLanguage": "zh-CN",
+      "templateLanguage": "zh-CN",
+      "requiresLocalization": false,
+      "gateLabel": "理想世界批准",
+      "candidateConnector": "位于 primary",
+      "labels": {
+        "idea": "构想",
+        "candidate": "候选版本",
+        "reviewFocus": "审阅重点",
+        "reviewFiles": "审阅文件",
+        "decision": "决定",
+        "local": "本地",
+        "pinned": "固定版本"
+      },
+      "documentLabels": {
+        "current-contract": "理想世界契约",
+        "ledger": "执行清单"
+      },
+      "decisionQuestion": "是否批准 `idealRevision=<12-character-reference>` 作为该 IDEA 的理想世界？"
+    }
   }
 }
 ```
@@ -409,9 +430,15 @@ to their corresponding revision and list the current contract plus `ledger.md`.
 The field is an authoritative index seed, not an assertion that the contract
 or evidence is complete and not a human decision. Callers inspect `scopePath`
 and add only supporting files with substantive review content; placeholders are
-omitted. JSON retains full object IDs. Raw Markdown renders a 12-character
-revision reference and primary reference in a **Review candidate** section
-before lifecycle instructions.
+omitted. `presentation.contentLanguage` always follows the effective idea
+content language, not `response.language`. English and Chinese content receive
+complete built-in presentation strings. Other canonical BCP 47 tags use the
+explicit English `templateLanguage` fallback with `requiresLocalization: true`;
+the Agent localizes every human-visible presentation value before rendering and
+preserves machine identifiers. JSON retains full object IDs. Raw Markdown
+renders a 12-character revision reference, primary reference, and the complete
+presentation object in a **Review candidate** section before lifecycle
+instructions.
 
 After readiness, an actionable selected idea or successful creation may add
 content-free `guidance` provenance to the public observation:

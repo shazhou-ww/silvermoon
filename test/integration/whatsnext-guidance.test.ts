@@ -64,6 +64,55 @@ function responseReview(report: Awaited<ReturnType<typeof whatsNext>>) {
   return report.response.review;
 }
 
+function englishReviewPresentation(
+  phase: ReviewContext["phase"],
+  field: ReviewContext["revision"]["field"],
+  revision: string,
+): ReviewContext["presentation"] {
+  const reference = `${field}=${revision.slice(0, 12)}`;
+  const phaseText = {
+    preparing: {
+      gateLabel: "Ideal World approval",
+      currentContract: "Ideal World contract",
+      decisionQuestion:
+        `Do you approve \`${reference}\` as the Ideal World for this IDEA?`,
+    },
+    implementing: {
+      gateLabel: "Inner World acceptance",
+      currentContract: "Inner World contract",
+      decisionQuestion:
+        `Do you accept \`${reference}\` as the Inner World implementation for this IDEA?`,
+    },
+    deploying: {
+      gateLabel: "Outer World acceptance",
+      currentContract: "Outer World contract",
+      decisionQuestion:
+        `Do you accept \`${reference}\` as the Outer World outcome for this IDEA?`,
+    },
+  }[phase];
+  return {
+    contentLanguage: "en-US",
+    templateLanguage: "en-US",
+    requiresLocalization: false,
+    gateLabel: phaseText.gateLabel,
+    candidateConnector: "on primary",
+    labels: {
+      idea: "Idea",
+      candidate: "Candidate",
+      reviewFocus: "Review focus",
+      reviewFiles: "Review files",
+      decision: "Decision",
+      local: "local",
+      pinned: "pinned",
+    },
+    documentLabels: {
+      "current-contract": phaseText.currentContract,
+      ledger: "Execution ledger",
+    },
+    decisionQuestion: phaseText.decisionQuestion,
+  };
+}
+
 test("records fetch failure as a failure outcome with a trustworthy envelope", async () => {
   const repository = await fixture();
   assert.ok(repository.remote);
@@ -182,16 +231,22 @@ test("attaches only the selected actionable phase guidance from primary", async 
               { role: "ledger", path: paths.ledgerPath },
             ],
           };
+    const revision = git(repository.root, "rev-parse", `HEAD:${expected.scopePath}`);
     assert.deepEqual(responseReview(report), {
       phase,
       decision: expected.decision,
       revision: {
         field: expected.field,
-        value: git(repository.root, "rev-parse", `HEAD:${expected.scopePath}`),
+        value: revision,
       },
       primaryCommit: git(repository.root, "rev-parse", "HEAD"),
       scopePath: expected.scopePath,
       canonicalDocuments: expected.canonicalDocuments,
+      presentation: englishReviewPresentation(
+        phase,
+        expected.field,
+        revision,
+      ),
     });
     assert.equal(
       fixtures
@@ -203,6 +258,7 @@ test("attaches only the selected actionable phase guidance from primary", async 
     );
     assert.match(responseText(report), /revision/);
     assert.match(responseText(report), /独立且已完成的 assistant 消息/);
+    assert.match(responseText(report), /response\.review\.presentation/);
     assert.match(responseText(report), /不要在同一 turn 打开交互决定/);
     if (phase === "preparing") {
       const paths = ideaPaths(id);

@@ -1,3 +1,5 @@
+import { resolveContentTemplateLanguage } from "../language/index.ts";
+
 export const IDEA_TEMPLATE = `# Replace with a concise action-oriented title
 
 <!--
@@ -249,24 +251,23 @@ const CHINESE_LEDGER_TEMPLATE = `# Ledger
 
 /** @pure */
 export function ideaTemplates(contentLanguage: string) {
-  const normalized = contentLanguage.toLowerCase();
-  if (normalized === "zh" || normalized.startsWith("zh-")) {
+  const template = resolveContentTemplateLanguage(contentLanguage);
+  if (template.tag === "zh-CN") {
     return {
       idea: CHINESE_IDEA_TEMPLATE,
       implementation: CHINESE_IMPLEMENTATION_TEMPLATE,
       deployment: CHINESE_DEPLOYMENT_TEMPLATE,
       ledger: CHINESE_LEDGER_TEMPLATE,
-      localized: true,
-      templateLanguage: "zh-CN",
+      localized: template.localized,
+      templateLanguage: template.tag,
     };
   }
-  const localized = normalized === "en" || normalized.startsWith("en-");
   return {
     idea: IDEA_TEMPLATE,
     implementation: IMPLEMENTATION_TEMPLATE,
     deployment: DEPLOYMENT_TEMPLATE,
     ledger: LEDGER_TEMPLATE,
-    localized,
-    templateLanguage: "en-US",
+    localized: template.localized,
+    templateLanguage: template.tag,
   };
 }

@@ -7,6 +7,7 @@ import {
   DEFAULT_LANGUAGE,
   isCanonicalLanguageTag,
   OUTPUT_LANGUAGES,
+  resolveContentTemplateLanguage,
   resolveLanguage,
   resolveOutputLanguage,
 } from "../../src/foundation/language/index.ts";
@@ -82,5 +83,20 @@ test("resolves output independently from arbitrary content languages", () => {
   assert.deepEqual(
     resolveOutputLanguage(),
     { tag: DEFAULT_LANGUAGE, source: "default" },
+  );
+});
+
+test("selects built-in content templates with an explicit fallback", () => {
+  assert.deepEqual(
+    resolveContentTemplateLanguage("zh-Hant"),
+    { tag: "zh-CN", localized: true },
+  );
+  assert.deepEqual(
+    resolveContentTemplateLanguage("en-GB"),
+    { tag: "en-US", localized: true },
+  );
+  assert.deepEqual(
+    resolveContentTemplateLanguage("fr-FR"),
+    { tag: "en-US", localized: false },
   );
 });
