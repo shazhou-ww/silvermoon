@@ -1,1 +1,2 @@
 {"sequence":1,"type":"setAlias","payload":{"alias":"global-runtime-schema-evolution"}}
+{"sequence":2,"type":"acceptIdeal","payload":{"idealRevision":"8059e12253e2ad4aeabcc706db3f5b02c3a2aae0"}}
