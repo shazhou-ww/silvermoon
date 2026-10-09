@@ -13,7 +13,7 @@ const lifecycleInactive = ({
   [
     `Review ${name} (${state}); preserve decisions.`,
     `Resume only through idea.resumed after an explicit human decision;`,
-    `revise world content for changed requirements.`,
+    `update the relevant canonical phase file when requirements change.`,
   ].join(" ");
 
 export default lifecycleInactive;

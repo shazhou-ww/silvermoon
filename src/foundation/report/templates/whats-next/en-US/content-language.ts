@@ -10,8 +10,8 @@ const contentLanguage = ({
   contentLanguage: language,
 }: ContentLanguageParameters) =>
   [
-    `Use ${language} for natural-language content in the current world,`,
-    `its supporting files, and the ledger.`,
+    `Use ${language} for natural-language content in the current idea's phase files,`,
+    `related supporting files, and ledger.`,
     `Preserve canonical headings, stable IDs, paths, and machine fields.`,
   ].join(" ");
 

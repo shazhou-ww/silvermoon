@@ -17,7 +17,8 @@ const lifecyclePreparing = ({
   submitAction,
 }: LifecyclePreparingParameters) =>
   [
-    `Continue ${name} in ${documentPath} and ${ledgerPath}.`,
+    `Continue the current idea ${name} in phase file ${documentPath}`,
+    `and ledger ${ledgerPath}.`,
     `The current revision is ${submissionState ?? "unsubmitted"}`,
     `and control is ${controlOwner ?? "unknown"}.`,
     `When the Idea candidate is ready, synchronize it to primary,`,

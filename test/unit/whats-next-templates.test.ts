@@ -176,43 +176,68 @@ test("what's next templates render dynamic repository values", () => {
   );
 });
 
+test("content language templates name concrete idea files", () => {
+  assert.equal(
+    whatsNextTemplates("en-US")["content-language"]({
+      contentLanguage: "fr-FR",
+    }),
+    [
+      "Use fr-FR for natural-language content in the current idea's phase files,",
+      "related supporting files, and ledger.",
+      "Preserve canonical headings, stable IDs, paths, and machine fields.",
+    ].join(" "),
+  );
+  assert.equal(
+    whatsNextTemplates("zh-CN")["content-language"]({
+      contentLanguage: "zh-CN",
+    }),
+    [
+      "当前 idea 的阶段文件、该阶段相关辅助文件和 ledger 中的自然语言内容",
+      "使用 zh-CN。",
+      "保留 canonical 标题、稳定 ID、路径和机器字段。",
+    ].join(""),
+  );
+});
+
 test("lifecycle instructions route all six derived template phases", () => {
   const cases = [
     {
       state: "preparing",
       submissionState: "unsubmitted",
-      expected: "Continue fixture in Ideal.md and ledger.md.",
+      expected: "Continue the current idea fixture in phase file Ideal.md",
       excluded: "The current Idea revision was recorded by submitIdeal",
     },
     {
       state: "preparing",
       submissionState: "submitted",
       expected: "The current Idea revision was recorded by submitIdeal",
-      excluded: "Continue fixture in Ideal.md and ledger.md.",
+      excluded: "Continue the current idea fixture in phase file Ideal.md",
     },
     {
       state: "implementing",
       submissionState: "unsubmitted",
-      expected: "Continue fixture in Implementation.md",
+      expected:
+        "Continue the current idea fixture in phase file Implementation.md",
       excluded: "The current implementation revision was recorded by submitInner",
     },
     {
       state: "implementing",
       submissionState: "submitted",
       expected: "The current implementation revision was recorded by submitInner",
-      excluded: "Continue fixture in Implementation.md",
+      excluded:
+        "Continue the current idea fixture in phase file Implementation.md",
     },
     {
       state: "deploying",
       submissionState: "unsubmitted",
-      expected: "Continue fixture in Deployment.md",
+      expected: "Continue the current idea fixture in phase file Deployment.md",
       excluded: "The current deployment revision was recorded by submitOuter",
     },
     {
       state: "deploying",
       submissionState: "submitted",
       expected: "The current deployment revision was recorded by submitOuter",
-      excluded: "Continue fixture in Deployment.md",
+      excluded: "Continue the current idea fixture in phase file Deployment.md",
     },
   ] as const;
 
@@ -227,7 +252,7 @@ test("lifecycle instructions route all six derived template phases", () => {
   }
 });
 
-test("submitted lifecycle templates preserve downstream phase-local exchange", () => {
+test("submitted lifecycle templates preserve downstream current-phase exchange", () => {
   const cases = [
     ["preparing", "Idea", "acceptIdeal"],
     ["implementing", "implementation", "acceptInner"],

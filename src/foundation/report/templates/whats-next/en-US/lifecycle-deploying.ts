@@ -18,8 +18,8 @@ const lifecycleDeploying = ({
   worldPath,
 }: LifecycleDeployingParameters) =>
   [
-    `Continue ${name} in ${documentPath}, supporting files under ${worldPath},`,
-    `and ${ledgerPath}.`,
+    `Continue the current idea ${name} in phase file ${documentPath},`,
+    `related supporting files under ${worldPath}, and ledger ${ledgerPath}.`,
     `The current revision is ${submissionState ?? "unsubmitted"}`,
     `and control is ${controlOwner ?? "unknown"}.`,
     `When external evidence is ready, synchronize it to primary,`,

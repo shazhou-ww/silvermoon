@@ -1,7 +1,7 @@
 /**
  * @template lifecycle-prepared
  * @when idea.state=preparing and current revision submitted
- * 用于已提交的构想 revision 等待 review，或继续阶段内交流时。
+ * 用于已提交的构想 revision 等待 review，或继续当前阶段交流时。
  */
 import type { LifecyclePreparedParameters } from "../contract.ts";
 
@@ -29,7 +29,7 @@ const submittedDownstream = ({
   [
     `当前构想 revision 仍由 ${submitAction} 记录，`,
     `但控制权在 ${controlOwner ?? "unknown"}。`,
-    `只继续把控制权交回 downstream 的阶段内回复或工作；`,
+    `只继续把控制权交回 downstream 的当前阶段回复或工作；`,
     `该交流使用 ping/pong，在控制权重新回到 upstream 前不要请求 ${action}。`,
   ].join("");
 

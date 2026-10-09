@@ -1,7 +1,7 @@
 /**
  * @template lifecycle-prepared
  * @when idea.state=preparing and current revision submitted
- * Used when the submitted Idea revision is ready for review or phase-local exchange.
+ * Used when the submitted Idea revision is ready for review or current-phase exchange.
  */
 import type { LifecyclePreparedParameters } from "../contract.ts";
 
@@ -29,7 +29,7 @@ const submittedDownstream = ({
   [
     `The current Idea revision remains recorded by ${submitAction},`,
     `but control is ${controlOwner ?? "unknown"}.`,
-    `Continue only the phase-local response or work that returned control downstream;`,
+    `Continue only the current phase response or work that returned control downstream;`,
     `use ping/pong for that exchange and do not request ${action} until control returns upstream.`,
   ].join(" ");
 

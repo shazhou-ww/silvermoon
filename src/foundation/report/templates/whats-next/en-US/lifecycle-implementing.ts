@@ -19,8 +19,10 @@ const lifecycleImplementing = ({
   worldPath,
 }: LifecycleImplementingParameters) =>
   [
-    `Continue ${name} in ${documentPath}, supporting files under ${worldPath},`,
-    `and ${ledgerPath}; do not change ${idealPath} unless the Ideal World must change.`,
+    `Continue the current idea ${name} in phase file ${documentPath},`,
+    `related supporting files under ${worldPath}, and ledger ${ledgerPath}.`,
+    `Do not change the canonical idea file ${idealPath}`,
+    `unless the current idea requirements must change.`,
     `The current revision is ${submissionState ?? "unsubmitted"}`,
     `and control is ${controlOwner ?? "unknown"}.`,
     `When implementation evidence is ready, synchronize it to primary,`,

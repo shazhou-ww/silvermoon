@@ -18,7 +18,9 @@ const lifecycleDeploying = ({
   worldPath,
 }: LifecycleDeployingParameters) =>
   [
-    `在 ${documentPath}、${worldPath} 下的辅助文件和 ${ledgerPath} 中继续 ${name}。`,
+    `在当前阶段文件 ${documentPath}、`,
+    `${worldPath} 下该阶段的相关辅助文件和 ledger ${ledgerPath} 中`,
+    `继续当前 idea ${name}。`,
     `当前 revision 为 ${submissionState ?? "unsubmitted"}，`,
     `控制权在 ${controlOwner ?? "unknown"}。`,
     `外部证据就绪后先同步到 primary，`,

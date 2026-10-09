@@ -13,7 +13,7 @@ const lifecycleInactive = ({
   [
     `复查 ${name}（${state}），保留已有决定。`,
     `只有明确人工决定才通过 idea.resumed 恢复；`,
-    `需求变化应修改对应世界内容。`,
+    `要求变化时应修改相关的 canonical 阶段文件。`,
   ].join("");
 
 export default lifecycleInactive;

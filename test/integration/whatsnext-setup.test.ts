@@ -420,7 +420,7 @@ test("default navigation excludes completed and abandoned ideas while counting t
   }
 });
 
-test("uses formal world and contract names in localized lifecycle instructions", async () => {
+test("uses concrete phase files in localized lifecycle instructions", async () => {
   const repository = await fixture({
     preferredLanguage: "fr-FR",
     ideas: [
@@ -473,7 +473,7 @@ test("uses formal world and contract names in localized lifecycle instructions",
     if ([FIRST_ID, SECOND_ID, DEPLOYING_ID].includes(id)) {
       assert.match(
         responseText(selected),
-        /自然语言内容中使用 fr-FR/,
+        /阶段文件、该阶段相关辅助文件和 ledger 中的自然语言内容使用 fr-FR/,
       );
     } else {
       assert.equal(selectedIdea(selected).control?.owner, "none");
@@ -481,7 +481,7 @@ test("uses formal world and contract names in localized lifecycle instructions",
   }
 });
 
-test("projects submit readiness and phase-local control into whats-next", async () => {
+test("projects submit readiness and current-phase control into whats-next", async () => {
   const repository = await fixture({
     ideas: [{ id: FIRST_ID, status: { alias: "submit-control" } }],
   });
@@ -706,7 +706,10 @@ test("uses a canonical output override without changing content language or pers
   );
   assert.match(responseText(selected), /^当前构想 revision/);
   assert.match(responseText(selected), /fenced 审阅模板/);
-  assert.match(responseText(selected), /自然语言内容中使用 fr-FR/);
+  assert.match(
+    responseText(selected),
+    /阶段文件、该阶段相关辅助文件和 ledger 中的自然语言内容使用 fr-FR/,
+  );
   assert.match(actionCommit(selected), /^[0-9a-f]{40}$/);
   assert.equal(await readFile(statusPath, "utf8"), before);
   assert.equal(await readFile(configPath, "utf8"), configBefore);

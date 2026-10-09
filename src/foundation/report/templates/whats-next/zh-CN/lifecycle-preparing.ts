@@ -17,7 +17,7 @@ const lifecyclePreparing = ({
   submitAction,
 }: LifecyclePreparingParameters) =>
   [
-    `在 ${documentPath} 和 ${ledgerPath} 继续 ${name}。`,
+    `在当前阶段文件 ${documentPath} 和 ledger ${ledgerPath} 中继续当前 idea ${name}。`,
     `当前 revision 为 ${submissionState ?? "unsubmitted"}，`,
     `控制权在 ${controlOwner ?? "unknown"}。`,
     `构想候选就绪后先同步到 primary，`,

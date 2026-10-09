@@ -19,8 +19,10 @@ const lifecycleImplementing = ({
   worldPath,
 }: LifecycleImplementingParameters) =>
   [
-    `在 ${documentPath}、${worldPath} 下的辅助文件和 ${ledgerPath} 中继续 ${name}；`,
-    `除非理想世界确实变化，否则不要修改 ${idealPath}。`,
+    `在当前阶段文件 ${documentPath}、`,
+    `${worldPath} 下该阶段的相关辅助文件和 ledger ${ledgerPath} 中`,
+    `继续当前 idea ${name}。`,
+    `除非当前 idea 的要求必须变化，否则不要修改 canonical idea 文件 ${idealPath}。`,
     `当前 revision 为 ${submissionState ?? "unsubmitted"}，`,
     `控制权在 ${controlOwner ?? "unknown"}。`,
     `实现证据就绪后先同步到 primary，`,
