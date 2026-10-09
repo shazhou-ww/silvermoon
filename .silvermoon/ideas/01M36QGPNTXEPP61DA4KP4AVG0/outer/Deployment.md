@@ -1,10 +1,23 @@
-# 验证 Agent Session Trajectory 评估基线进入现世
+# 验证 Harbor 评估基线进入开发工作流
+
+准备阶段的轻量初版；本 idea 交付评估工具与使用流程，不授权 npm 发布、
+生产写入或提前记录验收。
+
+## Deployment steps
+
+- **D-S01:** 准备可复现的交付与使用说明
+  - 明确版本安装、授权注入、环境检查、场景命令与安全证据保留方式。
+- **D-S02:** 验证全新环境的完整评估
+  - 在受控环境运行完整集与故障注入，保留版本绑定的结果和失败诊断。
+- **D-S03:** 接入验证流程与人工审阅
+  - 普通 CI 只跑确定性自测，明确受控评估触发规则及独立 VS Code smoke 边界。
 
 ## Deployment acceptance criteria
 
-- `pnpm check`、新增 verifier 自测以及 `silvermoon check --commit HEAD` 均通过。
-- 至少一次 canonical Agent 的完整代表性 session 成功，并保留可供 delivery review
-  检查的摘要。
-- 发布候选包含已评审的 harness、故障注入结果、完整验证和使用文档。
-- 真实 VS Code host smoke 验证 skill discovery、工具面和用户交互 gate，不以 Copilot
-  CLI 自动化结果替代。
+- **D-AC01:** 文档命令在全新环境可复现
+  - 使用说明能运行指定与完整场景集；环境不可用不会被记录为通过。
+- **D-AC02:** 完整真实评估与违规检测有证据
+  - E01–E07 全部变体的真实结果可审阅，对应故障负例被检出，安全产物可追溯。
+- **D-AC03:** 开发与发布验证边界明确
+  - 仓库检查及 verifier 自测通过，流程明确 focused/full 触发要求；
+    独立 VS Code smoke 有记录，不以 CLI 结果替代。
