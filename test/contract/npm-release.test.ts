@@ -40,17 +40,9 @@ test("uses a protected, least-privilege trusted-publishing workflow", async () =
 
   const workflow = document.toJS();
   assert.deepEqual(workflow.on.push.tags, ["npm/**"]);
-  assert.equal(workflow.on.deployment, null);
   assert.deepEqual(workflow.permissions, {});
 
   const publish = workflow.jobs.publish;
-  assert.match(publish.if, /github\.event_name == 'push'/);
-  assert.match(publish.if, /github\.event\.deployment\.task == 'npm-release'/);
-  assert.match(
-    publish.if,
-    /github\.event\.deployment\.environment == 'npm-release-recovery'/,
-  );
-  assert.match(publish.if, /startsWith\(github\.ref, 'refs\/tags\/npm\/'\)/);
   assert.equal(publish["runs-on"], "ubuntu-latest");
   assert.equal(publish.environment, "npm");
   assert.deepEqual(publish.permissions, {

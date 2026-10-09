@@ -4,7 +4,6 @@ on:
   push:
     tags:
       - "npm/**"
-  deployment:
 
 permissions: {}
 
@@ -15,12 +14,6 @@ concurrency:
 jobs:
   publish:
     name: Publish ${{ github.ref_name }}
-    if: >-
-      github.event_name == 'push' ||
-      (github.event_name == 'deployment' &&
-      github.event.deployment.task == 'npm-release' &&
-      github.event.deployment.environment == 'npm-release-recovery' &&
-      startsWith(github.ref, 'refs/tags/npm/'))
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment: npm
