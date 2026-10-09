@@ -3,15 +3,15 @@
  * @when repository.head=null
  * Used when the repository has no initial commit.
  */
-import type { SummaryAndStep } from "../contract.ts";
+import type { SummaryAndNextSteps } from "../contract.ts";
 
 /** @pure */
-const headMissing = (): SummaryAndStep =>
+const headMissing = (): SummaryAndNextSteps =>
   ({
     summary: "The repository has no commit at HEAD.",
-    step: [
-      `After resolving conflicts and deciding which local changes belong,`,
-      `create the initial commit on the intended branch.`,
+    nextSteps: [
+      `Confirm the intended branch and files to track,`,
+      `then create the initial commit.`,
     ].join(" "),
   });
 

@@ -157,6 +157,15 @@ test("navigation templates distinguish available and absent active ideas", () =>
 
 test("what's next templates render dynamic repository values", () => {
   const templates = whatsNextTemplates("en-US");
+  assert.deepEqual(templates["head-missing"](), {
+    summary: "The repository has no commit at HEAD.",
+    nextSteps:
+      "Confirm the intended branch and files to track, then create the initial commit.",
+  });
+  assert.deepEqual(whatsNextTemplates("zh-CN")["head-missing"](), {
+    summary: "repository 的 HEAD 尚无 commit。",
+    nextSteps: "确认预期分支和应纳入版本控制的文件后，创建初始 commit。",
+  });
   assert.deepEqual(
     templates["primary-behind"]({
       branch: "topic",
@@ -170,9 +179,29 @@ test("what's next templates render dynamic repository values", () => {
     {
       summary:
         "Local HEAD is abc123; observed primary is def456; relationship is behind.",
-      instructions:
+      nextSteps:
         "Fast-forward branch topic to observed primary def456 with `git merge --ff-only def456` without rewriting history, then run `silvermoon whats-next` again.",
     },
+  );
+  assert.equal(
+    templates["event-history-invalid"]({
+      recheckCommand: "`silvermoon whats-next --audience agent`",
+    }),
+    [
+      "Preserve both histories.",
+      "Review the selected commit's event boundary and repair only an authorized failure,",
+      "then retry `silvermoon whats-next --audience agent`.",
+    ].join(" "),
+  );
+  assert.equal(
+    whatsNextTemplates("zh-CN")["event-history-invalid"]({
+      recheckCommand: "`silvermoon whats-next --audience agent`",
+    }),
+    [
+      "保留双方历史。检查所选提交的事件边界，",
+      "仅在获得授权时修复明确的错误，",
+      "然后重试 `silvermoon whats-next --audience agent`。",
+    ].join(""),
   );
 });
 

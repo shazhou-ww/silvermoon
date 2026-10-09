@@ -5,7 +5,7 @@
  */
 import type {
   PrimaryRelationParameters,
-  SummaryAndInstructions,
+  SummaryAndNextSteps,
 } from "../contract.ts";
 
 /** @pure */
@@ -13,11 +13,11 @@ const primaryDiverged = ({
   head,
   primary,
   recheckCommand,
-}: PrimaryRelationParameters): SummaryAndInstructions =>
+}: PrimaryRelationParameters): SummaryAndNextSteps =>
   ({
     summary:
       `Local HEAD is ${head}; observed primary is ${primary}; relationship is diverged.`,
-    instructions: [
+    nextSteps: [
       `Preserve local ${head} and remote ${primary},`,
       `integrate both histories without force-pushing, resolve and validate the result,`,
       `then run ${recheckCommand} again.`,

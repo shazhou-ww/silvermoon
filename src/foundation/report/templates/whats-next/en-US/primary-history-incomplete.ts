@@ -5,7 +5,7 @@
  */
 import type {
   PrimaryRelationParameters,
-  SummaryAndInstructions,
+  SummaryAndNextSteps,
 } from "../contract.ts";
 
 /** @pure */
@@ -14,11 +14,11 @@ const primaryHistoryIncomplete = ({
   primary,
   recheckCommand,
   remote,
-}: PrimaryRelationParameters): SummaryAndInstructions =>
+}: PrimaryRelationParameters): SummaryAndNextSteps =>
   ({
     summary:
       `Local HEAD is ${head}; observed primary is ${primary}; relationship is unknown.`,
-    instructions: [
+    nextSteps: [
       `Deepen the shallow history from remote ${remote}`,
       `until ${head} and ${primary} can be compared,`,
       `then run ${recheckCommand} again.`,

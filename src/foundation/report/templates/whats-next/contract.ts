@@ -127,9 +127,9 @@ export interface WorktreeConflictsParameters {
   summary: string;
 }
 
-export interface SummaryAndStep {
+export interface SummaryAndNextSteps {
+  nextSteps: string;
   summary: string;
-  step: string;
 }
 
 export interface DetachedHeadParameters {
@@ -169,11 +169,6 @@ export interface PrimaryRelationParameters extends RecheckParameters {
   primary: string;
   remote: string | null;
   primaryBranch: string;
-}
-
-export interface SummaryAndInstructions {
-  instructions: string;
-  summary: string;
 }
 
 export interface MetadataUnavailableParameters {
@@ -222,13 +217,13 @@ export interface WhatsNextTemplates {
   "worktree-conflicts": (
     parameters: WorktreeConflictsParameters,
   ) => string;
-  "head-missing": () => SummaryAndStep;
+  "head-missing": () => SummaryAndNextSteps;
   "detached-head": (
     parameters: DetachedHeadParameters,
-  ) => SummaryAndStep;
+  ) => SummaryAndNextSteps;
   "primary-upstream-mismatch": (
     parameters: PrimaryUpstreamMismatchParameters,
-  ) => SummaryAndStep;
+  ) => SummaryAndNextSteps;
   "worktree-inspection-failed": (
     parameters: RecheckParameters,
   ) => string;
@@ -243,22 +238,19 @@ export interface WhatsNextTemplates {
   ) => string;
   "primary-history-incomplete": (
     parameters: PrimaryRelationParameters,
-  ) => SummaryAndInstructions;
+  ) => SummaryAndNextSteps;
   "primary-behind": (
     parameters: PrimaryRelationParameters,
-  ) => SummaryAndInstructions;
+  ) => SummaryAndNextSteps;
   "primary-ahead": (
     parameters: PrimaryRelationParameters,
-  ) => SummaryAndInstructions;
+  ) => SummaryAndNextSteps;
   "primary-diverged": (
     parameters: PrimaryRelationParameters,
-  ) => SummaryAndInstructions;
+  ) => SummaryAndNextSteps;
   "idea-metadata-unavailable": (
     parameters: MetadataUnavailableParameters,
-  ) => {
-    nextSteps: string;
-    summary: string;
-  };
+  ) => SummaryAndNextSteps;
 }
 
 type MissingTemplateIds = Exclude<

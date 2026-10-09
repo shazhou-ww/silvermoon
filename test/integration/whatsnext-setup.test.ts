@@ -726,7 +726,7 @@ test("uses a canonical output override without changing content language or pers
   assert.match(responseText(blocked), /^检查全部 staged、unstaged 和 untracked 路径/);
   assert.match(
     responseText(blocked),
-    /silvermoon whats-next "localized" --language zh-CN/,
+    /silvermoon whats-next "localized" --language zh-CN --audience agent/,
   );
 });
 

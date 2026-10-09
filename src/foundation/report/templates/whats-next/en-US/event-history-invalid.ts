@@ -12,7 +12,7 @@ const eventHistoryInvalid = ({
   [
     `Preserve both histories.`,
     `Review the selected commit's event boundary and repair only an authorized failure,`,
-    `then retry ${recheckCommand} --audience agent.`,
+    `then retry ${recheckCommand}.`,
   ].join(" ");
 
 export default eventHistoryInvalid;

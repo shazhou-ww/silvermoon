@@ -5,7 +5,7 @@
  */
 import type {
   PrimaryRelationParameters,
-  SummaryAndInstructions,
+  SummaryAndNextSteps,
 } from "../contract.ts";
 
 /** @pure */
@@ -15,11 +15,11 @@ const primaryBehind = ({
   mergeCommand,
   primary,
   recheckCommand,
-}: PrimaryRelationParameters): SummaryAndInstructions =>
+}: PrimaryRelationParameters): SummaryAndNextSteps =>
   ({
     summary:
       `Local HEAD is ${head}; observed primary is ${primary}; relationship is behind.`,
-    instructions: [
+    nextSteps: [
       `Fast-forward branch ${branch} to observed primary ${primary} with ${mergeCommand}`,
       `without rewriting history, then run ${recheckCommand} again.`,
     ].join(" "),

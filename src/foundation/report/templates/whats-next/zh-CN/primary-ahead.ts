@@ -5,7 +5,7 @@
  */
 import type {
   PrimaryRelationParameters,
-  SummaryAndInstructions,
+  SummaryAndNextSteps,
 } from "../contract.ts";
 
 /** @pure */
@@ -15,11 +15,11 @@ const primaryAhead = ({
   primaryBranch,
   recheckCommand,
   remote,
-}: PrimaryRelationParameters): SummaryAndInstructions =>
+}: PrimaryRelationParameters): SummaryAndNextSteps =>
   ({
     summary:
       `本地 HEAD 为 ${head}；观测到的 primary 是 ${primary}；两者关系为 ahead。`,
-    instructions: [
+    nextSteps: [
       `验证本地 commit ${head}，确认 remote tip 仍为 ${primary}，`,
       `再普通 push 到 ${remote}/${primaryBranch}，不要 force。`,
       `push 后重新运行 ${recheckCommand}。`,

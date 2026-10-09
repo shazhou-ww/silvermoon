@@ -5,7 +5,7 @@
  */
 import type {
   PrimaryUpstreamMismatchParameters,
-  SummaryAndStep,
+  SummaryAndNextSteps,
 } from "../contract.ts";
 
 /** @pure */
@@ -17,14 +17,14 @@ const primaryUpstreamMismatch = ({
   repository,
   upstreamBranch,
   verifyCommand,
-}: PrimaryUpstreamMismatchParameters): SummaryAndStep => {
+}: PrimaryUpstreamMismatchParameters): SummaryAndNextSteps => {
   const actual = remote === null
     ? "none"
     : `${repository ?? remote}#${upstreamBranch ?? "unknown"}`;
   return {
     summary:
       `Branch ${branch} has upstream ${actual}; expected ${expectedRepository}#${expectedBranch}.`,
-    step: [
+    nextSteps: [
       `Configure a named remote for ${expectedRepository},`,
       `then set branch ${branch} to track that remote's ${expectedBranch} branch.`,
       `Verify with ${verifyCommand}.`,
