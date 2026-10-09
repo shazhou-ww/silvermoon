@@ -73,19 +73,19 @@ function englishReviewPresentation(
   const phaseText = {
     preparing: {
       gateLabel: "Ideal World approval",
-      currentContract: "Ideal World contract",
+      currentContract: "Idea contract",
       decisionQuestion:
         `Do you approve \`${reference}\` as the Ideal World for this IDEA?`,
     },
     implementing: {
-      gateLabel: "Inner World acceptance",
-      currentContract: "Inner World contract",
+      gateLabel: "Implementation acceptance",
+      currentContract: "Implementation contract",
       decisionQuestion:
-        `Do you accept \`${reference}\` as the Inner World implementation for this IDEA?`,
+        `Do you accept \`${reference}\` as the implementation for this IDEA?`,
     },
     deploying: {
       gateLabel: "Outer World acceptance",
-      currentContract: "Outer World contract",
+      currentContract: "Deployment contract",
       decisionQuestion:
         `Do you accept \`${reference}\` as the Outer World outcome for this IDEA?`,
     },

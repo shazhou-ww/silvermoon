@@ -416,7 +416,7 @@ Every selected active idea adds a primary-bound `review` object to its
         "remote": "线上"
       },
       "documentLabels": {
-        "current-contract": "理想世界契约",
+        "current-contract": "构想契约",
         "ledger": "执行清单"
       },
       "decisionQuestion": "是否批准 `idealRevision=<12-character-reference>` 作为该 IDEA 的理想世界？"

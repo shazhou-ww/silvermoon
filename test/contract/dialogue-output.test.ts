@@ -139,7 +139,7 @@ test("renders primary-bound review context before lifecycle instructions", () =>
           remote: "remote",
         },
         documentLabels: {
-          "current-contract": "Ideal World contract",
+          "current-contract": "Idea contract",
           ledger: "Execution ledger",
         },
         decisionQuestion:

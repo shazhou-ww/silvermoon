@@ -664,7 +664,7 @@ test("drives gate presentation from content language instead of output language"
         remote: "线上",
       },
       documentLabels: {
-        "current-contract": "理想世界契约",
+        "current-contract": "构想契约",
         ledger: "执行清单",
       },
     },
@@ -682,4 +682,74 @@ test("drives gate presentation from content language instead of output language"
   assert.match(rendered, /"contentLanguage": "zh-CN"/);
   assert.match(rendered, /"gateLabel": "理想世界批准"/);
   assert.match(rendered, /"idea": "构想"/);
+});
+
+test("names Chinese review contracts by their canonical artifacts", async () => {
+  const repository = await fixture({
+    ideas: [
+      {
+        id: FIRST_ID,
+        status: { alias: "idea-contract", language: "zh-CN" },
+      },
+      {
+        id: SECOND_ID,
+        status: { alias: "implementation-contract", language: "zh-CN" },
+      },
+      {
+        id: DEPLOYING_ID,
+        status: { alias: "deployment-contract", language: "zh-CN" },
+      },
+    ],
+  });
+  await setIdeaState(repository.root, SECOND_ID, "implementing", {
+    alias: "implementation-contract",
+    language: "zh-CN",
+  });
+  await setIdeaState(repository.root, DEPLOYING_ID, "deploying", {
+    alias: "deployment-contract",
+    language: "zh-CN",
+  });
+  git(repository.root, "add", ".");
+  git(repository.root, "commit", "-m", "Set localized review phases");
+  git(repository.root, "push", "origin", "main");
+
+  const cases = [
+    {
+      selector: "idea-contract",
+      gateLabel: "理想世界批准",
+      contractLabel: "构想契约",
+      question: /作为该 IDEA 的理想世界？$/,
+    },
+    {
+      selector: "implementation-contract",
+      gateLabel: "实现验收",
+      contractLabel: "实现契约",
+      question: /作为该 IDEA 的实现？$/,
+    },
+    {
+      selector: "deployment-contract",
+      gateLabel: "现实世界验收",
+      contractLabel: "部署契约",
+      question: /作为该 IDEA 的现实世界结果？$/,
+    },
+  ] as const;
+
+  for (const expected of cases) {
+    const report = await whatsNext({
+      idea: expected.selector,
+      language: "en-US",
+      root: repository.root,
+      userHome: repository.base,
+    });
+    const presentation = responseReview(report).presentation;
+
+    assert.equal(report.observation.outputLanguage, "en-US");
+    assert.equal(presentation.contentLanguage, "zh-CN");
+    assert.equal(presentation.gateLabel, expected.gateLabel);
+    assert.equal(
+      presentation.documentLabels["current-contract"],
+      expected.contractLabel,
+    );
+    assert.match(presentation.decisionQuestion, expected.question);
+  }
 });

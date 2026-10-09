@@ -238,7 +238,7 @@ function reviewPresentation(
   const phaseText = {
     preparing: {
       gateLabel: localize(language, "Ideal World approval", "理想世界批准"),
-      currentContract: localize(language, "Ideal World contract", "理想世界契约"),
+      currentContract: localize(language, "Idea contract", "构想契约"),
       decisionQuestion: localize(
         language,
         `Do you approve \`${reference}\` as the Ideal World for this IDEA?`,
@@ -246,17 +246,17 @@ function reviewPresentation(
       ),
     },
     implementing: {
-      gateLabel: localize(language, "Inner World acceptance", "主体世界验收"),
-      currentContract: localize(language, "Inner World contract", "主体世界契约"),
+      gateLabel: localize(language, "Implementation acceptance", "实现验收"),
+      currentContract: localize(language, "Implementation contract", "实现契约"),
       decisionQuestion: localize(
         language,
-        `Do you accept \`${reference}\` as the Inner World implementation for this IDEA?`,
-        `是否接受 \`${reference}\` 作为该 IDEA 的主体世界实现？`,
+        `Do you accept \`${reference}\` as the implementation for this IDEA?`,
+        `是否接受 \`${reference}\` 作为该 IDEA 的实现？`,
       ),
     },
     deploying: {
       gateLabel: localize(language, "Outer World acceptance", "现实世界验收"),
-      currentContract: localize(language, "Outer World contract", "现实世界契约"),
+      currentContract: localize(language, "Deployment contract", "部署契约"),
       decisionQuestion: localize(
         language,
         `Do you accept \`${reference}\` as the Outer World outcome for this IDEA?`,
