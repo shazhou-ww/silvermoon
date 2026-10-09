@@ -2,35 +2,34 @@
 
 ## Steps
 
-### I-S01: 定义 digest CAS 契约
+### I-S01: 演进事件记录契约
 
-调整 append 输入与业务边界，使 optional expected digest 接受至少 12 位的
-十六进制前缀，并与完整 `events.jsonl` Git blob digest 执行前缀匹配，返回
-稳定的输入或冲突诊断。
+从 canonical event schema 移除 sequence，为新 append 增加 CLI 生成的规范 UTC
+timestamp，并为无可信 timestamp 的历史记录定义兼容迁移。
 
-### I-S02: 将 digest 接入 what's-next
+### I-S02: 重构 append 并发与重试
 
-在 v2 idea 观察与 report 中携带 event digest，由 routing 生成准确 append
-指引，并移除生产 lifecycle 文案对 replay cursor 的依赖。
+让 optional expected digest 接受至少 12 位的前缀匹配，并确保首次写入生成的
+timestamp 在不确定重试中保持不变；sequence 仅由读取位置派生。
 
 ### I-S03: 同步验证面
 
-更新直接相关的 CLI、业务、report、文档和测试，保留 replay 的调试与增量读取
-职责以及无 digest append 的兼容行为。
+更新迁移、CLI、reducer、report、schema、文档和测试，保留 replay 的调试与
+增量读取职责以及无 digest append 的兼容行为。
 
 ## Acceptance criteria
 
-### I-AC01: Digest 匹配控制写入
+### I-AC01: 事件记录自描述
 
-自动化测试覆盖 12 位、介于下限与完整 OID 之间以及完整 digest 的成功匹配；
-短于下限或前缀不匹配时文件字节不变并返回明确诊断。
+自动化测试证明新记录包含规范 UTC timestamp、不含 sequence，读取结果按文件
+位置派生序号，历史迁移不伪造未知时间。
 
-### I-AC02: 无 digest 保持可用
+### I-AC02: Digest 前缀控制写入
 
-自动化测试证明省略 optional digest 时 append 正常执行，sequence 继续由 reducer
-派生。
+自动化测试覆盖下限、中间长度与完整 digest 的成功匹配；短输入或不匹配时文件
+字节不变，省略 digest 时 append 仍正常执行。
 
-### I-AC03: Report 提供完整生产指引
+### I-AC03: 重试与指引保持一致
 
-模板与集成测试证明 `what's-next` 输出观察 digest 和可执行 append 指引，且不要求
-生产 Agent 先调用 `event replay`。
+集成测试证明重试保留首次 timestamp，且 `what's-next` 输出可执行 digest 指引，
+不要求生产 Agent 先调用 `event replay` 或为新事件查询 Git 历史。
