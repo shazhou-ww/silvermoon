@@ -321,8 +321,8 @@ export async function createIdeaUseCase({
     {
       nextSteps: localize(
         observed.outputLanguage,
-        `${languageInstruction} Describe the requested Ideal World in ${paths.ideaDocumentPath}; keep canonical headings, stable IDs, and placeholders in ${paths.implementationDocumentPath}, ${paths.deploymentDocumentPath}, and ${paths.ledgerPath} synchronized.`,
-        `${languageInstruction} 在 ${paths.ideaDocumentPath} 中描述请求的理想契约；保持 ${paths.implementationDocumentPath}、${paths.deploymentDocumentPath} 与 ${paths.ledgerPath} 中的 canonical 标题、稳定 ID 和占位同步。`,
+        `${languageInstruction} Complete the requested Ideal World in ${paths.ideaDocumentPath}. Before requesting Ideal approval, replace the placeholders in ${paths.implementationDocumentPath} and ${paths.deploymentDocumentPath} with lightweight first versions of no more than three high-level steps and three observable criteria each, then mirror their stable IDs and short titles in ${paths.ledgerPath}. Ideal approval covers only ${paths.ideaDocumentPath}; the two downstream versions remain provisional.`,
+        `${languageInstruction} 在 ${paths.ideaDocumentPath} 中完成请求的理想契约。请求 Ideal 批准前，把 ${paths.implementationDocumentPath} 和 ${paths.deploymentDocumentPath} 中的占位替换为轻量初版；每份最多三个高层步骤和三个可观察标准，并在 ${paths.ledgerPath} 中镜像其稳定 ID 与短标题。Ideal 批准只覆盖 ${paths.ideaDocumentPath}；两份下游初版仍可调整。`,
       ),
     },
   );

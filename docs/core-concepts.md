@@ -38,6 +38,13 @@ implementation.
 `Deployment.md` plus evidence that the implementation is true where it must
 operate.
 
+Preparation completes the Ideal contract and seeds both downstream contracts
+with lightweight first versions: at most three high-level steps and three
+observable criteria each, mirrored unchecked in `ledger.md`. These seeds expose
+feasibility before Ideal approval, but that decision still approves only the
+Ideal tree. Implementation and deployment phases progressively refine their
+respective seeds.
+
 The directory structure makes the relationship concrete: the Inner World
 contains the Ideal World, and the Outer World contains both. Each world is an
 opaque Git tree. Its revision therefore includes every nested world. Changing
@@ -62,6 +69,15 @@ Agents own continuation. The project skill combines `whats-next`,
 choose one safe action. The ledger is operational memory: it mirrors stable
 contract IDs and records completed work, but a checked item is not approval or
 acceptance.
+
+For each selected active idea, `response.review` supplies a primary-bound seed
+for the eventual review index: lifecycle phase, decision event, exact revision,
+fetched primary commit, current-world scope, and canonical documents. It is
+context, not a readiness or authorization flag. Agents still inspect relevant
+supporting files and evidence. JSON retains complete object IDs while the
+human-facing index uses 12-character references. The index includes only
+substantive review material, with clickable local and immutable remote links,
+in a completed assistant message before any later interactive decision.
 
 ## Persistent State Events
 

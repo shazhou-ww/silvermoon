@@ -243,6 +243,9 @@ function dialogueResponse(
         ),
         idea,
         nextSteps,
+        ...(context.review === undefined
+          ? {}
+          : { review: clone(context.review) }),
         ...(observation.guidance === undefined
           ? {}
           : { guidance: clone(observation.guidance) }),

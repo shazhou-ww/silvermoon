@@ -11,7 +11,7 @@ import {
 import { canonicalizeOutputLanguage } from "../foundation/language/index.ts";
 import { observeSnapshot, withObservationLanguage } from "./shared/index.ts";
 
-import { joinInstructions, lifecycleInstruction, navigationInstruction, phaseGuidanceInstructions, projectInstructions, selectIdea } from "../foundation/report/index.ts";
+import { joinInstructions, lifecycleInstruction, lifecycleReview, navigationInstruction, phaseGuidanceInstructions, projectInstructions, selectIdea } from "../foundation/report/index.ts";
 import { assessRepositoryReadiness } from "./shared/index.ts";
 import type { Diagnostic } from "./shared/business-types.ts";
 import { traceBusinessAsync } from "./shared/business-types.ts";
@@ -218,15 +218,17 @@ export async function whatsNextUseCase({
     ...(selected.alias === undefined ? {} : { alias: selected.alias }),
     state: selected.state,
   };
+  const primary = readiness.primary
+    ?? (() => {
+      throw new TypeError("Repository readiness omitted the primary revision.");
+    })();
+  const review = lifecycleReview(selected, primary);
   let guidance;
   if (ACTIVE_STATES.has(selected.state)) {
     const inspected = await guidanceReader({
       gitRoot: readiness.observation.root,
       phase: selected.state,
-      snapshotTree: readiness.primary
-        ?? (() => {
-          throw new TypeError("Repository readiness omitted the primary revision.");
-        })(),
+      snapshotTree: primary,
     });
     if (inspected.state === "invalid") {
       return runtime.complete(
@@ -270,6 +272,7 @@ export async function whatsNextUseCase({
         observed.outputLanguage,
         observed.contentLanguage,
       ),
+      ...(review === undefined ? {} : { review }),
     },
   );
 }

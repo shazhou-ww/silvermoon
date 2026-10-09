@@ -74,11 +74,26 @@ Keep the review message short: use that language to state the review focus and
 exact decision question, and provide local plus commit-pinned remote links to
 the canonical contract, same-world supporting files, ledger, evidence, and key
 deliverables. Durable detail belongs in those repository files, not in the
-chat message. Render this index as ordinary assistant Markdown. When using an
-interactive decision tool, put only the exact question and choices in that
-tool; local workspace links in tool-owned surfaces may fail even when the
-files exist. In VS Code on Windows, ordinary-message local links use absolute
-drive paths with forward slashes and never `file://` URIs.
+chat message. Seed the index from the selected report's `response.review`,
+including its exact primary commit and canonical documents, without treating
+the field's presence as gate readiness. Use one compact format in this order:
+idea identity, decision, 12-character revision reference, linked 12-character
+primary reference, one-sentence review focus, review-file links, and one exact
+candidate question. Keep the complete object IDs from `response.review`
+internally for event recording. Do not add
+repeated gate-policy explanations or inline inventories of test, CI, deployment,
+or SLO evidence; keep those details in the linked artifacts. List only files
+with substantive review content: Ideal uses `Idea.md` and substantive
+same-world support; Implementation and Deployment each use their corresponding
+contract plus `ledger.md`, with other evidence added only when material. Render the index
+as a standalone, completed ordinary assistant Markdown turn. Never open an
+interactive decision in that same turn because the tool surface may hide queued
+prose. If a later turn uses an interactive decision tool, put only the exact
+question and choices in that tool; local workspace links in tool-owned surfaces
+may fail even when the files exist. If that tool is unavailable or returns no
+choice, do not retry or repeat the rationale against unchanged state. In VS Code
+on Windows, ordinary-message local links use absolute drive paths with forward
+slashes and never `file://` URIs.
 
 After an explicit decision, change only the corresponding status fact,
 validate it, prefer a status-only commit when practical, synchronize it to
@@ -92,6 +107,12 @@ the next work. Do not record work notes or explanations in `ledger.md`. Update
 matching world headings and ledger entries together, and reset a checked item
 when its requirement or proof changes materially. Ledger checkboxes are Agent
 notes only and never imply approval or acceptance.
+
+Before the Ideal gate, preparation must replace the Implementation and
+Deployment scaffold placeholders with lightweight first versions of no more
+than three high-level steps and three observable criteria each, mirrored
+unchecked in the ledger. They are required feasibility context but remain
+outside the `acceptIdeal` review and decision scope.
 
 When a successful selected lifecycle report or `create-idea` report includes
 `response.guidance`, consume only that snapshot-bound field.

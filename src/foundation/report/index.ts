@@ -18,6 +18,7 @@ export {
   joinInstructions,
   lifecycleContentLanguageInstruction,
   lifecycleInstruction,
+  lifecycleReview,
   localRepositoryInstructions,
   navigationInstruction,
   phaseGuidanceInstructions,

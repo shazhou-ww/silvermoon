@@ -158,7 +158,12 @@ test("[unrelated-active-create] [create-no-remote] creates an exact scaffold wit
   assert.equal(actionCreatedIdeaId(report.actions.at(0)), createdId);
   assert.match(responseText(report), new RegExp(ideaPaths(createdId).ideaDocumentPath));
   assert.match(responseText(report), /en-US/);
+  assert.match(responseText(report), /lightweight first versions/);
+  assert.match(responseText(report), /Ideal approval covers only/);
   assert.doesNotMatch(responseText(report), /道心|内景|现世/);
+  assert.match(IMPLEMENTATION_TEMPLATE, /lightweight first\s+version/);
+  assert.match(DEPLOYMENT_TEMPLATE, /lightweight first\s+version/);
+  assert.match(LEDGER_TEMPLATE, /mirror the lightweight contract versions/);
 
   const paths = ideaPaths(createdId);
   const expectedFiles: Array<[string, string]> = [
@@ -258,6 +263,8 @@ test("normalizes and persists an explicit idea language", async () => {
     "zh-CN",
   );
   assert.match(responseText(report), /理想契约/);
+  assert.match(responseText(report), /轻量初版/);
+  assert.match(responseText(report), /Ideal 批准只覆盖/);
   assert.doesNotMatch(responseText(report), /道心|内景|现世/);
   const paths = ideaPaths(createdId);
   const templates = ideaTemplates("zh-CN");

@@ -132,6 +132,14 @@ Agent to replace natural-language placeholders with the effective content
 language. Selected-idea `whats-next` instructions repeat the effective content
 language even when a temporary output-language override is active.
 
+Creation initially writes explicit scaffold placeholders. Before Ideal
+approval, preparation replaces the Implementation and Deployment placeholders
+with lightweight first versions of no more than three high-level steps and
+three observable criteria each, mirrored unchecked in `ledger.md`. These
+provisional seeds do not widen `acceptIdeal`, which remains bound only to
+`idealRevision`; their later refinement changes the containing downstream
+revisions normally.
+
 State is derived in order:
 
 1. `abandoned` when `abandoned: true`.
@@ -341,9 +349,42 @@ projections:
 - `response` is a command-specific discriminated union produced only from the
   intention and final internal observation. Its variants are `blocked`,
   `choice-required`, `idea-created`, `idea-list`, `next-steps`, and
-  `validation-result`, and `event-result`. It contains the localized summary and any ordered
-  `nextSteps`, choices, items, validation result, or guidance needed by the
-  caller.
+  `validation-result`, and `event-result`. It contains the localized summary
+  and any ordered `nextSteps`, choices, items, validation result, review
+  context, or guidance needed by the caller.
+
+Every selected active idea adds a primary-bound `review` object to its
+`next-steps` response:
+
+```json
+{
+  "review": {
+    "phase": "preparing",
+    "decision": "acceptIdeal",
+    "revision": {
+      "field": "idealRevision",
+      "value": "<exact-world-tree-object-id>"
+    },
+    "primaryCommit": "<fetched-primary-commit>",
+    "scopePath": ".silvermoon/ideas/<ULID>/outer/inner/ideal",
+    "canonicalDocuments": [
+      {
+        "role": "current-contract",
+        "path": ".silvermoon/ideas/<ULID>/outer/inner/ideal/Idea.md"
+      }
+    ]
+  }
+}
+```
+
+Implementation and deployment responses bind `acceptInner` or `acceptOuter`
+to their corresponding revision and list the current contract plus `ledger.md`.
+The field is an authoritative index seed, not an assertion that the contract
+or evidence is complete and not a human decision. Callers inspect `scopePath`
+and add only supporting files with substantive review content; placeholders are
+omitted. JSON retains full object IDs. Raw Markdown renders a 12-character
+revision reference and primary reference in a **Review candidate** section
+before lifecycle instructions.
 
 After readiness, an actionable selected idea or successful creation may add
 content-free `guidance` provenance to the public observation:

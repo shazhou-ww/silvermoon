@@ -191,15 +191,19 @@ scaffold path is written. The command never stages, commits, pushes, or records
 a human decision.
 
 Replace the guidance in the `Idea.md` ideal contract with the desired outcome,
-scope, and constraints. Keep the `Implementation.md` inner implementation
-contract and `Deployment.md` real-world deployment contract placeholders
-synchronized until their lifecycle phases. Review every generated path,
-validate the complete candidate, and commit and publish the prepared idea to
-the configured primary through the repository's normal non-force publication
-path. Verify it is reachable from refreshed primary before asking the user to
-review or approve the exact reported ideal revision. If publication requires a
-pull request, wait until it reaches primary; never ask for approval of an
-unpublished local candidate. Publication does not itself approve the idea.
+scope, and constraints. Before requesting Ideal approval, replace the
+`Implementation.md` and `Deployment.md` placeholders with lightweight first
+versions of no more than three high-level steps and three observable criteria
+each. Mirror their stable IDs and short titles in `ledger.md`, leaving every
+item unchecked. These downstream seeds establish a credible path without
+expanding the Ideal decision: approval still covers only `Idea.md`. Review
+every generated path, validate the complete candidate, and commit and publish
+the prepared idea to the configured primary through the repository's normal
+non-force publication path. Verify it is reachable from refreshed primary
+before asking the user to review or approve the reported ideal candidate. If
+publication requires a pull request, wait until it reaches primary; never ask
+for approval of an unpublished local candidate. Publication does not itself
+approve the idea.
 
 Then ask what comes next with the generated ULID or an exact unique alias:
 
@@ -231,12 +235,14 @@ to validate the index before publishing a normal non-force commit. Default
 project validation exits `0`.
 
 When requesting any approval or acceptance, include the idea's alias and ULID,
-the decision and exact world revision, plus a clickable permalink to the
-canonical world entry pinned to the published primary commit. Link to
-`Idea.md`, `Implementation.md`, or `Deployment.md` as appropriate. Do not use
-a local workspace path or a branch-floating link; if the host has no known
-permalink format, provide the primary commit and repository-relative path and
-explain the limitation.
+the decision, a 12-character revision reference, a linked 12-character primary
+reference, and one review-focus sentence. Provide both a host-clickable local
+link and an immutable primary link for substantive review files. Ideal review
+links `Idea.md` and material same-world support only; Implementation and
+Deployment reviews always link their corresponding contract plus `ledger.md`.
+Keep complete object IDs internally for exact decision recording. Never use a
+branch-floating link; if the host has no known permalink format, provide the
+primary reference and repository-relative path and explain the limitation.
 
 Continue with [Core Concepts](./core-concepts.md) before changing lifecycle
 contracts, or use [Operating Silvermoon](./operations.md) for the routine

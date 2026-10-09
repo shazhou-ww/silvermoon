@@ -1,5 +1,9 @@
 import { diagnosticInstruction, localize } from "./dialogue.ts";
-import type { Diagnostic, IdeaReference } from "./types.ts";
+import type {
+  Diagnostic,
+  IdeaReference,
+  ReviewContext,
+} from "./types.ts";
 
 export const CHANGE_SAMPLE_ITEM_LIMIT = 12;
 export const CHANGE_SAMPLE_BYTE_LIMIT = 768;
@@ -216,6 +220,99 @@ export function lifecycleContentLanguageInstruction(contentLanguage: string, lan
 }
 
 /** @pure */
+function revisionReference(revision: string) {
+  return revision.slice(0, 12);
+}
+
+/** @pure */
+export function lifecycleReview(
+  idea: LifecycleIdea,
+  primaryCommit: string,
+): ReviewContext | undefined {
+  if (idea.state === "preparing") {
+    return {
+      phase: "preparing",
+      decision: "acceptIdeal",
+      revision: {
+        field: "idealRevision",
+        value: idea.idealRevision,
+      },
+      primaryCommit,
+      scopePath: idea.worlds.idealRevision.path,
+      canonicalDocuments: [
+        {
+          role: "current-contract",
+          path: idea.worlds.idealRevision.documentPath,
+        },
+      ],
+    };
+  }
+  if (idea.state === "implementing") {
+    return {
+      phase: "implementing",
+      decision: "acceptInner",
+      revision: {
+        field: "implementationRevision",
+        value: idea.implementationRevision,
+      },
+      primaryCommit,
+      scopePath: idea.worlds.implementationRevision.path,
+      canonicalDocuments: [
+        {
+          role: "current-contract",
+          path: idea.worlds.implementationRevision.documentPath,
+        },
+        {
+          role: "ledger",
+          path: idea.ledgerPath,
+        },
+      ],
+    };
+  }
+  if (idea.state === "deploying") {
+    return {
+      phase: "deploying",
+      decision: "acceptOuter",
+      revision: {
+        field: "deploymentRevision",
+        value: idea.deploymentRevision,
+      },
+      primaryCommit,
+      scopePath: idea.worlds.deploymentRevision.path,
+      canonicalDocuments: [
+        {
+          role: "current-contract",
+          path: idea.worlds.deploymentRevision.documentPath,
+        },
+        {
+          role: "ledger",
+          path: idea.ledgerPath,
+        },
+      ],
+    };
+  }
+  return undefined;
+}
+
+/** @pure */
+function reviewPresentationInstruction(language: string) {
+  return localize(
+    language,
+    "At the human gate, first render the reported review candidate as a standalone, completed assistant message with host-clickable local links and immutable primary links. Use the canonical compact gate format: identity and exact primary-bound revision, one-sentence focus, review links, and one exact question. Do not open an interactive decision in that same turn; its tool surface can hide the review index.",
+    "到达人工门时，先把报告中的审阅候选作为一条独立且已完成的 assistant 消息呈现，并提供宿主可点击的本地链接与不可变 primary 链接。使用 canonical 紧凑门格式：身份与绑定 primary 的准确 revision、一句审阅重点、审阅链接，以及一个准确问题。不要在同一 turn 打开交互决定；工具界面可能隐藏审阅索引。",
+  );
+}
+
+/** @pure */
+function preparationSeedInstruction(idea: LifecycleIdea, language: string) {
+  return localize(
+    language,
+    `Before requesting Ideal approval, replace scaffold placeholders with lightweight first versions in ${idea.worlds.implementationRevision.documentPath} and ${idea.worlds.deploymentRevision.documentPath}, then mirror their stable IDs and short titles in ${idea.ledgerPath}. Keep each downstream contract to no more than three high-level steps and three observable criteria. These provisional versions test feasibility but are outside the acceptIdeal decision.`,
+    `请求 Ideal 批准前，把 ${idea.worlds.implementationRevision.documentPath} 和 ${idea.worlds.deploymentRevision.documentPath} 中的脚手架占位替换为轻量初版，并在 ${idea.ledgerPath} 中镜像其稳定 ID 与短标题。每份下游契约最多三个高层步骤和三个可观察标准。这些可调整的初版用于校验可行性，但不属于 acceptIdeal 决定范围。`,
+  );
+}
+
+/** @pure */
 export function lifecycleInstruction(
   idea: LifecycleIdea,
   language: string,
@@ -223,41 +320,44 @@ export function lifecycleInstruction(
 ) {
   const name = ideaName(idea);
   if (idea.statusPath.endsWith("/events.jsonl")) {
-    const action = {
+    const actions: Record<string, readonly [string, string, string]> = {
       preparing: ["acceptIdeal", idea.idealRevision, idea.worlds.idealRevision.documentPath],
       implementing: ["acceptInner", idea.implementationRevision, idea.worlds.implementationRevision.documentPath],
       deploying: ["acceptOuter", idea.deploymentRevision, idea.worlds.deploymentRevision.documentPath],
-    }[idea.state];
+    };
+    const action = actions[idea.state];
     return joinInstructions([
       action ? localize(language,
-        `Continue ${name} in ${action[2]} and ${idea.ledgerPath}. Synchronize the candidate to primary before requesting the explicit human decision for ${action[0]} at exact revision ${action[1]}. Then use silvermoon event replay ${idea.id} --audience agent and silvermoon event append with its exact stream length, file digest and refreshed primary. Never edit events.jsonl directly.`,
-        `在 ${action[2]} 和 ${idea.ledgerPath} 继续 ${name}。先同步候选到 primary，再请求针对准确 revision ${action[1]} 的 ${action[0]} 人工决定。之后用 silvermoon event replay ${idea.id} --audience agent 观察，并通过 silvermoon event append 绑定准确流长度、文件 digest 和刷新后的 primary 写入；不要直接编辑 events.jsonl。`)
+        `Continue ${name} in ${action[2]} and ${idea.ledgerPath}. Synchronize the candidate to primary before requesting the explicit human decision for ${action[0]} (revision reference ${revisionReference(action[1])}); retain the full revision from response.review for the exact decision record. Then use silvermoon event replay ${idea.id} --audience agent and silvermoon event append with its exact stream length, file digest and refreshed primary. Never edit events.jsonl directly.`,
+        `在 ${action[2]} 和 ${idea.ledgerPath} 继续 ${name}。先同步候选到 primary，再请求 ${action[0]} 人工决定（revision reference ${revisionReference(action[1])}）；准确决定记录使用 response.review 中的完整 revision。之后用 silvermoon event replay ${idea.id} --audience agent 观察，并通过 silvermoon event append 绑定准确流长度、文件 digest 和刷新后的 primary 写入；不要直接编辑 events.jsonl。`)
         : localize(language,
           `Review ${name} (${idea.state}); preserve decisions. Resume only through idea.resumed after an explicit human decision; revise world content for changed requirements.`,
           `复查 ${name}（${idea.state}），保留已有决定。只有明确人工决定才通过 idea.resumed 恢复；需求变化应修改对应世界内容。`),
+      idea.state === "preparing" ? preparationSeedInstruction(idea, language) : null,
+      action ? reviewPresentationInstruction(language) : null,
       lifecycleContentLanguageInstruction(contentLanguage, language),
     ]);
   }
   if (idea.state === "preparing") {
     return joinInstructions([localize(
       language,
-      `Continue idea ${name} in ${idea.worlds.idealRevision.documentPath} and ${idea.ledgerPath}. Preserve the other worlds. When the Ideal World is ready, ask the user to approve exact revision ${idea.idealRevision}; only after explicit approval write it to approvedRevision in ${idea.statusPath}.`,
-      `继续在 ${idea.worlds.idealRevision.documentPath} 和 ${idea.ledgerPath} 推进 idea ${name}，并保留其他世界。理想契约就绪后，请用户明确批准精确 revision ${idea.idealRevision}；只有获得明确批准后，才将其写入 ${idea.statusPath} 的 approvedRevision。`,
-    ), lifecycleContentLanguageInstruction(contentLanguage, language)]);
+      `Continue idea ${name} in ${idea.worlds.idealRevision.documentPath} and ${idea.ledgerPath}. Preserve the other worlds. When the Ideal World is ready, ask the user to approve the candidate at revision reference ${revisionReference(idea.idealRevision)}; only after explicit approval write the full revision from response.review to approvedRevision in ${idea.statusPath}.`,
+      `继续在 ${idea.worlds.idealRevision.documentPath} 和 ${idea.ledgerPath} 推进 idea ${name}，并保留其他世界。理想契约就绪后，请用户明确批准 revision reference ${revisionReference(idea.idealRevision)} 对应的候选；只有获得明确批准后，才将 response.review 中的完整 revision 写入 ${idea.statusPath} 的 approvedRevision。`,
+    ), preparationSeedInstruction(idea, language), reviewPresentationInstruction(language), lifecycleContentLanguageInstruction(contentLanguage, language)]);
   }
   if (idea.state === "implementing") {
     return joinInstructions([localize(
       language,
-      `Continue idea ${name} in ${idea.worlds.implementationRevision.documentPath}, its supporting files under ${idea.worlds.implementationRevision.path}, and ${idea.ledgerPath}. Do not change ${idea.worlds.idealRevision.path} unless the Ideal World must change. After all implementation evidence is published, ask the user to accept exact revision ${idea.implementationRevision}; only then write it to implementationAcceptedRevision in ${idea.statusPath}.`,
-      `继续在 ${idea.worlds.implementationRevision.documentPath}、${idea.worlds.implementationRevision.path} 下的辅助文件和 ${idea.ledgerPath} 推进 idea ${name}。除非理想契约确实需要变化，否则不要修改 ${idea.worlds.idealRevision.path}。全部实现证据发布后，请用户明确验收精确 revision ${idea.implementationRevision}；只有获得明确验收后，才将其写入 ${idea.statusPath} 的 implementationAcceptedRevision。`,
-    ), lifecycleContentLanguageInstruction(contentLanguage, language)]);
+      `Refine the preparation seed for idea ${name} in ${idea.worlds.implementationRevision.documentPath}, its supporting files under ${idea.worlds.implementationRevision.path}, and ${idea.ledgerPath} as concrete work requires. Do not change ${idea.worlds.idealRevision.path} unless the Ideal World must change. After all implementation evidence is published, ask the user to accept the candidate at revision reference ${revisionReference(idea.implementationRevision)}; only then write the full revision from response.review to implementationAcceptedRevision in ${idea.statusPath}.`,
+      `按具体工作需要，在 ${idea.worlds.implementationRevision.documentPath}、${idea.worlds.implementationRevision.path} 下的辅助文件和 ${idea.ledgerPath} 中细化 idea ${name} 的准备阶段初版。除非理想契约确实需要变化，否则不要修改 ${idea.worlds.idealRevision.path}。全部实现证据发布后，请用户明确验收 revision reference ${revisionReference(idea.implementationRevision)} 对应的候选；只有获得明确验收后，才将 response.review 中的完整 revision 写入 ${idea.statusPath} 的 implementationAcceptedRevision。`,
+    ), reviewPresentationInstruction(language), lifecycleContentLanguageInstruction(contentLanguage, language)]);
   }
   if (idea.state === "deploying") {
     return joinInstructions([localize(
       language,
-      `Continue idea ${name} from ${idea.worlds.deploymentRevision.documentPath}, its supporting files under ${idea.worlds.deploymentRevision.path}, and ${idea.ledgerPath}. Preserve nested worlds. After external evidence is complete and published, ask the user to accept exact revision ${idea.deploymentRevision}; only then write it to deploymentAcceptedRevision in ${idea.statusPath}.`,
-      `从 ${idea.worlds.deploymentRevision.documentPath}、${idea.worlds.deploymentRevision.path} 下的辅助文件和 ${idea.ledgerPath} 继续推进 idea ${name}，并保留内层世界。外部证据完成且发布后，请用户明确验收精确 revision ${idea.deploymentRevision}；只有获得明确验收后，才将其写入 ${idea.statusPath} 的 deploymentAcceptedRevision。`,
-    ), lifecycleContentLanguageInstruction(contentLanguage, language)]);
+      `Refine the preparation seed for idea ${name} from ${idea.worlds.deploymentRevision.documentPath}, its supporting files under ${idea.worlds.deploymentRevision.path}, and ${idea.ledgerPath}. Preserve nested worlds. After external evidence is complete and published, ask the user to accept the candidate at revision reference ${revisionReference(idea.deploymentRevision)}; only then write the full revision from response.review to deploymentAcceptedRevision in ${idea.statusPath}.`,
+      `从 ${idea.worlds.deploymentRevision.documentPath}、${idea.worlds.deploymentRevision.path} 下的辅助文件和 ${idea.ledgerPath} 细化 idea ${name} 的准备阶段初版，并保留内层世界。外部证据完成且发布后，请用户明确验收 revision reference ${revisionReference(idea.deploymentRevision)} 对应的候选；只有获得明确验收后，才将 response.review 中的完整 revision 写入 ${idea.statusPath} 的 deploymentAcceptedRevision。`,
+    ), reviewPresentationInstruction(language), lifecycleContentLanguageInstruction(contentLanguage, language)]);
   }
   if (idea.state === "abandoned") {
     return localize(

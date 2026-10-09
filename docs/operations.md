@@ -165,6 +165,14 @@ World's real-world deployment contract. The latter two contain `## Steps` and
 Each criterion states both the observable outcome and how an Agent can prove
 it. World contracts do not use task-list checkboxes.
 
+During preparation, replace all scaffold placeholders in `Implementation.md`
+and `Deployment.md` with lightweight first versions of no more than three
+high-level steps and three observable criteria each. Mirror them unchecked in
+`ledger.md`. They provide a feasibility path before Ideal approval but remain
+provisional: `acceptIdeal` approves only the Ideal tree. Refine each seed during
+its own lifecycle phase rather than writing speculative architecture, detailed
+task trees, or execution evidence up front.
+
 The required idea-root `ledger.md` is an execution checklist only, not
 operational prose, a decision log, a discussion record, or a fourth world. It
 mirrors those IDs and short titles as checkboxes under Implementation and
@@ -226,13 +234,25 @@ Prefer a status-only decision commit, publish through the repository's normal
 non-force path, and verify the commit is reachable from refreshed primary.
 
 When asking for approval or acceptance, identify the idea by alias and ULID,
-state the exact reported world revision, and link the corresponding canonical
-entry at the published primary commit: `Idea.md` for ideal approval,
-`Implementation.md` for implementation acceptance, or `Deployment.md` for
-deployment acceptance. Use a commit-pinned web permalink rather than a local
-workspace path or a branch name that can move. The linked revision and
-publication are review context only; the user must still make the decision
-explicitly.
+seed the index from `response.review`, state the exact reported world revision
+and primary commit internally, and show their 12-character references. Link the
+corresponding canonical entry: `Idea.md` for
+ideal approval, `Implementation.md` for implementation acceptance, or
+`Deployment.md` for deployment acceptance. Provide a host-clickable local link
+for navigation and a commit-pinned web permalink for the immutable candidate;
+never substitute a moving branch URL. Complete this review index as a standalone
+assistant message. Do not open an interactive decision in the same turn because
+the tool surface may hide the links; a later decision interaction contains only
+the exact question and choices. Use the same compact order for all three gates:
+identity, decision, revision reference, primary reference, one-sentence focus,
+review links, then one exact candidate question. Ideal review omits downstream
+placeholders. Implementation and Deployment always link their corresponding
+contract and `ledger.md`; other files appear only when they contain substantive
+review material. Keep test, CI, deployment, and SLO detail in the
+linked evidence instead of repeating policy or completion narration. If the
+later decision interaction is unavailable or returns no explicit choice, do not
+retry or restate the unchanged gate. The linked revision and publication are
+review context only; the user must still make the decision explicitly.
 
 ## Publish Work
 

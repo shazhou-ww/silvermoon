@@ -62,6 +62,23 @@ export interface PublicGuidance {
   contentRevision: string;
 }
 
+export interface ReviewDocument {
+  role: "current-contract" | "ledger";
+  path: string;
+}
+
+export interface ReviewContext {
+  phase: "preparing" | "implementing" | "deploying";
+  decision: "acceptIdeal" | "acceptInner" | "acceptOuter";
+  revision: {
+    field: "idealRevision" | "implementationRevision" | "deploymentRevision";
+    value: string;
+  };
+  primaryCommit: string;
+  scopePath: string;
+  canonicalDocuments: ReviewDocument[];
+}
+
 export interface CreatedIdea {
   id: string;
   path: string;
@@ -194,6 +211,7 @@ export interface CommandIntention {
 
 export interface ResponseContext {
   nextSteps?: string | string[];
+  review?: ReviewContext;
 }
 
 export interface ResponseDetails {
@@ -261,6 +279,7 @@ export interface NextStepsResponse extends ResponseBase {
   idea: IdeaReference;
   nextSteps: InstructionStep[];
   guidance?: Guidance;
+  review?: ReviewContext;
 }
 
 export interface IdeaListResponse extends ResponseBase {

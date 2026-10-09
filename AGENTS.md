@@ -30,11 +30,21 @@
   silently replay a stale decision.
 - Record approval, acceptance, and abandonment only as explicit status facts,
   validate the exact candidate, and synchronize through ordinary non-force Git.
+- Before Ideal approval, replace the Implementation and Deployment scaffold
+  placeholders with lightweight first versions of at most three high-level
+  steps and three observable criteria each, mirrored unchecked in `ledger.md`.
+  These seeds remain outside the `acceptIdeal` decision scope.
 - Before a human gate, synchronize the candidate to primary, reobserve its
   exact revision and content language, then provide a short review index in
   ordinary assistant Markdown with local and commit-pinned remote links to
-  durable repository artifacts. Use an interactive decision tool only for the
-  exact question and choices; do not put local file links in its prompt.
+  substantive repository artifacts. Keep full object IDs internally but show
+  only 12-character revision and primary references. Use the canonical compact
+  gate format: identity and references, one-sentence focus, links, then one
+  exact candidate question. Complete that index as its own assistant turn; never open an
+  interactive decision in the same turn because its tool surface may hide the
+  links. Use a later interactive decision only for the exact question and
+  choices; do not put local file links in its prompt or repeat gate-policy
+  narration when the user is unavailable.
 - Requery only after an observable change. Yield on human or external waits;
   stop on actionable errors or lack of progress.
 

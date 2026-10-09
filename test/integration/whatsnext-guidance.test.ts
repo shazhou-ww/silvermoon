@@ -15,6 +15,7 @@ import { observeGitCommands } from "../../src/foundation/git/index.ts";
 import { inspectPhaseGuidance } from "../../src/foundation/guidance/index.ts";
 import {
   GUIDANCE_ROOT,
+  ideaPaths,
   phaseGuidancePath,
 } from "../../src/foundation/coordinates/index.ts";
 import {
@@ -22,6 +23,7 @@ import {
   whatsNext,
 } from "../../src/business/whats-next.ts";
 import { renderResponse } from "../../src/foundation/renderer/index.ts";
+import type { ReviewContext } from "../../src/foundation/report/types.ts";
 import {
   createRepository,
   FIRST_ID,
@@ -51,6 +53,15 @@ function responseGuidance(report: Awaited<ReturnType<typeof whatsNext>>) {
   assert.ok("guidance" in report.response);
   assert.ok(report.response.guidance);
   return report.response.guidance;
+}
+
+function responseReview(report: Awaited<ReturnType<typeof whatsNext>>) {
+  assert.equal(report.response.kind, "next-steps");
+  if (report.response.kind !== "next-steps") {
+    assert.fail("selected idea must return next steps");
+  }
+  assert.ok(report.response.review);
+  return report.response.review;
 }
 
 test("records fetch failure as a failure outcome with a trustworthy envelope", async () => {
@@ -108,7 +119,7 @@ test("attaches only the selected actionable phase guidance from primary", async 
   await setIdeaState(repository.root, DEPLOYING_ID, "deploying", {
     alias: "deploying",
   });
-  const fixtures: ReadonlyArray<readonly [string, string, string]> = [
+  const fixtures: ReadonlyArray<readonly [string, ReviewContext["phase"], string]> = [
     [FIRST_ID, "preparing", "# Prepare\n\nPreparing only.\n"],
     [SECOND_ID, "implementing", "# Implement\n\nImplementing only.\n"],
     [DEPLOYING_ID, "deploying", "# Deploy\n\nDeploying only.\n"],
@@ -142,6 +153,46 @@ test("attaches only the selected actionable phase guidance from primary", async 
       contentRevision: git(repository.root, "rev-parse", `HEAD:${path}`),
     });
     assert.equal(responseGuidance(report).content, content);
+    const paths = ideaPaths(id);
+    const expected = phase === "preparing"
+      ? {
+          decision: "acceptIdeal" as const,
+          field: "idealRevision" as const,
+          scopePath: paths.idealPath,
+          canonicalDocuments: [
+            { role: "current-contract", path: paths.ideaDocumentPath },
+          ],
+        }
+      : phase === "implementing"
+        ? {
+            decision: "acceptInner" as const,
+            field: "implementationRevision" as const,
+            scopePath: paths.innerPath,
+            canonicalDocuments: [
+              { role: "current-contract", path: paths.implementationDocumentPath },
+              { role: "ledger", path: paths.ledgerPath },
+            ],
+          }
+        : {
+            decision: "acceptOuter" as const,
+            field: "deploymentRevision" as const,
+            scopePath: paths.outerPath,
+            canonicalDocuments: [
+              { role: "current-contract", path: paths.deploymentDocumentPath },
+              { role: "ledger", path: paths.ledgerPath },
+            ],
+          };
+    assert.deepEqual(responseReview(report), {
+      phase,
+      decision: expected.decision,
+      revision: {
+        field: expected.field,
+        value: git(repository.root, "rev-parse", `HEAD:${expected.scopePath}`),
+      },
+      primaryCommit: git(repository.root, "rev-parse", "HEAD"),
+      scopePath: expected.scopePath,
+      canonicalDocuments: expected.canonicalDocuments,
+    });
     assert.equal(
       fixtures
         .filter(([, candidate]) => candidate !== phase)
@@ -151,6 +202,15 @@ test("attaches only the selected actionable phase guidance from primary", async 
       false,
     );
     assert.match(responseText(report), /revision/);
+    assert.match(responseText(report), /独立且已完成的 assistant 消息/);
+    assert.match(responseText(report), /不要在同一 turn 打开交互决定/);
+    if (phase === "preparing") {
+      const paths = ideaPaths(id);
+      assert.ok(responseText(report).includes(paths.implementationDocumentPath));
+      assert.ok(responseText(report).includes(paths.deploymentDocumentPath));
+      assert.match(responseText(report), /轻量初版/);
+      assert.match(responseText(report), /不属于 acceptIdeal 决定范围/);
+    }
     assert.doesNotMatch(responseText(report), /Preparing only|Implementing only|Deploying only/);
   }
 });
@@ -191,6 +251,7 @@ test("loads guidance only after an actionable idea becomes the next action", asy
       userHome: repository.base,
     });
     assert.notEqual(report.observation.state, "phase-guidance-invalid");
+    assert.equal("review" in report.response, false);
   }
 
   await writeFile(join(repository.root, "dirty.txt"), "preserve\n");

@@ -97,3 +97,49 @@ test("renders active idea choices as an escaped Markdown table", () => {
   if (choice === undefined) assert.fail("choice response must contain an idea");
   assert.equal(choice.alias, "first|line\nsecond\\line");
 });
+
+test("renders primary-bound review context before lifecycle instructions", () => {
+  const response: Parameters<typeof renderResponse>[0] = {
+    kind: "next-steps",
+    language: "en-US",
+    summary: "Continue idea fixture; its state is preparing.",
+    idea: {
+      id: "01M36QGPNTXEPP61DA4KP4AVZF",
+      alias: "fixture",
+      state: "preparing",
+    },
+    review: {
+      phase: "preparing",
+      decision: "acceptIdeal",
+      revision: {
+        field: "idealRevision",
+        value: "a".repeat(40),
+      },
+      primaryCommit: "b".repeat(40),
+      scopePath: ".silvermoon/ideas/fixture/outer/inner/ideal",
+      canonicalDocuments: [
+        {
+          role: "current-contract",
+          path: ".silvermoon/ideas/fixture/outer/inner/ideal/Idea.md",
+        },
+      ],
+    },
+    nextSteps: [{
+      type: "instruction",
+      text: "Present the review index first.",
+    }],
+  };
+
+  const rendered = renderResponse(response);
+
+  assert.ok(rendered.indexOf("### Review candidate") < rendered.indexOf("### Next steps"));
+  assert.match(rendered, /Decision: `acceptIdeal`/);
+  assert.match(rendered, /Revision reference: `idealRevision=a{12}`/);
+  assert.match(rendered, /Primary reference: `b{12}`/);
+  assert.doesNotMatch(rendered, /a{13}|b{13}/);
+  assert.match(rendered, /Canonical review documents/);
+  assert.match(
+    rendered,
+    /\| Current contract \| \.silvermoon\/ideas\/fixture\/outer\/inner\/ideal\/Idea\.md \|/,
+  );
+});

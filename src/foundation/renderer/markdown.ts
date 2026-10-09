@@ -6,6 +6,7 @@ import type {
   IdeaListResponse,
   ProjectVersion,
   ReportResponse,
+  ReviewContext,
 } from "../report/types.ts";
 
 /** @pure */
@@ -17,6 +18,11 @@ function codeSpan(value: string) {
   }
   const fence = "`".repeat(longest + 1);
   return longest === 0 ? `${fence}${text}${fence}` : `${fence} ${text} ${fence}`;
+}
+
+/** @pure */
+function objectReference(value: string) {
+  return value.slice(0, 12);
 }
 
 /** @pure */
@@ -84,6 +90,36 @@ function renderMarkdownTable(
     `| ${headers.map(() => "---").join(" | ")} |`,
     ...rows.map((row) =>
       `| ${row.map(markdownTableCell).join(" | ")} |`
+    ),
+  ];
+}
+
+/** @pure */
+function renderReview(
+  review: ReviewContext,
+  language: string,
+) {
+  const roles: Record<ReviewContext["canonicalDocuments"][number]["role"], string> = {
+    "current-contract": localize(language, "Current contract", "当前契约"),
+    ledger: "Ledger",
+  };
+  return [
+    `### ${localize(language, "Review candidate", "审阅候选")}`,
+    "",
+    `- ${localize(language, "Phase", "阶段")}: ${codeSpan(review.phase)}`,
+    `- ${localize(language, "Decision", "决定")}: ${codeSpan(review.decision)}`,
+    `- ${localize(language, "Revision reference", "Revision reference")}: ${codeSpan(`${review.revision.field}=${objectReference(review.revision.value)}`)}`,
+    `- ${localize(language, "Primary reference", "Primary reference")}: ${codeSpan(objectReference(review.primaryCommit))}`,
+    `- ${localize(language, "Review scope", "审阅范围")}: ${codeSpan(review.scopePath)}`,
+    "",
+    `#### ${localize(language, "Canonical review documents", "Canonical 审阅文档")}`,
+    "",
+    ...renderMarkdownTable(
+      [
+        localize(language, "Role", "角色"),
+        localize(language, "Path", "路径"),
+      ],
+      review.canonicalDocuments.map(({ role, path }) => [roles[role], path]),
     ),
   ];
 }
@@ -235,6 +271,10 @@ export function renderMarkdownResponse(
         `- ${localize(language, "Alias", "Alias")}: ${codeSpan(response.idea.alias)}`,
       );
     }
+  }
+
+  if (response.kind === "next-steps" && response.review !== undefined) {
+    lines.push("", ...renderReview(response.review, language));
   }
 
   if (response.kind === "idea-created") {

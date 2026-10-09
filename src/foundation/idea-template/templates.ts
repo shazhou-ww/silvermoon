@@ -29,6 +29,12 @@ decision, risk, or disagreement requires it.
 
 export const IMPLEMENTATION_TEMPLATE = `# Implementation
 
+<!--
+During preparation, replace every placeholder below with a lightweight first
+version before requesting Ideal approval. Keep it high-level and provisional:
+Ideal approval does not accept this contract. Refine it during implementation.
+-->
+
 ## Steps
 
 <!--
@@ -60,6 +66,12 @@ Do not create a separate validation section or use task-list checkboxes.
 
 export const DEPLOYMENT_TEMPLATE = `# Deployment
 
+<!--
+During preparation, replace every placeholder below with a lightweight first
+version before requesting Ideal approval. Keep it high-level and provisional:
+Ideal approval does not accept this contract. Refine it during deployment.
+-->
+
 ## Steps
 
 <!--
@@ -90,6 +102,8 @@ Do not create a separate validation section or use task-list checkboxes.
 `;
 
 export const LEDGER_TEMPLATE = `# Ledger
+
+<!-- During preparation, mirror the lightweight contract versions below and keep every item unchecked. -->
 
 ## Implementation
 
@@ -142,6 +156,11 @@ const CHINESE_IDEA_TEMPLATE = `# 将标题替换为简洁的“动作 + 目标�
 
 const CHINESE_IMPLEMENTATION_TEMPLATE = `# Implementation
 
+<!--
+准备阶段必须先把下方所有占位替换为轻量初版，再请求 Ideal 批准。
+保持高层、可调整；Ideal 批准不验收本契约，实施阶段再逐步细化。
+-->
+
 ## Steps
 
 <!--
@@ -171,6 +190,11 @@ const CHINESE_IMPLEMENTATION_TEMPLATE = `# Implementation
 
 const CHINESE_DEPLOYMENT_TEMPLATE = `# Deployment
 
+<!--
+准备阶段必须先把下方所有占位替换为轻量初版，再请求 Ideal 批准。
+保持高层、可调整；Ideal 批准不验收本契约，部署阶段再逐步细化。
+-->
+
 ## Steps
 
 <!--
@@ -199,6 +223,8 @@ const CHINESE_DEPLOYMENT_TEMPLATE = `# Deployment
 `;
 
 const CHINESE_LEDGER_TEMPLATE = `# Ledger
+
+<!-- 准备阶段同步下方轻量契约初版，并保持所有条目未勾选。 -->
 
 ## Implementation
 
