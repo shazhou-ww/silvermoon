@@ -1,0 +1,115 @@
+{
+  "runtimeCommit": "948515fdaaea4c49ad39118fdb5998beb6773620",
+  "isolatedTarget": {
+    "projectSchema": 2,
+    "projectDependency": false,
+    "repositorySkill": false
+  },
+  "reports": [
+    {
+      "selector": "english-gate",
+      "override": null,
+      "outputLanguage": "en-US",
+      "contentLanguage": "en-US",
+      "templateLanguage": "en-US",
+      "requiresLocalization": false,
+      "gateLabel": "Implementation acceptance",
+      "contractLabel": "Implementation contract",
+      "localLabel": "local",
+      "remoteLabel": "remote"
+    },
+    {
+      "selector": "english-gate",
+      "override": "zh-CN",
+      "outputLanguage": "zh-CN",
+      "contentLanguage": "en-US",
+      "templateLanguage": "en-US",
+      "requiresLocalization": false,
+      "gateLabel": "Implementation acceptance",
+      "contractLabel": "Implementation contract",
+      "localLabel": "local",
+      "remoteLabel": "remote"
+    },
+    {
+      "selector": "chinese-gate",
+      "override": null,
+      "outputLanguage": "zh-CN",
+      "contentLanguage": "zh-CN",
+      "templateLanguage": "zh-CN",
+      "requiresLocalization": false,
+      "gateLabel": "实现验收",
+      "contractLabel": "实现契约",
+      "localLabel": "本地",
+      "remoteLabel": "线上"
+    },
+    {
+      "selector": "chinese-gate",
+      "override": "en-US",
+      "outputLanguage": "en-US",
+      "contentLanguage": "zh-CN",
+      "templateLanguage": "zh-CN",
+      "requiresLocalization": false,
+      "gateLabel": "实现验收",
+      "contractLabel": "实现契约",
+      "localLabel": "本地",
+      "remoteLabel": "线上"
+    },
+    {
+      "selector": "fallback-gate",
+      "override": "zh-CN",
+      "outputLanguage": "zh-CN",
+      "contentLanguage": "fr-FR",
+      "templateLanguage": "en-US",
+      "requiresLocalization": true,
+      "gateLabel": "Implementation acceptance",
+      "contractLabel": "Implementation contract",
+      "localLabel": "local",
+      "remoteLabel": "remote"
+    }
+  ],
+  "agentGateSnapshots": [
+    {
+      "contentLanguage": "en-US",
+      "heading": "english-gate - Implementation acceptance",
+      "identityLabel": "Idea",
+      "candidateLabel": "Candidate",
+      "candidateConnector": "on primary",
+      "reviewFocusLabel": "Review focus",
+      "reviewFilesLabel": "Review files",
+      "contractLabel": "Implementation contract",
+      "localLabel": "local",
+      "remoteLabel": "remote",
+      "decisionLabel": "Decision"
+    },
+    {
+      "contentLanguage": "zh-CN",
+      "heading": "chinese-gate - 实现验收",
+      "identityLabel": "构想",
+      "candidateLabel": "候选版本",
+      "candidateConnector": "位于 primary",
+      "reviewFocusLabel": "审阅重点",
+      "reviewFilesLabel": "审阅文件",
+      "contractLabel": "实现契约",
+      "localLabel": "本地",
+      "remoteLabel": "线上",
+      "decisionLabel": "决定"
+    }
+  ],
+  "canonicalSkill": {
+    "presentationSource": "response.review.presentation",
+    "fixedGateTemplatePresent": false,
+    "hostOwnedFields": [
+      "reviewFocus",
+      "localLinkTarget",
+      "remoteLinkTarget",
+      "additionalEvidence"
+    ]
+  },
+  "liveRepositoryGate": {
+    "idea": "global-runtime-schema-evolution",
+    "implementationRevision": "63bcbb8bbe4010918a44b14bc308d40135dc51be",
+    "reviewPrimaryCommit": "e8658043f270e7b038be0898817a339ea957b9f1",
+    "acceptanceEventSequence": 5,
+    "acceptanceCommit": "948515fdaaea4c49ad39118fdb5998beb6773620"
+  }
+}

@@ -23,11 +23,11 @@
 - [x] **D-S01:** 准备不可变 0.4.0 发布候选
 - [x] **D-S02:** 固化发布 hold 边界
 - [x] **D-S03:** 验证全新执行环境
-- [ ] **D-S04:** 验证真实 Agent gate 的内容语言
+- [x] **D-S04:** 验证真实 Agent gate 的内容语言
 
 ### Deployment acceptance criteria
 
 - [x] **D-AC01:** 发布候选内部身份一致
 - [x] **D-AC02:** 普通项目无需本地 Silvermoon
 - [x] **D-AC03:** 发布前兼容承诺成立
-- [ ] **D-AC04:** Gate 在真实宿主中完整本地化
+- [x] **D-AC04:** Gate 在真实宿主中完整本地化
