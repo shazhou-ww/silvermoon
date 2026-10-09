@@ -4,56 +4,26 @@
 
 ### Implementation steps
 
-当前 contract 未单独定义 implementation steps。
+- [ ] **I-S01:** 整备隔离环境与 Harbor Copilot 接入
+- [ ] **I-S02:** 建立场景与确定性 verifier
+- [ ] **I-S03:** 接入七组真实评估与开发入口
 
 ### Implementation acceptance criteria
 
-- [ ] **I-AC01:** 文档化命令运行 Silvermoon scenario 并显式报告 hard failure
-- [ ] **I-AC02:** Canonical runner 授权与 preflight 安全
-- [ ] **I-AC03:** Disposable fixture、HOME 和 remote 隔离
-- [ ] **I-AC04:** 使用当前 checkout package 与 skill artifact
-- [ ] **I-AC05:** Versioned scenario 与 trajectory artifact
-- [ ] **I-AC06:** 以 trajectory 和最终仓库证据确定性验证行为
-- [ ] **I-AC07:** 首批 Silvermoon 导航、创建、只读与 lifecycle gate 场景
-- [ ] **I-AC08:** Focused、full 与 repeated run 支持
-- [ ] **I-AC09:** 文档化 session eval 触发条件与 host fidelity boundary
-- [ ] **I-AC10:** Agent 确定性验证顺序与失败分类
-- [ ] **I-AC11:** 默认测试和 CI 不伪造模型场景通过
+- [ ] **I-AC01:** 隔离执行与真实 session 续接
+- [ ] **I-AC02:** 违约与缺证据不误报通过
+- [ ] **I-AC03:** 七组真实场景可重复审计
 
 ## Deployment
 
 ### Deployment steps
 
-当前 contract 未单独定义 deployment steps。
+- [ ] **D-S01:** 准备可复现的交付与使用说明
+- [ ] **D-S02:** 验证全新环境的完整评估
+- [ ] **D-S03:** 接入验证流程与人工审阅
 
 ### Deployment acceptance criteria
 
-- [ ] **D-AC01:** Repository checks 与 verifier 自测通过
-- [ ] **D-AC02:** Canonical Agent 代表性 session 成功
-- [ ] **D-AC03:** 发布候选包含 harness、故障注入与文档
-- [ ] **D-AC04:** VS Code host smoke 验证真实交互边界
-
-## Preparation evidence
-
-- 2026-09-30（preparing）：Ideal World 契约在 Git tree
-  `267c5492ba1554acb430fcc00e80b643adc68d1a` 下审阅。契约以 zh-CN 记录 Goal、
-  Context、Scope、Out of scope、Constraints、五个 required human review checkpoint
-  与 References，并用首批 Silvermoon navigation、creation、只读与 lifecycle gate
-  场景界定评估范围。
-- References 中的 candidate runner（Harbor、Promptfoo coding-agent evaluations、
-  Inspect AI、AgentEvals）只作为待评估对象；runner、Agent host、模型、trajectory
-  schema 与 verifier 边界在 Architecture review 前保持开放，符合 Scope 与
-  Constraints。
-- 本次只推进 Ideal World 与 ledger：未修改 Implementation.md、Deployment.md、
-  status.yaml 或其他 idea，也未新增或改写任何 status revision 事实；仍等待用户对
-  精确 idealRevision `267c5492ba1554acb430fcc00e80b643adc68d1a` 的明确批准。
-- 2026-09-30（preparing，就绪复核）：逐节核对
-  `.silvermoon/ideas/01M36QGPNTXEPP61DA4KP4AVG0/outer/inner/ideal/Idea.md`，确认
-  Goal、Context、Scope、Out of scope、Constraints、五个 required human review
-  checkpoint 与 References 均已就绪，References 中的仓库内相对路径存在，且首批
-  scenario 与当前 Silvermoon 的 `whats-next`、`create-idea`、`check` 及 lifecycle
-  gate 契约一致。复核期间未改动 Idea.md 内容，因此
-  `silvermoon whats-next` 报告的 idealRevision 仍为
-  `267c5492ba1554acb430fcc00e80b643adc68d1a`；本次只向 ledger 追加本条就绪证据，
-  未修改 Implementation.md、Deployment.md、status.yaml 或其他 idea。证据同步到
-  primary 后，即可请求用户对该精确 revision 的明确批准。
+- [ ] **D-AC01:** 文档命令在全新环境可复现
+- [ ] **D-AC02:** 完整真实评估与违规检测有证据
+- [ ] **D-AC03:** 开发与发布验证边界明确
