@@ -4,13 +4,14 @@
 
 ### I-S01: 演进事件记录契约
 
-从 canonical event schema 移除 sequence，为新 append 增加 CLI 生成的规范 UTC
-timestamp，并为无可信 timestamp 的历史记录定义兼容迁移。
+新 canonical 记录不再写 sequence，并由 CLI 增加 UTC 毫秒 RFC 3339 timestamp；
+读取层兼容含 sequence 或缺少 timestamp 的旧记录，不重写历史或伪造时间。
 
 ### I-S02: 重构 append 并发与重试
 
-让 optional expected digest 接受至少 8 位的前缀匹配，并确保首次写入生成的
-timestamp 在不确定重试中保持不变；sequence 仅由读取位置派生。
+让 optional expected digest 接受至少 8 位的前缀匹配；拒绝调用方 timestamp，
+并按业务请求识别不确定重试，保留首次写入的 timestamp。sequence 仅由读取
+位置派生。
 
 ### I-S03: 同步验证面
 
@@ -21,8 +22,8 @@ timestamp 在不确定重试中保持不变；sequence 仅由读取位置派生�
 
 ### I-AC01: 事件记录自描述
 
-自动化测试证明新记录包含规范 UTC timestamp、不含 sequence，读取结果按文件
-位置派生序号，历史迁移不伪造未知时间。
+自动化测试证明新记录包含 CLI 生成的 UTC 毫秒 timestamp 且不含 sequence，
+读取结果按文件位置派生序号，旧格式保持可读且不伪造未知时间。
 
 ### I-AC02: Digest 前缀控制写入
 

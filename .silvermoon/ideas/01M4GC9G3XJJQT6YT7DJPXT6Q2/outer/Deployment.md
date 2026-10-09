@@ -9,8 +9,8 @@
 
 ### D-S02: 发布兼容说明
 
-在直接相关文档中明确事件顺序与 timestamp 语义、历史兼容边界、digest 前缀
-匹配规则、无 digest 行为以及 replay 的调试/增量读取定位。
+在直接相关文档中明确文件顺序与派生序号、timestamp 的来源和非排序语义、
+旧记录只读兼容边界、digest 前缀规则以及 replay 的调试/增量读取定位。
 
 ## Acceptance criteria
 
