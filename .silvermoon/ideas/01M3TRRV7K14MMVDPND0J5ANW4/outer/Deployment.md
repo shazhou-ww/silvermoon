@@ -30,11 +30,22 @@
 以 exact commit、`deploymentRevision` 和 commit-pinned repository links
 证明。
 
+结果：已验证实现提交 `6cf32dcab6281765b247a284afec84525443e458`、
+状态提交 `a3be4f929230f5771614ed98028ae15f403afaa4` 与部署契约提交
+`0968846329bf726d0f8eb65a34b47e9869ede669` 均可从刷新后的
+`origin/main` 到达。被测契约 revision 为
+`1acdbeb54af072cafb7653ead2e20505e587b712`。
+
 ### D-AC02: 托管 CI 对部署对象全部通过
 
 一次 `workflow_dispatch` CI run 的 `headSha` 包含稳定部署契约，run 结论为
 `success`，且所有 required jobs 均成功；以固定 GitHub Actions run URL
 和 job 列表证明。
+
+结果：[CI run 37878421830](https://github.com/shazhou-ww/silvermoon/actions/runs/37878421830)
+以 `workflow_dispatch` 验证 commit
+`0968846329bf726d0f8eb65a34b47e9869ede669`，最终结论为 `success`；
+固定 job 链接见 [deployment-evidence.md](./deployment-evidence.md)。
 
 ### D-AC03: 部署证据完整且未越过发布边界
 
