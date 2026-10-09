@@ -139,7 +139,7 @@ async function append(
   const observed = await replay(root);
   return eventCommand({
     root, operation: "append", idea: FIRST_ID, input: request,
-    expectedLength: observed.length, expectedDigest: observed.digest,
+    expectedDigest: observed.digest,
     expectedPrimary: observed.baseline.commit, ...extra,
   });
 }
@@ -181,7 +181,7 @@ test("explicit migration preserves inventory and supplies check evidence for all
   );
 });
 
-test("append uses exact CAS, reports retries and rejects no-op duplicates without writing", async (t) => {
+test("append uses optional digest prefixes, reports retries and rejects invalid CAS without writing", async (t) => {
   const { root } = await fixture(t);
   await migrate(root);
   publish(root, "Migrate");
@@ -189,12 +189,18 @@ test("append uses exact CAS, reports retries and rejects no-op duplicates withou
   const request = {
     root, operation: "append", idea: FIRST_ID,
     input: { type: "setLanguage", payload: { language: "zh-CN" } },
-    expectedLength: observed.length, expectedDigest: observed.digest, expectedPrimary: observed.baseline.commit,
+    expectedDigest: observed.digest.slice(0, 8), expectedPrimary: observed.baseline.commit,
   } satisfies Parameters<typeof eventCommand>[0];
   const written = await eventCommand(request);
   assert.equal(eventReceipt(written).outcome, "candidate-written", JSON.stringify(written));
   const source = await readFile(join(root, ideaPaths(FIRST_ID).eventsPath));
-  assert.equal(eventReceipt(await eventCommand(request)).outcome, "already-present");
+  const retry = eventReceipt(await eventCommand(request));
+  assert.equal(retry.outcome, "already-present");
+  assert.equal(retry.written, false);
+  assert.equal(retry.timestamp, eventReceipt(written).timestamp);
+  const short = await eventCommand({ ...request, expectedDigest: observed.digest.slice(0, 7) });
+  assert.equal(short.observation.state, "check-unavailable");
+  assert.match(short.observation.problems.at(0)?.summary ?? "", /8 to 40/);
   const conflict = await eventCommand({ ...request, input: { type: "setAlias", payload: { alias: "different" } } });
   assert.equal(conflict.observation.state, "check-unavailable");
   assert.equal(eventReceipt(await append(root, {
@@ -202,6 +208,32 @@ test("append uses exact CAS, reports retries and rejects no-op duplicates withou
     payload: request.input.payload,
   })).outcome, "no-state-change");
   assert.deepEqual(await readFile(join(root, ideaPaths(FIRST_ID).eventsPath)), source);
+});
+
+test("append accepts intermediate, full and omitted digest CAS inputs", async (t) => {
+  const { root } = await fixture(t);
+  await migrate(root);
+  publish(root, "Migrate");
+  const appendAlias = async (alias: string, expectedDigest?: string) => {
+    const observed = await replay(root);
+    const report = await eventCommand({
+      root,
+      operation: "append",
+      idea: FIRST_ID,
+      input: { type: "setAlias", payload: { alias } },
+      ...(expectedDigest === undefined ? {} : { expectedDigest }),
+      expectedPrimary: observed.baseline.commit,
+    });
+    assert.equal(report.observation.state, "event-result", JSON.stringify(report));
+    return eventReceipt(report);
+  };
+  const first = await replay(root);
+  assert.equal((await appendAlias("eight", first.digest.slice(0, 8))).outcome, "candidate-written");
+  const second = await replay(root);
+  assert.equal((await appendAlias("intermediate", second.digest.slice(0, 20))).outcome, "candidate-written");
+  const third = await replay(root);
+  assert.equal((await appendAlias("full", third.digest)).outcome, "candidate-written");
+  assert.equal((await appendAlias("omitted")).outcome, "candidate-written");
 });
 
 test("human decisions require exact synchronized world, explicit confirmation and lifecycle order", async (t) => {
@@ -322,7 +354,7 @@ test("two CLI processes cannot append different events at the same observed posi
     output: string;
   }>((done, reject) => {
     const child = spawn(process.execPath, [cli, "event", "append", FIRST_ID, "--root", root,
-      "--input", file, "--expected-length", String(observed.length), "--expected-digest", observed.digest,
+      "--input", file, "--expected-digest", observed.digest,
       "--expected-primary", observed.baseline.commit, "--json"], { windowsHide: true });
     let output = "";
     let error = "";
@@ -397,7 +429,7 @@ test("world observation is read-only and primary movement invalidates a pending 
   publish(root, "Advance primary");
   const stale = await eventCommand({
     root, operation: "append", idea: FIRST_ID, input: { type: "setLanguage", payload: { language: "en" } },
-    expectedLength: observed.length, expectedDigest: observed.digest, expectedPrimary: observed.baseline.commit,
+    expectedDigest: observed.digest, expectedPrimary: observed.baseline.commit,
   });
   assert.equal(stale.observation.state, "check-unavailable");
   assert.match(firstProblem(stale).summary, /Primary moved/);

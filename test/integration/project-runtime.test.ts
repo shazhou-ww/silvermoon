@@ -33,6 +33,7 @@ function eventReceipt(result: RuntimeResult) {
     outcome: value.outcome,
     length: value.length,
     digest: value.digest,
+    timestamp: typeof value.timestamp === "string" ? value.timestamp : undefined,
     events: Array.isArray(value.events)
       ? value.events.map((event: unknown) => event)
       : [],
@@ -113,31 +114,30 @@ if (content?.payload?.message === "fail") process.exitCode = 1;
     assert.equal(nextSteps(await runtime.next(firstRoute))[0], firstRoot);
     assert.equal(nextSteps(await runtime.next(secondRoute))[0], secondRoot);
     const appended = await runtime.appendInteraction(firstRoute, {
-      type: "pong", message: "diagnose Git", expectedLength: 0, expectedDigest: "0".repeat(64),
+      type: "pong", message: "diagnose Git", expectedDigest: "0".repeat(64),
     });
 
     assert.deepEqual(appended.report.observation.content, { type: "pong", payload: { message: "diagnose Git" } });
     assert.equal(appended.protocolVersion, 1);
     assert.equal(appended.exitCode, 0);
     const unavailable = await runtime.appendInteraction(firstRoute, {
-      type: "pong", message: "fail", expectedLength: 0, expectedDigest: "0".repeat(64),
+      type: "pong", message: "fail", expectedDigest: "0".repeat(64),
     });
     assert.equal(nextSteps(unavailable)[0], firstRoot);
     assert.equal(unavailable.exitCode, 1);
     await assert.rejects(runtime.appendInteraction(firstRoute, {
-      type: "pong", message: "wrong-operation", expectedLength: 0, expectedDigest: "0".repeat(64),
+      type: "pong", message: "wrong-operation", expectedDigest: "0".repeat(64),
     }), /does not support report protocol/);
     await assert.rejects(runtime.appendInteraction(firstRoute, {
-      type: "pong", message: "transport-failure", expectedLength: 0, expectedDigest: "0".repeat(64),
+      type: "pong", message: "transport-failure", expectedDigest: "0".repeat(64),
     }), /Project runtime event failed/);
     await assert.rejects(runtime.appendInteraction(firstRoute, {
-      type: "pong", message: "invalid-json", expectedLength: 0, expectedDigest: "0".repeat(64),
+      type: "pong", message: "invalid-json", expectedDigest: "0".repeat(64),
     }), /invalid JSON/);
     await assert.rejects(
       Reflect.apply(runtime.appendInteraction, runtime, [firstRoute, {
         type: "acceptIdeal",
         message: "yes",
-        expectedLength: 0,
         expectedDigest: "0".repeat(64),
       }]),
       TypeError,
@@ -191,7 +191,7 @@ test("real project CLI preserves exact interaction state across child processes"
   assert.equal(initial.exitCode, 0);
   const before = eventReceipt(initial);
   const request: Parameters<ProjectRuntime["appendInteraction"]>[1] = {
-    type: "ping", message: "diagnose Git", expectedLength: before.length, expectedDigest: before.digest,
+    type: "ping", message: "diagnose Git", expectedDigest: before.digest,
   };
   const written = await runtime.appendInteraction(route, request);
   assert.equal(eventReceipt(written).outcome, "candidate-written");
@@ -203,7 +203,10 @@ test("real project CLI preserves exact interaction state across child processes"
   const deltaReceipt = eventReceipt(delta);
   assert.equal(deltaReceipt.outcome, "delta-observed");
   assert.deepEqual(deltaReceipt.events, [{
-    sequence: 2, type: "ping", payload: { message: "diagnose Git" },
+    sequence: 2,
+    type: "ping",
+    timestamp: eventReceipt(written).timestamp,
+    payload: { message: "diagnose Git" },
   }]);
   const unchanged = await runtime.readSince(route, deltaReceipt);
   assert.deepEqual(eventReceipt(unchanged).events, []);

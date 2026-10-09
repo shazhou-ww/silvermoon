@@ -376,8 +376,18 @@ the host may prioritize its card and hide queued Markdown. Only a later turn
 may open the tool, with one question and choices limited to the exact decision.
 If the user answers the index directly, record that decision without reopening
 the tool.
-If the tool is unavailable, cancelled, or returns no explicit choice, stop
-after one concise wait statement; do not retry it or repeat the gate rationale.
+When the host enforces explicit task completion and would otherwise append a
+completion reminder or card after the index, use that completion surface once
+with the exact compact gate index as its complete content. Do not emit the
+index first and then add a second summary: the completion card can become the
+latest top-level result and collapse the review links. This host completion is
+presentation only and never implies lifecycle acceptance.
+In unattended or autopilot execution, do not open an interactive decision tool
+after presenting the gate; its immediate "user unavailable" result is not a
+decision. Wait for a later direct user reply to the decision question already
+shown in the index. If the tool is unavailable, cancelled, or returns no
+explicit choice, stop after one concise wait statement; do not retry it or
+repeat the gate rationale. Do not append a separate task-completion summary.
 Do not add lifecycle-policy essays, repeated gate rationale, test summaries, or
 deployment narration to the review message.
 

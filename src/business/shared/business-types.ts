@@ -38,6 +38,7 @@ export interface IdeaPaths {
 export interface EventOptions {
   objectIdLength: number;
   legacy?: boolean;
+  now?: () => Date;
 }
 
 export type EventStore = FoundationEventStore;

@@ -1,0 +1,13 @@
+{"sequence":1,"type":"setAlias","payload":{"alias":"event-digest-optimistic-lock"}}
+{"sequence":2,"type":"submitIdeal","payload":{"idealRevision":"3aa6925bede8459b0eca86fcc76324a98fd3af3d"}}
+{"sequence":3,"type":"submitIdeal","payload":{"idealRevision":"ed10d5917a5c1b3be1e9d7ef3c9ffc0cb0bb2619"}}
+{"sequence":4,"type":"submitIdeal","payload":{"idealRevision":"ac27e82cf5de62286423c5d4eb3d5a052e80dd4a"}}
+{"sequence":5,"type":"submitIdeal","payload":{"idealRevision":"3285a6865e6f50b794783da4a7806563b79bb6db"}}
+{"sequence":6,"type":"submitIdeal","payload":{"idealRevision":"3d375b5fc71bebec8420b1051973a88ea456183f"}}
+{"sequence":7,"type":"submitIdeal","payload":{"idealRevision":"70a551942c14f918e16fd93eb7ff8d92fd42f4ba"}}
+{"sequence":8,"type":"submitIdeal","payload":{"idealRevision":"a0f1773fb37c43dc6de770835b3242a86966ca28"}}
+{"sequence":9,"type":"acceptIdeal","payload":{"idealRevision":"a0f1773fb37c43dc6de770835b3242a86966ca28"}}
+{"type":"submitInner","timestamp":"2026-10-09T13:51:39.022Z","payload":{"implementationRevision":"d3b1ab9576988042e97ed2141ca1fb3940dfb7e9"}}
+{"type":"acceptInner","timestamp":"2026-10-09T14:03:55.357Z","payload":{"implementationRevision":"d3b1ab9576988042e97ed2141ca1fb3940dfb7e9"}}
+{"type":"submitOuter","timestamp":"2026-10-09T14:05:30.724Z","payload":{"deploymentRevision":"8c30aeaf025be4cc1b6dad7315f2e7ad73df8040"}}
+{"type":"acceptOuter","timestamp":"2026-10-09T14:07:19.888Z","payload":{"deploymentRevision":"8c30aeaf025be4cc1b6dad7315f2e7ad73df8040"}}

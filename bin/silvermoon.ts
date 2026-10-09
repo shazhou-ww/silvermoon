@@ -144,7 +144,7 @@ function addCommonOptions(command: Command): Command {
     .option("-r, --root <path>", "repository root", process.cwd());
 }
 
-function eventLengthArgument(label: "after" | "expected") {
+function eventLengthArgument(label: "after") {
   return (value: string) => {
     if (!/^(0|[1-9][0-9]*)$/.test(value) || !Number.isSafeInteger(Number(value))) {
       throw new InvalidArgumentError(
@@ -537,11 +537,9 @@ Examples:
       .option("--language <tag>", "use a built-in output language for this invocation", outputLanguageArgument)
       .option("--input <file>", "JSON business request for append")
       .option(
-        "--expected-length <bytes>",
-        "observed log byte length",
-        eventLengthArgument("expected"),
+        "--expected-digest <prefix>",
+        "optional observed event digest prefix (minimum 8 hex characters)",
       )
-      .option("--expected-digest <oid>", "observed canonical events-folder digest")
       .option(
         "--expected-primary <commit>",
         "observed primary commit (never stored in events)",

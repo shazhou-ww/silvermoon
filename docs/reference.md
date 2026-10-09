@@ -155,7 +155,10 @@ State is derived in order:
 Project `version: 2` replaces mutable status with one required regular
 `events.jsonl` file at each idea root. The file may be empty; otherwise it is
 canonical UTF-8 JSONL with LF record endings, a final LF, consecutive sequence
-numbers beginning at 1, and a 1 MiB limit per record including LF. Its strict
+numbers derived from one-based file order, and a 1 MiB limit per record including
+LF. New records omit sequence and include a CLI-generated UTC RFC 3339 millisecond
+timestamp. Historical sequence fields and missing timestamps remain readable;
+present timestamps must be nondecreasing. Its strict
 twelve-event union updates accepted and submitted revision facts, interaction
 messages, and unified control; no observations, creation/import markers, or
 audit envelope are stored. The nested-world revisions and five lifecycle
@@ -163,9 +166,10 @@ states are unchanged.
 
 Use `event replay` and `event append` for routine state. Exceptional history
 maintenance edits the complete `events.jsonl` file directly and validates it
-through ordinary Git review and snapshot/history checks. Append requests carry
-the exact byte length and Git blob OID of the complete file outside the business
-event; lifecycle writes also require expected primary. Canonical JSONL, human
+through ordinary Git review and snapshot/history checks. Append requests may
+carry an 8-character-or-longer prefix of the complete file's Git blob OID
+outside the business event; append length is not accepted, while lifecycle
+writes still require expected primary. Canonical JSONL, human
 gates, concurrency, conditional append-only history, and interrupted-write
 recovery are specified in the
 [event operations contract](../skills/silvermoon/references/events.md).
@@ -320,7 +324,7 @@ silvermoon list-ideas [--state <state>] [--all] [--query <text>] [--created-sinc
 silvermoon whats-next [idea] [--language <en|en-US|zh|zh-CN>] [--audience <human|agent>] [--trace <file.trace.jsonl>]
 silvermoon create-idea [--language <tag>] [--audience <human|agent>] [--trace <file.trace.jsonl>]
 silvermoon check [--remote | --commit <revision> | --staged | --worktree] [--language <en|en-US|zh|zh-CN>] [--audience <human|agent>] [--trace <file.trace.jsonl>]
-silvermoon event <replay|append> <idea> [--input <request.json>] [--after-length <bytes>] [--after-digest <oid>] [--full-history] [--expected-length <bytes>] [--expected-digest <oid>] [--expected-primary <commit>] [--confirm-decision] [--audience <human|agent>]
+silvermoon event <replay|append> <idea> [--input <request.json>] [--after-length <bytes>] [--after-digest <oid>] [--full-history] [--expected-digest <8+-hex-prefix>] [--expected-primary <commit>] [--confirm-decision] [--audience <human|agent>]
 ```
 
 Every valid invocation starts one ordered domain-message stream with

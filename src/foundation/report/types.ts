@@ -77,6 +77,7 @@ export interface IdeaReference {
   title?: string;
   control?: IdeaControlProjection;
   submissions?: IdeaSubmissionsProjection;
+  eventDigest?: string;
 }
 
 export interface IdeaControlProjection {

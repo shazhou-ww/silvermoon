@@ -5,28 +5,31 @@ import { isValidUlid, validateIdeaStatus } from "../idea-model/index.ts";
 export type EventCodecOptions = {
   objectIdLength?: number;
   legacy?: boolean;
+  now?: () => Date;
+  sequenceOffset?: number;
 };
 
 type EventSource = string|NodeJS.ArrayBufferView|ArrayBuffer;
 type EventPayload = Record<string, string|null>;
-type SignalEvent = {
+type EventMetadata = {
   sequence: number;
+  timestamp?: string;
+};
+type SignalEvent = {
   type: "ping"|"pong";
   payload: EventPayload & { message: string };
-};
+} & EventMetadata;
 type FieldEvent = {
-  sequence: number;
   type: "setAlias"|"setLanguage"
     |"submitIdeal"|"submitInner"|"submitOuter"
     |"acceptIdeal"|"acceptInner"|"acceptOuter"
     |"alias.updated"|"language.updated"|"ideal.approved"
     |"implementation.accepted"|"deployment.accepted";
   payload: EventPayload;
-};
+} & EventMetadata;
 type StateEvent = {
-  sequence: number;
   type: "abandon"|"resume"|"idea.abandoned"|"idea.resumed";
-};
+} & EventMetadata;
 export type IdeaEvent = SignalEvent|FieldEvent|StateEvent;
 
 export type IdeaEventStatus = Record<string, string|true|undefined> & {
@@ -224,6 +227,19 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 /** @pure */
+function isCanonicalTimestamp(value: unknown): value is string {
+  if (typeof value !== "string"
+    || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(value)) {
+    return false;
+  }
+  try {
+    return new Date(value).toISOString() === value;
+  } catch {
+    return false;
+  }
+}
+
+/** @pure */
 function payloadValue(event: IdeaEvent, key: string): string|null {
   if (!("payload" in event)) {
     throw new IdeaEventFormatError(`payload requires exactly ${key}`);
@@ -248,10 +264,24 @@ function assertValidIdeaEvent(
   }
   const field = fieldDefinition(type, legacy);
   const message = !legacy && (type === "ping" || type === "pong");
-  keys(event, field || message ? ["sequence", "type", "payload"] : ["sequence", "type"], "event");
+  const hasTimestamp = isRecord(event) && Object.hasOwn(event, "timestamp");
+  keys(
+    event,
+    field || message
+      ? ["sequence", "type", ...(hasTimestamp ? ["timestamp"] : []), "payload"]
+      : ["sequence", "type", ...(hasTimestamp ? ["timestamp"] : [])],
+    "event",
+  );
   if (!Number.isSafeInteger(event.sequence)
     || typeof event.sequence !== "number" || event.sequence < 1) {
     throw new IdeaEventFormatError("sequence must be a positive safe integer");
+  }
+  if (Object.hasOwn(event, "timestamp")) {
+    if (!isCanonicalTimestamp(event.timestamp)) {
+      throw new IdeaEventFormatError(
+        "timestamp must be a valid UTC RFC 3339 instant with millisecond precision",
+      );
+    }
   }
   if (field) {
     const [input, output, validationOutput = output] = field;
@@ -285,11 +315,30 @@ export function validateIdeaEvent(event: unknown, options?: EventCodecOptions): 
 /** @pure */
 export function serializeIdeaEvent(event: unknown, options?: EventCodecOptions) {
   const validated = validateIdeaEvent(event, options);
-  const value: { sequence: number; type: string; payload?: EventPayload } = {
-    sequence: validated.sequence,
+  return serializeValidatedIdeaEvent(
+    validated,
+    options?.legacy === true,
+    options?.legacy === true,
+  );
+}
+
+/** @pure */
+function serializeValidatedIdeaEvent(
+  validated: IdeaEvent,
+  includeSequence: boolean,
+  legacy: boolean,
+) {
+  const value: {
+    sequence?: number;
+    type: string;
+    timestamp?: string;
+    payload?: EventPayload;
+  } = {
+    ...(includeSequence ? { sequence: validated.sequence } : {}),
     type: validated.type,
+    ...(validated.timestamp === undefined ? {} : { timestamp: validated.timestamp }),
   };
-  const field = fieldDefinition(validated.type, options?.legacy === true);
+  const field = fieldDefinition(validated.type, legacy);
   if (field && "payload" in validated) {
     value.payload = { [field[0]]: payloadValue(validated, field[0]) };
   } else if (validated.type === "ping" || validated.type === "pong") {
@@ -321,11 +370,20 @@ export function parseIdeaEvents(
   if (!text.endsWith("\n")) throw new IdeaEventFormatError("last record must end with LF");
   return text.slice(0, -1).split("\n").map((line, index) => {
     try {
-      const event = JSON.parse(line);
-      if (serializeIdeaEvent(event, options) !== line) {
+      const parsed = JSON.parse(line);
+      const includeSequence = isRecord(parsed) && Object.hasOwn(parsed, "sequence");
+      const event = includeSequence
+        ? parsed
+        : { sequence: (options?.sequenceOffset ?? 0) + index + 1, ...parsed };
+      const validated = validateIdeaEvent(event, options);
+      if (serializeValidatedIdeaEvent(
+        validated,
+        includeSequence,
+        options?.legacy === true,
+      ) !== line) {
         throw new IdeaEventFormatError("record is not canonical JSON");
       }
-      return event;
+      return validated;
     } catch (cause) {
       throw new IdeaEventFormatError(`line ${index + 1}: ${errorMessage(cause)}`, { cause });
     }
@@ -427,8 +485,20 @@ export function replayIdeaEvents(
   options?: EventCodecOptions,
 ): IdeaEventReduction {
   let state = initialEventState(ideaId, options);
+  let lastTimestamp: string | undefined;
   for (const event of events) {
-    const result = reduceIdeaEvent(state, event, options);
+    const validated = validateIdeaEvent(event, options);
+    if (validated.timestamp !== undefined) {
+      if (lastTimestamp !== undefined && validated.timestamp < lastTimestamp) {
+        return {
+          ok: false,
+          code: "timestamp-regression",
+          sequence: validated.sequence,
+        };
+      }
+      lastTimestamp = validated.timestamp;
+    }
+    const result = reduceIdeaEvent(state, validated, options);
     if (!result.ok) return result;
     state = result.state;
   }

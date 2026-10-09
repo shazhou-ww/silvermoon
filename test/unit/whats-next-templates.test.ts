@@ -61,41 +61,39 @@ test("event command templates expose required parameters in CLI order", () => {
         audience: "agent",
         confirmDecision: false,
         expectedDigest: "<oid>",
-        expectedLength: "<bytes>",
         expectedPrimary: "<commit>",
         ideaId: "01IDEA",
         inputPath: "request.json",
       }),
-      "silvermoon event append 01IDEA --input request.json --expected-length <bytes> --expected-digest <oid> --expected-primary <commit> --audience agent",
+      "silvermoon event append 01IDEA --input request.json --expected-digest <oid> --expected-primary <commit> --audience agent",
     );
     assert.equal(
       templates["event-append-command"]({
         audience: "agent",
         confirmDecision: true,
         expectedDigest: "<oid>",
-        expectedLength: "<bytes>",
         expectedPrimary: "<commit>",
         ideaId: "01IDEA",
         inputPath: "request.json",
       }),
-      "silvermoon event append 01IDEA --input request.json --expected-length <bytes> --expected-digest <oid> --expected-primary <commit> --confirm-decision --audience agent",
+      "silvermoon event append 01IDEA --input request.json --expected-digest <oid> --expected-primary <commit> --confirm-decision --audience agent",
     );
     assert.equal(
       templates["event-append-command"]({
         audience: "agent",
         confirmDecision: false,
         expectedDigest: "<oid>",
-        expectedLength: "<bytes>",
         expectedPrimary: null,
         ideaId: "01IDEA",
         inputPath: "request.json",
       }),
-      "silvermoon event append 01IDEA --input request.json --expected-length <bytes> --expected-digest <oid> --audience agent",
+      "silvermoon event append 01IDEA --input request.json --expected-digest <oid> --audience agent",
     );
   }
 });
 
 const REVISION = "1234567890abcdef1234567890abcdef12345678";
+const EVENT_DIGEST = "abcdef1234567890abcdef1234567890abcdef12";
 const IDEA_ID = "01ARZ3NDEKTSV4RRFFQ69G5FAV";
 
 const phaseCases = [
@@ -144,6 +142,7 @@ function eventIdea(
   return {
     control: { lastTransfer: null, owner },
     deploymentRevision: REVISION,
+    eventDigest: EVENT_DIGEST,
     id: IDEA_ID,
     idealRevision: REVISION,
     implementationRevision: REVISION,
@@ -205,25 +204,24 @@ function eventIdea(
 }
 
 test("routing composes all three submit and accept guidance pairs without parameter drift", () => {
-  const replay =
-    `silvermoon event replay ${IDEA_ID} --audience agent`;
   const append =
-    `silvermoon event append ${IDEA_ID} --input request.json --expected-length <bytes> --expected-digest <oid> --expected-primary <commit> --audience agent`;
+    `silvermoon event append ${IDEA_ID} --input request.json --expected-digest ${EVENT_DIGEST} --expected-primary ${REVISION} --audience agent`;
   const decisionAppend =
-    `silvermoon event append ${IDEA_ID} --input request.json --expected-length <bytes> --expected-digest <oid> --expected-primary <commit> --confirm-decision --audience agent`;
+    `silvermoon event append ${IDEA_ID} --input request.json --expected-digest ${EVENT_DIGEST} --expected-primary ${REVISION} --confirm-decision --audience agent`;
 
   for (const phase of phaseCases) {
     const submit = lifecycleInstruction(
       eventIdea(phase, "unsubmitted", "downstream"),
       "en-US",
       "en-US",
+      REVISION,
     );
     assert.match(
       submit,
       new RegExp(
         `When ${phase.evidence} is ready, synchronize it to primary, then use ${
-          replay.replaceAll(/[.*+?^${}()|[\]\\]/g, "\\$&")
-        } and ${append.replaceAll(/[.*+?^${}()|[\]\\]/g, "\\$&")} to record ${phase.submitAction}`,
+          append.replaceAll(/[.*+?^${}()|[\]\\]/g, "\\$&")
+        } to record ${phase.submitAction}`,
       ),
     );
     assert.match(submit, new RegExp(`Do not request ${phase.acceptAction}`));
@@ -232,13 +230,12 @@ test("routing composes all three submit and accept guidance pairs without parame
       eventIdea(phase, "submitted", "upstream"),
       "en-US",
       "en-US",
+      REVISION,
     );
     assert.match(
       accept,
       new RegExp(
-        `request the explicit ${phase.acceptAction} decision for revision reference 1234567890ab\\.[\\s\\S]*obtain the exact cursor with ${
-          replay.replaceAll(/[.*+?^${}()|[\]\\]/g, "\\$&")
-        }, then use ${
+        `request the explicit ${phase.acceptAction} decision for revision reference 1234567890ab\\.[\\s\\S]*use ${
           decisionAppend.replaceAll(/[.*+?^${}()|[\]\\]/g, "\\$&")
         }`,
       ),
@@ -248,8 +245,11 @@ test("routing composes all three submit and accept guidance pairs without parame
       eventIdea(phase, "unsubmitted", "downstream"),
       "zh-CN",
       "zh-CN",
+      REVISION,
     );
-    assert.ok(localizedSubmit.indexOf(replay) < localizedSubmit.indexOf(append));
+    assert.match(localizedSubmit, new RegExp(
+      append.replaceAll(/[.*+?^${}()|[\]\\]/g, "\\$&"),
+    ));
     assert.match(localizedSubmit, new RegExp(
       `记录 ${phase.submitAction}；[\\s\\S]*不要请求 ${phase.acceptAction}`,
     ));
@@ -258,13 +258,14 @@ test("routing composes all three submit and accept guidance pairs without parame
       eventIdea(phase, "submitted", "upstream"),
       "zh-CN",
       "zh-CN",
+      REVISION,
     );
-    assert.ok(localizedAccept.indexOf(phase.acceptAction) < localizedAccept.indexOf(replay));
-    assert.ok(localizedAccept.indexOf(replay) < localizedAccept.indexOf(decisionAppend));
+    assert.ok(localizedAccept.indexOf(phase.acceptAction) < localizedAccept.indexOf(decisionAppend));
     assert.match(
       localizedAccept,
       new RegExp(`${phase.revisionField} 记录 ${phase.acceptAction}`),
     );
+    assert.doesNotMatch(`${submit}\n${accept}\n${localizedSubmit}\n${localizedAccept}`, /event replay|expected-length/);
   }
 });
 
@@ -273,14 +274,16 @@ test("routing composes ping/pong append without primary or decision parameters",
     eventIdea(phaseCases[1], "submitted", "downstream"),
     "en-US",
     "en-US",
+    REVISION,
   );
   const interactionAppend =
-    `silvermoon event append ${IDEA_ID} --input request.json --expected-length <bytes> --expected-digest <oid> --audience agent`;
+    `silvermoon event append ${IDEA_ID} --input request.json --expected-digest ${EVENT_DIGEST} --audience agent`;
 
   assert.match(instruction, new RegExp(
     `${interactionAppend.replaceAll(/[.*+?^${}()|[\]\\]/g, "\\$&")} for that ping/pong exchange`,
   ));
   assert.doesNotMatch(instruction, /--expected-primary|--confirm-decision/);
+  assert.doesNotMatch(instruction, /event replay|expected-length/);
 });
 
 test("routing composes inactive resume guidance outside lifecycle text", () => {
@@ -290,14 +293,15 @@ test("routing composes inactive resume guidance outside lifecycle text", () => {
     state: "abandoned",
     submissions: { ...active.submissions, current: null },
   };
-  const replay =
-    `silvermoon event replay ${IDEA_ID} --audience agent`;
   const resumeAppend =
-    `silvermoon event append ${IDEA_ID} --input request.json --expected-length <bytes> --expected-digest <oid> --expected-primary <commit> --confirm-decision --audience agent`;
+    `silvermoon event append ${IDEA_ID} --input request.json --expected-digest ${EVENT_DIGEST} --expected-primary ${REVISION} --confirm-decision --audience agent`;
 
   for (const language of ["en-US", "zh-CN"]) {
-    const instruction = lifecycleInstruction(inactive, language, language);
-    assert.ok(instruction.indexOf(replay) < instruction.indexOf(resumeAppend));
+    const instruction = lifecycleInstruction(inactive, language, language, REVISION);
+    assert.match(instruction, new RegExp(
+      resumeAppend.replaceAll(/[.*+?^${}()|[\]\\]/g, "\\$&"),
+    ));
     assert.match(instruction, /resume/);
+    assert.doesNotMatch(instruction, /event replay|expected-length/);
   }
 });

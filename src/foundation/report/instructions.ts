@@ -5,7 +5,6 @@ import {
   renderEventAcceptGuidance,
   renderEventAppendCommand,
   renderEventInteractionGuidance,
-  renderEventReplayCommand,
   renderEventResumeGuidance,
   renderEventSubmitGuidance,
   renderLifecycleDeploying,
@@ -352,12 +351,10 @@ function eventGuidanceInstruction(
   idea: LifecycleIdea,
   language: string,
   phase: EventPhaseGuidance,
+  primaryCommit: string,
 ) {
   const submission = currentSubmission(idea);
-  const replayCommand = renderEventReplayCommand(language, {
-    audience: "agent",
-    ideaId: idea.id,
-  });
+  const expectedDigest = idea.eventDigest ?? "<event-digest>";
   if (submission?.state === "submitted") {
     if (idea.control?.owner === "upstream") {
       return renderEventAcceptGuidance(language, {
@@ -365,13 +362,11 @@ function eventGuidanceInstruction(
         appendCommand: renderEventAppendCommand(language, {
           audience: "agent",
           confirmDecision: true,
-          expectedDigest: "<oid>",
-          expectedLength: "<bytes>",
-          expectedPrimary: "<commit>",
+          expectedDigest,
+          expectedPrimary: primaryCommit,
           ideaId: idea.id,
           inputPath: "request.json",
         }),
-        replayCommand,
         revisionField: phase.revisionField,
         revisionKind: phase.revisionKind,
         revisionReference: phase.revisionReference,
@@ -383,14 +378,12 @@ function eventGuidanceInstruction(
       appendCommand: renderEventAppendCommand(language, {
         audience: "agent",
         confirmDecision: false,
-        expectedDigest: "<oid>",
-        expectedLength: "<bytes>",
+        expectedDigest,
         expectedPrimary: null,
         ideaId: idea.id,
         inputPath: "request.json",
       }),
       controlOwner: idea.control?.owner ?? null,
-      replayCommand,
       revisionKind: phase.revisionKind,
       submitAction: phase.submitAction,
     });
@@ -401,15 +394,13 @@ function eventGuidanceInstruction(
     appendCommand: renderEventAppendCommand(language, {
       audience: "agent",
       confirmDecision: false,
-      expectedDigest: "<oid>",
-      expectedLength: "<bytes>",
-      expectedPrimary: "<commit>",
+      expectedDigest,
+      expectedPrimary: primaryCommit,
       ideaId: idea.id,
       inputPath: "request.json",
     }),
     controlOwner: idea.control?.owner ?? null,
     evidence: phase.evidence,
-    replayCommand,
     revisionKind: phase.revisionKind,
     submissionState: submission?.state ?? null,
   });
@@ -420,6 +411,7 @@ export function lifecycleInstruction(
   idea: LifecycleIdea,
   language: string,
   contentLanguage: string,
+  primaryCommit: string,
 ) {
   const name = ideaName(idea);
   if (idea.statusPath.endsWith("/events.jsonl")) {
@@ -432,7 +424,7 @@ export function lifecycleInstruction(
         revisionKind: "Idea",
         revisionReference: revisionReference(idea.idealRevision),
         submitAction: "submitIdeal",
-      })
+      }, primaryCommit)
       : idea.state === "implementing"
       ? eventGuidanceInstruction(idea, language, {
         action: "acceptInner",
@@ -441,7 +433,7 @@ export function lifecycleInstruction(
         revisionKind: "implementation",
         revisionReference: revisionReference(idea.implementationRevision),
         submitAction: "submitInner",
-      })
+      }, primaryCommit)
       : idea.state === "deploying"
       ? eventGuidanceInstruction(idea, language, {
         action: "acceptOuter",
@@ -450,29 +442,26 @@ export function lifecycleInstruction(
         revisionKind: "deployment",
         revisionReference: revisionReference(idea.deploymentRevision),
         submitAction: "submitOuter",
-      })
+      }, primaryCommit)
       : renderEventResumeGuidance(language, {
         appendCommand: renderEventAppendCommand(language, {
           audience: "agent",
           confirmDecision: true,
-          expectedDigest: "<oid>",
-          expectedLength: "<bytes>",
-          expectedPrimary: "<commit>",
+          expectedDigest: idea.eventDigest ?? "<event-digest>",
+          expectedPrimary: primaryCommit,
           ideaId: idea.id,
           inputPath: "request.json",
-        }),
-        replayCommand: renderEventReplayCommand(language, {
-          audience: "agent",
-          ideaId: idea.id,
         }),
       });
     const instruction = idea.state === "preparing"
       ? renderLifecyclePreparing(language, {
         action: "acceptIdeal",
         documentPath: idea.worlds.idealRevision.documentPath,
+        eventDigest: idea.eventDigest ?? null,
         eventBacked: true,
         ledgerPath: idea.ledgerPath,
         name,
+        primaryCommit,
         revisionReference: revisionReference(idea.idealRevision),
         statusPath: idea.statusPath,
         submissionState: submission?.state ?? null,
@@ -481,10 +470,12 @@ export function lifecycleInstruction(
       ? renderLifecycleImplementing(language, {
         action: "acceptInner",
         documentPath: idea.worlds.implementationRevision.documentPath,
+        eventDigest: idea.eventDigest ?? null,
         eventBacked: true,
         idealPath: idea.worlds.idealRevision.path,
         ledgerPath: idea.ledgerPath,
         name,
+        primaryCommit,
         revisionReference: revisionReference(idea.implementationRevision),
         statusPath: idea.statusPath,
         submissionState: submission?.state ?? null,
@@ -494,9 +485,11 @@ export function lifecycleInstruction(
       ? renderLifecycleDeploying(language, {
         action: "acceptOuter",
         documentPath: idea.worlds.deploymentRevision.documentPath,
+        eventDigest: idea.eventDigest ?? null,
         eventBacked: true,
         ledgerPath: idea.ledgerPath,
         name,
+        primaryCommit,
         revisionReference: revisionReference(idea.deploymentRevision),
         statusPath: idea.statusPath,
         submissionState: submission?.state ?? null,
@@ -526,9 +519,11 @@ export function lifecycleInstruction(
       renderLifecyclePreparing(language, {
         action: "acceptIdeal",
         documentPath: idea.worlds.idealRevision.documentPath,
+        eventDigest: null,
         eventBacked: false,
         ledgerPath: idea.ledgerPath,
         name,
+        primaryCommit,
         revisionReference: revisionReference(idea.idealRevision),
         statusPath: idea.statusPath,
         submissionState: null,
@@ -543,10 +538,12 @@ export function lifecycleInstruction(
       renderLifecycleImplementing(language, {
         action: "acceptInner",
         documentPath: idea.worlds.implementationRevision.documentPath,
+        eventDigest: null,
         eventBacked: false,
         idealPath: idea.worlds.idealRevision.path,
         ledgerPath: idea.ledgerPath,
         name,
+        primaryCommit,
         revisionReference: revisionReference(idea.implementationRevision),
         statusPath: idea.statusPath,
         submissionState: null,
@@ -561,9 +558,11 @@ export function lifecycleInstruction(
       renderLifecycleDeploying(language, {
         action: "acceptOuter",
         documentPath: idea.worlds.deploymentRevision.documentPath,
+        eventDigest: null,
         eventBacked: false,
         ledgerPath: idea.ledgerPath,
         name,
+        primaryCommit,
         revisionReference: revisionReference(idea.deploymentRevision),
         statusPath: idea.statusPath,
         submissionState: null,

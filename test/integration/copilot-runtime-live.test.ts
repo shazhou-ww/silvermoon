@@ -137,7 +137,7 @@ test("real Copilot replies through the host-runtime interaction boundary", {
     const prompt = `Reply with exactly the text ${token}. Do not use tools.`;
     const original = eventReceipt(await runtime.replay(route));
     const ping = await runtime.appendInteraction(route, {
-      type: "ping", message: prompt, expectedLength: original.length, expectedDigest: original.digest,
+      type: "ping", message: prompt, expectedDigest: original.digest,
     });
     assert.equal(ping.exitCode, 0);
     const deliveries = [];
@@ -148,7 +148,7 @@ test("real Copilot replies through the host-runtime interaction boundary", {
     if (expectToken) assert.match(reply, new RegExp(token));
     const receipt = eventReceipt(await runtime.replay(route));
     const pong = await runtime.appendInteraction(route, {
-      type: "pong", message: reply, expectedLength: receipt.length, expectedDigest: receipt.digest,
+      type: "pong", message: reply, expectedDigest: receipt.digest,
     });
     assert.equal(pong.exitCode, 0);
     messages.push(prompt, reply);
@@ -243,18 +243,18 @@ test("real Copilot receives a diagnostic ping while a Git commit is blocked", {
   const first = "Call silvermoon_git_probe once, wait for its result, then explain the blocked Git commit.";
   const before = eventReceipt(await runtime.replay(route));
   assert.equal((await runtime.appendInteraction(route, {
-    type: "ping", message: first, expectedLength: before.length, expectedDigest: before.digest,
+    type: "ping", message: first, expectedDigest: before.digest,
   })).exitCode, 0);
   assert.deepEqual((await collect(adapter.send(route, first))).map(({ state }) => state), ["queued", "unknown"]);
   await within(started, 30_000);
   const followup = "Pause commit attempts, diagnose the failed Git commit and include SILVERMOON_GIT_DIAGNOSIS. Do not call tools.";
   const observed = eventReceipt(await runtime.replay(route));
   assert.equal((await runtime.appendInteraction(route, {
-    type: "ping", message: followup, expectedLength: observed.length, expectedDigest: observed.digest,
+    type: "ping", message: followup, expectedDigest: observed.digest,
   })).exitCode, 0);
   assert.deepEqual((await collect(adapter.send(route, followup))).map(({ state }) => state), ["queued", "unknown"]);
   assert.equal((await runtime.appendInteraction(route, {
-    type: "pong", message: "old answer", expectedLength: observed.length, expectedDigest: observed.digest,
+    type: "pong", message: "old answer", expectedDigest: observed.digest,
   })).exitCode, 1);
   assert.equal(coordinationState(await runtime.replay(route)).owner, "downstream");
   releaseTool?.();
@@ -292,7 +292,7 @@ test("real Copilot receives a diagnostic ping while a Git commit is blocked", {
   assert.deepEqual({ sawStart, sawFinish }, { sawStart: true, sawFinish: true }, JSON.stringify(seen));
   const after = eventReceipt(await runtime.replay(route));
   assert.equal((await runtime.appendInteraction(route, {
-    type: "pong", message: diagnosis, expectedLength: after.length, expectedDigest: after.digest,
+    type: "pong", message: diagnosis, expectedDigest: after.digest,
   })).exitCode, 0);
   assert.deepEqual(
     coordinationState(await runtime.replay(route)).messages.map(
@@ -303,7 +303,7 @@ test("real Copilot receives a diagnostic ping while a Git commit is blocked", {
   const pending = "SILVERMOON_PENDING_RECOVERY";
   const beforeFailure = eventReceipt(await runtime.replay(route));
   assert.equal((await runtime.appendInteraction(route, {
-    type: "ping", message: pending, expectedLength: beforeFailure.length, expectedDigest: beforeFailure.digest,
+    type: "ping", message: pending, expectedDigest: beforeFailure.digest,
   })).exitCode, 0);
   await client.forceStop();
   assert.deepEqual((await collect(adapter.send(route, pending))).map(({ state }) => state), ["unknown"]);
@@ -336,7 +336,7 @@ test("one real Copilot adapter keeps two project routes independent", {
     const before = eventReceipt(await runtime.replay(route));
     const message = `Reply with exactly ${tokens[index]}. Do not use tools.`;
     assert.equal((await runtime.appendInteraction(route, {
-      type: "ping", message, expectedLength: before.length, expectedDigest: before.digest,
+      type: "ping", message, expectedDigest: before.digest,
     })).exitCode, 0);
     assert.deepEqual((await collect(adapter.send(route, message))).map(({ state }) => state),
       ["queued", "unknown"]);
@@ -353,7 +353,7 @@ test("one real Copilot adapter keeps two project routes independent", {
     assert.doesNotMatch(answer, new RegExp(otherToken));
     const before = eventReceipt(await runtime.replay(route));
     assert.equal((await runtime.appendInteraction(route, {
-      type: "pong", message: answer, expectedLength: before.length, expectedDigest: before.digest,
+      type: "pong", message: answer, expectedDigest: before.digest,
     })).exitCode, 0);
     const interaction = coordinationState(await runtime.replay(route));
     assert.equal(interaction.messages.length, 2);

@@ -62,7 +62,11 @@ async function fixture(t: test.TestContext) {
   for (const path of ["src", "bin", "tools", "skills", "schema", "package.json"]) {
     await cp(join(sourceRoot, path), join(root, path), { recursive: true });
   }
-  await symlink(join(sourceRoot, "node_modules"), join(root, "node_modules"), "dir");
+  await symlink(
+    join(sourceRoot, "node_modules"),
+    join(root, "node_modules"),
+    process.platform === "win32" ? "junction" : "dir",
+  );
   await writeFile(join(root, ".gitignore"), "node_modules/\n");
   await writeFile(
     join(root, ".silvermoon", "config.yaml"),

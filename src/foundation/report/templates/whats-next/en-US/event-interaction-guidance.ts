@@ -10,10 +10,9 @@ export const eventInteractionGuidance = ({
   action,
   appendCommand,
   controlOwner,
-  replayCommand,
   revisionKind,
   submitAction,
 }: EventInteractionGuidanceParameters) =>
-  `The current ${revisionKind} revision remains recorded by ${submitAction}, but control is ${controlOwner ?? "unknown"}. Continue only the phase-local response or work that returned control downstream; obtain the exact cursor with ${replayCommand}, then use ${appendCommand} for that ping/pong exchange and do not request ${action} until control returns upstream.`;
+  `The current ${revisionKind} revision remains recorded by ${submitAction}, but control is ${controlOwner ?? "unknown"}. Continue only the phase-local response or work that returned control downstream; use ${appendCommand} for that ping/pong exchange and do not request ${action} until control returns upstream. No replay cursor or expected length is required.`;
 
 export default eventInteractionGuidance;

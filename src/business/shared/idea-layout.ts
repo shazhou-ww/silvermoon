@@ -59,6 +59,7 @@ export interface ObservedIdea {
   status: ReturnType<typeof parseIdeaStatus>;
   control?: IdeaControlProjection;
   submissions?: IdeaSubmissionsProjection;
+  eventDigest?: string;
   statusPath: string;
   ledgerPath: string;
   worlds: {
@@ -510,6 +511,7 @@ export async function inspectIdeaLayout({
 
     let status;
     let eventState: IdeaEventState | undefined;
+    let eventDigest: string | undefined;
     try {
       const options = { objectIdLength: repositoryObjectIdLength, legacy: legacyEvents };
       if (eventFormat && useProjections) {
@@ -534,6 +536,7 @@ export async function inspectIdeaLayout({
             snapshotFile: filesystem.snapshotFile,
           },
         );
+        eventDigest = projected.digest;
         const request = projectedRequests?.get(entry.name);
         const reduced = request ? reduceIdeaEvent(projected.state, request, options) : null;
         if (reduced && !reduced.ok && "sequence" in reduced && "code" in reduced) {
@@ -545,6 +548,7 @@ export async function inspectIdeaLayout({
       } else if (eventFormat) {
         const store = eventOverrides?.get(entry.name)
           ?? await readEventStorage(root, paths, options, filesystem);
+        eventDigest = store.digest;
         const events = parseIdeaEvents(
           store.bytes, options,
         );
@@ -679,6 +683,7 @@ export async function inspectIdeaLayout({
       worlds,
       ...(control === undefined ? {} : { control }),
       ...(submissions === undefined ? {} : { submissions }),
+      ...(eventDigest === undefined ? {} : { eventDigest }),
     };
     if (status.alias !== undefined) idea.alias = status.alias;
     ideas.push(idea);

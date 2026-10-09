@@ -9,12 +9,11 @@ import type { EventAcceptGuidanceParameters } from "../contract.ts";
 export const eventAcceptGuidance = ({
   action,
   appendCommand,
-  replayCommand,
   revisionField,
   revisionKind,
   revisionReference,
   submitAction,
 }: EventAcceptGuidanceParameters) =>
-  `The current ${revisionKind} revision was recorded by ${submitAction}; control is upstream. Present response.review and request the explicit ${action} decision for revision reference ${revisionReference}. After that explicit decision, obtain the exact cursor with ${replayCommand}, then use ${appendCommand} to record ${action} with the full ${revisionField} from response.review.`;
+  `The current ${revisionKind} revision was recorded by ${submitAction}; control is upstream. Present response.review and request the explicit ${action} decision for revision reference ${revisionReference}. After that explicit decision, use ${appendCommand} to record ${action} with the full ${revisionField} from response.review; no replay cursor or expected length is required.`;
 
 export default eventAcceptGuidance;

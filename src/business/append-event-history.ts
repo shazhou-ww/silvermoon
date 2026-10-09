@@ -1,10 +1,16 @@
 import { inspectEventHistory } from "../foundation/event-history/index.ts";
 import { inspectCandidate } from "./shared/index.ts";
-import { assertIntroducedDecisions, parseRequest, planFullEventChange } from "../foundation/event-reducer/index.ts";
+import {
+  assertIntroducedDecisions,
+  matchesBusinessRequest,
+  planFullEventChange,
+  retryEventAfterDigest,
+  validateExpectedDigestPrefix,
+} from "../foundation/event-reducer/index.ts";
 import { eventStorageChanges, readEventStorage, storageDigest } from "../foundation/event-store/index.ts";
-import { appendLocalInteraction } from "./append-event.ts";
+import { appendLocalInteraction, eventTimestamp } from "./append-event.ts";
 import { fetchPrimary, inspectTreePaths, worktreeSnapshot } from "../foundation/git/index.ts";
-import { parseIdeaEvents, replayIdeaEvents, serializeIdeaEvents } from "../foundation/event-codec/index.ts";
+import { parseIdeaEvents, replayIdeaEvents } from "../foundation/event-codec/index.ts";
 import { stateTransaction } from "../foundation/state-transaction/index.ts";
 import type {
   CommandRuntime,
@@ -52,10 +58,12 @@ export async function appendFullEvent({
     if (action.status === "failure") throw new Error(action.problem.summary);
     receipt = action.result;
   } else {
-    if (typeof expectedLength !== "number" || !Number.isSafeInteger(expectedLength) || expectedLength < 0
-      || !/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/.test(expectedDigest ?? "")
-      || !/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/.test(expectedPrimary ?? "")) {
-      throw new Error("Writes require exact --expected-length, --expected-digest and --expected-primary from observation.");
+    if (expectedLength !== undefined) {
+      throw new Error("Append no longer accepts --expected-length; use an optional digest prefix.");
+    }
+    validateExpectedDigestPrefix(expectedDigest, options.objectIdLength);
+    if (!new RegExp(`^[0-9a-f]{${options.objectIdLength}}$`).test(expectedPrimary ?? "")) {
+      throw new Error("Writes require the exact observed primary commit.");
     }
     const refreshPrimary = async () => {
       const action = await runtime.performAction({ type: "fetch-primary" },
@@ -66,28 +74,27 @@ export async function appendFullEvent({
     };
     const primary = await refreshPrimary();
     if (primary !== expectedPrimary) throw new Error("Primary moved; preserve the candidate, synchronize and reassess the request.");
-    const prefix = bytes.subarray(0, expectedLength);
-    const matches = bytes.length === expectedLength && store.digest === expectedDigest;
-    if (!matches) {
-      if (bytes.length > expectedLength && head(prefix) === expectedDigest) {
-        const before = replayIdeaEvents(id, parseIdeaEvents(prefix, options), options);
-        if (before.ok && "state" in before) {
-          const event = parseRequest(input, before.state.sequence + 1, options);
-          const record = Buffer.from(serializeIdeaEvents([event], options));
-          if (bytes.subarray(expectedLength, expectedLength + record.length).equals(record)) {
-            const result = replayIdeaEvents(id, parseIdeaEvents(bytes, options), options);
-            if (!result.ok || !("state" in result)) {
-              throw new Error(`Retry encountered invalid current state: ${"code" in result ? result.code : "missing-state"}`);
-            }
-            receipt = { ...observation, outcome: "already-present", written: false, primary };
-          }
+    if (expectedDigest !== undefined && !store.digest.startsWith(expectedDigest)) {
+      const existing = retryEventAfterDigest(bytes, expectedDigest, options);
+      if (existing && matchesBusinessRequest(existing, input, options)) {
+        const result = replayIdeaEvents(id, parseIdeaEvents(bytes, options), options);
+        if (!result.ok || !("state" in result)) {
+          throw new Error(`Retry encountered invalid current state: ${"code" in result ? result.code : "missing-state"}`);
         }
+        receipt = {
+          ...observation,
+          outcome: "already-present",
+          written: false,
+          primary,
+          ...(existing.timestamp === undefined ? {} : { timestamp: existing.timestamp }),
+        };
       }
-      if (!receipt) throw new Error("Stale log length or digest; do not renumber or replay the old request.");
+      if (!receipt) throw new Error("Stale event digest; reobserve before retrying the request.");
     }
     if (!receipt) {
+      const timestamp = eventTimestamp(options);
       const { candidate, reduction } = planFullEventChange({
-        operation: "append", input, bytes, id,
+        operation: "append", input, bytes, id, timestamp,
       }, options);
       if (candidate.equals(bytes)) {
         receipt = { ...observation, outcome: "no-state-change", written: false, primary };
@@ -147,7 +154,7 @@ export async function appendFullEvent({
           return {
             id, outcome: "candidate-written", written: true, primary,
             length: candidate.length, digest: head(candidate),
-            sequence: reductionState.sequence, history,
+            sequence: reductionState.sequence, timestamp, history,
           };
         }, (cause) => ({ problem: { type: "event.write-failed", summary: errorMessage(cause) } }));
         if (action.status === "failure") throw new Error(action.problem.summary);

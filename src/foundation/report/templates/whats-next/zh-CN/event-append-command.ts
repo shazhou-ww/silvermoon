@@ -10,11 +10,10 @@ export const eventAppendCommand = ({
   audience,
   confirmDecision,
   expectedDigest,
-  expectedLength,
   expectedPrimary,
   ideaId,
   inputPath,
 }: EventAppendCommandParameters) =>
-  `silvermoon event append ${ideaId} --input ${inputPath} --expected-length ${expectedLength} --expected-digest ${expectedDigest}${expectedPrimary === null ? "" : ` --expected-primary ${expectedPrimary}`}${confirmDecision ? " --confirm-decision" : ""} --audience ${audience}`;
+  `silvermoon event append ${ideaId} --input ${inputPath} --expected-digest ${expectedDigest}${expectedPrimary === null ? "" : ` --expected-primary ${expectedPrimary}`}${confirmDecision ? " --confirm-decision" : ""} --audience ${audience}`;
 
 export default eventAppendCommand;

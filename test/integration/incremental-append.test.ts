@@ -80,8 +80,6 @@ function append(
     FIRST_ID,
     "--input",
     request,
-    "--expected-length",
-    String(cursor.length),
     "--expected-digest",
     cursor.digest,
     ...extra,
@@ -122,6 +120,7 @@ test("real CLI appends and cursor queries preserve one exact byte stream", async
     assert.deepEqual(delta.events, [{
       sequence: count + 2,
       type: "pong",
+      timestamp: second.timestamp,
       payload: { message: "incremental" },
     }]);
     const candidate = await readFile(join(root, paths.eventsPath));
@@ -146,7 +145,6 @@ test("SHA-256 stale prefixes fail without writing the proposed event", async (t)
     operation: "append",
     idea: FIRST_ID,
     input: { type: "pong", payload: { message: "stale" } },
-    expectedLength: cursor.length,
     expectedDigest: cursor.digest,
   });
   assert.equal(report.observation.state, "check-unavailable");
@@ -165,7 +163,6 @@ test("alias appends retain layout and uniqueness validation", async (t) => {
     operation: "append",
     idea: "fixture",
     input: { type: "pong", payload: { message: "alias increment" } },
-    expectedLength: before.length,
     expectedDigest: before.digest,
   });
   assert.equal(appended.observation.state, "event-result");
@@ -185,7 +182,6 @@ test("alias appends retain layout and uniqueness validation", async (t) => {
     operation: "append",
     idea: "fixture",
     input: { type: "pong", payload: { message: "must not choose an owner" } },
-    expectedLength: receipt.length as number,
     expectedDigest: receipt.digest as string,
   });
   assert.equal(duplicate.observation.state, "check-unavailable");
@@ -227,7 +223,6 @@ test("tampered blob-bound projections fail without authorizing an append", async
     operation: "append",
     idea: FIRST_ID,
     input: { type: "pong", payload: { message: "must not write" } },
-    expectedLength: before.length,
     expectedDigest: before.digest,
   });
   assert.equal(failed.observation.state, "check-unavailable");

@@ -79,9 +79,11 @@ export interface PreparationSeedParameters {
 interface LifecycleParameters {
   action: string;
   documentPath: string;
+  eventDigest: string | null;
   eventBacked: boolean;
   ledgerPath: string;
   name: string;
+  primaryCommit: string;
   revisionReference: string;
   statusPath: string;
   submissionState: "unsubmitted" | "submitted" | "accepted" | "stale" | null;
@@ -114,9 +116,8 @@ export interface EventReplayCommandParameters {
 export interface EventAppendCommandParameters {
   audience: "agent";
   confirmDecision: boolean;
-  expectedDigest: "<oid>";
-  expectedLength: "<bytes>";
-  expectedPrimary: "<commit>" | null;
+  expectedDigest: string;
+  expectedPrimary: string | null;
   ideaId: string;
   inputPath: "request.json";
 }
@@ -127,7 +128,6 @@ export interface EventSubmitGuidanceParameters {
   appendCommand: string;
   controlOwner: "upstream" | "downstream" | "none" | null;
   evidence: "Idea candidate" | "implementation evidence" | "external evidence";
-  replayCommand: string;
   revisionKind: "Idea" | "implementation" | "deployment";
   submissionState: "unsubmitted" | "accepted" | "stale" | null;
 }
@@ -135,7 +135,6 @@ export interface EventSubmitGuidanceParameters {
 export interface EventAcceptGuidanceParameters {
   action: "acceptIdeal" | "acceptInner" | "acceptOuter";
   appendCommand: string;
-  replayCommand: string;
   revisionField: "idealRevision" | "implementationRevision" | "deploymentRevision";
   revisionKind: "Idea" | "implementation" | "deployment";
   revisionReference: string;
@@ -146,14 +145,12 @@ export interface EventInteractionGuidanceParameters {
   action: "acceptIdeal" | "acceptInner" | "acceptOuter";
   appendCommand: string;
   controlOwner: "downstream" | "none" | null;
-  replayCommand: string;
   revisionKind: "Idea" | "implementation" | "deployment";
   submitAction: "submitIdeal" | "submitInner" | "submitOuter";
 }
 
 export interface EventResumeGuidanceParameters {
   appendCommand: string;
-  replayCommand: string;
 }
 
 export interface NavigationParameters {

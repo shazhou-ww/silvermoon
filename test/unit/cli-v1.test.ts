@@ -237,15 +237,17 @@ test("event help separates replay and append parameter surfaces", async () => {
   assert.match(appendHelp, /Usage: silvermoon event append \[options\] <idea>/);
   for (const option of [
     "--input <file>",
-    "--expected-length <bytes>",
-    "--expected-digest <oid>",
+    "--expected-digest <prefix>",
     "--expected-primary <commit>",
     "--confirm-decision",
     "--full-history",
   ]) {
     assert.match(appendHelp, new RegExp(option));
   }
-  assert.doesNotMatch(appendHelp, /--after-length|--after-digest/);
+  assert.doesNotMatch(
+    appendHelp,
+    /--after-length|--after-digest|--expected-length/,
+  );
 });
 
 test("renders JSON verbatim and default non-TTY output from response only", async () => {

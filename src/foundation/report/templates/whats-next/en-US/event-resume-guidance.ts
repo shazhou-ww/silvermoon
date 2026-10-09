@@ -8,8 +8,7 @@ import type { EventResumeGuidanceParameters } from "../contract.ts";
 /** @pure */
 export const eventResumeGuidance = ({
   appendCommand,
-  replayCommand,
 }: EventResumeGuidanceParameters) =>
-  `Resume only after an explicit human decision: obtain the exact cursor with ${replayCommand}, then use ${appendCommand} to record resume.`;
+  `Resume only after an explicit human decision: use ${appendCommand} to record resume; no replay cursor or expected length is required.`;
 
 export default eventResumeGuidance;

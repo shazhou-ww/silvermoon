@@ -8,8 +8,7 @@ import type { EventResumeGuidanceParameters } from "../contract.ts";
 /** @pure */
 export const eventResumeGuidance = ({
   appendCommand,
-  replayCommand,
 }: EventResumeGuidanceParameters) =>
-  `只有获得明确的人类决定后才能恢复：先用 ${replayCommand} 获取准确 cursor，再使用 ${appendCommand} 记录 resume。`;
+  `只有获得明确的人类决定后才能恢复：使用 ${appendCommand} 记录 resume；无需 replay cursor 或 expected length。`;
 
 export default eventResumeGuidance;
