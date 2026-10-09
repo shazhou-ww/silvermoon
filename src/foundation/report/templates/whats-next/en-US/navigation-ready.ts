@@ -9,13 +9,16 @@ import type { NavigationParameters } from "../contract.ts";
 const navigationReady = ({
   hasActiveIdea,
 }: NavigationParameters) =>
-  [
-    "Choose explicitly whether to continue an active idea or create a new one.",
-    hasActiveIdea ? null : "No active ideas are available.",
-    [
+  hasActiveIdea
+    ? [
+      `Choose explicitly whether to continue an active idea or,`,
+      `after discussing the goal, create a new one.`,
       `To continue, run \`silvermoon whats-next <ULID-or-alias>\`.`,
-      `To start something else, discuss the goal and run \`silvermoon create-idea\`.`,
-    ].join(" "),
-  ].filter(Boolean).join("\n");
+      `To start something else, discuss the goal, then run \`silvermoon create-idea\`.`,
+    ].join(" ")
+    : [
+      `No active ideas are available.`,
+      `Discuss the goal, then run \`silvermoon create-idea\` to create a new idea.`,
+    ].join("\n");
 
 export default navigationReady;
