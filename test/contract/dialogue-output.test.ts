@@ -154,19 +154,33 @@ test("renders primary-bound review context before lifecycle instructions", () =>
 
   const rendered = renderResponse(response);
 
-  assert.ok(rendered.indexOf("### Review candidate") < rendered.indexOf("### Next steps"));
-  assert.match(rendered, /Decision: `acceptIdeal`/);
-  assert.match(rendered, /Revision reference: `idealRevision=a{12}`/);
-  assert.match(rendered, /Primary reference: `b{12}`/);
-  assert.doesNotMatch(rendered, /a{13}|b{13}/);
-  assert.match(rendered, /Canonical review documents/);
-  assert.match(rendered, /#### Gate presentation/);
-  assert.match(rendered, /"contentLanguage": "en-US"/);
-  assert.match(rendered, /"gateLabel": "Idea acceptance"/);
+  assert.ok(
+    rendered.indexOf("### Review request template")
+      < rendered.indexOf("### Next steps"),
+  );
   assert.match(
     rendered,
-    /\| Current contract \| \.silvermoon\/ideas\/fixture\/outer\/inner\/ideal\/Idea\.md \|/,
+    /Use the following template to request the user's review\./,
   );
+  assert.match(rendered, /```markdown\n## Idea acceptance/);
+  assert.match(
+    rendered,
+    /- Candidate: `idealRevision=a{12}` on primary `b{12}`/,
+  );
+  assert.doesNotMatch(rendered, /a{13}|b{13}/);
+  assert.match(
+    rendered,
+    /- Idea contract: \[local\]\(\{host-clickable local link for \.silvermoon\/ideas\/fixture\/outer\/inner\/ideal\/Idea\.md\}\) · \[remote\]\(\{immutable primary link for \.silvermoon\/ideas\/fixture\/outer\/inner\/ideal\/Idea\.md\}\)/,
+  );
+  assert.match(
+    rendered,
+    /- Decision: Do you accept `idealRevision=a{12}` as the idea for this IDEA\?/,
+  );
+  assert.doesNotMatch(
+    rendered,
+    /### Review candidate|Canonical review documents|```json/,
+  );
+  assert.doesNotMatch(rendered, /"contentLanguage"|"gateLabel"/);
 });
 
 test("renders device readiness as a non-blocking advisory", () => {

@@ -122,6 +122,10 @@ Adding, renaming, or removing a template requires the same change in both
 locale directories, both locale indexes, the typed contract, and the static
 renderers used by pure callers. The catalog contract test enforces filename
 symmetry, header identity, registration completeness, and unique IDs.
+Agent-facing gate output renders `response.review.presentation` as one
+explicit fenced Markdown template with a direct instruction to use it. Do not
+emit the presentation object as prose or repeat its candidate metadata in
+parallel sections.
 Run the focused template unit and contract tests, `pnpm typecheck`, and
 `pnpm check:pure`; run the relevant command integration tests whenever
 callers or wording change.

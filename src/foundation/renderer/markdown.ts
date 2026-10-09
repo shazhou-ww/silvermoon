@@ -101,33 +101,34 @@ function renderReview(
   review: ReviewContext,
   language: string,
 ) {
-  const roles: Record<ReviewContext["canonicalDocuments"][number]["role"], string> = {
-    "current-contract": localize(language, "Current contract", "当前契约"),
-    ledger: localize(language, "Ledger", "执行清单"),
-  };
+  const { presentation } = review;
+  const templateInstruction = presentation.requiresLocalization
+    ? localize(
+      language,
+      `Use the following template to request the user's review. Localize all human-visible template text to ${presentation.contentLanguage}, replace only brace-delimited placeholders and link targets, and preserve machine identifiers.`,
+      `必须按照以下模板提请用户审阅。把所有面向用户的模板文本本地化为 ${presentation.contentLanguage}，仅替换花括号占位值和链接目标，并保留机器标识。`,
+    )
+    : localize(
+      language,
+      "Use the following template to request the user's review. Replace only brace-delimited placeholders and link targets; preserve all other text verbatim.",
+      "必须按照以下模板提请用户审阅。仅替换花括号占位值和链接目标；其余文本必须逐字保留。",
+    );
   return [
-    `### ${localize(language, "Review candidate", "审阅候选")}`,
+    `### ${localize(language, "Review request template", "审阅请求模板")}`,
     "",
-    `- ${localize(language, "Phase", "阶段")}: ${codeSpan(review.phase)}`,
-    `- ${localize(language, "Decision", "决定")}: ${codeSpan(review.decision)}`,
-    `- ${localize(language, "Revision reference", "修订引用")}: ${codeSpan(`${review.revision.field}=${objectReference(review.revision.value)}`)}`,
-    `- ${localize(language, "Primary reference", "主分支引用")}: ${codeSpan(objectReference(review.primaryCommit))}`,
-    `- ${localize(language, "Review scope", "审阅范围")}: ${codeSpan(review.scopePath)}`,
+    templateInstruction,
     "",
-    `#### ${localize(language, "Canonical review documents", "规范审阅文档")}`,
+    "```markdown",
+    `## ${presentation.gateLabel}`,
     "",
-    ...renderMarkdownTable(
-      [
-        localize(language, "Role", "角色"),
-        localize(language, "Path", "路径"),
-      ],
-      review.canonicalDocuments.map(({ role, path }) => [roles[role], path]),
+    `- ${presentation.labels.idea}: {idea identity}`,
+    `- ${presentation.labels.candidate}: ${codeSpan(`${review.revision.field}=${objectReference(review.revision.value)}`)} ${presentation.candidateConnector} ${codeSpan(objectReference(review.primaryCommit))}`,
+    `- ${presentation.labels.reviewFocus}: {one-sentence review focus}`,
+    `- ${presentation.labels.reviewFiles}:`,
+    ...review.canonicalDocuments.map(({ role, path }) =>
+      `  - ${presentation.documentLabels[role]}: [${presentation.labels.local}]({host-clickable local link for ${path}}) · [${presentation.labels.remote}]({immutable primary link for ${path}})`
     ),
-    "",
-    `#### ${localize(language, "Gate presentation", "人工门呈现")}`,
-    "",
-    "```json",
-    JSON.stringify(review.presentation, null, 2),
+    `- ${presentation.labels.decision}: ${presentation.decisionQuestion}`,
     "```",
   ];
 }

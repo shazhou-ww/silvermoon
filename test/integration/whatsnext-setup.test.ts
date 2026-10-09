@@ -598,7 +598,7 @@ test("uses a canonical output override without changing content language or pers
     /^Do you accept `idealRevision=[0-9a-f]{12}` as the idea for this IDEA\?$/,
   );
   assert.match(responseText(selected), /^在 /);
-  assert.match(responseText(selected), /requiresLocalization/);
+  assert.match(responseText(selected), /fenced 审阅模板/);
   assert.match(responseText(selected), /自然语言内容中使用 fr-FR/);
   assert.match(actionCommit(selected), /^[0-9a-f]{40}$/);
   assert.equal(await readFile(statusPath, "utf8"), before);
@@ -677,11 +677,14 @@ test("drives gate presentation from content language instead of output language"
   assert.match(responseText(selected), /response\.review\.presentation/);
 
   const rendered = renderResponse(selected.response);
-  assert.match(rendered, /### Review candidate/);
-  assert.match(rendered, /#### Gate presentation/);
-  assert.match(rendered, /"contentLanguage": "zh-CN"/);
-  assert.match(rendered, /"gateLabel": "构想验收"/);
-  assert.match(rendered, /"idea": "构想"/);
+  assert.match(rendered, /### Review request template/);
+  assert.match(rendered, /```markdown\n## 构想验收/);
+  assert.match(rendered, /- 构想: \{idea identity\}/);
+  assert.match(
+    rendered,
+    /- 候选版本: `idealRevision=[0-9a-f]{12}` 位于 primary `[0-9a-f]{12}`/,
+  );
+  assert.doesNotMatch(rendered, /```json|"contentLanguage"|"gateLabel"/);
 });
 
 test("names Chinese review contracts by their canonical artifacts", async () => {
