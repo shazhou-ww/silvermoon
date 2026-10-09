@@ -4,7 +4,6 @@ on:
   push:
     tags:
       - "npm/**"
-  workflow_dispatch:
 
 permissions: {}
 
