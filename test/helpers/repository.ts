@@ -172,6 +172,8 @@ export async function createRepository({
   git(root, "config", "user.name", "silvermoon test");
   git(root, "config", "user.email", "silvermoon@example.invalid");
   git(root, "config", "core.autocrlf", "false");
+  git(root, "config", "maintenance.auto", "false");
+  git(root, "config", "gc.auto", "0");
   await mkdir(join(root, ".silvermoon", "ideas"), { recursive: true });
   if (schemaVersion === 2) {
     await writeFile(
@@ -239,6 +241,8 @@ async function createTemplate(schemaVersion: 1 | 2) {
   git(root, "config", "user.name", "silvermoon test");
   git(root, "config", "user.email", "silvermoon@example.invalid");
   git(root, "config", "core.autocrlf", "false");
+  git(root, "config", "maintenance.auto", "false");
+  git(root, "config", "gc.auto", "0");
   await mkdir(join(root, ".silvermoon", "ideas"), { recursive: true });
   if (schemaVersion === 2) {
     await writeFile(
