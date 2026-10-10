@@ -1,5 +1,12 @@
 # 设备级 daemon 与 Agent 协作集成
 
+## 终止与职责移交
+
+2026-10-10，用户明确决定放弃本仓库中的 `daemon-event-bridge` 工作：
+Silvermoon CLI 专注于项目状态管理；daemon、connector 与 relay 由
+`silvermoon-ai` 项目继续跟进。以下设计保留为历史资料，不再作为本仓库的
+实施或发布目标。此决定只终止本 idea，不推断其他 idea 的放弃或验收。
+
 ## 意图
 
 将一台设备、HEADQUARTER（HQ）、Silvermoon daemon 和下游 Agent 组成一个生产
