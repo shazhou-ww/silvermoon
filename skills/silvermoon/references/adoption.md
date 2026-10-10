@@ -43,8 +43,9 @@ observation. A global runtime reuses a successful npm `latest` result for less
 than 24 hours and validates personal discovery links against the running
 package. Missing, broken, or stale links and registry failures require device
 repair but do not turn a valid project snapshot into
-`project-setup-required`. Snapshot-only `check` commands do not perform these
-device checks.
+`project-setup-required`. Healthy device facts remain in structured reports but
+are omitted from text and TUI output. Snapshot-only `check` commands do not
+perform these device checks.
 
 Project observations report every discovered schema-bearing file under
 `observation.schemas`. Validity and current-target readiness are independent:

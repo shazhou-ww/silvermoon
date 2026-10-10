@@ -681,7 +681,9 @@ before filtering. It reads staged, unstaged, and
 untracked idea changes from the current worktree snapshot but never checks
 worktree hygiene, branch, upstream, or primary ancestry, and never fetches or
 accesses the project remote. Its independent device advisory may query npm
-`latest` only when the successful device cache is at least 24 hours old.
+`latest` only when the successful device cache is at least 24 hours old. Text
+and TUI output omit that advisory when every observed device state is healthy
+and non-actionable; structured reports retain the device facts.
 `list-ideas --language <en|en-US|zh|zh-CN>` overrides only Silvermoon-owned
 output for that invocation; without it, the project's resolved output
 language is used.

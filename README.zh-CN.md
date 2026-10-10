@@ -66,9 +66,10 @@ silvermoon list-ideas
 ```
 
 > **备注**：每台设备或 Agent host 只安装并更新一个全局 Silvermoon runtime。
-> 对话命令会把带缓存的最新 runtime 状态和个人级 skill 健康度作为设备提示。
-> 目标项目不固定 Silvermoon 版本，也不保存它的 skill。从 `0.4.0` 起，
-> 项目兼容性由 runtime 持有的逐文件 schema capability 与 migration graph 决定。
+> 对话命令会在结构化报告中保留带缓存的最新 runtime 状态和个人级 skill
+> 健康度，但 Text 和 TUI 仅在需要处理时显示设备提示。目标项目不固定
+> Silvermoon 版本，也不保存它的 skill。从 `0.4.0` 起，项目兼容性由 runtime
+> 持有的逐文件 schema capability 与 migration graph 决定。
 
 工作流见 [Operating Silvermoon](./docs/operations.md)，
 命令详情见 [Technical Reference](./docs/reference.md)。

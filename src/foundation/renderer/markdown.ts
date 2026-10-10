@@ -281,6 +281,27 @@ function renderDeviceAdvisory(
   device: DeviceAdvisory,
   language: string,
 ) {
+  const runtimeNeedsAttention =
+    device.runtime.source === "source-checkout"
+    || device.runtime.summary !== undefined;
+  const skillNeedsAttention =
+    !["ready", "managed-by-host"].includes(device.skill.status)
+    || device.skill.remediation !== undefined
+    || device.skill.summary !== undefined
+    || (device.skill.invalidPaths?.length ?? 0) > 0;
+  const updateNeedsAttention =
+    !["current", "managed-by-host"].includes(device.update.status)
+    || (
+      device.update.status === "current"
+      && device.update.summary !== undefined
+    );
+  if (
+    !runtimeNeedsAttention
+    && !skillNeedsAttention
+    && !updateNeedsAttention
+  ) {
+    return [];
+  }
   const skillDetails = device.skill.summary
     ?? (device.skill.invalidPaths?.length
       ? device.skill.invalidPaths.join(", ")
@@ -407,7 +428,8 @@ export function renderMarkdownResponse(
       if (readiness.length > 0) sections.push("", ...readiness);
     }
     if (response.device !== undefined) {
-      sections.push("", ...renderDeviceAdvisory(response.device, language));
+      const advisory = renderDeviceAdvisory(response.device, language);
+      if (advisory.length > 0) sections.push("", ...advisory);
     }
     return sections.join("\n");
   }
@@ -417,7 +439,8 @@ export function renderMarkdownResponse(
     if (readiness.length > 0) lines.push("", ...readiness);
   }
   if (response.device !== undefined) {
-    lines.push("", ...renderDeviceAdvisory(response.device, language));
+    const advisory = renderDeviceAdvisory(response.device, language);
+    if (advisory.length > 0) lines.push("", ...advisory);
   }
 
   if (response.kind === "event-result") {

@@ -79,8 +79,9 @@ silvermoon list-ideas
 ```
 
 > **Note:** Install and update one global Silvermoon runtime for the device or
-> Agent host. Dialogue commands report cached latest-runtime and personal-skill
-> health as device advisories. Target repositories do not pin Silvermoon or
+> Agent host. Dialogue commands retain cached latest-runtime and personal-skill
+> health in structured reports, but text and TUI output show a device advisory
+> only when it needs attention. Target repositories do not pin Silvermoon or
 > store its skill. Since `0.4.0`, project compatibility is determined by the
 > runtime-owned per-file schema capability and migration graph.
 
