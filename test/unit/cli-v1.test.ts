@@ -122,22 +122,11 @@ test("registers only the approved command surface", () => {
   assert.ok(create);
   assert.ok(create.options.some(({ long }) => long === "--language"));
   for (const command of program.commands.filter((candidate) =>
-    !["event", "list-ideas"].includes(candidate.name())
+    candidate.name() !== "list-ideas"
   )) {
     assert.ok(command.options.some(({ long }) => long === "--audience"));
     assert.ok(command.options.some(({ long }) => long === "--trace"));
     assert.ok(command.options.some(({ long }) => long === "--language"));
-  }
-  const event = program.commands.find((command) => command.name() === "event");
-  assert.ok(event);
-  assert.deepEqual(
-    event.commands.map((command) => command.name()),
-    ["replay", "append"],
-  );
-  for (const operation of event.commands) {
-    assert.ok(operation.options.some(({ long }) => long === "--audience"));
-    assert.ok(operation.options.some(({ long }) => long === "--trace"));
-    assert.ok(operation.options.some(({ long }) => long === "--language"));
   }
   const list = program.commands.find((command) => command.name() === "list-ideas");
   assert.ok(list);
@@ -194,60 +183,6 @@ test("help describes the four projections and unified trace", async () => {
   assert.match(commandHelp, /four command projections/);
   assert.match(commandHelp, /human TUI or agent Markdown/);
   assert.match(commandHelp, /domain and timing events/);
-});
-
-test("event help separates replay and append parameter surfaces", async () => {
-  const parent = capture();
-  assert.equal(await runCli(["event", "--help"], parent.io), 0);
-  const parentHelp = parent.logs.join("\n");
-  assert.match(parentHelp, /Commands:\s+replay \[options\] <idea>/s);
-  assert.match(parentHelp, /append \[options\] <idea>/);
-  const commands = parentHelp.slice(parentHelp.indexOf("Commands:"));
-  assert.ok(commands.indexOf("replay") < commands.indexOf("append"));
-  assert.doesNotMatch(parentHelp, /help \[command\]/);
-  for (const option of [
-    "--after-length",
-    "--input",
-    "--expected-length",
-    "--confirm-decision",
-  ]) {
-    assert.doesNotMatch(parentHelp, new RegExp(option));
-  }
-
-  const replay = capture();
-  assert.equal(await runCli(["event", "replay", "--help"], replay.io), 0);
-  const replayHelp = replay.logs.join("\n");
-  assert.match(replayHelp, /Usage: silvermoon event replay \[options\] <idea>/);
-  assert.match(replayHelp, /--after-length <bytes>/);
-  assert.match(replayHelp, /--after-digest <oid>/);
-  for (const option of [
-    "--input",
-    "--expected-length",
-    "--expected-digest",
-    "--expected-primary",
-    "--confirm-decision",
-    "--full-history",
-  ]) {
-    assert.doesNotMatch(replayHelp, new RegExp(option));
-  }
-
-  const append = capture();
-  assert.equal(await runCli(["event", "append", "--help"], append.io), 0);
-  const appendHelp = append.logs.join("\n");
-  assert.match(appendHelp, /Usage: silvermoon event append \[options\] <idea>/);
-  for (const option of [
-    "--input <file>",
-    "--expected-digest <prefix>",
-    "--expected-primary <commit>",
-    "--confirm-decision",
-    "--full-history",
-  ]) {
-    assert.match(appendHelp, new RegExp(option));
-  }
-  assert.doesNotMatch(
-    appendHelp,
-    /--after-length|--after-digest|--expected-length/,
-  );
 });
 
 test("renders JSON verbatim and default non-TTY output from response only", async () => {

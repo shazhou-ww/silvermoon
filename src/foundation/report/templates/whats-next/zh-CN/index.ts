@@ -1,12 +1,6 @@
 import contentLanguage from "./content-language.ts";
 import detachedHead from "./detached-head.ts";
 import eventHistoryInvalid from "./event-history-invalid.ts";
-import { eventAcceptGuidance } from "./event-accept-guidance.ts";
-import { eventAppendCommand } from "./event-append-command.ts";
-import { eventInteractionGuidance } from "./event-interaction-guidance.ts";
-import { eventReplayCommand } from "./event-replay-command.ts";
-import { eventResumeGuidance } from "./event-resume-guidance.ts";
-import { eventSubmitGuidance } from "./event-submit-guidance.ts";
 import headMissing from "./head-missing.ts";
 import ideaMetadataUnavailable from "./idea-metadata-unavailable.ts";
 import ideaNotFound from "./idea-not-found.ts";
@@ -46,12 +40,6 @@ const templates = {
   "review-presentation": reviewPresentation,
   "review-presentation-instruction": reviewPresentationInstruction,
   "preparation-seed": preparationSeed,
-  "event-replay-command": eventReplayCommand,
-  "event-append-command": eventAppendCommand,
-  "event-submit-guidance": eventSubmitGuidance,
-  "event-accept-guidance": eventAcceptGuidance,
-  "event-interaction-guidance": eventInteractionGuidance,
-  "event-resume-guidance": eventResumeGuidance,
   "lifecycle-preparing": lifecyclePreparing,
   "lifecycle-implementing": lifecycleImplementing,
   "lifecycle-deploying": lifecycleDeploying,
@@ -79,12 +67,6 @@ export {
   contentLanguage,
   detachedHead,
   eventHistoryInvalid,
-  eventAcceptGuidance,
-  eventAppendCommand,
-  eventInteractionGuidance,
-  eventReplayCommand,
-  eventResumeGuidance,
-  eventSubmitGuidance,
   headMissing,
   ideaMetadataUnavailable,
   ideaNotFound,

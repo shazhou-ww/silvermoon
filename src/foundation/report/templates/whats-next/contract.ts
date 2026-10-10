@@ -14,12 +14,6 @@ export const WHATS_NEXT_TEMPLATE_IDS = Object.freeze([
   "review-presentation",
   "review-presentation-instruction",
   "preparation-seed",
-  "event-replay-command",
-  "event-append-command",
-  "event-submit-guidance",
-  "event-accept-guidance",
-  "event-interaction-guidance",
-  "event-resume-guidance",
   "lifecycle-preparing",
   "lifecycle-implementing",
   "lifecycle-deploying",
@@ -78,15 +72,18 @@ export interface PreparationSeedParameters {
 
 interface LifecycleParameters {
   action: string;
+  controlOwner: "upstream" | "downstream" | "none" | null;
   documentPath: string;
   eventDigest: string | null;
   eventBacked: boolean;
+  ideaId: string;
   ledgerPath: string;
   name: string;
   primaryCommit: string;
   revisionReference: string;
   statusPath: string;
   submissionState: "unsubmitted" | "submitted" | "accepted" | "stale" | null;
+  submitAction: string;
 }
 
 export interface LifecyclePreparingParameters extends LifecycleParameters {}
@@ -106,51 +103,6 @@ export interface LifecycleInactiveParameters {
   relativePath: string;
   state: string;
   statusPath: string;
-}
-
-export interface EventReplayCommandParameters {
-  audience: "agent";
-  ideaId: string;
-}
-
-export interface EventAppendCommandParameters {
-  audience: "agent";
-  confirmDecision: boolean;
-  expectedDigest: string;
-  expectedPrimary: string | null;
-  ideaId: string;
-  inputPath: "request.json";
-}
-
-export interface EventSubmitGuidanceParameters {
-  acceptanceAction: "acceptIdeal" | "acceptInner" | "acceptOuter";
-  action: "submitIdeal" | "submitInner" | "submitOuter";
-  appendCommand: string;
-  controlOwner: "upstream" | "downstream" | "none" | null;
-  evidence: "Idea candidate" | "implementation evidence" | "external evidence";
-  revisionKind: "Idea" | "implementation" | "deployment";
-  submissionState: "unsubmitted" | "accepted" | "stale" | null;
-}
-
-export interface EventAcceptGuidanceParameters {
-  action: "acceptIdeal" | "acceptInner" | "acceptOuter";
-  appendCommand: string;
-  revisionField: "idealRevision" | "implementationRevision" | "deploymentRevision";
-  revisionKind: "Idea" | "implementation" | "deployment";
-  revisionReference: string;
-  submitAction: "submitIdeal" | "submitInner" | "submitOuter";
-}
-
-export interface EventInteractionGuidanceParameters {
-  action: "acceptIdeal" | "acceptInner" | "acceptOuter";
-  appendCommand: string;
-  controlOwner: "downstream" | "none" | null;
-  revisionKind: "Idea" | "implementation" | "deployment";
-  submitAction: "submitIdeal" | "submitInner" | "submitOuter";
-}
-
-export interface EventResumeGuidanceParameters {
-  appendCommand: string;
 }
 
 export interface NavigationParameters {
@@ -234,24 +186,6 @@ export interface WhatsNextTemplates {
   "review-presentation-instruction": () => string;
   "preparation-seed": (
     parameters: PreparationSeedParameters,
-  ) => string;
-  "event-replay-command": (
-    parameters: EventReplayCommandParameters,
-  ) => string;
-  "event-append-command": (
-    parameters: EventAppendCommandParameters,
-  ) => string;
-  "event-submit-guidance": (
-    parameters: EventSubmitGuidanceParameters,
-  ) => string;
-  "event-accept-guidance": (
-    parameters: EventAcceptGuidanceParameters,
-  ) => string;
-  "event-interaction-guidance": (
-    parameters: EventInteractionGuidanceParameters,
-  ) => string;
-  "event-resume-guidance": (
-    parameters: EventResumeGuidanceParameters,
   ) => string;
   "lifecycle-preparing": (
     parameters: LifecyclePreparingParameters,
