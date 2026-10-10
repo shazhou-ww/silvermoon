@@ -14,7 +14,7 @@
 
 ### D-AC01: 日常 CI 更快反馈
 
-pull request 的日常 integration 门禁相对记录的同环境基线至少缩短 40%，并通过 CI job timing 证明。
+pull request 只执行快速 integration 和必要的 platform smoke；记录三个真实 CI 样本，并据此建立后续可比较的 job budget。
 
 ### D-AC02: 完整门禁持续生效
 
