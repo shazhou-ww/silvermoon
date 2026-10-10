@@ -222,6 +222,42 @@ test("renders device readiness as a non-blocking advisory", () => {
   assert.match(rendered, /\| Latest runtime \| available \| current=0\.3\.0; latest=0\.4\.0;/);
 });
 
+test("renders prerelease freshness against the installed npm channel", () => {
+  const rendered = renderResponse({
+    kind: "choice-required",
+    language: "en-US",
+    summary: "Choose an active idea.",
+    choices: [],
+    nextSteps: [],
+    device: {
+      runtime: {
+        source: "global",
+        version: "0.5.0-canary.41.g111111111111",
+      },
+      skill: {
+        status: "ready",
+        expectedRoot: "C:\\runtime\\skills\\silvermoon",
+        paths: ["C:\\Users\\agent\\.agents\\skills\\silvermoon"],
+      },
+      update: {
+        status: "available",
+        channel: "canary",
+        currentVersion: "0.5.0-canary.41.g111111111111",
+        latestVersion: "0.5.0-canary.42.g222222222222",
+        checkedAt: "2026-01-01T00:00:00.000Z",
+        source: "registry",
+      },
+    },
+  });
+
+  assert.match(rendered, /\| Canary runtime \| available \|/);
+  assert.match(
+    rendered,
+    /current=0\.5\.0-canary\.41\.g111111111111; canary=0\.5\.0-canary\.42\.g222222222222/,
+  );
+  assert.doesNotMatch(rendered, /latest=0\.5\.0-canary/);
+});
+
 test("renders mismatched skill targets with an executable repair command", () => {
   const rendered = renderResponse({
     kind: "choice-required",

@@ -311,13 +311,17 @@ function renderDeviceAdvisory(
   const skillDescription = device.skill.remediation === undefined
     ? skillDetails
     : `${skillDetails}; ${device.skill.remediation}`;
+  const updateChannel = device.update.channel ?? "latest";
+  const updateLabel = updateChannel === "latest"
+    ? localize(language, "Latest runtime", "最新 runtime")
+    : `${updateChannel[0]?.toUpperCase() ?? ""}${updateChannel.slice(1)} runtime`;
   const updateDetails = [
     device.update.currentVersion === null
       ? null
       : `current=${device.update.currentVersion}`,
     device.update.latestVersion === undefined
       ? null
-      : `latest=${device.update.latestVersion}`,
+      : `${updateChannel}=${device.update.latestVersion}`,
     device.update.checkedAt === undefined
       ? null
       : `checked=${device.update.checkedAt}`,
@@ -352,7 +356,7 @@ function renderDeviceAdvisory(
           skillDescription,
         ],
         [
-          localize(language, "Latest runtime", "最新 runtime"),
+          updateLabel,
           device.update.status,
           updateDetails.join("; "),
         ],

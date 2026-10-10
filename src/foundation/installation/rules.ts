@@ -27,6 +27,17 @@ export function parseSemanticVersion(value: unknown): SemanticVersion | null {
 }
 
 /** @pure */
+export function resolveRuntimeUpdateChannel(value: unknown): string | null {
+  const version = parseSemanticVersion(value);
+  if (!version) return null;
+  const channel = version.prerelease[0];
+  if (channel === undefined) return "latest";
+  return /^[A-Za-z][0-9A-Za-z-]*$/.test(channel)
+    ? channel.toLowerCase()
+    : null;
+}
+
+/** @pure */
 function compareNumericIdentifiers(left: string, right: string) {
   if (left.length !== right.length) return left.length < right.length ? -1 : 1;
   return left < right ? -1 : left > right ? 1 : 0;

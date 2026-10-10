@@ -48,9 +48,10 @@ src/
 | `bin/check-pack.ts` | [bin/check-pack.ts](../bin/check-pack.ts) | package manifest、白名单和 `npm pack` 结果 | 包内容／入口诊断和退出码 | 检查制品，不发布 |
 | `bin/ci-package-risk.ts` | [bin/ci-package-risk.ts](../bin/ci-package-risk.ts) | base／head revision 或 full 模式 | 风险分类、受影响路径和退出码 | 只为 CI 选择 gate |
 | `bin/generate-npm-readme.ts` | [bin/generate-npm-readme.ts](../bin/generate-npm-readme.ts) | commit、可选 source 和 output path | 固定 commit 链接的 README 或失败诊断 | 只生成制品文档 |
-| `bin/prepare-npm-release.ts` | [bin/prepare-npm-release.ts](../bin/prepare-npm-release.ts) | release tag 和准确 commit | release key、版本、dist-tag 和 workflow 输出 | 不执行发布 |
+| `bin/prepare-npm-release.ts` | [bin/prepare-npm-release.ts](../bin/prepare-npm-release.ts) | release tag，或 canary channel、run number 和准确 primary commit | release key、稳定版或派生 canary 版本、dist-tag 和 workflow 输出 | 不执行发布 |
+| `bin/stage-npm-canary.ts` | [bin/stage-npm-canary.ts](../bin/stage-npm-canary.ts) | 隔离 package directory 和 planner 产生的 canary 版本 | 只改 staging manifest 的 canary package | 拒绝跨稳定版本线或非规范 canary |
 | `bin/build-npm-tarball.ts` | [bin/build-npm-tarball.ts](../bin/build-npm-tarball.ts) | package directory、output directory、Git HEAD | tarball 路径、hash、integrity 和打包元数据 | 构建可验证制品 |
-| `bin/verify-npm-release.ts` | [bin/verify-npm-release.ts](../bin/verify-npm-release.ts) | package、版本、dist-tag、commit、tag 和 tarball | registry、provenance、tag 与 tarball 一致性 | 发布后只读验证 |
+| `bin/verify-npm-release.ts` | [bin/verify-npm-release.ts](../bin/verify-npm-release.ts) | package、版本、dist-tag、commit、source ref 和 tarball | registry、provenance、source ref 与 tarball 一致性 | 发布后只读验证 |
 
 事件历史修订和中断恢复不设进程入口，也不属于应用层。维护者直接编辑 idea 的
 `events.jsonl`，再通过普通 Git review 和 snapshot／event history 校验确认完整

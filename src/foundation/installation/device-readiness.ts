@@ -9,7 +9,11 @@ import { homedir } from "node:os";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { compareSemanticVersions, parseSemanticVersion } from "./rules.ts";
+import {
+  compareSemanticVersions,
+  parseSemanticVersion,
+  resolveRuntimeUpdateChannel,
+} from "./rules.ts";
 
 const packageRoot = fileURLToPath(new URL(
   import.meta.url.endsWith(".ts") ? "../../.." : "../../../..",
@@ -32,8 +36,8 @@ interface ReadinessFileSystem {
 }
 
 interface LatestCache {
-  version: 1;
-  channel: "latest";
+  version: 2;
+  channel: string;
   checkedAt: string;
   latestVersion: string;
 }
@@ -47,11 +51,11 @@ function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : String(error);
 }
 
-function validCache(value: unknown): value is LatestCache {
+function validCache(value: unknown, channel: string): value is LatestCache {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const cache = value as Partial<LatestCache>;
-  return cache.version === 1
-    && cache.channel === "latest"
+  return cache.version === 2
+    && cache.channel === channel
     && typeof cache.checkedAt === "string"
     && Number.isFinite(Date.parse(cache.checkedAt))
     && parseSemanticVersion(cache.latestVersion) !== null;
@@ -59,11 +63,12 @@ function validCache(value: unknown): value is LatestCache {
 
 async function readCache(
   path: string,
+  channel: string,
   filesystem: Pick<ReadinessFileSystem, "readFile">,
 ) {
   try {
     const parsed: unknown = JSON.parse(await filesystem.readFile(path, "utf8"));
-    return validCache(parsed) ? parsed : null;
+    return validCache(parsed, channel) ? parsed : null;
   } catch (error) {
     const code = errorCode(error);
     if (code === "ENOENT" || error instanceof SyntaxError) return null;
@@ -71,11 +76,14 @@ async function readCache(
   }
 }
 
-async function registryLatest() {
-  const response = await fetch("https://registry.npmjs.org/silvermoon/latest", {
-    headers: { accept: "application/json" },
-    signal: AbortSignal.timeout(5000),
-  });
+async function registryLatest(channel: string) {
+  const response = await fetch(
+    `https://registry.npmjs.org/silvermoon/${encodeURIComponent(channel)}`,
+    {
+      headers: { accept: "application/json" },
+      signal: AbortSignal.timeout(5000),
+    },
+  );
   if (!response.ok) {
     throw new Error(`npm registry returned HTTP ${response.status}`);
   }
@@ -84,7 +92,7 @@ async function registryLatest() {
     ? body.version
     : null;
   if (typeof version !== "string" || parseSemanticVersion(version) === null) {
-    throw new Error("npm registry returned an invalid latest version");
+    throw new Error(`npm registry returned an invalid ${channel} version`);
   }
   return version;
 }
@@ -102,7 +110,7 @@ export async function inspectRuntimeUpdate({
   force?: boolean;
   home?: string;
   now?: number;
-  requestLatest?: () => Promise<string>;
+  requestLatest?: (channel: string) => Promise<string>;
 }) {
   const cachePath = resolve(home, CACHE_PATH);
   if (!Number.isFinite(now)) {
@@ -113,7 +121,8 @@ export async function inspectRuntimeUpdate({
       summary: "The runtime freshness clock is invalid.",
     };
   }
-  if (parseSemanticVersion(currentVersion) === null) {
+  const channel = resolveRuntimeUpdateChannel(currentVersion);
+  if (channel === null) {
     return {
       status: "unavailable" as const,
       currentVersion,
@@ -124,7 +133,7 @@ export async function inspectRuntimeUpdate({
   let cached: LatestCache | null = null;
   let cacheWarning: string | undefined;
   try {
-    cached = await readCache(cachePath, filesystem);
+    cached = await readCache(cachePath, channel, filesystem);
   } catch (error) {
     cacheWarning = `Cannot read the runtime freshness cache: ${errorMessage(error)}`;
   }
@@ -138,34 +147,37 @@ export async function inspectRuntimeUpdate({
     latestCheckedAt = cached.checkedAt;
   } else {
     try {
-      latestVersion = await requestLatest();
+      latestVersion = await requestLatest(channel);
     } catch (error) {
       return {
         status: "unavailable" as const,
+        channel,
         currentVersion,
         source: "registry" as const,
         ...(cached === null
           ? {}
           : {
             lastSuccessfulCheck: {
+              channel: cached.channel,
               checkedAt: cached.checkedAt,
               latestVersion: cached.latestVersion,
             },
           }),
         summary: [
           cacheWarning,
-          `Cannot confirm the latest Silvermoon version: ${errorMessage(error)}`,
+          `Cannot confirm the Silvermoon ${channel} version: ${errorMessage(error)}`,
         ].filter(Boolean).join(" "),
       };
     }
     if (parseSemanticVersion(latestVersion) === null) {
       return {
         status: "unavailable" as const,
+        channel,
         currentVersion,
         source: "registry" as const,
         summary: [
           cacheWarning,
-          "Runtime latest resolver returned an invalid version.",
+          `Runtime ${channel} resolver returned an invalid version.`,
         ].filter(Boolean).join(" "),
       };
     }
@@ -175,8 +187,8 @@ export async function inspectRuntimeUpdate({
       await filesystem.writeFile(
         cachePath,
         `${JSON.stringify({
-          version: 1,
-          channel: "latest",
+          version: 2,
+          channel,
           checkedAt: latestCheckedAt,
           latestVersion,
         })}\n`,
@@ -188,14 +200,15 @@ export async function inspectRuntimeUpdate({
       const summaries = [
         cacheWarning,
         updateAvailable
-          ? `Upgrade the global Silvermoon runtime to ${latestVersion}.`
+          ? `Upgrade the global Silvermoon ${channel} runtime to ${latestVersion}.`
           : undefined,
-        `Confirmed the latest Silvermoon version but could not cache the result: ${errorMessage(error)}`,
+        `Confirmed the Silvermoon ${channel} version but could not cache the result: ${errorMessage(error)}`,
       ].filter((value): value is string => value !== undefined);
       return {
         status: updateAvailable
           ? "available" as const
           : "current" as const,
+        channel,
         currentVersion,
         latestVersion,
         checkedAt: latestCheckedAt,
@@ -209,20 +222,22 @@ export async function inspectRuntimeUpdate({
   if (comparison === null) {
     return {
       status: "unavailable" as const,
+      channel,
       currentVersion,
       source,
-      summary: "Cannot compare the running and latest Silvermoon versions.",
+      summary: `Cannot compare the running and ${channel} Silvermoon versions.`,
     };
   }
   const updateAvailable = comparison < 0;
   const summaries = [
     cacheWarning,
     updateAvailable
-      ? `Upgrade the global Silvermoon runtime to ${latestVersion}.`
+      ? `Upgrade the global Silvermoon ${channel} runtime to ${latestVersion}.`
       : undefined,
   ].filter((value): value is string => value !== undefined);
   return {
     status: updateAvailable ? "available" as const : "current" as const,
+    channel,
     currentVersion,
     latestVersion,
     checkedAt: latestCheckedAt,

@@ -2,9 +2,13 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import {
+  createCanaryPlan,
+  createCanaryVersion,
   createReleasePlan,
+  createTaggedCanaryPlan,
   deriveNpmDistTag,
   formatGitHubOutput,
+  observeCanaryPublication,
   observeVersionPublication,
   parseReleaseTag,
 } from "../../bin/prepare-npm-release.ts";
@@ -99,6 +103,92 @@ test("derives named prerelease channels without using latest", () => {
   assert.throws(() => deriveNpmDistTag("1.0.0-latest.1"), /must not use the latest/);
 });
 
+test("derives deterministic canary versions from the next stable line", () => {
+  assert.equal(
+    createCanaryVersion({
+      baseVersion: "0.5.0",
+      commit,
+      runNumber: "42",
+    }),
+    "0.5.0-canary.42.gaaaaaaaaaaaa",
+  );
+  assert.throws(
+    () => createCanaryVersion({
+      baseVersion: "0.5.0-rc.1",
+      commit,
+      runNumber: "42",
+    }),
+    /stable canonical SemVer/,
+  );
+  assert.throws(
+    () => createCanaryVersion({
+      baseVersion: "0.5.0",
+      commit,
+      runNumber: "01",
+    }),
+    /positive canonical integer/,
+  );
+});
+
+test("plans canaries only from the exact refreshed primary commit", () => {
+  assert.deepEqual(
+    createCanaryPlan({
+      commit,
+      manifest: manifest("0.5.0"),
+      primaryCommit: commit,
+      runNumber: "42",
+    }),
+    {
+      baseVersion: "0.5.0",
+      commit,
+      distTag: "canary",
+      packageDirectory: ".",
+      packageName: "silvermoon",
+      releaseKey: "silvermoon",
+      version: "0.5.0-canary.42.gaaaaaaaaaaaa",
+    },
+  );
+  assert.throws(
+    () => createCanaryPlan({
+      commit,
+      manifest: manifest("0.5.0"),
+      primaryCommit: "b".repeat(40),
+      runNumber: "42",
+    }),
+    /must equal refreshed origin\/main/,
+  );
+});
+
+test("validates an immutable canary tag against its stable line and commit", () => {
+  const tag = "npm/silvermoon/v0.5.0-canary.42.gaaaaaaaaaaaa";
+  assert.deepEqual(
+    createTaggedCanaryPlan({
+      commit,
+      manifest: manifest("0.5.0"),
+      reachableFromPrimary: true,
+      tag,
+    }),
+    {
+      baseVersion: "0.5.0",
+      commit,
+      distTag: "canary",
+      packageDirectory: ".",
+      packageName: "silvermoon",
+      releaseKey: "silvermoon",
+      version: "0.5.0-canary.42.gaaaaaaaaaaaa",
+    },
+  );
+  assert.throws(
+    () => createTaggedCanaryPlan({
+      commit: "b".repeat(40),
+      manifest: manifest("0.5.0"),
+      reachableFromPrimary: true,
+      tag,
+    }),
+    /must extend 0\.5\.0/,
+  );
+});
+
 test("observes published versions and fails closed for registry errors", async () => {
   const release = plan();
   assert.equal(
@@ -125,6 +215,65 @@ test("observes published versions and fails closed for registry errors", async (
         fetchImpl: async () => new Response(null, { status: 503 }),
       }),
     /registry returned 503/,
+  );
+});
+
+test("skips unchanged canaries and prevents reuse of a published stable line", async () => {
+  const canary = createCanaryPlan({
+    commit,
+    manifest: manifest("0.5.0"),
+    primaryCommit: commit,
+    runNumber: "42",
+  });
+  assert.equal(
+    await observeCanaryPublication(canary, {
+      fetchImpl: async () => Response.json({
+        "dist-tags": { canary: "0.5.0-canary.41.gbbbbbbbbbbbb" },
+        versions: {
+          "0.5.0-canary.41.gbbbbbbbbbbbb": { gitHead: commit },
+        },
+      }),
+    }),
+    "unchanged",
+  );
+  assert.equal(
+    await observeCanaryPublication(canary, {
+      fetchImpl: async () => Response.json({
+        "dist-tags": { canary: "0.5.0-canary.41.gbbbbbbbbbbbb" },
+        versions: {
+          "0.5.0-canary.41.gbbbbbbbbbbbb": { gitHead: commit },
+        },
+      }),
+      skipUnchanged: false,
+    }),
+    "absent",
+  );
+  assert.equal(
+    await observeCanaryPublication(canary, {
+      fetchImpl: async () => Response.json({
+        "dist-tags": { canary: "0.5.0-canary.41.gbbbbbbbbbbbb" },
+        versions: {
+          "0.5.0-canary.41.gbbbbbbbbbbbb": { gitHead: "b".repeat(40) },
+        },
+      }),
+    }),
+    "absent",
+  );
+  assert.equal(
+    await observeCanaryPublication(canary, {
+      fetchImpl: async () => Response.json({
+        versions: { [canary.version]: { gitHead: commit } },
+      }),
+    }),
+    "published",
+  );
+  await assert.rejects(
+    () => observeCanaryPublication(canary, {
+      fetchImpl: async () => Response.json({
+        versions: { "0.5.0": { gitHead: commit } },
+      }),
+    }),
+    /base silvermoon@0\.5\.0 is already published/,
   );
 });
 

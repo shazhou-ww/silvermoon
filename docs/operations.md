@@ -38,8 +38,9 @@ Dialogue reports observe runtime source/version, personal skill health, and
 latest-runtime status independently from project readiness. Structured reports
 retain those facts; text and TUI output render the non-blocking device advisory
 only when a device state needs attention. Global installations reuse a
-successful npm `latest` result for less than 24 hours; direct source invocations
-and embedding hosts do not perform that registry query. A direct source
+successful result from the installed version's npm channel for less than 24
+hours; stable versions follow `latest`, canaries follow `canary`, and direct
+source invocations and embedding hosts do not perform that registry query. A direct source
 invocation is reported as device setup debt: link the checkout globally and
 rerun through `silvermoon`.
 Registry or skill failures remain device diagnostics and do not replace
@@ -94,7 +95,7 @@ The command reads one valid local worktree snapshot. It checks the project
 configuration and complete idea layout, but deliberately
 does not check conflicts, cleanliness, current branch, upstream, primary
 ancestry, or primary network availability. The project query never fetches;
-the independent device advisory may refresh npm `latest` when its cache is
+the independent device advisory may refresh the installed npm channel when its cache is
 expired. Filters cannot hide an invalid idea; setup or layout failures return
 a `blocked` four-projection report and exit `1`.
 

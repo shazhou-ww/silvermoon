@@ -11,5 +11,6 @@ export {
 export {
   compareSemanticVersions,
   parseSemanticVersion,
+  resolveRuntimeUpdateChannel,
 } from "./rules.ts";
 export { linkPersonalSkill } from "./personal-skill-link.ts";

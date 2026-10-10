@@ -19,6 +19,7 @@ import {
   inspectInstallation,
   inspectPersonalSkill,
   inspectRuntimeUpdate,
+  resolveRuntimeUpdateChannel,
 } from "../../src/foundation/installation/index.ts";
 import { observeDevice } from "../../src/business/shared/observe-device.ts";
 
@@ -29,6 +30,46 @@ test("compares stable and prerelease semantic versions", () => {
   assert.equal(compareSemanticVersions("1.0.0-alpha.2", "1.0.0-alpha.10"), -1);
   assert.equal(compareSemanticVersions("1.0.0-alpha", "1.0.0"), -1);
   assert.equal(compareSemanticVersions("not-a-version", "1.0.0"), null);
+  assert.equal(resolveRuntimeUpdateChannel("0.5.0"), "latest");
+  assert.equal(
+    resolveRuntimeUpdateChannel("0.5.0-canary.42.g0123456789ab"),
+    "canary",
+  );
+  assert.equal(resolveRuntimeUpdateChannel("0.5.0-1"), null);
+});
+
+test("follows the installed prerelease channel without reusing another channel cache", async () => {
+  const home = await mkdtemp(join(tmpdir(), "silvermoon-runtime-channel-"));
+  const initialTime = Date.parse("2026-01-01T00:00:00.000Z");
+  try {
+    const canary = await inspectRuntimeUpdate({
+      currentVersion: "0.5.0-canary.41.g111111111111",
+      home,
+      now: initialTime,
+      requestLatest: async (channel) => {
+        assert.equal(channel, "canary");
+        return "0.5.0-canary.42.g222222222222";
+      },
+    });
+    assert.equal(canary.channel, "canary");
+    assert.equal(canary.status, "available");
+    assert.equal(canary.latestVersion, "0.5.0-canary.42.g222222222222");
+
+    const stable = await inspectRuntimeUpdate({
+      currentVersion: "0.5.0",
+      home,
+      now: initialTime + 1,
+      requestLatest: async (channel) => {
+        assert.equal(channel, "latest");
+        return "0.5.0";
+      },
+    });
+    assert.equal(stable.channel, "latest");
+    assert.equal(stable.status, "current");
+    assert.equal(stable.source, "registry");
+  } finally {
+    await rm(home, { recursive: true, force: true });
+  }
 });
 
 test("caches successful latest checks for less than 24 hours", async () => {

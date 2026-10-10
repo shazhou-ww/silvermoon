@@ -19,6 +19,10 @@ npm install --global silvermoon
 silvermoon whats-next
 ```
 
+The default installation follows the stable npm `latest` channel. To opt into
+the daily development channel, install `silvermoon@canary`; return to stable
+with `silvermoon@latest`.
+
 Register the global package's canonical skill in the universal personal
 discovery path:
 
@@ -36,7 +40,8 @@ skill paths.
 Dialogue commands report device readiness separately from project readiness.
 For a global installation, Silvermoon verifies that every present personal
 registration resolves to the running package's canonical skill and checks the
-npm `latest` channel. A successful latest result is reused from
+npm channel encoded by the installed version (`latest` for stable versions,
+`canary` for canary versions). A successful channel result is reused from
 `~/.cache/silvermoon/runtime-latest.json` for less than 24 hours. An unavailable
 registry or an invalid skill link is an explicit, non-blocking device advisory;
 it never changes a project snapshot result. Healthy, non-actionable device

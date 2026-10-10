@@ -142,6 +142,7 @@ if (packed.status !== 0) {
     "bin/pure-check.mjs",
     "bin/run-checks.mjs",
     "bin/silvermoon.js",
+    "bin/stage-npm-canary.mjs",
     "bin/verify-npm-release.mjs",
     "docs/core-concepts.md",
     "docs/getting-started.md",

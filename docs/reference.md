@@ -385,7 +385,9 @@ Dialogue observations and responses also carry the same optional `device`
 advisory. `device.runtime` identifies the running package as `global`, `host`,
 or `source-checkout`; `device.skill` reports personal-link health; and
 `device.update` reports `current`, `available`, `unavailable`,
-`managed-by-host`, or `source-checkout` with cache or registry provenance.
+`managed-by-host`, or `source-checkout` with cache or registry provenance. Its
+optional `channel` identifies the npm dist-tag selected from the installed
+version; `latestVersion` remains the observed target version on that channel.
 These fields never enter `problems` or change command success. Snapshot-only
 `check` responses omit `device` so their result depends only on the selected
 project snapshot and explicit primary state.
@@ -681,8 +683,10 @@ The query validates Git presence, configuration, and the complete idea layout
 before filtering. It reads staged, unstaged, and
 untracked idea changes from the current worktree snapshot but never checks
 worktree hygiene, branch, upstream, or primary ancestry, and never fetches or
-accesses the project remote. Its independent device advisory may query npm
-`latest` only when the successful device cache is at least 24 hours old. Text
+accesses the project remote. Its independent device advisory may query the
+installed runtime's npm channel only when the successful device cache is at
+least 24 hours old. Stable versions follow `latest`; named prereleases follow
+their named dist-tag, including `canary`. Text
 and TUI output omit that advisory when every observed device state is healthy
 and non-actionable; structured reports retain the device facts.
 `list-ideas --language <en|en-US|zh|zh-CN>` overrides only Silvermoon-owned

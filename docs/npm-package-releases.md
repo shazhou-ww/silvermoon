@@ -1,9 +1,11 @@
 # npm package releases
 
-This repository publishes an allowlisted package when an authorized
-tag under `npm/` reaches GitHub. The tag is a release instruction; the package
-manifest at the tagged commit remains authoritative for the package name and
-version.
+This repository publishes an allowlisted package through one trusted GitHub
+Actions workflow. Stable, named prerelease, and daily canary publications all
+use an immutable authorized tag under `npm/`. Daily automation creates its
+canary tag only at the exact refreshed `origin/main` commit. The committed
+package manifest remains authoritative for the package name and next stable
+version line.
 
 The current release mapping is:
 
@@ -11,11 +13,17 @@ The current release mapping is:
 | --- | --- | --- |
 | `silvermoon` | `silvermoon` | `.` |
 
-A stable tag such as `npm/silvermoon/v0.2.0` publishes with the npm `latest`
-dist-tag. A named prerelease such as `npm/silvermoon/v0.2.0-rc.1` publishes
+The two routine channels are:
+
+| Channel | Source | npm dist-tag | Version identity |
+| --- | --- | --- | --- |
+| Stable | Immutable `npm/silvermoon/v<version>` tag | `latest` | Committed manifest version |
+| Canary | Automated immutable tag at exact protected `origin/main` head | `canary` | `<next-stable>-canary.<run-number>.g<12-hex-commit>` |
+
+A named tagged prerelease such as `npm/silvermoon/v0.5.0-rc.1` still publishes
 with the `rc` dist-tag. Numeric-only prerelease channels are intentionally
-rejected. Preparing a manifest candidate does not authorize tag creation or
-publication.
+rejected. Preparing a candidate or changing the next stable manifest version
+does not authorize a stable tag or publication.
 
 ## One-time configuration
 
@@ -37,9 +45,10 @@ GitHub secrets; the workflow uses GitHub OIDC with `id-token: write`.
 
 ### GitHub environment
 
-Create an environment named `npm`. Limit deployments to protected tags in the
-`npm/**` namespace. Add required reviewers when the repository needs a manual
-release approval; the workflow itself does not require a repository secret.
+Create an environment named `npm`. Its custom deployment policy must allow only
+the protected `npm/*/*` tag pattern. Tags are the publication trust boundary
+for every channel. Add required reviewers when the repository needs a manual
+release approval. The workflow does not require a repository secret.
 
 The npm trusted publisher and the workflow environment name must remain the
 same. A mismatch prevents npm from accepting the OIDC identity.
@@ -52,16 +61,19 @@ preconditions; do not replace them with a write token.
 ### Tag ruleset
 
 Create an active GitHub tag ruleset targeting `npm/**`. Restrict tag creation,
-update, and deletion to the release maintainers or a dedicated release team.
-Do not allow release tags to be moved after creation. The workflow independently
-fetches `origin/main` and rejects a tagged commit that is not reachable from
-that refreshed branch.
+update, and deletion to the release maintainer and the GitHub Actions
+integration. The integration bypass is required only for the protected canary
+planner's tag creation; `main` protection and the exact-head check constrain
+its source. Do not allow release tags to be moved after creation. The workflow
+independently fetches `origin/main` and rejects a tagged commit that is not
+reachable from that refreshed branch. Keep the live ruleset synchronized with
+`.github/rulesets/npm-release-tags.json`.
 
 Tag protection is part of the trust boundary: GitHub loads a workflow from the
 tagged commit, so only authorized maintainers should be able to create tags in
 the release namespace.
 
-## Publish a version
+## Publish a tagged version
 
 1. Update the selected package's `version` in its committed `package.json`.
 2. Run `pnpm install --frozen-lockfile` and `pnpm check` (or `pnpm check:release`).
@@ -137,6 +149,64 @@ Release runs are serialized within this repository. The registry preflight and
 `npm publish` cannot form one cross-system transaction, so an external
 publisher could still win that interval; npm then atomically rejects the
 duplicate publication without replacing the existing version.
+
+## Publish the canary channel
+
+The same trusted workflow runs every day at `02:00 UTC` and supports manual
+dispatch from `main`:
+
+```sh
+gh workflow run publish-npm.yml --ref main
+```
+
+Canary planning requires the scheduled or manually dispatched workflow commit
+to equal the refreshed `origin/main` head. The committed manifest must contain
+a stable canonical SemVer for the next intended stable line. For a `0.5.0`
+manifest, workflow run `42` at commit `0123456789abcdef...` derives:
+
+```text
+silvermoon@0.5.0-canary.42.g0123456789ab
+```
+
+The planning job creates the immutable
+`npm/silvermoon/v0.5.0-canary.42.g0123456789ab` tag at that exact commit and
+dispatches the same workflow from the tag. The derived version is written only
+into the isolated package staging tree. The workflow does not make a version
+commit, move `latest`, or create a daily GitHub Release. It runs the same build,
+unit, contract, integration, skill, tarball, installed-package, provenance,
+and post-publication verification gates as a stable release.
+
+If npm's current `canary` dist-tag already has the same `gitHead`, a later
+scheduled or manual run records an unchanged canary and creates no tag.
+Rerunning a workflow that already published its exact derived version reuses
+the existing immutable tag, rebuilds, and verifies the same candidate without
+publishing again. Once the stable base version itself exists on npm, canary
+planning fails until the committed manifest advances to the next intended
+stable line.
+
+Canary use is explicit:
+
+```sh
+npm install --global silvermoon@canary
+silvermoon-link-skill
+```
+
+Return to the stable channel with:
+
+```sh
+npm install --global silvermoon@latest
+silvermoon-link-skill
+```
+
+An installed canary checks freshness against npm's `canary` dist-tag rather
+than `latest`. Because a canary may contain schema behavior that an older
+stable runtime does not understand, use it on development repositories unless
+the project has explicitly accepted that compatibility boundary.
+
+To promote a tested line, prepare release notes, run the complete release
+gate, merge any release-only metadata to `main`, and create the ordinary
+immutable stable tag. Publishing `0.5.0-canary.*` never authorizes or
+automatically publishes `0.5.0` to `latest`.
 
 ### GitHub Release
 

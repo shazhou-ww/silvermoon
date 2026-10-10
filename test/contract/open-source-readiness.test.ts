@@ -124,6 +124,40 @@ test("defines the exact active main ruleset contract", async () => {
   });
 });
 
+test("defines the exact protected npm tag ruleset contract", async () => {
+  const ruleset = JSON.parse(
+    await read(".github/rulesets/npm-release-tags.json"),
+  );
+  assert.deepEqual(ruleset, {
+    name: "Protect npm release tags",
+    target: "tag",
+    enforcement: "active",
+    bypass_actors: [
+      {
+        actor_id: 242885595,
+        actor_type: "User",
+        bypass_mode: "always",
+      },
+      {
+        actor_id: 15368,
+        actor_type: "Integration",
+        bypass_mode: "always",
+      },
+    ],
+    conditions: {
+      ref_name: {
+        include: ["refs/tags/npm/*/*"],
+        exclude: [],
+      },
+    },
+    rules: [
+      { type: "creation" },
+      { type: "update" },
+      { type: "deletion" },
+    ],
+  });
+});
+
 test("uses only approved external workflow actions pinned to immutable SHAs", async () => {
   const workflowNames = (await readdir(workflowsUrl))
     .filter((name) => /\.ya?ml$/.test(name))
@@ -162,7 +196,7 @@ test("publishes explicit metadata and a pre-1.0 experimental API contract", asyn
     url: "https://github.com/shazhou-ww",
   };
 
-  assert.equal(manifest.version, "0.4.0");
+  assert.equal(manifest.version, "0.5.0");
   assert.equal(manifest.license, "MIT");
   assert.equal(
     manifest.homepage,
