@@ -32,16 +32,16 @@
 
 - 参考环境保持为 Windows、Node.js v24.11.1、`availableParallelism=20`。
 - 修复 Linux/Node 22 暴露的 Git object store 复制竞态后，
-  `pnpm test:integration:built` 连续三次均为 122 项、120 通过、2 跳过、
-  0 失败；墙钟时间为 82.9、72.8、77.5 秒，中位 77.5 秒，最大
-  82.9 秒。
+  `pnpm test:integration:built` 连续三次均为 123 项、121 通过、2 跳过、
+  0 失败；墙钟时间为 80.7、87.7、92.4 秒，中位 87.7 秒，最大
+  92.4 秒。
 - `pnpm test:integration:extended:built` 为 35 项全部通过，耗时
-  102.1 秒；`pnpm test:integration:all:built` 为 157 项、155 通过、
-  2 跳过、0 失败；修复后的独立运行耗时 174.7 秒。
+  102.1 秒；`pnpm test:integration:all:built` 为 158 项、156 通过、
+  2 跳过、0 失败；最终独立运行耗时 163.0 秒。
 - `pnpm test:integration:platform:built` 的 4 项真实平台 smoke 全部通过，
   耗时 17.8 秒。live external 保持显式 opt-in，不属于无凭据门禁。
 - V1/V2 fixture 的并发初始化与 remote 隔离、selected-idea fast smoke、
   CI 路由、npm release 路由、behavior manifest 和 run-checks 合同均通过。
 - `pnpm check:sanity`、`pnpm check:commit` 与 release-grade
   `pnpm check` 全部通过；后者执行 complete non-live integration，结果仍为
-  157 项、155 通过、2 跳过、0 失败。
+  158 项、156 通过、2 跳过、0 失败。

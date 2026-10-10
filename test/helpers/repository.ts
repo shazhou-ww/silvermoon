@@ -264,20 +264,8 @@ async function createTemplate(schemaVersion: 1 | 2) {
   }
   git(root, "add", ".");
   git(root, "commit", "-m", "Create Silvermoon fixture");
-  git(
-    root,
-    "-c",
-    "core.autocrlf=false",
-    "clone",
-    "--no-local",
-    root,
-    local,
-  );
-  git(local, "remote", "remove", "origin");
-  git(local, "config", "user.name", "silvermoon test");
-  git(local, "config", "user.email", "silvermoon@example.invalid");
-  git(local, "config", "core.autocrlf", "false");
-  git(root, "clone", "--bare", "--no-local", root, remote);
+  await cp(root, local, { recursive: true });
+  git(root, "init", "--bare", "--initial-branch=main", remote);
   const repository = pathToFileURL(remote).href;
   git(root, "config", `url.${repository}.insteadOf`, PRIMARY_REPOSITORY);
   git(root, "remote", "add", "origin", PRIMARY_REPOSITORY);
