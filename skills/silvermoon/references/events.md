@@ -79,8 +79,9 @@ clear approval to reset the lifecycle.
 
 ## Observe and append
 
-Use the project-version CLI, not hand-edited JSONL. In Silvermoon's source
-checkout, replace `silvermoon` below with `node bin/silvermoon.js`.
+Use the project-version CLI, not hand-edited JSONL. Silvermoon source
+contributors must link their checkout globally and use the same `silvermoon`
+command.
 
 ```sh
 silvermoon event replay <idea> --audience agent

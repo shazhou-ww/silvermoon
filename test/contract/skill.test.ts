@@ -7,20 +7,12 @@ import { fileURLToPath } from "node:url";
 import { parseDocument } from "yaml";
 
 const repositoryRoot = fileURLToPath(new URL("../..", import.meta.url));
-const generatedSkillRegistration = resolve(
-  repositoryRoot,
-  ".agents",
-  "skills",
-  "silvermoon",
-);
-
 async function findSkillFiles(directory: string): Promise<string[]> {
   const entries = await readdir(directory, { withFileTypes: true });
   const matches: string[] = [];
   for (const entry of entries) {
     if ([".git", "node_modules"].includes(entry.name)) continue;
     const path = resolve(directory, entry.name);
-    if (path === generatedSkillRegistration) continue;
     if (entry.isDirectory()) matches.push(...(await findSkillFiles(path)));
     if (entry.isFile() && entry.name === "SKILL.md") matches.push(path);
   }
@@ -33,7 +25,6 @@ async function findMarkdownFiles(directory: string): Promise<string[]> {
   for (const entry of entries) {
     if ([".git", "ideas", "node_modules"].includes(entry.name)) continue;
     const path = resolve(directory, entry.name);
-    if (path === generatedSkillRegistration) continue;
     if (entry.isDirectory()) matches.push(...(await findMarkdownFiles(path)));
     if (entry.isFile() && entry.name.endsWith(".md")) matches.push(path);
   }
@@ -108,6 +99,9 @@ test("exposes one consolidated silvermoon skill", async () => {
     "~/.agents/skills/silvermoon",
     "~/.copilot/skills/silvermoon",
     "register it globally by link rather than copy",
+    "not exempt from the device boundary",
+    "link the current checkout as the device-level global runtime",
+    "a repository-local skill copy",
     "do not read `package.json`, `node_modules`, or repository",
     "turn the scaffold into the preparation candidate",
     "human gate accepts only the exact reported",
@@ -209,32 +203,18 @@ test("exposes one consolidated silvermoon skill", async () => {
   }
 });
 
-test("registers the canonical silvermoon skill for this project", async () => {
+test("keeps the canonical skill out of repository discovery paths", async () => {
   const canonical = resolve(repositoryRoot, "skills", "silvermoon");
-  const metadata = await lstat(generatedSkillRegistration);
-  assert.ok(metadata.isDirectory(), "repository skill registration must be a directory");
-
-  type Snapshot = { [name: string]: Snapshot | Buffer };
-
-  async function snapshot(directory: string): Promise<Snapshot> {
-    const entries = (await readdir(directory, { withFileTypes: true }))
-      .sort((left, right) => left.name.localeCompare(right.name));
-    const result: Snapshot = {};
-    for (const entry of entries) {
-      const path = resolve(directory, entry.name);
-      if (entry.isDirectory()) {
-        result[entry.name] = await snapshot(path);
-      } else {
-        assert.ok(entry.isFile(), `skill contains a non-regular path: ${path}`);
-        result[entry.name] = await readFile(path);
-      }
-    }
-    return result;
-  }
-
-  assert.deepEqual(
-    await snapshot(generatedSkillRegistration),
-    await snapshot(canonical),
+  const registration = resolve(
+    repositoryRoot,
+    ".agents",
+    "skills",
+    "silvermoon",
+  );
+  assert.equal((await lstat(canonical)).isDirectory(), true);
+  await assert.rejects(
+    lstat(registration),
+    (error: NodeJS.ErrnoException) => error.code === "ENOENT",
   );
 });
 

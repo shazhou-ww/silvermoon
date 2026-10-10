@@ -243,12 +243,19 @@ export async function inspectPersonalSkill({
   skillRoot?: string;
 }) {
   if (runtimeSource !== "global") {
+    const expectedRoot = resolve(skillRoot);
     return {
       status: runtimeSource === "source-checkout"
         ? "source-checkout" as const
         : "managed-by-host" as const,
-      expectedRoot: resolve(skillRoot),
+      expectedRoot,
       paths: [],
+      ...(runtimeSource === "source-checkout"
+        ? {
+            remediation:
+              `Link this checkout as the device-level global Silvermoon runtime, register ${expectedRoot} by link in a personal discovery path, and rerun with silvermoon.`,
+          }
+        : {}),
     };
   }
   let expectedRoot = resolve(skillRoot);

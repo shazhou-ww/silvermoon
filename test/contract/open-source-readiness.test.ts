@@ -12,9 +12,20 @@ async function read(path: string|URL) {
   return readFile(new URL(path, repositoryRoot), "utf8");
 }
 
-test("develops Silvermoon with the source CLI and no published self-dependency", async () => {
+test("develops Silvermoon through global checkout links and no self-dependency", async () => {
   const manifest = JSON.parse(await read("package.json"));
-  assert.equal(manifest.scripts.silvermoon, "node bin/silvermoon.js");
+  assert.equal(manifest.scripts["link:runtime"], "npm run build && npm link");
+  assert.equal(
+    manifest.scripts["link:skill"],
+    "node bin/link-personal-skill.ts",
+  );
+  assert.equal(
+    manifest.scripts["setup:dev"],
+    "npm run link:runtime && npm run link:skill",
+  );
+  assert.equal(Object.hasOwn(manifest.scripts, "silvermoon"), false);
+  assert.equal(Object.hasOwn(manifest.scripts, "sync:skills"), false);
+  assert.equal(Object.hasOwn(manifest.scripts, "check:skills:local"), false);
   assert.equal(manifest.scripts.typecheck, "tsc -p tsconfig.json");
   assert.equal(
     manifest.scripts.build,
@@ -23,6 +34,7 @@ test("develops Silvermoon with the source CLI and no published self-dependency",
   assert.equal(manifest.types, "./dist/src/index.d.ts");
   assert.deepEqual(manifest.bin, {
     silvermoon: "dist/bin/silvermoon.js",
+    "silvermoon-link-skill": "dist/bin/link-personal-skill.js",
     "silvermoon-migrate-v1-to-v2": "dist/bin/migrate-v1-to-v2.js",
   });
   assert.deepEqual(manifest.exports, {

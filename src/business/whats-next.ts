@@ -51,6 +51,7 @@ function navigationItem(
 }
 
 interface WhatsNextOptions {
+  entryPath?: string;
   guidanceReader?: typeof inspectPhaseGuidance;
   idea?: string;
   language?: string;
@@ -59,6 +60,7 @@ interface WhatsNextOptions {
 }
 
 export async function whatsNextUseCase({
+  entryPath,
   guidanceReader = inspectPhaseGuidance,
   idea: selector,
   language,
@@ -85,6 +87,7 @@ export async function whatsNextUseCase({
     ? `${baseRecheckCommand} --audience agent`
     : `${baseRecheckCommand} --language ${canonicalLanguage} --audience agent`;
   let observed = await observeSnapshot({
+    entryPath,
     outputLanguage: canonicalLanguage,
     root: requestedRoot,
     userHome,

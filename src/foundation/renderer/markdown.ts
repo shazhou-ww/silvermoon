@@ -303,7 +303,7 @@ function renderDeviceAdvisory(
     `source=${device.update.source}`,
     device.update.summary,
   ].filter((value): value is string => value !== null && value !== undefined);
-  return [
+  const lines = [
     `### ${localize(
       language,
       "Device advisory (does not affect the project result)",
@@ -338,6 +338,17 @@ function renderDeviceAdvisory(
       ],
     ),
   ];
+  if (device.runtime.source === "source-checkout") {
+    lines.push(
+      "",
+      localize(
+        language,
+        "**Device setup required:** This command bypassed the device-level global Silvermoon link. Link this checkout globally, register its canonical skill by link in a personal discovery path, and rerun with `silvermoon`; the Silvermoon source repository is not an exception to the global runtime boundary.",
+        "**需要完成设备设置：** 本次命令绕过了设备级全局 Silvermoon 链接。请把当前 checkout 链接为全局 runtime，在个人 discovery 路径中以链接注册 canonical skill，然后用 `silvermoon` 重试；Silvermoon 源码仓库也不例外。",
+      ),
+    );
+  }
+  return lines;
 }
 
 /** @pure */

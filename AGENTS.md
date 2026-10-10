@@ -1,16 +1,19 @@
 # Silvermoon repository instructions
 
-## Source runtime
+## Development runtime and skill
 
 - This repository develops Silvermoon itself and must not depend on the
   published `silvermoon` package in any dependency section.
-- Run every Silvermoon command from this checkout with
-  `node bin/silvermoon.js <command>` (or `pnpm silvermoon <command>`).
-  Treat `silvermoon` examples below and in the shared skill as this local
-  entrypoint, never a global, npx, or node_modules installation.
-- Maintain the canonical skill in `skills/silvermoon` and refresh its
-  registered copy with `pnpm sync:skills`; do not install the published
-  package to obtain this repository's skill.
+- Run `pnpm setup:dev` to build this checkout, link it as the device-level
+  global `silvermoon` runtime, and register its canonical skill by link in a
+  personal discovery path.
+- Run every Silvermoon command through that global `silvermoon` executable.
+  It must resolve to this checkout; never use a published copy, another
+  checkout, `npx silvermoon`, a project dependency, or a direct `node bin/...`
+  entrypoint.
+- Maintain the one canonical skill in `skills/silvermoon`. Do not create or
+  synchronize a repository-local skill copy; the personal registration links
+  directly to the canonical directory.
 
 ## Idea workflow
 
@@ -55,8 +58,8 @@
   `silvermoon check --staged` checks metadata, not staged-code test results.
 - Run `pnpm check` (alias `check:release`) before delivery of CLI, schema,
   repository model, release, or skill changes; it remains full release-grade.
-- Run `pnpm check:skills:local` while editing skills and `pnpm check:skills`
-  before delivering skill frontmatter or structure changes.
+- Run `pnpm check:skills` before delivering skill frontmatter or structure
+  changes.
 - Do not commit secrets, credentials, tokens, or private customer data.
 
 ## npm releases

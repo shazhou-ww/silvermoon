@@ -66,6 +66,7 @@ interface ListIdeasOptions {
   all?: boolean;
   createdBefore?: string;
   createdSince?: string;
+  entryPath?: string;
   language?: string;
   limit?: number | null;
   metadataReader?: MetadataReader;
@@ -190,6 +191,7 @@ export async function listIdeasUseCase({
   all,
   createdBefore,
   createdSince,
+  entryPath,
   language,
   limit,
   metadataReader = readIdeaInventoryItem,
@@ -221,6 +223,7 @@ export async function listIdeasUseCase({
   };
   const runtime = createCommandRun(intention);
   const observed = await observeSnapshot({
+    entryPath,
     root,
     outputLanguage: canonicalLanguage,
     requireCurrentSchemas: false,

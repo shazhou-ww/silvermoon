@@ -60,7 +60,7 @@ export async function observeDevice({
         currentVersion: runtime.version,
         source: "runtime" as const,
         summary: runtime.source === "source-checkout"
-          ? "The source checkout is the active development runtime; npm latest status is advisory only for global installations."
+          ? "This command bypassed the device-level global Silvermoon link; link the checkout globally and rerun with silvermoon before checking npm latest."
           : "The embedding host owns Silvermoon runtime updates.",
       }),
   ]);

@@ -19,19 +19,19 @@ npm install --global silvermoon
 silvermoon whats-next
 ```
 
-Register the global package's canonical skill in a personal discovery path.
-Omit `--copy` so updates to the global package are visible through the same
-link:
+Register the global package's canonical skill in the universal personal
+discovery path:
 
 ```sh
-npx skills add <path-to-global-silvermoon>/skills --skill silvermoon --agent universal --global --yes
+silvermoon-link-skill
 ```
 
-The personal registration may be discovered from
-`~/.agents/skills/silvermoon` or `~/.copilot/skills/silvermoon`, depending on
-the host. Target repositories never declare Silvermoon dependencies or store a
-Silvermoon skill copy. Snapshot checks ignore `package.json`, `node_modules`,
-and repository skill paths.
+The command creates `~/.agents/skills/silvermoon` as a link to the running
+installation's canonical skill. It safely replaces an identical copied
+registration, but refuses to overwrite a modified or mismatched path. Target
+repositories never declare Silvermoon dependencies or store a Silvermoon skill
+copy. Snapshot checks ignore `package.json`, `node_modules`, and repository
+skill paths.
 
 Dialogue commands report device readiness separately from project readiness.
 For a global installation, Silvermoon verifies that every present personal
@@ -42,13 +42,14 @@ registry or an invalid skill link is an explicit, non-blocking device advisory;
 it never changes a project snapshot result. Snapshot-only `check` commands do
 not perform either device check.
 
-Silvermoon's own source repository is the exception: it has no Silvermoon
-self-dependency and must run `node bin/silvermoon.js` from its current checkout.
-It keeps a workspace skill for unpublished development through
-`pnpm sync:skills`; that copy is not installed into other projects, and source
-commands do not query npm for a global-runtime update. See
-[Development](./maintaining.md#development) for the source CLI and skill
-workflow.
+Silvermoon's own source repository uses the same device boundary without a
+self-dependency. Contributors run `pnpm setup:dev` to build the checkout, link
+it as the device's global `silvermoon` package, and register
+`skills/silvermoon` by link in a personal discovery path. They then use the
+ordinary `silvermoon` command. The global package and personal skill links
+resolve back to the checkout, so unpublished runtime and skill changes remain
+available without a repository-local copy. See
+[Development](./maintaining.md#development).
 
 ## Configure The Shared Primary
 

@@ -7,6 +7,7 @@
   "types": "./dist/src/index.d.ts",
   "bin": {
     "silvermoon": "dist/bin/silvermoon.js",
+    "silvermoon-link-skill": "dist/bin/link-personal-skill.js",
     "silvermoon-migrate-v1-to-v2": "dist/bin/migrate-v1-to-v2.js"
   },
   "exports": {
@@ -33,10 +34,12 @@
     "schema"
   ],
   "scripts": {
-    "silvermoon": "node bin/silvermoon.js",
     "clean": "node tools/clean.ts",
     "typecheck": "tsc -p tsconfig.json",
     "build": "npm run clean && tsc -p tsconfig.build.json && node tools/write-cli-shim.ts",
+    "link:runtime": "npm run build && npm link",
+    "link:skill": "node bin/link-personal-skill.ts",
+    "setup:dev": "npm run link:runtime && npm run link:skill",
     "check": "node bin/run-checks.ts",
     "check:sanity": "node bin/run-checks.ts --tier sanity",
     "check:commit": "node bin/run-checks.ts --tier commit",
@@ -46,14 +49,12 @@
     "check:staged": "node bin/silvermoon.ts check --staged --audience agent",
     "check:diff": "git diff --check && git diff --cached --check",
     "check:quick": "npm run check:syntax && npm test",
-    "check:skills": "npm run check:skills:local && npm run check:skills:discover",
-    "check:skills:local": "node bin/sync-skills.ts --check",
+    "check:skills": "npm run check:skills:discover",
     "check:skills:discover": "npx skills add . --list",
     "lint:markdown": "markdownlint-cli2",
     "pack:check": "npm run build && npm run pack:check:built",
     "pack:check:built": "node bin/check-pack.ts",
     "prepare:npm-release": "node bin/prepare-npm-release.ts",
-    "sync:skills": "node bin/sync-skills.ts",
     "test": "npm run test:unit && npm run test:contract",
     "test:contract": "npm run build && npm run test:contract:built",
     "test:contract:built": "node --test \"test/contract/*.test.ts\"",

@@ -22,12 +22,15 @@ every target repository:
 npm install --global silvermoon
 ```
 
-Register that installation's canonical skill in a personal discovery path.
-Omit `--copy` so the registration remains a link to the installed package:
+Register that installation's canonical skill in the universal personal
+discovery path:
 
 ```sh
-npx skills add <path-to-global-silvermoon>/skills --skill silvermoon --agent universal --global --yes
+silvermoon-link-skill
 ```
+
+The command creates `~/.agents/skills/silvermoon` as a link and refuses to
+overwrite a modified or mismatched registration.
 
 The target repository may use any language or build ecosystem. Silvermoon does
 not read or modify its `package.json`, dependency graph, `node_modules`, or
@@ -51,11 +54,11 @@ historical metadata. A future version is never parsed or modified; project
 preparation bypasses the 24-hour latest-runtime cache once and reports the
 runtime freshness outcome.
 
-Silvermoon's own source repository must not depend on its published package.
-Use `node bin/silvermoon.js` from that checkout instead of every `silvermoon`
-invocation below, and refresh its registered skill from the source using
-`pnpm sync:skills`. Its repository-local skill is a development exception for
-unpublished changes and must not be propagated to other projects.
+Silvermoon's own source repository must not depend on its published package,
+but it uses the same device boundary. Run `pnpm setup:dev` to build and link
+the checkout as the global runtime and register its canonical skill by link in
+a personal discovery path. Then use the ordinary `silvermoon` commands below.
+The links expose unpublished changes without a repository-local skill copy.
 
 Existing v1 projects remain readable and snapshot-valid, but lifecycle
 preparation requires the declared `project-v1-to-v2` migration. New projects

@@ -44,6 +44,7 @@ interface SnapshotDeviceObservation {
 }
 
 type SnapshotDeviceObserver = (options: {
+  entryPath?: string;
   forceRuntimeRefresh: boolean;
   includeReadiness: boolean;
   userHome?: string;
@@ -147,7 +148,9 @@ function localizeDeviceAdvisory(
   }
   const skillRemediation = device.skill.remediation === undefined
     ? undefined
-    : device.skill.status === "missing"
+    : device.skill.status === "source-checkout"
+      ? `把当前 checkout 链接为设备级全局 Silvermoon runtime，在个人级 skill discovery 路径中以链接注册 ${device.skill.expectedRoot}，然后用 silvermoon 重试。`
+      : device.skill.status === "missing"
       ? `在个人级 skill discovery 路径中，将 ${device.skill.expectedRoot} 注册为链接。`
       : device.skill.status === "mismatched"
         ? `把报告的个人级 skill 注册替换为指向 ${device.skill.expectedRoot} 的链接。`
@@ -155,7 +158,7 @@ function localizeDeviceAdvisory(
   const updateSummary = device.update.status === "available"
     ? `将全局 Silvermoon runtime 升级到 ${device.update.latestVersion}。`
     : device.update.status === "source-checkout"
-      ? "当前使用源码 checkout 开发 runtime；npm latest 状态只适用于全局安装。"
+      ? "本次命令绕过了设备级全局 Silvermoon 链接；请把当前 checkout 链接到全局，并用 silvermoon 重试后再检查 npm latest。"
       : device.update.status === "managed-by-host"
         ? "Silvermoon runtime 更新由嵌入它的 host 管理。"
         : device.update.summary === undefined
@@ -224,7 +227,7 @@ function futureSchemaDiagnostic(
     path: file.path,
     message: `Schema version ${String(file.schemaVersion)} is newer than this runtime can read.`,
     remediation: update?.status === "source-checkout"
-      ? "Update this Silvermoon source checkout to a revision that declares the required schema capability."
+      ? "Update this Silvermoon checkout to a revision that declares the required schema capability, link it globally, and rerun with silvermoon."
       : update?.status === "managed-by-host"
         ? "Update the host-provided Silvermoon runtime before modifying this project."
         : "Upgrade the Silvermoon runtime before modifying this project.",
@@ -269,11 +272,9 @@ function projectSchemaDiagnostics({
       const migration = file.migrationPath?.[0];
       const command = migration === undefined
         ? undefined
-        : device?.runtime.source === "source-checkout"
-        ? `node ${migration.sourceEntrypoint}`
         : device?.runtime.source === "host"
-        ? `the host-managed ${migration.id} migration`
-        : migration.executable;
+          ? `the host-managed ${migration.id} migration`
+          : migration.executable;
       diagnostics.push({
         code: "schema.migration-required",
         level: "error",
@@ -281,6 +282,8 @@ function projectSchemaDiagnostics({
         message: `${file.family} schema version ${String(file.schemaVersion)} is valid but the current write target is version ${file.targetVersion}.`,
         remediation: command === undefined
           ? `Migrate ${file.path} before continuing.`
+          : device?.runtime.source === "source-checkout"
+            ? `Link this checkout globally, then run ${command} to plan the migration before continuing.`
           : `Run ${command} to plan the migration before continuing.`,
       });
     } else if (file.readiness === "migration-unavailable") {
@@ -354,6 +357,7 @@ function schemaOwnsLayoutDiagnostic(
 async function observeSnapshotInternal({
   allowMissingIdeas = false,
   contentRoot,
+  entryPath,
   filesystem,
   gitRoot,
   ideaLanguage,
@@ -368,6 +372,7 @@ async function observeSnapshotInternal({
 }: {
   allowMissingIdeas?: boolean;
   contentRoot?: string | undefined;
+  entryPath?: string | undefined;
   filesystem?: BusinessFileSystem | undefined;
   gitRoot?: string | undefined;
   ideaLanguage?: string | undefined;
@@ -420,6 +425,7 @@ async function observeSnapshotInternal({
     "device.observe",
     {},
     () => deviceObserver({
+      ...(entryPath === undefined ? {} : { entryPath }),
       forceRuntimeRefresh: !projectOnly && futureSchema,
       includeReadiness: !projectOnly,
       ...(userHome === undefined ? {} : { userHome }),

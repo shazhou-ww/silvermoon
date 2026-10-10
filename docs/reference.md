@@ -209,9 +209,10 @@ silvermoon-migrate-v1-to-v2 --root <project> --apply --expected-digest <plan-dig
 ```
 
 Embedding hosts may call the experimental `runSchemaMigration` package API.
-The source checkout instead runs `node bin/migrate-v1-to-v2.ts` so it tests
-the unpublished implementation. No ordinary command automatically migrates a
-v1 project.
+Source contributors expose the checkout through the device-level global link
+and use the same `silvermoon-migrate-v1-to-v2` executable, which resolves back
+to the unpublished implementation. No ordinary command automatically migrates
+a v1 project.
 
 V2's ten business types are `setAlias`, `setLanguage`, `submitIdeal`,
 `submitInner`, `submitOuter`, `acceptIdeal`, `acceptInner`, `acceptOuter`,
@@ -287,8 +288,8 @@ This does not erase the old session, undo side effects, or authorize retrying
 messages with uncertain delivery.
 
 The `silvermoon/agents/project-runtime` subpath exports `ProjectRuntime`.
-It resolves the registered project's own installed Silvermoon CLI (or this
-source checkout's entrypoint), starts it in a separate process with the
+It resolves the registered project's installed or globally linked Silvermoon
+CLI, starts it in a separate process with the
 idea worktree as its working directory, and returns its structured report
 with `exitCode` (0 for success, 1 for a structured invalid/unavailable report).
 Reports with an unexpected command, idea, event operation, or malformed

@@ -220,3 +220,51 @@ test("renders device readiness as a non-blocking advisory", () => {
   assert.match(rendered, /\| Personal skill \| missing \|/);
   assert.match(rendered, /\| Latest runtime \| available \| current=0\.3\.0; latest=0\.4\.0;/);
 });
+
+test("requires source checkout commands to use the global device link", () => {
+  const response: Parameters<typeof renderResponse>[0] = {
+    kind: "choice-required",
+    language: "en-US",
+    summary: "No active ideas are available.",
+    choices: [],
+    nextSteps: [],
+    device: {
+      runtime: {
+        source: "source-checkout",
+        version: "0.4.0",
+      },
+      skill: {
+        status: "source-checkout",
+        expectedRoot: "D:\\Code\\silvermoon\\skills\\silvermoon",
+        paths: [],
+      },
+      update: {
+        status: "source-checkout",
+        currentVersion: "0.4.0",
+        source: "runtime",
+      },
+    },
+  };
+
+  const english = renderResponse(response);
+  assert.match(english, /Device setup required/);
+  assert.match(
+    english,
+    /Link this checkout globally, register its canonical skill by link/,
+  );
+  assert.match(
+    english,
+    /the Silvermoon source repository is not an exception/,
+  );
+
+  const chinese = renderResponse({ ...response, language: "zh-CN" });
+  assert.match(chinese, /需要完成设备设置/);
+  assert.match(
+    chinese,
+    /把当前 checkout 链接为全局 runtime/,
+  );
+  assert.match(
+    chinese,
+    /Silvermoon 源码仓库也不例外/,
+  );
+});

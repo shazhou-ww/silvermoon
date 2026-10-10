@@ -56,6 +56,7 @@ type CliOptions = {
 };
 type Runtime = {
   bootstrapStartedAt?: bigint;
+  entryPath?: string;
   renderTui?: (content: string, terminal: Terminal) => Promise<void>;
   terminal?: Terminal;
 };
@@ -73,6 +74,7 @@ type NormalizedIdeaQuery = ReturnType<typeof normalizeIdeaQuery>;
 type CliListIdeasOptions = {
   createdBefore?: string;
   createdSince?: string;
+  entryPath?: string;
   language?: string;
   limit: number | null;
   query?: string;
@@ -362,6 +364,9 @@ Examples:
         ...(query.createdSince === null
           ? {}
           : { createdSince: query.createdSince }),
+        ...(runtime.entryPath === undefined
+          ? {}
+          : { entryPath: runtime.entryPath }),
         ...(options.language === undefined
           ? {}
           : { language: options.language }),
@@ -395,6 +400,9 @@ Examples:
         outputLanguage: options.language ?? null,
       },
       execute: () => whatsNext({
+        ...(runtime.entryPath === undefined
+          ? {}
+          : { entryPath: runtime.entryPath }),
         ...(idea === undefined ? {} : { idea }),
         ...(options.language === undefined
           ? {}
@@ -423,6 +431,9 @@ Examples:
         contentLanguage: options.language ?? null,
       },
       execute: () => createIdea({
+        ...(runtime.entryPath === undefined
+          ? {}
+          : { entryPath: runtime.entryPath }),
         ...(options.language === undefined
           ? {}
           : { language: options.language }),
@@ -571,6 +582,9 @@ if (isMain(import.meta.url)) {
   process.exitCode = await runCli(
     process.argv.slice(2),
     console,
-    { bootstrapStartedAt },
+    {
+      bootstrapStartedAt,
+      entryPath: fileURLToPath(import.meta.url),
+    },
   );
 }

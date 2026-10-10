@@ -1,13 +1,14 @@
 # Repository idea workflow
 
-This repository uses the local [Silvermoon skill](/skills/silvermoon/SKILL.md)
-and the fixed `.silvermoon/` metadata layout.
+This repository owns the canonical
+[Silvermoon skill](/skills/silvermoon/SKILL.md) and the fixed `.silvermoon/`
+metadata layout.
 
-This is Silvermoon's own source repository: every `silvermoon` command below
-means `node bin/silvermoon.js` from the current checkout, also available as
-`pnpm silvermoon`. Never use a global or published package here, and never
-add Silvermoon as its own dependency. Refresh the local skill with
-`pnpm sync:skills`.
+This is Silvermoon's own source repository. Run `pnpm setup:dev` so the
+device-level global `silvermoon` executable and personal skill registration
+both link to this checkout. Every command below uses that global executable.
+Never use a published or different checkout, invoke a direct `node bin/...`
+entrypoint, or add Silvermoon as its own dependency.
 
 ## Authority
 
@@ -148,8 +149,8 @@ branches.
 - Run `pnpm check` (or `pnpm check:release`) before delivery of CLI, schema,
   repository model, release, or skill changes. It remains the complete
   release-grade validation entrypoint, not the per-edit default.
-- Run `pnpm check:skills:local` while editing skills and `pnpm check:skills`
-  before delivery; external discovery failures remain failures.
+- Run `pnpm check:skills` before skill delivery; external discovery failures
+  remain failures.
 - Validate package contents, installed-package smoke behavior, Markdown links,
   and `git diff --check` before delivery review.
 - Use `silvermoon check --commit HEAD` for checked-out CI and

@@ -159,7 +159,9 @@ export async function inspectInstallation({
     versionError = error instanceof Error ? error.message : String(error);
   }
   return {
-    source: classifyRuntimeSource(entry, globalEntry, executable),
+    source: entryPath === undefined
+      ? "source-checkout" as const
+      : classifyRuntimeSource(entry, globalEntry, executable),
     entry,
     executable,
     packageRoot,

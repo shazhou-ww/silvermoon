@@ -27,6 +27,7 @@ import type {
 } from "../foundation/report/types.ts";
 
 interface CreateIdeaOptions {
+  entryPath?: string;
   generateId?: typeof generateUlid;
   guidanceReader?: typeof inspectPhaseGuidance;
   language?: string;
@@ -138,6 +139,7 @@ function cleanupPlan(value: unknown): Parameters<typeof cleanupScaffold>[0] {
 const CREATEIDEA_PORTS = Object.freeze({ createCommandRun, observeSnapshot, assessIdeaCreationReadiness, createScaffold, cleanupScaffold });
 
 export async function createIdeaUseCase({
+  entryPath,
   generateId = generateUlid,
   guidanceReader = inspectPhaseGuidance,
   language,
@@ -157,6 +159,7 @@ export async function createIdeaUseCase({
   const runtime = createCommandRun(intention);
   const observed = await observeSnapshot({
     allowMissingIdeas: true,
+    entryPath,
     ideaLanguage: canonicalLanguage,
     root: requestedRoot,
     userHome,

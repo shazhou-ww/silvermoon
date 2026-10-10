@@ -21,7 +21,6 @@ export const CHECK_TIERS = Object.freeze({
     "check:sanity",
     "test:contract:built",
     "lint:markdown",
-    "check:skills:local",
     "test:smoke",
     "check:staged",
     "check:diff",

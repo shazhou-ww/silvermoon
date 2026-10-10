@@ -37,7 +37,9 @@ stashes, deletes, resets, fast-forwards, or pushes.
 Dialogue reports expose runtime source/version, personal skill health, and
 latest-runtime status under the non-blocking device advisory. Global
 installations reuse a successful npm `latest` result for less than 24 hours;
-source checkouts and embedding hosts do not perform that registry query.
+direct source invocations and embedding hosts do not perform that registry
+query. A direct source invocation is reported as device setup debt: link the
+checkout globally and rerun through `silvermoon`.
 Registry or skill failures remain device diagnostics and do not replace
 project problems or lifecycle instructions.
 

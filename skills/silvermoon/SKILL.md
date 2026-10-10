@@ -101,17 +101,17 @@ When preparation reports `migration-required`, use the exact migration path
 declared in `observation.schemas`; do not edit only a version field. With an
 installed global runtime, plan `project-v1-to-v2` through
 `silvermoon-migrate-v1-to-v2 --root <project>`, then apply only the returned
-digest after explicit upgrade authorization. In this source checkout, use
-`node bin/migrate-v1-to-v2.ts` instead. Migration never commits, pushes, or
-records a lifecycle decision.
+digest after explicit upgrade authorization. A development checkout must be
+linked as that global runtime and uses the same executable. Migration never
+commits, pushes, or records a lifecycle decision.
 
-Silvermoon's own source repository is exempt from the dependency requirement.
-There, use `node bin/silvermoon.js` from the current checkout for every
-`silvermoon` command in this skill, preserving all arguments and options.
-Never add Silvermoon as its own dependency or use a globally installed,
-published, or different checkout's runtime while working in this repository.
-Maintain its canonical skill in `skills/silvermoon` and refresh the registered
-copy with `pnpm sync:skills`, not from `node_modules`.
+Silvermoon's own source repository must not add a self-dependency, but it is
+not exempt from the device boundary. Build and link the current checkout as
+the device-level global runtime, invoke every command through `silvermoon`,
+and ensure the personal skill registration links to its canonical
+`skills/silvermoon` directory. Never use a published or different checkout,
+`npx silvermoon`, a project dependency, a direct `node bin/...` entrypoint, or
+a repository-local skill copy.
 
 ## Follow One Report
 

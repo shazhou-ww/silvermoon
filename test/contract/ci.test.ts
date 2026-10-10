@@ -88,8 +88,8 @@ test("runs fast layered validation in ordinary CI", async () => {
   assert.equal(scripts.check, "node bin/run-checks.ts");
   assert.equal(scripts["check:release"], "node bin/run-checks.ts --tier release");
   assert.equal(scripts["test:unit"], 'node --test "test/unit/*.test.ts" "test/runtime/*.test.ts"');
-  assert.equal(scripts["check:skills"], "npm run check:skills:local && npm run check:skills:discover");
-  assert.equal(scripts["check:skills:local"], "node bin/sync-skills.ts --check");
+  assert.equal(scripts["check:skills"], "npm run check:skills:discover");
+  assert.equal(Object.hasOwn(scripts, "check:skills:local"), false);
   assert.equal(scripts["check:skills:discover"], "npx skills add . --list");
   assert.deepEqual(CHECK_SCRIPTS, [
     "typecheck",

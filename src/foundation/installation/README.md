@@ -7,7 +7,8 @@ latest-release status without inspecting a target project.
 
 - Allowed dependencies: process, filesystem and clock primitives plus a
   bounded read from the public npm registry.
-- Does not own: installing, upgrading, daemon probing, and project inspection.
+- Does not own: runtime installation or upgrades, daemon probing, and project
+  inspection.
 - Cross-module callers use [index.ts](./index.ts); sibling implementations do not import their own index.
 
 ## Key exports
@@ -17,5 +18,7 @@ latest-release status without inspecting a target project.
   source-checkout, or host-managed.
 - `inspectPersonalSkill`: verifies personal discovery links against the
   running global package.
+- `linkPersonalSkill`: links the installed canonical skill into the universal
+  personal discovery path without overwriting a modified registration.
 - `inspectRuntimeUpdate`: compares the running package with npm `latest` and
   reuses successful observations for less than 24 hours.

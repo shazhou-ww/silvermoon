@@ -12,3 +12,4 @@ export {
   compareSemanticVersions,
   parseSemanticVersion,
 } from "./rules.ts";
+export { linkPersonalSkill } from "./personal-skill-link.ts";

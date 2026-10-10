@@ -202,7 +202,7 @@ test("validates personal discovery links without reading a project", async () =>
   }
 });
 
-test("source checkout readiness does not query npm or require a personal skill", async () => {
+test("source checkout readiness requires the global runtime and skill links", async () => {
   const home = await mkdtemp(join(tmpdir(), "silvermoon-source-device-"));
   try {
     const device = await observeDevice({
@@ -213,6 +213,8 @@ test("source checkout readiness does not query npm or require a personal skill",
     assert.equal(device.readiness?.runtime.source, "source-checkout");
     assert.equal(device.readiness?.skill.status, "source-checkout");
     assert.equal(device.readiness?.update.status, "source-checkout");
+    assert.match(device.readiness?.skill.remediation ?? "", /Link this checkout/);
+    assert.match(device.readiness?.update.summary ?? "", /bypassed the device-level global/);
   } finally {
     await rm(home, { recursive: true, force: true });
   }

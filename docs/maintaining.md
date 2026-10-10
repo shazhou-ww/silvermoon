@@ -12,23 +12,24 @@ pnpm install --frozen-lockfile
 ```
 
 Silvermoon does not depend on its own published package. Run the current
-checkout's CLI, including uncommitted source changes:
+checkout through the same device-level global boundary used by every project:
 
 ```sh
-pnpm silvermoon list-ideas --audience agent
-# Equivalent: node bin/silvermoon.js list-ideas --audience agent
+pnpm setup:dev
+silvermoon list-ideas --audience agent
 ```
 
-Use this entrypoint for all repository idea and check commands, not a global
-installation or `npx silvermoon`. The source checkout is a development runtime
-and uses its synchronized workspace skill; it neither requires a
-self-dependency nor rewrites the personal skill for a published global
-installation.
+`setup:dev` builds the checkout, links it as the global npm package, and
+registers the canonical skill from `skills/silvermoon` by link in a personal
+discovery path. The repository remains free of a Silvermoon self-dependency and
+repository-local skill copy. Re-run `pnpm build` after runtime source changes;
+skill changes are visible immediately through the personal link. Use the
+global `silvermoon` executable for repository idea and check commands, and
+verify it resolves to this checkout rather than a published or different copy.
 
 Use the smallest check that covers a change:
 
 ```sh
-pnpm sync:skills       # refresh the generated universal skill copy
 pnpm typecheck         # strict no-emit TypeScript validation
 pnpm build             # clean reproducible JS, declarations and maps in dist/
 pnpm check:sanity      # offline pure logic and lightweight contracts
@@ -40,8 +41,7 @@ pnpm test:integration  # real filesystem and Git behavior
 pnpm test:e2e          # packed and installed CLI behavior
 pnpm check             # complete release-grade validation
 pnpm check:release     # same complete release-grade validation
-pnpm check:skills:local # local skill copy consistency, no discovery
-pnpm check:skills      # local consistency and external skill discovery
+pnpm check:skills      # external discovery of the canonical packaged skill
 ```
 
 ## Validation tiers
@@ -196,10 +196,10 @@ the selected commit. A checkout action's default URL spelling or shallow
 history is not sufficient event-history evidence. This setup does not change
 the selected commit or the project's primary configuration.
 
-`check:skills:local` needs no external discovery tool.
 `check:skills:discover` runs `npx skills add . --list` and can use the network;
-`check:skills` runs both in order. Missing tools and failed external checks
-are errors, not successful skips. No validation entrypoint publishes npm.
+`check:skills` delegates to that discovery check. Missing tools and failed
+external checks are errors, not successful skips. No validation entrypoint
+publishes npm.
 
 `pnpm check` runs the independent release-grade checks concurrently and waits
 for all of them before reporting every failure. Run the narrower commands above
@@ -213,15 +213,14 @@ repeat it five times and compare the median under the same machine and checkout
 conditions. Keep each sample; do not count network, queueing, or cache
 fluctuations in installed-package smoke tests as code performance gains.
 
-Edit the canonical skill only under `skills/silvermoon`, then run
-`pnpm sync:skills`. The checked-in `.agents/skills/silvermoon` directory is a
-generated copy so repository skill discovery works without symbolic-link
-support. `pnpm check:skills` rejects a stale or manually edited copy.
+Edit the canonical skill only under `skills/silvermoon`. `pnpm link:skill`
+registers that directory by link in a personal discovery path, so no generated
+repository copy can become stale.
 The repository-only publish skill is maintained directly under
-`.agents/skills/publish`; it is not part of the generated copy or npm package.
+`.agents/skills/publish`; it is not part of the personal Silvermoon
+registration or npm package.
 For documentation and skill iteration, run `pnpm lint:markdown`,
-`pnpm check:skills:local`, and relevant contract tests; run external
-`pnpm check:skills` before skill delivery.
+relevant contract tests, and `pnpm check:skills` before skill delivery.
 
 Run `pnpm check` before delivery of CLI, schema, repository model, release,
 or skill changes, not after every edit.
