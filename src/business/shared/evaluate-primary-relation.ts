@@ -64,7 +64,7 @@ export function evaluatePrimaryRelation({
     head,
     observation: repositoryProblem(observed.observation, [problem]),
     primary,
-    instructions: rendered.instructions,
+    instructions: rendered.nextSteps,
     ready: false,
   };
 }

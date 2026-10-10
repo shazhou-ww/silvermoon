@@ -5,19 +5,23 @@
  */
 import type {
   DetachedHeadParameters,
-  SummaryAndStep,
+  SummaryAndNextSteps,
 } from "../contract.ts";
 
 /** @pure */
-export default function detachedHead({
+const detachedHead = ({
   expectedBranch,
   expectedRepository,
   head,
-}: DetachedHeadParameters): SummaryAndStep {
-  return {
+}: DetachedHeadParameters): SummaryAndNextSteps =>
+  ({
     summary: head === null
       ? "The repository has no current local branch."
       : `HEAD ${head} is detached and has no current branch.`,
-    step: `Preserve current work, then switch to or create the intended local branch whose upstream is ${expectedRepository}#${expectedBranch}.`,
-  };
-}
+    nextSteps: [
+      `Preserve current work, then switch to or create the intended local branch`,
+      `whose upstream is ${expectedRepository}#${expectedBranch}.`,
+    ].join(" "),
+  });
+
+export default detachedHead;

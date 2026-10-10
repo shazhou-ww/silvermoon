@@ -1,6 +1,7 @@
 import { renderIdeaMetadataUnavailable } from "../../foundation/report/index.ts";
 import type { ProjectSetupObservation } from "../../foundation/report/types.ts";
 import type { ReadyObservation } from "./business-types.ts";
+import { IdeaMetadataReadError } from "./read-idea-inventory-item.ts";
 
 export function metadataFailureObservation(
   observed: ReadyObservation,
@@ -10,7 +11,13 @@ export function metadataFailureObservation(
   const message = caught instanceof Error ? caught.message : String(caught);
   const rendered = renderIdeaMetadataUnavailable(
     observed.outputLanguage,
-    { command, message },
+    {
+      command,
+      message,
+      ...(caught instanceof IdeaMetadataReadError
+        ? { documentPath: caught.documentPath }
+        : {}),
+    },
   );
   const problem = {
     type: "idea-metadata-unavailable",

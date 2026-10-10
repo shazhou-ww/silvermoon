@@ -5,21 +5,25 @@
  */
 import type {
   PrimaryRelationParameters,
-  SummaryAndInstructions,
+  SummaryAndNextSteps,
 } from "../contract.ts";
 
 /** @pure */
-export default function primaryAhead({
+const primaryAhead = ({
   head,
   primary,
   primaryBranch,
   recheckCommand,
   remote,
-}: PrimaryRelationParameters): SummaryAndInstructions {
-  return {
+}: PrimaryRelationParameters): SummaryAndNextSteps =>
+  ({
     summary:
       `Local HEAD is ${head}; observed primary is ${primary}; relationship is ahead.`,
-    instructions:
-      `Validate local commit ${head}, confirm the remote tip is still ${primary}, then push normally to ${remote}/${primaryBranch} without force. Re-run ${recheckCommand} after the push.`,
-  };
-}
+    nextSteps: [
+      `Validate local commit ${head}, confirm the remote tip is still ${primary},`,
+      `then push normally to ${remote}/${primaryBranch} without force.`,
+      `Re-run ${recheckCommand} after the push.`,
+    ].join(" "),
+  });
+
+export default primaryAhead;

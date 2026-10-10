@@ -6,9 +6,12 @@ import {
   headMissing as enHeadMissing,
   ideaMetadataUnavailable as enIdeaMetadataUnavailable,
   ideaNotFound as enIdeaNotFound,
+  lifecycleDeployed as enLifecycleDeployed,
   lifecycleDeploying as enLifecycleDeploying,
+  lifecycleImplemented as enLifecycleImplemented,
   lifecycleImplementing as enLifecycleImplementing,
   lifecycleInactive as enLifecycleInactive,
+  lifecyclePrepared as enLifecyclePrepared,
   lifecyclePreparing as enLifecyclePreparing,
   navigationReady as enNavigationReady,
   phaseGuidanceInvalid as enPhaseGuidanceInvalid,
@@ -37,9 +40,12 @@ import {
   headMissing as zhHeadMissing,
   ideaMetadataUnavailable as zhIdeaMetadataUnavailable,
   ideaNotFound as zhIdeaNotFound,
+  lifecycleDeployed as zhLifecycleDeployed,
   lifecycleDeploying as zhLifecycleDeploying,
+  lifecycleImplemented as zhLifecycleImplemented,
   lifecycleImplementing as zhLifecycleImplementing,
   lifecycleInactive as zhLifecycleInactive,
+  lifecyclePrepared as zhLifecyclePrepared,
   lifecyclePreparing as zhLifecyclePreparing,
   navigationReady as zhNavigationReady,
   phaseGuidanceInvalid as zhPhaseGuidanceInvalid,
@@ -66,9 +72,12 @@ import type {
   DetachedHeadParameters,
   EventHistoryInvalidParameters,
   IdeaNotFoundParameters,
+  LifecycleDeployedParameters,
   LifecycleDeployingParameters,
+  LifecycleImplementedParameters,
   LifecycleImplementingParameters,
   LifecycleInactiveParameters,
+  LifecyclePreparedParameters,
   LifecyclePreparingParameters,
   MetadataUnavailableParameters,
   NavigationParameters,
@@ -185,6 +194,16 @@ export function renderLifecyclePreparing(
 }
 
 /** @pure */
+export function renderLifecyclePrepared(
+  language: string,
+  parameters: LifecyclePreparedParameters,
+) {
+  return isChinese(language)
+    ? zhLifecyclePrepared(parameters)
+    : enLifecyclePrepared(parameters);
+}
+
+/** @pure */
 export function renderLifecycleImplementing(
   language: string,
   parameters: LifecycleImplementingParameters,
@@ -195,6 +214,16 @@ export function renderLifecycleImplementing(
 }
 
 /** @pure */
+export function renderLifecycleImplemented(
+  language: string,
+  parameters: LifecycleImplementedParameters,
+) {
+  return isChinese(language)
+    ? zhLifecycleImplemented(parameters)
+    : enLifecycleImplemented(parameters);
+}
+
+/** @pure */
 export function renderLifecycleDeploying(
   language: string,
   parameters: LifecycleDeployingParameters,
@@ -202,6 +231,16 @@ export function renderLifecycleDeploying(
   return isChinese(language)
     ? zhLifecycleDeploying(parameters)
     : enLifecycleDeploying(parameters);
+}
+
+/** @pure */
+export function renderLifecycleDeployed(
+  language: string,
+  parameters: LifecycleDeployedParameters,
+) {
+  return isChinese(language)
+    ? zhLifecycleDeployed(parameters)
+    : enLifecycleDeployed(parameters);
 }
 
 /** @pure */

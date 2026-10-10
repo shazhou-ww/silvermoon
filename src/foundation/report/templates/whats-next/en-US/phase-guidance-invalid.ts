@@ -6,8 +6,9 @@
 import type { RecheckParameters } from "../contract.ts";
 
 /** @pure */
-export default function phaseGuidanceInvalid({
+const phaseGuidanceInvalid = ({
   recheckCommand,
-}: RecheckParameters) {
-  return `After repairing the current phase guidance, run ${recheckCommand} again.`;
-}
+}: RecheckParameters) =>
+  `After repairing the current phase guidance, run ${recheckCommand} again.`;
+
+export default phaseGuidanceInvalid;

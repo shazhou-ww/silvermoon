@@ -6,8 +6,13 @@
 import type { ContentLanguageParameters } from "../contract.ts";
 
 /** @pure */
-export default function contentLanguage({
+const contentLanguage = ({
   contentLanguage: language,
-}: ContentLanguageParameters) {
-  return `Use ${language} for natural-language content in the current world, its supporting files, and the ledger. Preserve canonical headings, stable IDs, paths, and machine fields.`;
-}
+}: ContentLanguageParameters) =>
+  [
+    `Use ${language} for natural-language content in the current idea's phase files,`,
+    `related supporting files, and ledger.`,
+    `Preserve canonical headings, stable IDs, paths, and machine fields.`,
+  ].join(" ");
+
+export default contentLanguage;

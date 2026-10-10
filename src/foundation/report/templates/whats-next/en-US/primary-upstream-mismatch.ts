@@ -5,11 +5,11 @@
  */
 import type {
   PrimaryUpstreamMismatchParameters,
-  SummaryAndStep,
+  SummaryAndNextSteps,
 } from "../contract.ts";
 
 /** @pure */
-export default function primaryUpstreamMismatch({
+const primaryUpstreamMismatch = ({
   branch,
   expectedBranch,
   expectedRepository,
@@ -17,14 +17,19 @@ export default function primaryUpstreamMismatch({
   repository,
   upstreamBranch,
   verifyCommand,
-}: PrimaryUpstreamMismatchParameters): SummaryAndStep {
+}: PrimaryUpstreamMismatchParameters): SummaryAndNextSteps => {
   const actual = remote === null
     ? "none"
     : `${repository ?? remote}#${upstreamBranch ?? "unknown"}`;
   return {
     summary:
       `Branch ${branch} has upstream ${actual}; expected ${expectedRepository}#${expectedBranch}.`,
-    step:
-      `Configure a named remote for ${expectedRepository}, then set branch ${branch} to track that remote's ${expectedBranch} branch. Verify with ${verifyCommand}.`,
+    nextSteps: [
+      `Configure a named remote for ${expectedRepository},`,
+      `then set branch ${branch} to track that remote's ${expectedBranch} branch.`,
+      `Verify with ${verifyCommand}.`,
+    ].join(" "),
   };
-}
+};
+
+export default primaryUpstreamMismatch;

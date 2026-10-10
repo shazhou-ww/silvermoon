@@ -3,12 +3,13 @@
  * @when repository.head=null
  * 用于 repository 尚无初始 commit 时。
  */
-import type { SummaryAndStep } from "../contract.ts";
+import type { SummaryAndNextSteps } from "../contract.ts";
 
 /** @pure */
-export default function headMissing(): SummaryAndStep {
-  return {
+const headMissing = (): SummaryAndNextSteps =>
+  ({
     summary: "repository 的 HEAD 尚无 commit。",
-    step: "解决冲突并确认应保留的本地修改后，在预期分支创建初始 commit。",
-  };
-}
+    nextSteps: "确认预期分支和应纳入版本控制的文件后，创建初始 commit。",
+  });
+
+export default headMissing;

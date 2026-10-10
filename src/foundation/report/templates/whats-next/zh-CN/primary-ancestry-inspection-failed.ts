@@ -6,10 +6,11 @@
 import type { PrimaryAncestryFailedParameters } from "../contract.ts";
 
 /** @pure */
-export default function primaryAncestryInspectionFailed({
+const primaryAncestryInspectionFailed = ({
   head,
   primary,
   recheckCommand,
-}: PrimaryAncestryFailedParameters) {
-  return `修复或补全本地 Git 历史，直到可以比较 ${head} 和 ${primary}，然后再运行 ${recheckCommand}。`;
-}
+}: PrimaryAncestryFailedParameters) =>
+  `修复或补全本地 Git 历史，直到可以比较 ${head} 和 ${primary}，然后再运行 ${recheckCommand}。`;
+
+export default primaryAncestryInspectionFailed;

@@ -6,11 +6,11 @@
 import type { WorktreeSummaryParameters } from "../contract.ts";
 
 /** @pure */
-export default function worktreeSummary({
+const worktreeSummary = ({
   counts,
   omitted,
   samples,
-}: WorktreeSummaryParameters) {
+}: WorktreeSummaryParameters) => {
   const countText = [
     ["冲突", counts.conflicted],
     ["已暂存", counts.staged],
@@ -19,4 +19,6 @@ export default function worktreeSummary({
   ].map(([kind, count]) => `${kind}=${count}`).join("，");
   const sampleText = samples.length === 0 ? "无" : samples.join("，");
   return `${countText}；样例=[${sampleText}]；省略=${omitted}`;
-}
+};
+
+export default worktreeSummary;

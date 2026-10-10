@@ -15,8 +15,11 @@ export const WHATS_NEXT_TEMPLATE_IDS = Object.freeze([
   "review-presentation-instruction",
   "preparation-seed",
   "lifecycle-preparing",
+  "lifecycle-prepared",
   "lifecycle-implementing",
+  "lifecycle-implemented",
   "lifecycle-deploying",
+  "lifecycle-deployed",
   "lifecycle-inactive",
   "navigation-ready",
   "idea-not-found",
@@ -70,39 +73,49 @@ export interface PreparationSeedParameters {
   ledgerPath: string;
 }
 
-interface LifecycleParameters {
+interface LifecycleCurrentParameters {
   action: string;
   controlOwner: "upstream" | "downstream" | "none" | null;
   documentPath: string;
   eventDigest: string | null;
-  eventBacked: boolean;
   ideaId: string;
   ledgerPath: string;
   name: string;
   primaryCommit: string;
-  revisionReference: string;
-  statusPath: string;
-  submissionState: "unsubmitted" | "submitted" | "accepted" | "stale" | null;
+  submissionState: "unsubmitted" | "accepted" | "stale" | null;
   submitAction: string;
 }
 
-export interface LifecyclePreparingParameters extends LifecycleParameters {}
+interface LifecycleSubmittedParameters {
+  action: string;
+  controlOwner: "upstream" | "downstream" | "none" | null;
+  eventDigest: string | null;
+  ideaId: string;
+  primaryCommit: string;
+  revisionReference: string;
+  submitAction: string;
+}
 
-export interface LifecycleImplementingParameters extends LifecycleParameters {
+export interface LifecyclePreparingParameters extends LifecycleCurrentParameters {}
+
+export interface LifecyclePreparedParameters extends LifecycleSubmittedParameters {}
+
+export interface LifecycleImplementingParameters extends LifecycleCurrentParameters {
   idealPath: string;
   worldPath: string;
 }
 
-export interface LifecycleDeployingParameters extends LifecycleParameters {
+export interface LifecycleImplementedParameters extends LifecycleSubmittedParameters {}
+
+export interface LifecycleDeployingParameters extends LifecycleCurrentParameters {
   worldPath: string;
 }
 
+export interface LifecycleDeployedParameters extends LifecycleSubmittedParameters {}
+
 export interface LifecycleInactiveParameters {
-  eventBacked: boolean;
   name: string;
-  relativePath: string;
   state: string;
-  statusPath: string;
 }
 
 export interface NavigationParameters {
@@ -118,9 +131,9 @@ export interface WorktreeConflictsParameters {
   summary: string;
 }
 
-export interface SummaryAndStep {
+export interface SummaryAndNextSteps {
+  nextSteps: string;
   summary: string;
-  step: string;
 }
 
 export interface DetachedHeadParameters {
@@ -162,13 +175,9 @@ export interface PrimaryRelationParameters extends RecheckParameters {
   primaryBranch: string;
 }
 
-export interface SummaryAndInstructions {
-  instructions: string;
-  summary: string;
-}
-
 export interface MetadataUnavailableParameters {
   command: string;
+  documentPath?: string;
   message: string;
 }
 
@@ -190,11 +199,20 @@ export interface WhatsNextTemplates {
   "lifecycle-preparing": (
     parameters: LifecyclePreparingParameters,
   ) => string;
+  "lifecycle-prepared": (
+    parameters: LifecyclePreparedParameters,
+  ) => string;
   "lifecycle-implementing": (
     parameters: LifecycleImplementingParameters,
   ) => string;
+  "lifecycle-implemented": (
+    parameters: LifecycleImplementedParameters,
+  ) => string;
   "lifecycle-deploying": (
     parameters: LifecycleDeployingParameters,
+  ) => string;
+  "lifecycle-deployed": (
+    parameters: LifecycleDeployedParameters,
   ) => string;
   "lifecycle-inactive": (
     parameters: LifecycleInactiveParameters,
@@ -204,13 +222,13 @@ export interface WhatsNextTemplates {
   "worktree-conflicts": (
     parameters: WorktreeConflictsParameters,
   ) => string;
-  "head-missing": () => SummaryAndStep;
+  "head-missing": () => SummaryAndNextSteps;
   "detached-head": (
     parameters: DetachedHeadParameters,
-  ) => SummaryAndStep;
+  ) => SummaryAndNextSteps;
   "primary-upstream-mismatch": (
     parameters: PrimaryUpstreamMismatchParameters,
-  ) => SummaryAndStep;
+  ) => SummaryAndNextSteps;
   "worktree-inspection-failed": (
     parameters: RecheckParameters,
   ) => string;
@@ -225,22 +243,19 @@ export interface WhatsNextTemplates {
   ) => string;
   "primary-history-incomplete": (
     parameters: PrimaryRelationParameters,
-  ) => SummaryAndInstructions;
+  ) => SummaryAndNextSteps;
   "primary-behind": (
     parameters: PrimaryRelationParameters,
-  ) => SummaryAndInstructions;
+  ) => SummaryAndNextSteps;
   "primary-ahead": (
     parameters: PrimaryRelationParameters,
-  ) => SummaryAndInstructions;
+  ) => SummaryAndNextSteps;
   "primary-diverged": (
     parameters: PrimaryRelationParameters,
-  ) => SummaryAndInstructions;
+  ) => SummaryAndNextSteps;
   "idea-metadata-unavailable": (
     parameters: MetadataUnavailableParameters,
-  ) => {
-    nextSteps: string;
-    summary: string;
-  };
+  ) => SummaryAndNextSteps;
 }
 
 type MissingTemplateIds = Exclude<

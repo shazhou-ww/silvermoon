@@ -6,10 +6,14 @@
 import type { PrimaryAncestryFailedParameters } from "../contract.ts";
 
 /** @pure */
-export default function primaryAncestryInspectionFailed({
+const primaryAncestryInspectionFailed = ({
   head,
   primary,
   recheckCommand,
-}: PrimaryAncestryFailedParameters) {
-  return `Repair or deepen local Git history until ${head} and ${primary} can be compared, then run ${recheckCommand} again.`;
-}
+}: PrimaryAncestryFailedParameters) =>
+  [
+    `Repair or deepen local Git history until ${head} and ${primary} can be compared,`,
+    `then run ${recheckCommand} again.`,
+  ].join(" ");
+
+export default primaryAncestryInspectionFailed;

@@ -6,8 +6,9 @@
 import type { IdeaNotFoundParameters } from "../contract.ts";
 
 /** @pure */
-export default function ideaNotFound({
+const ideaNotFound = ({
   selector,
-}: IdeaNotFoundParameters) {
-  return `Idea ${selector} does not match an observed ULID or unique alias.`;
-}
+}: IdeaNotFoundParameters) =>
+  `Idea ${selector} does not match an observed ULID or unique alias.`;
+
+export default ideaNotFound;

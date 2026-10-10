@@ -2,9 +2,12 @@ import { diagnosticInstruction } from "./dialogue.ts";
 import { resolveContentTemplateLanguage } from "../language/index.ts";
 import {
   renderContentLanguage,
+  renderLifecycleDeployed,
   renderLifecycleDeploying,
+  renderLifecycleImplemented,
   renderLifecycleImplementing,
   renderLifecycleInactive,
+  renderLifecyclePrepared,
   renderLifecyclePreparing,
   renderNavigationReady,
   renderPhaseGuidanceInvalid,
@@ -45,7 +48,6 @@ interface IdeaWorld {
 }
 
 interface LifecycleIdea extends IdeaReference {
-  statusPath: string;
   idealRevision: string;
   worlds: {
     idealRevision: IdeaWorld;
@@ -68,7 +70,6 @@ function currentSubmission(idea: LifecycleIdea) {
 
 /** @pure */
 function reviewReady(idea: LifecycleIdea) {
-  if (!idea.statusPath.endsWith("/events.jsonl")) return true;
   return currentSubmission(idea)?.state === "submitted"
     && idea.control?.owner === "upstream";
 }
@@ -340,151 +341,94 @@ export function lifecycleInstruction(
   primaryCommit: string,
 ) {
   const name = ideaName(idea);
-  if (idea.statusPath.endsWith("/events.jsonl")) {
-    const submission = currentSubmission(idea);
-    const instruction = idea.state === "preparing"
-      ? renderLifecyclePreparing(language, {
+  const submission = currentSubmission(idea);
+  const submissionState = submission?.state ?? null;
+  const instruction = idea.state === "preparing"
+    ? submissionState === "submitted"
+      ? renderLifecyclePrepared(language, {
+        action: "acceptIdeal",
+        controlOwner: idea.control?.owner ?? null,
+        eventDigest: idea.eventDigest ?? null,
+        ideaId: idea.id,
+        primaryCommit,
+        revisionReference: revisionReference(idea.idealRevision),
+        submitAction: "submitIdeal",
+      })
+      : renderLifecyclePreparing(language, {
         action: "acceptIdeal",
         controlOwner: idea.control?.owner ?? null,
         documentPath: idea.worlds.idealRevision.documentPath,
         eventDigest: idea.eventDigest ?? null,
-        eventBacked: true,
         ideaId: idea.id,
         ledgerPath: idea.ledgerPath,
         name,
         primaryCommit,
-        revisionReference: revisionReference(idea.idealRevision),
-        statusPath: idea.statusPath,
-        submissionState: submission?.state ?? null,
+        submissionState,
         submitAction: "submitIdeal",
       })
-      : idea.state === "implementing"
-      ? renderLifecycleImplementing(language, {
+    : idea.state === "implementing"
+    ? submissionState === "submitted"
+      ? renderLifecycleImplemented(language, {
+        action: "acceptInner",
+        controlOwner: idea.control?.owner ?? null,
+        eventDigest: idea.eventDigest ?? null,
+        ideaId: idea.id,
+        primaryCommit,
+        revisionReference: revisionReference(idea.implementationRevision),
+        submitAction: "submitInner",
+      })
+      : renderLifecycleImplementing(language, {
         action: "acceptInner",
         controlOwner: idea.control?.owner ?? null,
         documentPath: idea.worlds.implementationRevision.documentPath,
         eventDigest: idea.eventDigest ?? null,
-        eventBacked: true,
         ideaId: idea.id,
         idealPath: idea.worlds.idealRevision.path,
         ledgerPath: idea.ledgerPath,
         name,
         primaryCommit,
-        revisionReference: revisionReference(idea.implementationRevision),
-        statusPath: idea.statusPath,
-        submissionState: submission?.state ?? null,
+        submissionState,
         submitAction: "submitInner",
         worldPath: idea.worlds.implementationRevision.path,
       })
-      : idea.state === "deploying"
-      ? renderLifecycleDeploying(language, {
+    : idea.state === "deploying"
+    ? submissionState === "submitted"
+      ? renderLifecycleDeployed(language, {
+        action: "acceptOuter",
+        controlOwner: idea.control?.owner ?? null,
+        eventDigest: idea.eventDigest ?? null,
+        ideaId: idea.id,
+        primaryCommit,
+        revisionReference: revisionReference(idea.deploymentRevision),
+        submitAction: "submitOuter",
+      })
+      : renderLifecycleDeploying(language, {
         action: "acceptOuter",
         controlOwner: idea.control?.owner ?? null,
         documentPath: idea.worlds.deploymentRevision.documentPath,
         eventDigest: idea.eventDigest ?? null,
-        eventBacked: true,
         ideaId: idea.id,
         ledgerPath: idea.ledgerPath,
         name,
         primaryCommit,
-        revisionReference: revisionReference(idea.deploymentRevision),
-        statusPath: idea.statusPath,
-        submissionState: submission?.state ?? null,
+        submissionState,
         submitAction: "submitOuter",
         worldPath: idea.worlds.deploymentRevision.path,
       })
-      : renderLifecycleInactive(language, {
-        eventBacked: true,
-        name,
-        relativePath: idea.relativePath,
-        state: idea.state,
-        statusPath: idea.statusPath,
-      });
-    return joinInstructions([
-      instruction,
-      idea.state === "preparing" ? preparationSeedInstruction(idea, language) : null,
-      idea.state === "preparing"
-          || idea.state === "implementing"
-          || idea.state === "deploying"
-        ? reviewReady(idea) ? reviewPresentationInstruction(language) : null
-        : null,
-      lifecycleContentLanguageInstruction(contentLanguage, language),
-    ]);
-  }
-  if (idea.state === "preparing") {
-    return joinInstructions([
-      renderLifecyclePreparing(language, {
-        action: "acceptIdeal",
-        controlOwner: null,
-        documentPath: idea.worlds.idealRevision.documentPath,
-        eventDigest: null,
-        eventBacked: false,
-        ideaId: idea.id,
-        ledgerPath: idea.ledgerPath,
-        name,
-        primaryCommit,
-        revisionReference: revisionReference(idea.idealRevision),
-        statusPath: idea.statusPath,
-        submissionState: null,
-        submitAction: "submitIdeal",
-      }),
-      preparationSeedInstruction(idea, language),
-      reviewPresentationInstruction(language),
-      lifecycleContentLanguageInstruction(contentLanguage, language),
-    ]);
-  }
-  if (idea.state === "implementing") {
-    return joinInstructions([
-      renderLifecycleImplementing(language, {
-        action: "acceptInner",
-        controlOwner: null,
-        documentPath: idea.worlds.implementationRevision.documentPath,
-        eventDigest: null,
-        eventBacked: false,
-        ideaId: idea.id,
-        idealPath: idea.worlds.idealRevision.path,
-        ledgerPath: idea.ledgerPath,
-        name,
-        primaryCommit,
-        revisionReference: revisionReference(idea.implementationRevision),
-        statusPath: idea.statusPath,
-        submissionState: null,
-        submitAction: "submitInner",
-        worldPath: idea.worlds.implementationRevision.path,
-      }),
-      reviewPresentationInstruction(language),
-      lifecycleContentLanguageInstruction(contentLanguage, language),
-    ]);
-  }
-  if (idea.state === "deploying") {
-    return joinInstructions([
-      renderLifecycleDeploying(language, {
-        action: "acceptOuter",
-        controlOwner: null,
-        documentPath: idea.worlds.deploymentRevision.documentPath,
-        eventDigest: null,
-        eventBacked: false,
-        ideaId: idea.id,
-        ledgerPath: idea.ledgerPath,
-        name,
-        primaryCommit,
-        revisionReference: revisionReference(idea.deploymentRevision),
-        statusPath: idea.statusPath,
-        submissionState: null,
-        submitAction: "submitOuter",
-        worldPath: idea.worlds.deploymentRevision.path,
-      }),
-      reviewPresentationInstruction(language),
-      lifecycleContentLanguageInstruction(contentLanguage, language),
-    ]);
-  }
-  return renderLifecycleInactive(language, {
-    eventBacked: false,
+    : renderLifecycleInactive(language, {
     name,
-    relativePath: idea.relativePath,
     state: idea.state,
-    statusPath: idea.statusPath,
   });
+  return joinInstructions([
+    instruction,
+    idea.state === "preparing" ? preparationSeedInstruction(idea, language) : null,
+    idea.state === "preparing"
+        || idea.state === "implementing"
+        || idea.state === "deploying"
+      ? reviewReady(idea) ? reviewPresentationInstruction(language) : null
+      : null,
+    lifecycleContentLanguageInstruction(contentLanguage, language),
+  ]);
 }
 
 /** @pure */

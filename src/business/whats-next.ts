@@ -82,8 +82,8 @@ export async function whatsNextUseCase({
     ? "silvermoon whats-next"
     : `silvermoon whats-next ${JSON.stringify(selector)}`;
   const recheckCommand = canonicalLanguage === undefined
-    ? baseRecheckCommand
-    : `${baseRecheckCommand} --language ${canonicalLanguage}`;
+    ? `${baseRecheckCommand} --audience agent`
+    : `${baseRecheckCommand} --language ${canonicalLanguage} --audience agent`;
   let observed = await observeSnapshot({
     outputLanguage: canonicalLanguage,
     root: requestedRoot,

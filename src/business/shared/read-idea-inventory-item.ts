@@ -10,6 +10,21 @@ interface InventoryIdea {
   worlds: { idealRevision: { documentPath: string } };
 }
 
+export class IdeaMetadataReadError extends Error {
+  readonly documentPath: string;
+
+  constructor(id: string, documentPath: string, cause: unknown) {
+    super(
+      `Cannot read idea metadata for ${id} at ${documentPath}: ${
+        cause instanceof Error ? cause.message : String(cause)
+      }`,
+      { cause },
+    );
+    this.name = "IdeaMetadataReadError";
+    this.documentPath = documentPath;
+  }
+}
+
 export async function readIdeaInventoryItem(root: string, idea: InventoryIdea) {
   const documentPath = idea.worlds.idealRevision.documentPath;
   try {
@@ -26,9 +41,6 @@ export async function readIdeaInventoryItem(root: string, idea: InventoryIdea) {
       extractIdeaTitle(source),
     );
   } catch (caught) {
-    throw new Error(
-      `Cannot read idea metadata for ${idea.id} at ${documentPath}: ${caught instanceof Error ? caught.message : String(caught)}`,
-      { cause: caught },
-    );
+    throw new IdeaMetadataReadError(idea.id, documentPath, caught);
   }
 }

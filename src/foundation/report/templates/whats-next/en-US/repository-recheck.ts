@@ -6,8 +6,9 @@
 import type { RecheckParameters } from "../contract.ts";
 
 /** @pure */
-export default function repositoryRecheck({
+const repositoryRecheck = ({
   recheckCommand,
-}: RecheckParameters) {
-  return `After completing every applicable step, run ${recheckCommand} again.`;
-}
+}: RecheckParameters) =>
+  `After completing every applicable step, run ${recheckCommand} again.`;
+
+export default repositoryRecheck;

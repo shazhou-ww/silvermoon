@@ -1,0 +1,47 @@
+/**
+ * @template lifecycle-prepared
+ * @when idea.state=preparing and current revision submitted
+ * Used when the submitted Idea revision is ready for review or current-phase exchange.
+ */
+import type { LifecyclePreparedParameters } from "../contract.ts";
+
+/** @pure */
+const submittedUpstream = ({
+  action,
+  eventDigest,
+  ideaId,
+  primaryCommit,
+  revisionReference,
+  submitAction,
+}: LifecyclePreparedParameters) =>
+  [
+    `The current Idea revision was recorded by ${submitAction}; control is upstream.`,
+    `Present response.review and request the explicit ${action} decision`,
+    `for revision reference ${revisionReference}.`,
+    `Record an acceptance only with the full revision from response.review`,
+    `using silvermoon event append ${ideaId}`,
+    `--expected-digest ${eventDigest ?? "<event-digest>"}`,
+    `--expected-primary ${primaryCommit} --audience agent;`,
+    `no replay cursor is required.`,
+  ].join(" ");
+
+/** @pure */
+const submittedDownstream = ({
+  action,
+  controlOwner,
+  submitAction,
+}: LifecyclePreparedParameters) =>
+  [
+    `The current Idea revision remains recorded by ${submitAction},`,
+    `but control is ${controlOwner ?? "unknown"}.`,
+    `Continue only the current phase response or work that returned control downstream;`,
+    `use ping/pong for that exchange and do not request ${action} until control returns upstream.`,
+  ].join(" ");
+
+/** @pure */
+const lifecyclePrepared = (parameters: LifecyclePreparedParameters) =>
+  parameters.controlOwner === "upstream"
+    ? submittedUpstream(parameters)
+    : submittedDownstream(parameters);
+
+export default lifecyclePrepared;

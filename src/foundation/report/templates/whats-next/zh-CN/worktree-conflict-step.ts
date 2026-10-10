@@ -5,6 +5,7 @@
  */
 
 /** @pure */
-export default function worktreeConflictStep() {
-  return "检查全部冲突路径及其内容，再在不丢弃任一方内容的前提下解决冲突。";
-}
+const worktreeConflictStep = () =>
+  `检查全部冲突路径及其内容，再在不丢弃任一方内容的前提下解决冲突。`;
+
+export default worktreeConflictStep;

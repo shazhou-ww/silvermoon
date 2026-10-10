@@ -128,6 +128,23 @@ test("recognizes a pure default function import", () => {
   assert.deepEqual(result.problems, []);
 });
 
+test("recognizes a pure default arrow function import", () => {
+  const result = inspect(`
+    import helper from "./helper.ts";
+    /** @pure */
+    function run(input) {
+      return helper(input);
+    }
+  `, [[
+    "/fixture/helper.js",
+    `/** @pure */
+    const helper = (value) => value;
+    export default helper;`,
+  ]]);
+  assert.equal(result.count, 2);
+  assert.deepEqual(result.problems, []);
+});
+
 test("resolves pure imports and local bindings with Windows source paths", () => {
   const result = inspectPureSources(new Map([
     ["D:\\fixture\\main.js", `

@@ -5,6 +5,7 @@
  */
 
 /** @pure */
-export default function reviewPresentationInstruction() {
-  return "把 fenced 审阅模板作为一条独立的 assistant 消息发送后结束当前 turn；不要在同一 turn 打开交互决定。";
-}
+const reviewPresentationInstruction = () =>
+  `把 fenced 审阅模板作为一条独立的 assistant 消息发送后结束当前 turn；不要在同一 turn 打开交互决定。`;
+
+export default reviewPresentationInstruction;

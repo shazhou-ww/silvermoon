@@ -76,7 +76,7 @@ export function evaluateLocalReadiness({
       type: "head-missing",
       summary: headMissing.summary,
     });
-    localSteps.push(headMissing.step);
+    localSteps.push(headMissing.nextSteps);
   }
 
   if (branch.branch === null) {
@@ -89,7 +89,7 @@ export function evaluateLocalReadiness({
       type: "detached-head",
       summary: detachedHead.summary,
     });
-    localSteps.push(detachedHead.step);
+    localSteps.push(detachedHead.nextSteps);
   } else {
     if (
       branch.repository !== observed.config.primaryRepository
@@ -111,7 +111,7 @@ export function evaluateLocalReadiness({
         type: "primary-upstream-mismatch",
         summary: mismatch.summary,
       });
-      localSteps.push(mismatch.step);
+      localSteps.push(mismatch.nextSteps);
     }
   }
 

@@ -166,8 +166,8 @@ export async function createIdeaUseCase({
     factType: "project.snapshot",
   });
   const recheckCommand = canonicalLanguage === undefined
-    ? "silvermoon create-idea"
-    : `silvermoon create-idea --language ${canonicalLanguage}`;
+    ? "silvermoon create-idea --audience agent"
+    : `silvermoon create-idea --language ${canonicalLanguage} --audience agent`;
   if (!observed.projectReady) {
     return runtime.complete(
       projectCreationObservation(observed.observation),

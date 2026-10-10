@@ -6,12 +6,19 @@
 import type { NavigationParameters } from "../contract.ts";
 
 /** @pure */
-export default function navigationReady({
+const navigationReady = ({
   hasActiveIdea,
-}: NavigationParameters) {
-  return [
-    "请明确选择继续一个 active idea，或创建一个新 idea。",
-    hasActiveIdea ? null : "当前没有 active idea。",
-    "如需继续，运行 `silvermoon whats-next <ULID-or-alias>`；如需开始其他工作，先讨论目标，再运行 `silvermoon create-idea`。",
-  ].filter(Boolean).join("\n");
-}
+}: NavigationParameters) =>
+  hasActiveIdea
+    ? [
+      `请明确选择继续一个 active idea，`,
+      `或先讨论目标，再创建一个新 idea。`,
+      `如需继续，运行 \`silvermoon whats-next <ULID-or-alias>\`；`,
+      `如需开始其他工作，先讨论目标，再运行 \`silvermoon create-idea\`。`,
+    ].join("")
+    : [
+      `当前没有 active idea。`,
+      `请先讨论目标，再运行 \`silvermoon create-idea\` 创建新 idea。`,
+    ].join("\n");
+
+export default navigationReady;

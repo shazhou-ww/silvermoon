@@ -5,6 +5,11 @@
  */
 
 /** @pure */
-export default function reviewPresentationInstruction() {
-  return "Send the fenced review template as a standalone assistant message, then end the turn. Do not open an interactive decision in that same turn.";
-}
+const reviewPresentationInstruction = () =>
+  [
+    `Send the fenced review template as a standalone assistant message,`,
+    `then end the turn.`,
+    `Do not open an interactive decision in that same turn.`,
+  ].join(" ");
+
+export default reviewPresentationInstruction;

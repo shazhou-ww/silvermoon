@@ -187,6 +187,10 @@ export function inspectPureSources(
             : { local: entry.propertyName?.text ?? entry.name.text });
         }
       }
+      if (ts.isExportAssignment(node) && !node.isExportEquals
+        && ts.isIdentifier(node.expression)) {
+        exports.set("default", { local: node.expression.text });
+      }
     }
     return [path, { tree, functions, imports, exports, classes }];
   }));
