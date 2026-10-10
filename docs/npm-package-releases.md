@@ -253,7 +253,8 @@ the commit is outside `origin/main`, registry state cannot be observed, or
 validation fails. If the exact version already exists during a workflow rerun,
 the publish step is skipped and the verifier must prove that registry content
 is byte-identical to the rebuilt candidate and carries the expected provenance.
-Any mismatch is a hard failure.
+The verifier allows roughly five minutes for registry metadata and both npm
+attestations to propagate. Any mismatch after that window is a hard failure.
 
 For a transient GitHub or registry failure before publication, rerun the same
 workflow run. Do not move or recreate the tag. For a source, manifest, or

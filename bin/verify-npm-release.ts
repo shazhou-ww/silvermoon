@@ -519,7 +519,7 @@ export async function verifyNpmRelease(
 export async function verifyNpmReleaseEventually(
   release: Release,
   {
-    attempts = 12,
+    attempts = 30,
     delayMs = 10_000,
     fetchImpl = globalThis.fetch,
     sleepImpl = (duration: number) =>

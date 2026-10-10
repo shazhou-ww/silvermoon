@@ -426,6 +426,20 @@ test("verifies registry identity, READMEs, provenance, and jsDelivr assets", asy
   );
   assert.deepEqual(retries, [1]);
 
+  const defaultRetries: number[] = [];
+  await assert.rejects(
+    () =>
+      verifyNpmReleaseEventually(release, {
+        delayMs: 0,
+        fetchImpl: async () => new Response("unavailable", { status: 503 }),
+        onRetry: ({ attempt }: { attempt: number }) =>
+          defaultRetries.push(attempt),
+        sleepImpl: async () => {},
+      }),
+    /failed after 30 attempts.*server returned 503/,
+  );
+  assert.deepEqual(defaultRetries, Array.from({ length: 29 }, (_, index) => index + 1));
+
   const relativeOutputDirectory = join(root, "relative-output");
   const relativeReadme = [
     "# Unstaged fixture",
