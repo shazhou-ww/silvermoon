@@ -82,6 +82,33 @@ async function syncDirectory(path: PathLike) {
   try { await directory.sync(); } finally { await directory.close(); }
 }
 
+async function publishTransactionPlan(root: string, path: string, plan: Buffer) {
+  const directories = [dirname(root), resolve(root, ".git"), dirname(path)];
+  let fallbackError: unknown;
+  for (const directory of directories) {
+    const prepared = resolve(directory, `.silvermoon-transaction-${randomUUID()}.prepared`);
+    try {
+      await durableFile(prepared, plan);
+    } catch (cause) {
+      if (!["EACCES", "ENOENT", "ENOTDIR", "EPERM", "EROFS"].some((code) => hasErrorCode(cause, code))) {
+        throw cause;
+      }
+      fallbackError = cause;
+      continue;
+    }
+    try {
+      await link(prepared, path);
+      return;
+    } catch (cause) {
+      if (!["EACCES", "EPERM", "EXDEV"].some((code) => hasErrorCode(cause, code))) throw cause;
+      fallbackError = cause;
+    } finally {
+      await unlink(prepared);
+    }
+  }
+  throw fallbackError;
+}
+
 function allowedPath(path: string) {
   if (path === ".silvermoon/config.yaml" || path === ".gitattributes") return true;
   const match = /^\.silvermoon\/ideas\/([^/]+)\/(status\.yaml|events\.jsonl|events\/[0-9]{16}\.jsonl)$/.exec(path);
@@ -314,15 +341,10 @@ export async function stateTransaction(root: string, kind: TransactionPlan["kind
       throw new Error(`Irregular migration source directory: ${directory}`);
     }
   }
-  const prepared = `${path}.${randomUUID()}.prepared`;
   const planSource = Buffer.from(`${JSON.stringify(plan)}\n`);
-  await durableFile(prepared, planSource);
-  try {
-    // Publish a complete recovery plan and acquire the lock in one atomic step.
-    await link(prepared, path);
-  } finally {
-    await unlink(prepared);
-  }
+  // Keep transient hard-link sources outside the worktree so concurrent losers
+  // cannot disappear during the winner's Git snapshot validation.
+  await publishTransactionPlan(root, path, planSource);
   try {
     await syncDirectory(dirname(path));
     // Before taking any effect the entire source must still equal the requested old state.
