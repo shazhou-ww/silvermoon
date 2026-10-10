@@ -27,6 +27,9 @@ import {
   withTemporaryWorktree,
 } from "../../src/foundation/git/index.ts";
 import { createGitSnapshotFileSystem } from "../../src/foundation/snapshot/index.ts";
+import {
+  createRepository as createFixtureRepository,
+} from "../helpers/repository.ts";
 
 const temporaryDirectories: string[] = [];
 const repository = "https://example.test/owner/repository.git";
@@ -78,6 +81,20 @@ async function createRepository() {
     root,
   };
 }
+
+test("repository fixtures disable automatic Git maintenance", async () => {
+  const templated = await createFixtureRepository({ schemaVersion: 2 });
+  const direct = await createFixtureRepository({
+    ideas: [],
+    withRemote: false,
+  });
+  temporaryDirectories.push(templated.base, direct.base);
+
+  for (const root of [templated.root, direct.root]) {
+    assert.equal(git(root, "config", "--get", "maintenance.auto"), "false");
+    assert.equal(git(root, "config", "--get", "gc.auto"), "0");
+  }
+});
 
 test("fetches primary by URL without a named Git remote", async () => {
   const { config, root } = await createRepository();
