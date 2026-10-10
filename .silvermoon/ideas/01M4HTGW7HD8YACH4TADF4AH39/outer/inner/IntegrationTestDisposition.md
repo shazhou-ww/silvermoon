@@ -44,9 +44,11 @@
 
 ## 夹具处置
 
-默认 V1 和 V2 fixture 均从各自不可变种子复制。每次调用仍获得独立 worktree
-和 bare remote，特殊 idea 集合、preferred language 与 object format 继续
-显式建仓，避免模板键掩盖测试输入。
+默认 V1 和 V2 fixture 均从各自不可变种子复制。种子的 local worktree 与
+bare remote 先通过 Git transport 从初始化仓固化，避免复制仍可能执行
+maintenance 的 live object store。每次调用仍获得独立 worktree 和 bare
+remote，特殊 idea 集合、preferred language 与 object format 继续显式建仓，
+避免模板键掩盖测试输入。
 
 ## 覆盖约束
 

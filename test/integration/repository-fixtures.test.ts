@@ -20,9 +20,17 @@ afterEach(async () => {
 });
 
 test("creates independent V1 and V2 repositories from immutable seeds", async () => {
-  for (const schemaVersion of [1, 2] as const) {
-    const first = await createRepository({ schemaVersion });
-    const second = await createRepository({ schemaVersion });
+  const repositories = await Promise.all(
+    ([1, 2] as const).map(async (schemaVersion) => {
+      const [first, second] = await Promise.all([
+        createRepository({ schemaVersion }),
+        createRepository({ schemaVersion }),
+      ]);
+      return { first, schemaVersion, second };
+    }),
+  );
+
+  for (const { first, schemaVersion, second } of repositories) {
     temporaryDirectories.push(first.base, second.base);
 
     assert.equal(
