@@ -3,6 +3,7 @@ import { test } from "node:test";
 
 import { CommandRun } from "../../src/foundation/command-message/index.ts";
 import { renderResponse } from "../../src/foundation/renderer/index.ts";
+import type { DeviceAdvisory } from "../../src/foundation/report/types.ts";
 
 test("keeps guidance content in response and renders it as isolated data", () => {
   const content = [
@@ -219,6 +220,54 @@ test("renders device readiness as a non-blocking advisory", () => {
   assert.match(rendered, /\| Runtime \| global \| 0\.3\.0 \|/);
   assert.match(rendered, /\| Personal skill \| missing \|/);
   assert.match(rendered, /\| Latest runtime \| available \| current=0\.3\.0; latest=0\.4\.0;/);
+});
+
+test("omits healthy non-actionable device readiness", () => {
+  const device: DeviceAdvisory = {
+    runtime: {
+      source: "global",
+      version: "0.4.0",
+    },
+    skill: {
+      status: "ready",
+      expectedRoot: "C:\\runtime\\skills\\silvermoon",
+      paths: ["C:\\Users\\agent\\.agents\\skills\\silvermoon"],
+    },
+    update: {
+      status: "current",
+      currentVersion: "0.4.0",
+      latestVersion: "0.4.0",
+      checkedAt: "2026-01-01T00:00:00.000Z",
+      source: "cache",
+    },
+  };
+  const response: Parameters<typeof renderResponse>[0] = {
+    kind: "choice-required",
+    language: "en-US",
+    summary: "Choose an active idea.",
+    choices: [],
+    nextSteps: [],
+    device,
+  };
+
+  const rendered = renderResponse(response);
+
+  assert.match(rendered, /Choose an active idea\./);
+  assert.doesNotMatch(rendered, /Device advisory|Personal skill|Latest runtime/);
+  assert.doesNotMatch(rendered, /C:\\Users\\agent|current=0\.4\.0/);
+
+  const warning = renderResponse({
+    ...response,
+    device: {
+      ...device,
+      update: {
+        ...device.update,
+        summary: "Latest version confirmed, but the cache could not be written.",
+      },
+    },
+  });
+  assert.match(warning, /Device advisory/);
+  assert.match(warning, /cache could not be written/);
 });
 
 test("requires source checkout commands to use the global device link", () => {

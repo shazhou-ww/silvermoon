@@ -39,8 +39,9 @@ registration resolves to the running package's canonical skill and checks the
 npm `latest` channel. A successful latest result is reused from
 `~/.cache/silvermoon/runtime-latest.json` for less than 24 hours. An unavailable
 registry or an invalid skill link is an explicit, non-blocking device advisory;
-it never changes a project snapshot result. Snapshot-only `check` commands do
-not perform either device check.
+it never changes a project snapshot result. Healthy, non-actionable device
+facts remain available in structured reports but are omitted from text and TUI
+output. Snapshot-only `check` commands do not perform either device check.
 
 Silvermoon's own source repository uses the same device boundary without a
 self-dependency. Contributors run `pnpm setup:dev` to build the checkout, link
