@@ -11,6 +11,9 @@ importers:
       '@github/copilot-sdk':
         specifier: 1.0.16
         version: 1.0.16
+      '@jitl/opentui-core':
+        specifier: 0.4.0
+        version: 0.4.0(typescript@5.9.3)(web-tree-sitter@0.25.10)
       '@opentui/core':
         specifier: npm:@jitl/opentui-core@0.4.0
         version: '@jitl/opentui-core@0.4.0(typescript@5.9.3)(web-tree-sitter@0.25.10)'

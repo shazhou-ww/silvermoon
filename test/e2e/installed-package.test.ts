@@ -186,6 +186,7 @@ try {
     /^MIT License\r?\n\r?\nCopyright \(c\) 2026 Silvermoon contributors\r?\n/,
   );
   for (const dependency of [
+    "@jitl/opentui-core",
     "@opentui/core",
     "@opentui/react",
     "react",
@@ -364,6 +365,18 @@ try {
       bootstrap,
     ),
     "function",
+  );
+  assert.equal(
+    run(
+      process.execPath,
+      [
+        "--input-type=module",
+        "-e",
+        "import { PassThrough, Writable } from 'node:stream'; import { renderTuiMarkdown } from './node_modules/silvermoon/dist/src/foundation/tui/index.js'; const stdin = new PassThrough(); stdin.isTTY = true; stdin.setRawMode = () => stdin; const stdout = new Writable({ write(_chunk, _encoding, callback) { callback(); } }); stdout.isTTY = true; stdout.columns = 80; stdout.rows = 24; stdout.getColorDepth = () => 8; await renderTuiMarkdown('## Installed TUI', { stdin, stdout }); process.exit(0);",
+      ],
+      bootstrap,
+    ),
+    "",
   );
   const inventory = JSON.parse(
     installed(["list-ideas", "--all", "--json"], consumer),
