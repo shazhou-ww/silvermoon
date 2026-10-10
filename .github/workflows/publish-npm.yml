@@ -24,12 +24,13 @@ jobs:
     timeout-minutes: 10
     permissions:
       actions: write
-      contents: write
+      contents: read
     steps:
       - name: Check out full history
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          ssh-key: ${{ secrets.NPM_RELEASE_DEPLOY_KEY }}
 
       - name: Refresh and verify primary head
         run: |
@@ -64,7 +65,7 @@ jobs:
           echo "The current origin/main commit is already published on the npm canary channel." \
             >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Create immutable canary tag and dispatch publication
+      - name: Create immutable canary tag or resume publication
         if: steps.canary.outputs.publication_state != 'unchanged'
         env:
           GH_TOKEN: ${{ github.token }}
@@ -74,12 +75,14 @@ jobs:
           REMOTE_COMMIT="$(git ls-remote --tags origin "refs/tags/$RELEASE_TAG" | cut -f1)"
           if [ -n "$REMOTE_COMMIT" ]; then
             test "$REMOTE_COMMIT" = "$GITHUB_SHA"
+            gh workflow run publish-npm.yml --ref "$RELEASE_TAG"
+            echo "Dispatched existing $RELEASE_TAG from $GITHUB_SHA." >> "$GITHUB_STEP_SUMMARY"
           else
             git tag "$RELEASE_TAG" "$GITHUB_SHA"
             git push origin "refs/tags/$RELEASE_TAG"
+            echo "Created $RELEASE_TAG from $GITHUB_SHA; its push dispatches publication." \
+              >> "$GITHUB_STEP_SUMMARY"
           fi
-          gh workflow run publish-npm.yml --ref "$RELEASE_TAG"
-          echo "Dispatched $RELEASE_TAG from $GITHUB_SHA." >> "$GITHUB_STEP_SUMMARY"
 
   publish:
     name: Publish ${{ github.ref_name }}

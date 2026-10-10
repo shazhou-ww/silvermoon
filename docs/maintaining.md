@@ -252,9 +252,11 @@ gate before merging.
 The branch ruleset protects `main` against deletion and non-fast-forward
 updates. Keep its configuration synchronized with `.github/rulesets/main.json`.
 The npm tag ruleset restricts creation, update, and deletion under `npm/**`.
-Only the release maintainer and the GitHub Actions integration may bypass it;
-the integration access exists solely so the protected canary planner can
-create immutable tags. Keep it synchronized with
+Only the release maintainer and repository deploy keys may bypass it. Keep one
+dedicated write-enabled deploy key whose private half is stored only in the
+`NPM_RELEASE_DEPLOY_KEY` Actions secret; its access exists solely so the
+protected canary planner can create immutable tags. Keep the ruleset
+synchronized with
 `.github/rulesets/npm-release-tags.json`.
 
 ## Documentation Ownership

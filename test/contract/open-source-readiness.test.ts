@@ -139,8 +139,8 @@ test("defines the exact protected npm tag ruleset contract", async () => {
         bypass_mode: "always",
       },
       {
-        actor_id: 15368,
-        actor_type: "Integration",
+        actor_id: null,
+        actor_type: "DeployKey",
         bypass_mode: "always",
       },
     ],

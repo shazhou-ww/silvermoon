@@ -51,9 +51,12 @@ test("uses a protected, least-privilege trusted-publishing workflow", async () =
   assert.equal(prepareCanary.environment, undefined);
   assert.deepEqual(prepareCanary.permissions, {
     actions: "write",
-    contents: "write",
+    contents: "read",
   });
   const prepareSteps = prepareCanary.steps;
+  const prepareCheckout = prepareSteps.find(
+    ({ name }: { name: string }) => name === "Check out full history",
+  );
   const refreshCanary = prepareSteps.find(
     ({ name }: { name: string }) => name === "Refresh and verify primary head",
   );
@@ -62,7 +65,12 @@ test("uses a protected, least-privilege trusted-publishing workflow", async () =
   );
   const dispatchCanary = prepareSteps.find(
     ({ name }: { name: string }) =>
-      name === "Create immutable canary tag and dispatch publication",
+      name === "Create immutable canary tag or resume publication",
+  );
+  assert.equal(prepareCheckout.with["fetch-depth"], 0);
+  assert.equal(
+    prepareCheckout.with["ssh-key"],
+    "${{ secrets.NPM_RELEASE_DEPLOY_KEY }}",
   );
   assert.match(
     refreshCanary.run,

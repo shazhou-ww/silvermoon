@@ -48,7 +48,7 @@ GitHub secrets; the workflow uses GitHub OIDC with `id-token: write`.
 Create an environment named `npm`. Its custom deployment policy must allow only
 the protected `npm/*/*` tag pattern. Tags are the publication trust boundary
 for every channel. Add required reviewers when the repository needs a manual
-release approval. The workflow does not require a repository secret.
+release approval. The environment does not contain an npm credential.
 
 The npm trusted publisher and the workflow environment name must remain the
 same. A mismatch prevents npm from accepting the OIDC identity.
@@ -58,15 +58,32 @@ The workflow uses a GitHub-hosted runner, `id-token: write`, Node 24,
 pinned npm CLI version at or above `11.5.1`. These are source-controlled OIDC
 preconditions; do not replace them with a write token.
 
+### Canary tag deploy key
+
+Personal-account repositories cannot grant the default GitHub Actions
+integration a repository-ruleset bypass. Create one dedicated Ed25519 deploy
+key for this repository, add its public key as a write-enabled repository
+deploy key, and store its private key as the repository Actions secret
+`NPM_RELEASE_DEPLOY_KEY`. Do not reuse the key in another repository or put it
+in the `npm` environment.
+
+Only the canary planning job receives this key, through the pinned
+`actions/checkout` SSH configuration. Its only write is the exact derived tag
+at the refreshed `origin/main` head. A new deploy-key tag push triggers the
+tag-based publication run; if an immutable tag already exists at the expected
+commit, the planner uses its ordinary `GITHUB_TOKEN` only to dispatch a
+recovery run. Keep this as the repository's only write-enabled deploy key and
+rotate it if its private material may have been exposed.
+
 ### Tag ruleset
 
 Create an active GitHub tag ruleset targeting `npm/**`. Restrict tag creation,
-update, and deletion to the release maintainer and the GitHub Actions
-integration. The integration bypass is required only for the protected canary
-planner's tag creation; `main` protection and the exact-head check constrain
-its source. Do not allow release tags to be moved after creation. The workflow
-independently fetches `origin/main` and rejects a tagged commit that is not
-reachable from that refreshed branch. Keep the live ruleset synchronized with
+update, and deletion to the release maintainer and deploy keys. The deploy-key
+bypass is required only for the protected canary planner's tag creation;
+`main` protection and the exact-head check constrain its source. Do not allow
+release tags to be moved after creation. The workflow independently fetches
+`origin/main` and rejects a tagged commit that is not reachable from that
+refreshed branch. Keep the live ruleset synchronized with
 `.github/rulesets/npm-release-tags.json`.
 
 Tag protection is part of the trust boundary: GitHub loads a workflow from the
@@ -170,11 +187,13 @@ silvermoon@0.5.0-canary.42.g0123456789ab
 
 The planning job creates the immutable
 `npm/silvermoon/v0.5.0-canary.42.g0123456789ab` tag at that exact commit and
-dispatches the same workflow from the tag. The derived version is written only
-into the isolated package staging tree. The workflow does not make a version
-commit, move `latest`, or create a daily GitHub Release. It runs the same build,
-unit, contract, integration, skill, tarball, installed-package, provenance,
-and post-publication verification gates as a stable release.
+its deploy-key push triggers the same workflow from the tag. If that exact tag
+already exists after an interrupted run, the planner explicitly dispatches it
+instead. The derived version is written only into the isolated package staging
+tree. The workflow does not make a version commit, move `latest`, or create a
+daily GitHub Release. It runs the same build, unit, contract, integration,
+skill, tarball, installed-package, provenance, and post-publication
+verification gates as a stable release.
 
 If npm's current `canary` dist-tag already has the same `gitHead`, a later
 scheduled or manual run records an unchanged canary and creates no tag.
