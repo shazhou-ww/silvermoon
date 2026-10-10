@@ -20,7 +20,7 @@ import { createCheckV1TestHelpers } from "../helpers/check-v1.ts";
 
 const { fixture, trackTemporaryDirectory } = createCheckV1TestHelpers(afterEach);
 
-test("checks HEAD with a project-only observation and resolved commit version", async () => {
+test("checks HEAD through a project-only observation and resolved commit version", async () => {
   const repository = await fixture();
   const commit = git(repository.root, "rev-parse", "HEAD");
 

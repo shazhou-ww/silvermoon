@@ -9,7 +9,7 @@ export const CHECK_SCRIPTS = Object.freeze([
   "lint:markdown",
   "check:pure",
   "check:quick",
-  "test:integration:built",
+  "test:integration:all:built",
   "pack:check:built",
   "test:e2e:built",
   "check:skills",

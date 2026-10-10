@@ -13,6 +13,8 @@ const suites = {
   runtime: "test:unit",
   contract: "test:contract:built",
   integration: "test:integration:built",
+  "integration-extended": "test:integration:extended:built",
+  "integration-live": "test:integration:live:built",
   e2e: "test:e2e:built",
 };
 
@@ -88,6 +90,18 @@ test("runs fast layered validation in ordinary CI", async () => {
   assert.equal(scripts.check, "node bin/run-checks.ts");
   assert.equal(scripts["check:release"], "node bin/run-checks.ts --tier release");
   assert.equal(scripts["test:unit"], 'node --test "test/unit/*.test.ts" "test/runtime/*.test.ts"');
+  assert.equal(
+    scripts["test:integration:all:built"],
+    'node --test "test/integration/*.test.ts" "test/integration-extended/*.test.ts"',
+  );
+  assert.equal(
+    scripts["test:integration:live:built"],
+    'node --test "test/integration-live/*.test.ts"',
+  );
+  assert.match(
+    text(scripts["test:integration:platform:built"]),
+    /test\/integration\/git\.test\.ts test\/integration-extended\/incremental-append\.test\.ts$/,
+  );
   assert.equal(scripts["check:skills"], "npm run check:skills:discover");
   assert.equal(Object.hasOwn(scripts, "check:skills:local"), false);
   assert.equal(scripts["check:skills:discover"], "npx skills add . --list");
@@ -97,7 +111,7 @@ test("runs fast layered validation in ordinary CI", async () => {
     "lint:markdown",
     "check:pure",
     "check:quick",
-    "test:integration:built",
+    "test:integration:all:built",
     "pack:check:built",
     "test:e2e:built",
     "check:skills",
@@ -108,6 +122,7 @@ test("runs fast layered validation in ordinary CI", async () => {
   assert.deepEqual(Object.keys(jobs).sort(), [
     "contract",
     "integration",
+    "integration-extended",
     "package",
     "package-risk",
     "required",
@@ -117,6 +132,7 @@ test("runs fast layered validation in ordinary CI", async () => {
   const unit = job(jobs.unit);
   const contract = job(jobs.contract);
   const integration = job(jobs.integration);
+  const extendedIntegration = job(jobs["integration-extended"]);
   const required = job(jobs.required);
   assert.deepEqual(record(unit.strategy).matrix, {
     os: ["ubuntu-latest", "windows-latest", "macos-latest"],
@@ -124,6 +140,10 @@ test("runs fast layered validation in ordinary CI", async () => {
   });
   assertSanityGate(unit);
   assert.equal(step(unit, "Run unit tests").run, "pnpm test:unit");
+  assert.equal(
+    step(unit, "Run platform integration smoke").run,
+    "pnpm test:integration:platform:built",
+  );
 
   assert.equal(contract["runs-on"], "ubuntu-latest");
   assert.equal(record(step(contract, "Set up Node.js").with)["node-version"], 24);
@@ -140,8 +160,21 @@ test("runs fast layered validation in ordinary CI", async () => {
   assert.equal(integration["runs-on"], "ubuntu-latest");
   assert.equal(record(step(integration, "Set up Node.js").with)["node-version"], 24);
   assert.equal(
-    step(integration, "Run integration tests").run,
+    step(integration, "Run fast integration tests").run,
     "pnpm test:integration",
+  );
+  assert.equal(extendedIntegration["runs-on"], "ubuntu-latest");
+  assert.equal(
+    extendedIntegration.if,
+    "github.event_name != 'pull_request'",
+  );
+  assert.equal(
+    record(step(extendedIntegration, "Set up Node.js").with)["node-version"],
+    24,
+  );
+  assert.equal(
+    step(extendedIntegration, "Run extended integration tests").run,
+    "pnpm test:integration:extended",
   );
 
   for (const job of [unit, contract, integration]) {
@@ -169,20 +202,27 @@ test("runs fast layered validation in ordinary CI", async () => {
     "unit",
     "contract",
     "integration",
+    "integration-extended",
     "package",
   ]);
   assert.equal(required["runs-on"], "ubuntu-latest");
   assert.equal(required["timeout-minutes"], 5);
   const requiredGate = step(required, "Verify required jobs");
   assert.deepEqual(requiredGate.env, {
+    EVENT_NAME: "${{ github.event_name }}",
     PACKAGE_REQUIRED: "${{ needs.package-risk.outputs.required }}",
     PACKAGE_RISK_RESULT: "${{ needs.package-risk.result }}",
     UNIT_RESULT: "${{ needs.unit.result }}",
     CONTRACT_RESULT: "${{ needs.contract.result }}",
     INTEGRATION_RESULT: "${{ needs.integration.result }}",
+    EXTENDED_INTEGRATION_RESULT: "${{ needs.integration-extended.result }}",
     PACKAGE_RESULT: "${{ needs.package.result }}",
   });
   assert.match(text(requiredGate.run), /true:success\|false:skipped/);
+  assert.match(
+    text(requiredGate.run),
+    /pull_request:skipped\|schedule:success\|workflow_dispatch:success/,
+  );
   assert.match(text(requiredGate.run), /Required CI job result was \$result/);
   assert.equal(requiredGate["continue-on-error"], undefined);
   assert.deepEqual(workflow.permissions, { contents: "read" });
@@ -210,7 +250,7 @@ test("CI contract rejects absent, bypassed or non-blocking sanity validation", a
   }
 });
 
-test("every test file belongs to an unconditional core suite or package E2E", async () => {
+test("every test file belongs to an explicit suite", async () => {
   const manifest = record(JSON.parse(await readFile(packageUrl, "utf8")));
   const scripts = record(manifest.scripts);
   const root = new URL("../", import.meta.url);

@@ -95,7 +95,7 @@ jobs:
         run: pnpm test:contract
 
       - name: Run integration tests
-        run: pnpm test:integration
+        run: pnpm test:integration:all
 
       - name: Discover agent skills
         run: pnpm check:skills

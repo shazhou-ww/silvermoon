@@ -35,6 +35,8 @@ test("selects exact scenario sets without changing release compatibility", async
     "check:sanity", "test:contract:built", "lint:markdown", "test:smoke",
     "check:staged", "check:diff",
   ]);
+  assert.ok(CHECK_SCRIPTS.includes("test:integration:all:built"));
+  assert.equal(CHECK_SCRIPTS.includes("test:integration:built"), false);
   assert.equal(CHECK_TIERS.release, CHECK_SCRIPTS);
   assert.match(COMMIT_SCOPE, /WORKTREE, not staged code/);
   assert.match(COMMIT_SCOPE, /Partial staging is NOT exact-candidate test evidence/);

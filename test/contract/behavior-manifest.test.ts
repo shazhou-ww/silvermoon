@@ -40,7 +40,7 @@ test("executes the approved behavior case manifest", async () => {
     readFile(new URL("../integration/create-idea-scaffold.test.ts", import.meta.url), "utf8"),
     readFile(new URL("../integration/create-idea-transactions.test.ts", import.meta.url), "utf8"),
     readFile(new URL("../integration/list-ideas.test.ts", import.meta.url), "utf8"),
-    readFile(new URL("../integration/whatsnext-setup.test.ts", import.meta.url), "utf8"),
+    readFile(new URL("../integration-extended/whatsnext-setup.test.ts", import.meta.url), "utf8"),
     readFile(new URL("../integration/whatsnext-readiness.test.ts", import.meta.url), "utf8"),
     readFile(new URL("../integration/whatsnext-guidance.test.ts", import.meta.url), "utf8"),
   ]);

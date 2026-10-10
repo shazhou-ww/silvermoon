@@ -4,15 +4,15 @@
 
 ### Implementation steps
 
-- [ ] **I-S01:** 复核调研并冻结分层清单
-- [ ] **I-S02:** 精简用例与测试夹具
-- [ ] **I-S03:** 建立 integration 分层入口
+- [x] **I-S01:** 复核调研并冻结分层清单
+- [x] **I-S02:** 精简用例与测试夹具
+- [x] **I-S03:** 建立 integration 分层入口
 
 ### Implementation acceptance criteria
 
-- [ ] **I-AC01:** 覆盖处置可追溯
-- [ ] **I-AC02:** 日常入口达到性能目标
-- [ ] **I-AC03:** 完整风险覆盖保持通过
+- [x] **I-AC01:** 覆盖处置可追溯
+- [x] **I-AC02:** 日常入口达到性能目标
+- [x] **I-AC03:** 完整风险覆盖保持通过
 
 ## Deployment
 

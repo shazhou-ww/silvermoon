@@ -144,7 +144,8 @@ branches.
   [validation tiers](./maintaining.md#validation-tiers).
 - `pnpm test` and `pnpm check:quick` retain the complete unit/runtime and
   contract suites, including real runtime behavior; they are not sanity aliases.
-- Run `pnpm test:integration` for real filesystem and Git behavior, and
+- Run `pnpm test:integration` for the fast real filesystem, Git and CLI layer,
+  `pnpm test:integration:all` for the complete non-live integration gate, and
   `pnpm test:e2e` for the installed package.
 - Run `pnpm check` (or `pnpm check:release`) before delivery of CLI, schema,
   repository model, release, or skill changes. It remains the complete

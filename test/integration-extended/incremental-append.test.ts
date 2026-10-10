@@ -89,46 +89,54 @@ function append(
   return JSON.parse(child.stdout).observation.receipt;
 }
 
-test("real CLI appends and cursor queries preserve one exact byte stream", async (t) => {
+async function exerciseCliStream(t: test.TestContext, count: number) {
+  const {
+    root,
+    paths,
+    bytes,
+    request,
+    cursor,
+    objectIdLength,
+  } = await fixture(t, count);
+  const first = append(root, request, cursor);
+  assert.equal(first.sequence, count + 1);
+  assert.equal(append(root, request, cursor).outcome, "already-present");
+  const second = append(root, request, first);
+  assert.equal(second.sequence, count + 2);
+  const query = spawnSync(process.execPath, [
+    entry,
+    "event",
+    "replay",
+    FIRST_ID,
+    "--after-length",
+    String(first.length),
+    "--after-digest",
+    first.digest,
+    "--json",
+  ], { cwd: root, encoding: "utf8", windowsHide: true });
+  assert.equal(query.status, 0, query.stderr || query.stdout);
+  const delta = JSON.parse(query.stdout).observation.receipt;
+  assert.deepEqual(delta.events, [{
+    sequence: count + 2,
+    type: "pong",
+    timestamp: second.timestamp,
+    payload: { message: "incremental" },
+  }]);
+  const candidate = await readFile(join(root, paths.eventsPath));
+  assert.equal(candidate.subarray(0, bytes.length).equals(bytes), true);
+  assert.equal(
+    delta.digest,
+    gitContentDigest("blob", candidate, { objectIdLength }),
+  );
+}
+
+test("real CLI preserves a small event stream across child processes", async (t) => {
+  await exerciseCliStream(t, 11);
+});
+
+test("real CLI preserves large event streams across child processes", async (t) => {
   for (const count of [1001, 10001]) {
-    const {
-      root,
-      paths,
-      bytes,
-      request,
-      cursor,
-      objectIdLength,
-    } = await fixture(t, count);
-    const first = append(root, request, cursor);
-    assert.equal(first.sequence, count + 1);
-    assert.equal(append(root, request, cursor).outcome, "already-present");
-    const second = append(root, request, first);
-    assert.equal(second.sequence, count + 2);
-    const query = spawnSync(process.execPath, [
-      entry,
-      "event",
-      "replay",
-      FIRST_ID,
-      "--after-length",
-      String(first.length),
-      "--after-digest",
-      first.digest,
-      "--json",
-    ], { cwd: root, encoding: "utf8", windowsHide: true });
-    assert.equal(query.status, 0, query.stderr || query.stdout);
-    const delta = JSON.parse(query.stdout).observation.receipt;
-    assert.deepEqual(delta.events, [{
-      sequence: count + 2,
-      type: "pong",
-      timestamp: second.timestamp,
-      payload: { message: "incremental" },
-    }]);
-    const candidate = await readFile(join(root, paths.eventsPath));
-    assert.equal(candidate.subarray(0, bytes.length).equals(bytes), true);
-    assert.equal(
-      delta.digest,
-      gitContentDigest("blob", candidate, { objectIdLength }),
-    );
+    await exerciseCliStream(t, count);
   }
 });
 

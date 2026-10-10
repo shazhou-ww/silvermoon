@@ -127,7 +127,7 @@ function recordCommands(commands: string[][]) {
   };
 }
 
-test("project setup uses cumulative observation variants and reports all setup fixes", async () => {
+test("project setup reports cumulative observation variants and every setup fix", async () => {
   const root = await mkdtemp(join(tmpdir(), "silvermoon-unconfigured-"));
   trackTemporaryDirectory(root);
 

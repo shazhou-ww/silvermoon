@@ -223,7 +223,7 @@ test("uses a protected, least-privilege trusted-publishing workflow", async () =
   assert.equal(repositoryBuild.run, "pnpm build");
   assert.equal(unit.run, "pnpm test:unit");
   assert.equal(contract.run, "pnpm test:contract");
-  assert.equal(integration.run, "pnpm test:integration");
+  assert.equal(integration.run, "pnpm test:integration:all");
   assert.equal(skills.run, "pnpm check:skills");
   const staticChecks = publish.steps.find(({ name }: { name: string }) => name === "Validate local static checks");
   assert.equal(staticChecks.run, "pnpm lint:markdown\npnpm check:diff\nnode bin/silvermoon.ts check --commit HEAD --audience agent\n");
@@ -378,7 +378,7 @@ test("documents trusted-publisher setup and the protected release procedure", as
     "Do not move or recreate the tag",
     "pnpm test:unit",
     "pnpm test:contract",
-    "pnpm test:integration",
+    "pnpm test:integration:all",
     "npm run test:e2e",
     "verify-npm-release.ts",
     "package-level README",

@@ -95,7 +95,7 @@ The [`publish-npm.yml`](../.github/workflows/publish-npm.yml) workflow then:
 2. installs the frozen pnpm dependencies;
 3. runs the allowlisted release planner and confirms the version is absent
    from npm, or records that an exact-version rerun must skip publication;
-4. runs `pnpm test:unit`, `pnpm test:contract`, `pnpm test:integration`, and
+4. runs `pnpm test:unit`, `pnpm test:contract`, `pnpm test:integration:all`, and
    `pnpm check:skills`, Markdown/whitespace and checked-out Silvermoon snapshot
    validation, all unconditionally;
 5. creates an isolated `git archive` staging tree and generates commit-pinned

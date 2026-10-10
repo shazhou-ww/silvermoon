@@ -19,40 +19,45 @@ afterEach(async () => {
   );
 });
 
-test("creates independent real primary remotes from the immutable seed", async () => {
-  const first = await createRepository();
-  const second = await createRepository();
-  temporaryDirectories.push(first.base, second.base);
+test("creates independent V1 and V2 repositories from immutable seeds", async () => {
+  for (const schemaVersion of [1, 2] as const) {
+    const first = await createRepository({ schemaVersion });
+    const second = await createRepository({ schemaVersion });
+    temporaryDirectories.push(first.base, second.base);
 
-  assert.equal(
-    git(first.root, "config", "--get", "remote.origin.url"),
-    PRIMARY_REPOSITORY,
-  );
-  assert.equal(
-    git(first.root, "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}"),
-    "origin/main",
-  );
-  assert.notEqual(first.remote, second.remote);
-  const firstBase = git(first.root, "ls-remote", "origin", "refs/heads/main")
-    .split("\t")[0];
-  const secondBase = git(second.root, "ls-remote", "origin", "refs/heads/main")
-    .split("\t")[0];
-  assert.equal(firstBase, secondBase);
+    assert.equal(
+      git(first.root, "config", "--get", "remote.origin.url"),
+      PRIMARY_REPOSITORY,
+    );
+    assert.equal(
+      git(first.root, "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}"),
+      "origin/main",
+    );
+    assert.notEqual(first.remote, second.remote);
+    const firstBase = git(first.root, "ls-remote", "origin", "refs/heads/main")
+      .split("\t")[0];
+    const secondBase = git(second.root, "ls-remote", "origin", "refs/heads/main")
+      .split("\t")[0];
+    assert.equal(firstBase, secondBase);
 
-  await writeFile(join(first.root, "only-first.txt"), "isolated update\n");
-  git(first.root, "add", ".");
-  git(first.root, "commit", "-m", "Update first fixture");
-  git(first.root, "push", "origin", "main");
+    await writeFile(
+      join(first.root, `only-first-v${schemaVersion}.txt`),
+      "isolated update\n",
+    );
+    git(first.root, "add", ".");
+    git(first.root, "commit", "-m", `Update first V${schemaVersion} fixture`);
+    git(first.root, "push", "origin", "main");
 
-  assert.notEqual(
-    git(first.root, "ls-remote", "origin", "refs/heads/main").split("\t")[0],
-    firstBase,
-  );
-  assert.equal(
-    git(second.root, "ls-remote", "origin", "refs/heads/main").split("\t")[0],
-    secondBase,
-  );
-  assert.equal(git(second.root, "rev-parse", "HEAD"), secondBase);
+    assert.notEqual(
+      git(first.root, "ls-remote", "origin", "refs/heads/main").split("\t")[0],
+      firstBase,
+    );
+    assert.equal(
+      git(second.root, "ls-remote", "origin", "refs/heads/main").split("\t")[0],
+      secondBase,
+    );
+    assert.equal(git(second.root, "rev-parse", "HEAD"), secondBase);
+  }
 });
 
 test("creates a local-only fixture without a remote or bare primary", async () => {

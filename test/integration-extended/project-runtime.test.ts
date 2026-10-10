@@ -63,7 +63,7 @@ function nextSteps(result: RuntimeResult): string[] {
   return value;
 }
 
-test("dispatches every project through one host runtime and relays its report", async () => {
+test("dispatches projects through one host runtime and relays reports", async () => {
   const base = await mkdtemp(join(tmpdir(), "silvermoon-runtime-"));
   const roots = [join(base, "first"), join(base, "second")];
   try {

@@ -37,7 +37,11 @@ pnpm check:pure        # JSDoc @pure constraints and functional-core imports
 pnpm check:commit      # worktree tests plus staged metadata validation
 pnpm lint:markdown     # Markdown lint (contract tests check links)
 pnpm test              # complete unit/runtime and repository contracts
-pnpm test:integration  # real filesystem and Git behavior
+pnpm test:integration  # fast real filesystem, Git and CLI behavior
+pnpm test:integration:extended  # pressure and complete topology combinations
+pnpm test:integration:all  # fast plus extended release-grade integration
+pnpm test:integration:platform  # cross-platform native source smoke
+pnpm test:integration:live  # explicit real external service tests
 pnpm test:e2e          # packed and installed CLI behavior
 pnpm check             # complete release-grade validation
 pnpm check:release     # same complete release-grade validation
@@ -50,8 +54,8 @@ pnpm check:skills      # external discovery of the canonical packaged skill
 | --- | --- |
 | Edit / Agent iteration | `check:sanity`: strict typecheck, clean build, CLI syntax, @pure checks, pure unit tests, schema and API contracts; add change-specific tests |
 | Before commit | `check:commit`: sanity, local contracts and Markdown, skill consistency, Git/CLI smoke, whitespace, staged Silvermoon metadata |
-| Ordinary CI | Triggered on pull request, daily scheduled run, or manual dispatch. Unconditional sanity then complete unit/runtime on Ubuntu/Windows/macOS, Node 22/24; complete contracts and integration, static checks and skill discovery |
-| Before delivery / release | `check` or `check:release`: every release-grade gate including package contents, installed-package E2E and external discovery |
+| Ordinary CI | Triggered on pull request, daily scheduled run, or manual dispatch. Unconditional sanity then complete unit/runtime plus platform smoke on Ubuntu/Windows/macOS, Node 22/24; complete contracts, fast integration, static checks and skill discovery. Scheduled and manual runs also execute extended integration |
+| Before delivery / release | `check` or `check:release`: every release-grade gate including fast plus extended integration, package contents, installed-package E2E and external discovery |
 | After publication | The existing release workflow's `verify-npm-release.ts`: registry identity, integrity, provenance, README and CDN |
 
 `test:unit` includes `test/runtime` so moving filesystem, Git and terminal
@@ -63,11 +67,20 @@ the Node test runner from creating workers. Terminal integration stays in
 runtime, outside sanity.
 
 Each CI matrix job runs the actual `pnpm check:sanity` entrypoint before the
-complete unit/runtime suite. Passing `test:unit` alone does not prove the
+complete unit/runtime suite and the bounded platform integration smoke. Passing
+`test:unit` alone does not prove the
 sanity I/O boundary: it intentionally permits runtime tests. Tests that call
 real Git, even only to compare pure logic with Git's behavior, belong in
 `test/runtime`, not `test/unit`. Keep their assertions and platform coverage
 when splitting mixed-cost files; never disable the sanity guard to admit them.
+
+The default `test:integration` entrypoint is the fast developer and pull
+request layer. Large event streams, complete snapshot combinations and
+high-cost cross-process scenarios live in `test:integration:extended`.
+`test:integration:all` is the complete non-live integration gate used by
+release validation and npm publication. Real external service tests remain
+explicit through `test:integration:live` and are not implied by a release
+check without credentials.
 
 ### Functional boundaries and pure functions
 

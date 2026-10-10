@@ -110,7 +110,7 @@ async function liveProject() {
   return { base, root, registry, route, runtime: new ProjectRuntime({ registry }) };
 }
 
-test("real Copilot replies through the host-runtime interaction boundary", {
+test("real Copilot replies through the live host-runtime interaction boundary", {
   skip: process.env.SILVERMOON_REAL_COPILOT !== "1",
   timeout: 120_000,
 }, async (t) => {

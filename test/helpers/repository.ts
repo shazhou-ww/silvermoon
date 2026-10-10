@@ -37,13 +37,16 @@ export const FIRST_ID = "01M36QGPNTXEPP61DA4KP4AVZF";
 export const SECOND_ID = "01M36QGPNTXEPP61DA4KP4AVG0";
 
 const defaultIdeas = [{ id: FIRST_ID, status: { alias: "fixture" } }];
-let templatePromise: ReturnType<typeof createTemplate> | undefined;
-let templateDirectory: string | undefined;
+const templatePromises = new Map<1 | 2, ReturnType<typeof createTemplate>>();
+const templateDirectories: string[] = [];
 
 after(async () => {
-  if (templateDirectory) {
-    await rm(templateDirectory, { recursive: true, force: true });
-  }
+  await Promise.all(
+    templateDirectories.splice(0).map((directory) =>
+      rm(directory, { recursive: true, force: true })
+    ),
+  );
+  templatePromises.clear();
 });
 
 export function git(root: string, ...args: string[]) {
@@ -130,9 +133,8 @@ export async function createRepository({
     ideas === defaultIdeas
     && objectFormat === undefined
     && preferredLanguage === undefined
-    && schemaVersion === 1
   ) {
-    const template = await getTemplate();
+    const template = await getTemplate(schemaVersion);
     if (withRemote) {
       const remote = join(base, "primary.git");
       await cp(template.work, root, { recursive: true });
@@ -215,15 +217,20 @@ export async function createRepository({
   return { base, remote: null, repository: null, root };
 }
 
-async function getTemplate() {
+async function getTemplate(schemaVersion: 1 | 2) {
+  let templatePromise = templatePromises.get(schemaVersion);
   if (!templatePromise) {
-    templatePromise = createTemplate();
+    templatePromise = createTemplate(schemaVersion);
+    templatePromises.set(schemaVersion, templatePromise);
   }
   return templatePromise;
 }
 
-async function createTemplate() {
-  templateDirectory = await mkdtemp(join(tmpdir(), "silvermoon-fixture-template-"));
+async function createTemplate(schemaVersion: 1 | 2) {
+  const templateDirectory = await mkdtemp(
+    join(tmpdir(), `silvermoon-v${schemaVersion}-fixture-template-`),
+  );
+  templateDirectories.push(templateDirectory);
   const root = join(templateDirectory, "work");
   const local = join(templateDirectory, "local-work");
   const remote = join(templateDirectory, "primary.git");
@@ -233,17 +240,23 @@ async function createTemplate() {
   git(root, "config", "user.email", "silvermoon@example.invalid");
   git(root, "config", "core.autocrlf", "false");
   await mkdir(join(root, ".silvermoon", "ideas"), { recursive: true });
+  if (schemaVersion === 2) {
+    await writeFile(
+      join(root, ".gitattributes"),
+      "**/events.jsonl -text -filter\n",
+    );
+  }
   await writeFile(
     join(root, ".silvermoon", "config.yaml"),
     [
-      "version: 1",
+      `version: ${schemaVersion}`,
       `primaryRepository: ${PRIMARY_REPOSITORY}`,
       "primaryBranch: main",
       "",
     ].join("\n"),
   );
   for (const idea of defaultIdeas) {
-    await writeIdea(root, idea.id, idea.status);
+    await writeIdea(root, idea.id, idea.status, schemaVersion);
   }
   git(root, "add", ".");
   git(root, "commit", "-m", "Create Silvermoon fixture");

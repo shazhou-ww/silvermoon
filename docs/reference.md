@@ -306,7 +306,7 @@ and the safe correlation of delivery and reply observations.
 
 For an isolated, opt-in live acceptance run (requires an authenticated
 Copilot CLI), use
-`SILVERMOON_REAL_COPILOT=1 node --test test/integration/copilot-runtime-live.test.ts`.
+`SILVERMOON_REAL_COPILOT=1 pnpm test:integration:live`.
 The three cases use distinct disposable Git projects and deny unrelated tool
 permissions. They check two sequential `ping`/reply/`pong` handoffs and a
 third after adapter restart; a custom test-only tool with a rejecting Git
