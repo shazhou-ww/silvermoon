@@ -20,6 +20,8 @@ export interface MigrationOptions {
   afterStep?: (step: string) => void | Promise<void>;
 }
 
+export const PROJECT_V1_TO_V2_MIGRATION_ID = "project-v1-to-v2";
+
 function migrationEvents(status: ReturnType<typeof parseIdeaStatus>) {
   const events: object[] = [];
   const append = (type: string, payload?: Record<string, string>) => {
@@ -163,7 +165,10 @@ export async function migrateEvents({
   }
   await stateTransaction(root, "migration", files, {
     ...(afterStep === undefined ? {} : { afterStep }),
-    context: { sourceCommit: repository.head },
+    context: {
+      migrationId: PROJECT_V1_TO_V2_MIGRATION_ID,
+      sourceCommit: repository.head,
+    },
   });
   return { ...receipt, outcome: "migrated", written: true };
 }

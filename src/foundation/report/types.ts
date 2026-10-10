@@ -47,6 +47,10 @@ export interface DeviceAdvisory {
     expectedRoot: string;
     paths: string[];
     invalidPaths?: string[];
+    invalidTargets?: Array<{
+      path: string;
+      target: string | null;
+    }>;
     remediation?: string;
     summary?: string;
   };

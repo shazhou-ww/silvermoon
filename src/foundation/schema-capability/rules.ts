@@ -13,6 +13,7 @@ export interface SchemaMigrationCapability {
   entrypoint: string;
   sourceEntrypoint: string;
   executable: string;
+  arguments: string[];
   guarantees: SchemaMigrationGuarantee[];
 }
 
@@ -98,6 +99,7 @@ function schemaMigration(
       "entrypoint",
       "sourceEntrypoint",
       "executable",
+      "arguments",
       "guarantees",
     ])
     || value.kind !== "schema") {
@@ -112,6 +114,11 @@ function schemaMigration(
     || typeof value.sourceEntrypoint !== "string"
     || value.sourceEntrypoint.length === 0
     || !identifier(value.executable)
+    || !Array.isArray(value.arguments)
+    || value.arguments.length === 0
+    || !value.arguments.every((argument) =>
+      typeof argument === "string" && argument.length > 0
+    )
     || !Array.isArray(value.guarantees)
     || value.guarantees.length !== MIGRATION_GUARANTEES.length
     || !value.guarantees.every((guarantee) =>
@@ -139,6 +146,7 @@ function schemaMigration(
     entrypoint: value.entrypoint,
     sourceEntrypoint: value.sourceEntrypoint,
     executable: value.executable,
+    arguments: value.arguments,
     guarantees: value.guarantees as SchemaMigrationGuarantee[],
   };
 }

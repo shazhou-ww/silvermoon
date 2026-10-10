@@ -186,6 +186,12 @@ test("validates personal discovery links without reading a project", async () =>
     });
     assert.equal(mismatched.status, "mismatched");
     assert.deepEqual(mismatched.invalidPaths, [copilotSkill]);
+    assert.deepEqual(mismatched.invalidTargets, [{
+      path: copilotSkill,
+      target: await realpath(wrongSkill),
+    }]);
+    assert.match(mismatched.remediation, /silvermoon-link-skill/);
+    assert.match(mismatched.summary, /resolves to/);
 
     assert.equal((await inspectPersonalSkill({
       home,

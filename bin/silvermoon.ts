@@ -18,6 +18,7 @@ import { listIdeas } from "../src/business/index.ts";
 import { checkRepository } from "../src/business/index.ts";
 import { createIdea } from "../src/business/index.ts";
 import { eventCommand } from "../src/business/index.ts";
+import { runProjectSchemaMigration } from "../src/business/index.ts";
 import { renderResponse } from "../src/foundation/renderer/index.ts";
 import { traceAsync, withTraceFile } from "../src/foundation/trace/index.ts";
 import { writeTerminalLine } from "../src/foundation/terminal/index.ts";
@@ -32,6 +33,7 @@ type CliOptions = {
   afterDigest?: string;
   afterLength?: number;
   all?: boolean;
+  apply?: boolean;
   audience?: string;
   commit?: string;
   confirmDecision?: boolean;
@@ -47,6 +49,9 @@ type CliOptions = {
   limit?: string;
   query?: string;
   remote?: boolean;
+  resume?: boolean;
+  rollback?: boolean;
+  confirmStopped?: boolean;
   root: string;
   sort?: string;
   staged?: boolean;
@@ -305,6 +310,8 @@ Examples:
   $ silvermoon whats-next <idea> --json
   $ silvermoon whats-next <idea> --trace whats-next.trace.jsonl
   $ silvermoon create-idea
+  $ silvermoon migrate
+  $ silvermoon migrate --apply --expected-digest <sha256>
   $ silvermoon check
   $ silvermoon check --language en-US
   $ silvermoon check --worktree
@@ -412,6 +419,39 @@ Examples:
     }, io, runtime);
     program.setOptionValue("resultCode", 0);
   });
+
+  program
+    .command("migrate")
+    .description("plan, apply, resume, or rollback the next project schema migration")
+    .option("-r, --root <path>", "repository root", process.cwd())
+    .addOption(
+      new Option("--apply", "apply the exact confirmed plan")
+        .conflicts(["resume", "rollback"]),
+    )
+    .option(
+      "--expected-digest <sha256>",
+      "digest returned by the read-only plan",
+    )
+    .addOption(
+      new Option("--resume", "complete an interrupted migration")
+        .conflicts(["apply", "rollback"]),
+    )
+    .addOption(
+      new Option("--rollback", "restore an interrupted migration's original files")
+        .conflicts(["apply", "resume"]),
+    )
+    .option(
+      "--confirm-stopped",
+      "confirm the interrupted writer has stopped",
+    )
+    .action(async (options: CliOptions) => {
+      io.log(JSON.stringify(
+        await runProjectSchemaMigration(options),
+        null,
+        2,
+      ));
+      program.setOptionValue("resultCode", 0);
+    });
 
   addCommonOptions(
     program

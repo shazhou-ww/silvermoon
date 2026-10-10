@@ -24,6 +24,8 @@ test("exports schema migration discovery and dispatch", () => {
   );
   assert.equal(typeof silvermoon.findSchemaMigrationPath, "function");
   assert.equal(typeof silvermoon.loadSchemaCapabilityManifest, "function");
+  assert.equal(typeof silvermoon.resolveProjectSchemaMigration, "function");
+  assert.equal(typeof silvermoon.runProjectSchemaMigration, "function");
   assert.equal(typeof silvermoon.runSchemaMigration, "function");
 });
 

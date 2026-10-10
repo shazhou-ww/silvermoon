@@ -21,6 +21,8 @@ export {
 
 export {
   IMPLEMENTED_SCHEMA_MIGRATIONS,
+  resolveProjectSchemaMigration,
+  runProjectSchemaMigration,
   runSchemaMigration,
 } from "./schema-migration.ts";
 

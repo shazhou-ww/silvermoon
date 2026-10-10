@@ -48,11 +48,13 @@ test("schema capability manifest validates and references packaged artifacts", a
     );
   }
   for (const migration of Object.values(manifest.migrations) as Array<{
+    arguments: string[];
     entrypoint: string;
     executable: string;
     sourceEntrypoint: string;
   }>) {
     assert.equal(packageManifest.bin[migration.executable], migration.entrypoint);
+    assert.deepEqual(migration.arguments, ["migrate"]);
     await Promise.all([
       access(resolve(import.meta.dirname, "../..", migration.sourceEntrypoint)),
       access(resolve(import.meta.dirname, "../..", migration.entrypoint)),

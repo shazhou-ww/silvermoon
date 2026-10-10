@@ -657,12 +657,13 @@ decision, risk, or disagreement requires it.
   assert.equal(preparation.observation.state, "project-setup-required");
   assert.match(
     JSON.stringify(preparation.response),
-    /silvermoon-migrate-v1-to-v2/,
+    /host-managed project-v1-to-v2 project migration/,
   );
   const migrationPlan = JSON.parse(npm([
     "exec",
     "--",
-    "silvermoon-migrate-v1-to-v2",
+    "silvermoon",
+    "migrate",
     "--root",
     eventConsumer,
   ], bootstrap));
@@ -671,7 +672,8 @@ decision, risk, or disagreement requires it.
   const migrated = JSON.parse(npm([
     "exec",
     "--",
-    "silvermoon-migrate-v1-to-v2",
+    "silvermoon",
+    "migrate",
     "--root",
     eventConsumer,
     "--apply",

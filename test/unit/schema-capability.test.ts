@@ -63,9 +63,10 @@ test("loads the packaged schema capability contract", async () => {
       "project-config": 2,
       "idea-state": 2,
     },
-    entrypoint: "dist/bin/migrate-v1-to-v2.js",
-    sourceEntrypoint: "bin/migrate-v1-to-v2.ts",
-    executable: "silvermoon-migrate-v1-to-v2",
+    entrypoint: "dist/bin/silvermoon.js",
+    sourceEntrypoint: "bin/silvermoon.ts",
+    executable: "silvermoon",
+    arguments: ["migrate"],
     guarantees: [
       "read-only-plan",
       "exact-digest-apply",

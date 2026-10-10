@@ -40,9 +40,9 @@ src/
 
 | 目标入口文件 | 当前入口 | 接收的消息 | 发出的消息 | 说明 |
 | --- | --- | --- | --- | --- |
-| `bin/silvermoon.ts` | [bin/silvermoon.ts](../bin/silvermoon.ts) | 命令、argv、可选 JSON 输入文件、stdin、TTY／locale／trace 事实 | `CommandReport` 的 JSON、Text 或 TUI 表示，诊断／trace 和命令专属退出码 | 唯一用户 CLI；子命令不拆成应用 |
+| `bin/silvermoon.ts` | [bin/silvermoon.ts](../bin/silvermoon.ts) | 命令、argv、可选 JSON 输入文件、stdin、TTY／locale／trace 事实 | `CommandReport` 的 JSON、Text 或 TUI 表示，migration JSON 回执、诊断／trace 和命令专属退出码 | 唯一用户 CLI；包含通用 `migrate` 子命令，其他子命令不拆成应用 |
 | `bin/link-personal-skill.ts` | [bin/link-personal-skill.ts](../bin/link-personal-skill.ts) | 已安装 package 的 canonical skill 和个人 home 路径 | 已创建／已存在的 personal skill link 或明确失败诊断 | 已安装 runtime 的 `silvermoon-link-skill`；不覆盖修改过或指向其他目标的 registration |
-| `bin/migrate-v1-to-v2.ts` | [bin/migrate-v1-to-v2.ts](../bin/migrate-v1-to-v2.ts) | capability graph 中的 `project-v1-to-v2`、project root、plan／apply／resume／rollback、plan digest、writer 停止确认 | V1 到 V2 的 JSON 计划或执行／恢复回执；失败写 stderr 和非零退出码 | 已安装 runtime 的 `silvermoon-migrate-v1-to-v2` 与 source-checkout 入口 |
+| `bin/migrate-v1-to-v2.ts` | [bin/migrate-v1-to-v2.ts](../bin/migrate-v1-to-v2.ts) | capability graph 中的 `project-v1-to-v2`、project root、plan／apply／resume／rollback、plan digest、writer 停止确认 | V1 到 V2 的 JSON 计划或执行／恢复回执；失败写 stderr 和非零退出码 | 版本专用 compatibility alias；新调用统一走 `silvermoon migrate` |
 | `bin/run-checks.ts` | [bin/run-checks.ts](../bin/run-checks.ts) | 无参数或 `sanity`／`commit`／`release` tier | 逐 gate 开始、结果、耗时、汇总和退出码 | 组合检查，不修改候选 |
 | `bin/pure-check.ts` | [bin/pure-check.ts](../bin/pure-check.ts) | `src` TypeScript 和纯规则入口 | 纯函数数量、违规位置／原因和退出码 | 静态纯度检查 |
 | `bin/check-pack.ts` | [bin/check-pack.ts](../bin/check-pack.ts) | package manifest、白名单和 `npm pack` 结果 | 包内容／入口诊断和退出码 | 检查制品，不发布 |

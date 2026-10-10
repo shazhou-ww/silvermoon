@@ -222,6 +222,49 @@ test("renders device readiness as a non-blocking advisory", () => {
   assert.match(rendered, /\| Latest runtime \| available \| current=0\.3\.0; latest=0\.4\.0;/);
 });
 
+test("renders mismatched skill targets with an executable repair command", () => {
+  const rendered = renderResponse({
+    kind: "choice-required",
+    language: "en-US",
+    summary: "Choose an active idea.",
+    choices: [],
+    nextSteps: [],
+    device: {
+      runtime: {
+        source: "global",
+        version: "0.4.0",
+      },
+      skill: {
+        status: "mismatched",
+        expectedRoot: "D:\\Code\\silvermoon\\skills\\silvermoon",
+        paths: [],
+        invalidPaths: [
+          "C:\\Users\\agent\\.agents\\skills\\silvermoon",
+        ],
+        invalidTargets: [{
+          path: "C:\\Users\\agent\\.agents\\skills\\silvermoon",
+          target: "D:\\Code\\stale\\skills\\silvermoon",
+        }],
+        summary:
+          "C:\\Users\\agent\\.agents\\skills\\silvermoon resolves to D:\\Code\\stale\\skills\\silvermoon; expected D:\\Code\\silvermoon\\skills\\silvermoon.",
+        remediation:
+          "Run silvermoon-link-skill to relink the reported personal skill registration to the active global runtime's canonical skill at D:\\Code\\silvermoon\\skills\\silvermoon, then rerun the Silvermoon command.",
+      },
+      update: {
+        status: "current",
+        currentVersion: "0.4.0",
+        latestVersion: "0.4.0",
+        source: "cache",
+      },
+    },
+  });
+
+  assert.match(rendered, /C:\\\\Users\\\\agent\\\\\.agents\\\\skills\\\\silvermoon resolves to/);
+  assert.match(rendered, /D:\\\\Code\\\\stale\\\\skills\\\\silvermoon/);
+  assert.match(rendered, /expected D:\\\\Code\\\\silvermoon\\\\skills\\\\silvermoon/);
+  assert.match(rendered, /silvermoon-link-skill/);
+});
+
 test("omits healthy non-actionable device readiness", () => {
   const device: DeviceAdvisory = {
     runtime: {

@@ -46,7 +46,7 @@ test("historical schemas remain check-valid but block lifecycle preparation", as
   assert.equal(preparation.response.kind, "blocked");
   assert.deepEqual(
     preparation.observation.problems.map(({ type }) => type),
-    ["schema-migration-required", "schema-migration-required"],
+    ["schema-migration-required"],
   );
   assert.deepEqual(
     preparation.response.schemas,
@@ -59,6 +59,12 @@ test("historical schemas remain check-valid but block lifecycle preparation", as
   assert.match(markdown, /Project schema preparation/);
   assert.match(markdown, /\.silvermoon\/config\.yaml/);
   assert.match(markdown, /migration-required/);
+  assert.equal(
+    preparation.response.nextSteps?.filter(({ text }) =>
+      text.includes("silvermoon migrate")
+    ).length,
+    1,
+  );
 });
 
 test("current schemas stay available in JSON without adding Markdown noise", async () => {

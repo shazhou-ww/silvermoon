@@ -14,4 +14,4 @@ export { renderResponse } from "./foundation/renderer/index.ts";
 export { respond } from "./foundation/report/index.ts";
 export { TRACE_SCHEMA_VERSION } from "./foundation/trace/index.ts";
 export { whatsNext } from "./business/index.ts";
-export { IMPLEMENTED_SCHEMA_MIGRATIONS, runSchemaMigration } from "./business/index.ts";
+export { IMPLEMENTED_SCHEMA_MIGRATIONS, resolveProjectSchemaMigration, runProjectSchemaMigration, runSchemaMigration } from "./business/index.ts";

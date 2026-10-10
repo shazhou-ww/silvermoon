@@ -273,25 +273,31 @@ export async function inspectPersonalSkill({
   }
   const paths = [];
   const invalidPaths = [];
+  const invalidTargets: Array<{ path: string; target: string | null }> = [];
   for (const relativePath of PERSONAL_SKILL_PATHS) {
     const path = resolve(home, relativePath);
     try {
       const metadata = await filesystem.lstat(path);
       if (!metadata.isDirectory() && !metadata.isSymbolicLink()) {
         invalidPaths.push(path);
+        invalidTargets.push({ path, target: null });
         continue;
       }
-      let target;
+      let target: string | null;
       try {
         target = await filesystem.realpath(path);
       } catch (error) {
         if (errorCode(error) === "ENOENT") {
           invalidPaths.push(path);
+          invalidTargets.push({ path, target: null });
           continue;
         }
         throw error;
       }
-      if (target !== expectedRoot) invalidPaths.push(path);
+      if (target !== expectedRoot) {
+        invalidPaths.push(path);
+        invalidTargets.push({ path, target });
+      }
       else {
         await filesystem.readFile(resolve(target, "SKILL.md"), "utf8");
         paths.push(path);
@@ -313,7 +319,11 @@ export async function inspectPersonalSkill({
       expectedRoot,
       paths,
       invalidPaths,
-      remediation: `Replace the reported personal skill registration with a link to ${expectedRoot}.`,
+      invalidTargets,
+      remediation: `Run silvermoon-link-skill to relink the reported personal skill registration to the active global runtime's canonical skill at ${expectedRoot}, then rerun the Silvermoon command.`,
+      summary: invalidTargets.map(({ path, target }) =>
+        `${path} resolves to ${target ?? "an unreadable target"}; expected ${expectedRoot}.`
+      ).join(" "),
     };
   }
   if (paths.length === 0) {
@@ -321,7 +331,7 @@ export async function inspectPersonalSkill({
       status: "missing" as const,
       expectedRoot,
       paths,
-      remediation: `Register ${dirname(expectedRoot)} globally by link in a personal skill discovery path.`,
+      remediation: `Run silvermoon-link-skill to link the active global runtime's canonical skill at ${expectedRoot} into the personal discovery path, then rerun the Silvermoon command.`,
     };
   }
   return {

@@ -66,7 +66,7 @@ export async function linkPersonalSkill({
   const destination = resolve(home, ".agents", "skills", "silvermoon");
   await mkdir(dirname(destination), { recursive: true });
 
-  let replacedCopy = false;
+  let replacement: "copy" | "link" | null = null;
   try {
     const metadata = await lstat(destination);
     let target: string | null = null;
@@ -80,13 +80,20 @@ export async function linkPersonalSkill({
     if (target !== null && samePath(target, source)) {
       return { destination, source, status: "already-linked" as const };
     }
-    if (!metadata.isDirectory() || !(await directoriesMatch(source, destination))) {
+    if (metadata.isSymbolicLink()) {
+      await rm(destination);
+      replacement = "link";
+    } else if (
+      metadata.isDirectory()
+      && await directoriesMatch(source, destination)
+    ) {
+      await rm(destination, { recursive: true });
+      replacement = "copy";
+    } else {
       throw new Error(
         `${destination} already exists and is not an unmodified copy of ${source}; preserve or remove it before linking the installation.`,
       );
     }
-    await rm(destination, { recursive: true });
-    replacedCopy = true;
   } catch (error) {
     if (!(error instanceof Error && "code" in error && error.code === "ENOENT")) {
       throw error;
@@ -107,6 +114,10 @@ export async function linkPersonalSkill({
   return {
     destination,
     source,
-    status: replacedCopy ? "replaced-copy" as const : "created" as const,
+    status: replacement === "copy"
+      ? "replaced-copy" as const
+      : replacement === "link"
+      ? "relinked" as const
+      : "created" as const,
   };
 }

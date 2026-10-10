@@ -18,6 +18,8 @@ export async function runLinkPersonalSkill() {
     ? "Already linked"
     : result.status === "replaced-copy"
     ? "Replaced copied skill with link"
+    : result.status === "relinked"
+    ? "Relinked"
     : "Linked";
   console.log(`${action}: ${result.destination} -> ${result.source}`);
 }

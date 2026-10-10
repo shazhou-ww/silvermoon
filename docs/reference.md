@@ -195,24 +195,24 @@ Full replay and history audits are not advertised as constant-time operations.
 The runtime-owned `schema/capabilities.json` manifest declares every readable
 schema version, current write target, and continuous schema migration path.
 The `project-v1-to-v2` edge covers project configuration and idea state
-together. It names the installed `silvermoon-migrate-v1-to-v2` executable,
-the packaged `dist/bin/migrate-v1-to-v2.js` entrypoint, and the source-checkout
-`bin/migrate-v1-to-v2.ts` entrypoint. Its declared guarantees require a
-read-only plan, exact-digest apply, resume, rollback, and semantic projection
-equivalence.
+together. It names the installed `silvermoon migrate` command and the linked
+runtime's `dist/bin/silvermoon.js` entrypoint. Its declared guarantees require
+a read-only plan, exact-digest apply, resume, rollback, and semantic projection
+equivalence. The version-specific `silvermoon-migrate-v1-to-v2` executable
+remains a compatibility alias, not the documented migration surface.
 
 Use the installed global runtime to plan and apply the edge:
 
 ```sh
-silvermoon-migrate-v1-to-v2 --root <project>
-silvermoon-migrate-v1-to-v2 --root <project> --apply --expected-digest <plan-digest>
+silvermoon migrate --root <project>
+silvermoon migrate --root <project> --apply --expected-digest <plan-digest>
 ```
 
 Embedding hosts may call the experimental `runSchemaMigration` package API.
 Source contributors expose the checkout through the device-level global link
-and use the same `silvermoon-migrate-v1-to-v2` executable, which resolves back
-to the unpublished implementation. No ordinary command automatically migrates
-a v1 project.
+and use the same `silvermoon migrate` command, which resolves back to the
+unpublished implementation. No navigation command automatically migrates a v1
+project.
 
 V2's ten business types are `setAlias`, `setLanguage`, `submitIdeal`,
 `submitInner`, `submitOuter`, `acceptIdeal`, `acceptInner`, `acceptOuter`,
@@ -324,6 +324,7 @@ reconciliation.
 silvermoon list-ideas [--state <state>] [--all] [--query <text>] [--created-since <RFC3339>] [--created-before <RFC3339>] [--sort <newest|oldest>] [--limit <positive-integer>] [--language <en|en-US|zh|zh-CN>] [--audience <human|agent>] [--trace <file.trace.jsonl>]
 silvermoon whats-next [idea] [--language <en|en-US|zh|zh-CN>] [--audience <human|agent>] [--trace <file.trace.jsonl>]
 silvermoon create-idea [--language <tag>] [--audience <human|agent>] [--trace <file.trace.jsonl>]
+silvermoon migrate [--apply --expected-digest <sha256> | --resume --confirm-stopped | --rollback --confirm-stopped]
 silvermoon check [--remote | --commit <revision> | --staged | --worktree] [--language <en|en-US|zh|zh-CN>] [--audience <human|agent>] [--trace <file.trace.jsonl>]
 silvermoon event <replay|append> <idea> [--input <request.json>] [--after-length <bytes>] [--after-digest <oid>] [--full-history] [--expected-digest <8+-hex-prefix>] [--expected-primary <commit>] [--confirm-decision] [--audience <human|agent>]
 ```

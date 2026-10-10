@@ -7,6 +7,7 @@ import {
   readFile,
   realpath,
   rm,
+  symlink,
   writeFile,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -15,7 +16,7 @@ import { test } from "node:test";
 
 import { linkPersonalSkill } from "../../src/foundation/installation/personal-skill-link.ts";
 
-test("links the canonical skill and safely replaces only an identical copy", async () => {
+test("links the canonical skill and safely replaces links or an identical copy", async () => {
   const root = await mkdtemp(join(tmpdir(), "silvermoon-skill-link-"));
   const home = join(root, "home");
   const source = join(root, "source");
@@ -32,6 +33,19 @@ test("links the canonical skill and safely replaces only an identical copy", asy
 
     const unchanged = await linkPersonalSkill({ home, skillRoot: source });
     assert.equal(unchanged.status, "already-linked");
+
+    await rm(destination);
+    const stale = join(root, "stale");
+    await mkdir(stale);
+    await writeFile(join(stale, "SKILL.md"), "stale\n");
+    await symlink(
+      stale,
+      destination,
+      process.platform === "win32" ? "junction" : "dir",
+    );
+    const relinked = await linkPersonalSkill({ home, skillRoot: source });
+    assert.equal(relinked.status, "relinked");
+    assert.equal(await realpath(destination), await realpath(source));
 
     await rm(destination);
     await cp(source, destination, { recursive: true });

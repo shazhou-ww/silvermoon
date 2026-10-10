@@ -55,11 +55,11 @@ snapshot-only `check` validates it without requiring migration.
 
 Since `0.4.0`, `schema/capabilities.json` is the runtime-owned compatibility
 contract. Each historical read version must have one continuous path to its
-family target. A migration edge names one global executable and its packaged
-and source-checkout entrypoints; storage-only transformations do not appear as
-schema edges. For the current v1-to-v2 edge, plan with
-`silvermoon-migrate-v1-to-v2 --root <project>` and apply only the exact
-reviewed digest. Ordinary navigation never migrates automatically.
+family target. A migration edge names the global command and its packaged and
+source-checkout entrypoints; storage-only transformations do not appear as
+schema edges. Plan the next project edge with
+`silvermoon migrate --root <project>` and apply only the exact reviewed digest.
+Ordinary navigation never migrates automatically.
 
 When project preparation encounters a future schema, it bypasses the 24-hour
 runtime freshness cache once for that observation. The report distinguishes a

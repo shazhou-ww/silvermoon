@@ -99,11 +99,11 @@ latest still lacks support, or registry freshness is unavailable.
 
 When preparation reports `migration-required`, use the exact migration path
 declared in `observation.schemas`; do not edit only a version field. With an
-installed global runtime, plan `project-v1-to-v2` through
-`silvermoon-migrate-v1-to-v2 --root <project>`, then apply only the returned
-digest after explicit upgrade authorization. A development checkout must be
-linked as that global runtime and uses the same executable. Migration never
-commits, pushes, or records a lifecycle decision.
+installed global runtime, run `silvermoon migrate --root <project>` to plan
+the next declared project migration, then apply only the returned digest after
+explicit upgrade authorization. A development checkout must be linked as that
+global runtime and uses the same command. Migration never commits, pushes, or
+records a lifecycle decision.
 
 Silvermoon's own source repository must not add a self-dependency, but it is
 not exempt from the device boundary. Build and link the current checkout as

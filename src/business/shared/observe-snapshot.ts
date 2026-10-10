@@ -151,10 +151,17 @@ function localizeDeviceAdvisory(
     : device.skill.status === "source-checkout"
       ? `把当前 checkout 链接为设备级全局 Silvermoon runtime，在个人级 skill discovery 路径中以链接注册 ${device.skill.expectedRoot}，然后用 silvermoon 重试。`
       : device.skill.status === "missing"
-      ? `在个人级 skill discovery 路径中，将 ${device.skill.expectedRoot} 注册为链接。`
+      ? `运行 silvermoon-link-skill，把当前全局 runtime 的 canonical skill ${device.skill.expectedRoot} 链接到个人级 discovery 路径，然后重试当前 Silvermoon 命令。`
       : device.skill.status === "mismatched"
-        ? `把报告的个人级 skill 注册替换为指向 ${device.skill.expectedRoot} 的链接。`
+        ? `运行 silvermoon-link-skill，把报告的个人级 skill registration 重新链接到当前全局 runtime 的 canonical skill ${device.skill.expectedRoot}，然后重试当前 Silvermoon 命令。`
         : `修复 Silvermoon 安装，确保 ${device.skill.expectedRoot} 包含可读的 SKILL.md。`;
+  const skillSummary = device.skill.status === "mismatched"
+    ? device.skill.invalidTargets?.map(({ path, target }) =>
+      `个人级 skill registration ${path} 当前解析到 ${target ?? "不可读目标"}；当前全局 runtime 期望 ${device.skill.expectedRoot}。`
+    ).join(" ")
+    : device.skill.summary === undefined
+      ? undefined
+      : `无法完整检查个人级 Silvermoon skill：${device.skill.summary}`;
   const updateSummary = device.update.status === "available"
     ? `将全局 Silvermoon runtime 升级到 ${device.update.latestVersion}。`
     : device.update.status === "source-checkout"
@@ -175,9 +182,7 @@ function localizeDeviceAdvisory(
     },
     skill: {
       ...device.skill,
-      ...(device.skill.summary === undefined
-        ? {}
-        : { summary: `无法完整检查个人级 Silvermoon skill：${device.skill.summary}` }),
+      ...(skillSummary === undefined ? {} : { summary: skillSummary }),
       ...(skillRemediation === undefined
         ? {}
         : { remediation: skillRemediation }),
@@ -247,6 +252,10 @@ function projectSchemaDiagnostics({
 }): Diagnostic[] {
   if (schemas === undefined) return [];
   const diagnostics: Diagnostic[] = [];
+  const migrationGroups = new Map<string, {
+    files: SchemaFileReadiness[];
+    path: NonNullable<SchemaFileReadiness["migrationPath"]>;
+  }>();
   for (const file of schemas.files) {
     if (file.validity === "invalid") {
       diagnostics.push({
@@ -269,23 +278,24 @@ function projectSchemaDiagnostics({
       || file.readiness === "current"
     ) continue;
     if (file.readiness === "migration-required") {
-      const migration = file.migrationPath?.[0];
-      const command = migration === undefined
-        ? undefined
-        : device?.runtime.source === "host"
-          ? `the host-managed ${migration.id} migration`
-          : migration.executable;
-      diagnostics.push({
-        code: "schema.migration-required",
-        level: "error",
-        path: file.path,
-        message: `${file.family} schema version ${String(file.schemaVersion)} is valid but the current write target is version ${file.targetVersion}.`,
-        remediation: command === undefined
-          ? `Migrate ${file.path} before continuing.`
-          : device?.runtime.source === "source-checkout"
-            ? `Link this checkout globally, then run ${command} to plan the migration before continuing.`
-          : `Run ${command} to plan the migration before continuing.`,
-      });
+      const migrationPath = file.migrationPath;
+      if (migrationPath === undefined || migrationPath.length === 0) {
+        diagnostics.push({
+          code: "schema.migration-required",
+          level: "error",
+          path: file.path,
+          message: `${file.family} schema version ${String(file.schemaVersion)} is valid but the current write target is version ${file.targetVersion}.`,
+          remediation: `Migrate ${file.path} before continuing.`,
+        });
+        continue;
+      }
+      const key = migrationPath.map(({ id }) => id).join("\0");
+      const group = migrationGroups.get(key);
+      if (group === undefined) {
+        migrationGroups.set(key, { files: [file], path: migrationPath });
+      } else {
+        group.files.push(file);
+      }
     } else if (file.readiness === "migration-unavailable") {
       diagnostics.push({
         code: "schema.migration-unavailable",
@@ -297,7 +307,30 @@ function projectSchemaDiagnostics({
       });
     }
   }
-  return diagnostics;
+  const migrationDiagnostics = [...migrationGroups.values()].map(
+    ({ files, path }): Diagnostic => {
+      const migration = path[0];
+      if (migration === undefined) {
+        throw new Error("Schema migration group is missing its first edge.");
+      }
+      const command = [
+        migration.executable,
+        ...migration.arguments,
+      ].join(" ");
+      const migrationIds = path.map(({ id }) => id).join(" -> ");
+      return {
+        code: "schema.migration-required",
+        level: "error",
+        message: `${files.length} valid historical schema file${files.length === 1 ? "" : "s"} require the project migration path ${migrationIds} before Silvermoon can write this project.`,
+        remediation: device?.runtime.source === "host"
+          ? `Run the host-managed ${migrationIds} project migration before continuing.`
+          : device?.runtime.source === "source-checkout"
+            ? `Link this checkout globally, then run ${command} to generate the read-only project migration plan before continuing.`
+            : `Run ${command} to generate the read-only project migration plan before continuing.`,
+      };
+    },
+  );
+  return [...migrationDiagnostics, ...diagnostics];
 }
 
 function schemaOwnsConfigDiagnostic(

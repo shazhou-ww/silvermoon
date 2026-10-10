@@ -264,24 +264,16 @@ Node on Windows provides no directory-fsync guarantee, so power-loss durability
 depends on the filesystem. Process-interruption recovery does not imply a
 hardware power-loss guarantee.
 
-## Explicit v1-to-v2 migration
+## Explicit schema migration
 
 The runtime capability graph declares `project-v1-to-v2` as one cross-family
-edge for project configuration and idea state. It is not an ordinary
-Silvermoon lifecycle subcommand and never runs automatically. With the
-installed global runtime, use its packaged executable only after explicit
-project-upgrade authorization:
+edge for project configuration and idea state. The generic migration command
+selects the next declared project edge and never runs automatically. Use it
+only after explicit project-upgrade authorization:
 
 ```sh
-silvermoon-migrate-v1-to-v2 --root <project>
-silvermoon-migrate-v1-to-v2 --root <project> --apply --expected-digest <plan-digest>
-```
-
-In this source repository, use the unpublished local entrypoint instead:
-
-```sh
-node bin/migrate-v1-to-v2.ts --root <project>
-node bin/migrate-v1-to-v2.ts --root <project> --apply --expected-digest <plan-digest>
+silvermoon migrate --root <project>
+silvermoon migrate --root <project> --apply --expected-digest <plan-digest>
 ```
 
 The first invocation is read-only. Apply requires the same plan digest and a
@@ -294,14 +286,14 @@ produce empty logs. Ordinary commands and installation never migrate.
 Recovery uses the same runtime-owned edge:
 
 ```sh
-silvermoon-migrate-v1-to-v2 --root <project> --resume --confirm-stopped
-silvermoon-migrate-v1-to-v2 --root <project> --rollback --confirm-stopped
+silvermoon migrate --root <project> --resume --confirm-stopped
+silvermoon migrate --root <project> --rollback --confirm-stopped
 ```
 
 Changed source/candidate bytes block rather than overwrite. A completed v2
 project is detected without appending again. Do not downgrade or roll back
 after accepting new facts. Validate and integrate the exact migration boundary
 before adding new events; history checks compare it with the original primary
-v1 facts. Source-checkout recovery uses `node bin/migrate-v1-to-v2.ts` with
-the same options. Migration never commits, pushes, approves, or publishes a
-package.
+v1 facts. A development checkout is linked as the global runtime and uses
+`silvermoon migrate` with the same options. Migration never commits, pushes,
+approves, or publishes a package.
