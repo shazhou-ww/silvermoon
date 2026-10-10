@@ -71,6 +71,9 @@ silvermoon list-ideas
 > Silvermoon 版本，也不保存它的 skill。从 `0.4.0` 起，项目兼容性由 runtime
 > 持有的逐文件 schema capability 与 migration graph 决定。
 
+稳定安装使用 `silvermoon@latest`。开发设备可以主动选择每日更新的
+`silvermoon@canary`，而不会改变正式版 `latest` channel。
+
 工作流见 [Operating Silvermoon](./docs/operations.md)，
 命令详情见 [Technical Reference](./docs/reference.md)。
 

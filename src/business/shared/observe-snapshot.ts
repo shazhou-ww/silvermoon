@@ -162,16 +162,17 @@ function localizeDeviceAdvisory(
     : device.skill.summary === undefined
       ? undefined
       : `无法完整检查个人级 Silvermoon skill：${device.skill.summary}`;
+  const updateChannel = device.update.channel ?? "latest";
   const updateSummary = device.update.status === "available"
-    ? `将全局 Silvermoon runtime 升级到 ${device.update.latestVersion}。`
+    ? `将全局 Silvermoon ${updateChannel} channel runtime 升级到 ${device.update.latestVersion}。`
     : device.update.status === "source-checkout"
-      ? "本次命令绕过了设备级全局 Silvermoon 链接；请把当前 checkout 链接到全局，并用 silvermoon 重试后再检查 npm latest。"
+      ? "本次命令绕过了设备级全局 Silvermoon 链接；请把当前 checkout 链接到全局，并用 silvermoon 重试后再检查对应的 npm channel。"
       : device.update.status === "managed-by-host"
         ? "Silvermoon runtime 更新由嵌入它的 host 管理。"
         : device.update.summary === undefined
           ? undefined
           : device.update.status === "unavailable"
-            ? `无法确认最新 Silvermoon runtime：${device.update.summary}`
+            ? `无法确认 Silvermoon ${updateChannel} channel runtime：${device.update.summary}`
             : `Silvermoon runtime freshness cache 提示：${device.update.summary}`;
   return {
     runtime: {

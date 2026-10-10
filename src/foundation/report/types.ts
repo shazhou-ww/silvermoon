@@ -63,9 +63,11 @@ export interface DeviceAdvisory {
       | "source-checkout";
     currentVersion: string | null;
     source: "cache" | "registry" | "runtime";
+    channel?: string;
     latestVersion?: string;
     checkedAt?: string;
     lastSuccessfulCheck?: {
+      channel?: string;
       checkedAt: string;
       latestVersion: string;
     };

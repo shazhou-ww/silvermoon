@@ -24,6 +24,7 @@ const version = "1.2.3";
 const distTag = "latest";
 const commit = "a".repeat(40);
 const tag = `npm/silvermoon/v${version}`;
+const sourceRef = `refs/tags/${tag}`;
 const repository = "shazhou-ww/silvermoon";
 const registry = "https://registry.npmjs.org";
 const publicMetadata = {
@@ -188,12 +189,12 @@ test("verifies registry identity, READMEs, provenance, and jsDelivr assets", asy
             externalParameters: {
               workflow: {
                 path: ".github/workflows/publish-npm.yml",
-                ref: `refs/tags/${tag}`,
+                ref: sourceRef,
                 repository: `https://github.com/${repository}`,
               },
             },
             resolvedDependencies: [{
-              uri: `git+https://github.com/${repository}@refs/tags/${tag}`,
+              uri: `git+https://github.com/${repository}@${sourceRef}`,
               digest: { gitCommit: commit },
             }],
           },
@@ -278,7 +279,7 @@ test("verifies registry identity, READMEs, provenance, and jsDelivr assets", asy
     version,
     distTag,
     commit,
-    tag,
+    sourceRef,
     tarballPath: candidate.tarballPath,
   };
   const verified = await verifyNpmRelease(release, {
@@ -294,20 +295,6 @@ test("verifies registry identity, READMEs, provenance, and jsDelivr assets", asy
     `https://github.com/${repository}/actions/runs/123/attempts/1`,
   );
   assert.deepEqual(verified.assets, assetUrls);
-
-  const prereleaseVerified = await verifyNpmRelease(
-    { ...release, distTag: "rc" },
-    {
-      fetchImpl: fetchFor({
-        packageMetadata: {
-          "dist-tags": { latest: "1.2.2", rc: version },
-          readme: "",
-          readmeFilename: "",
-        },
-      }),
-    },
-  );
-  assert.equal(prereleaseVerified.distTag, "rc");
 
   await assert.rejects(
     () =>

@@ -22,6 +22,9 @@ every target repository:
 npm install --global silvermoon
 ```
 
+Use `silvermoon@canary` only when the device should follow daily development
+builds; install `silvermoon@latest` to return to the stable channel.
+
 Register that installation's canonical skill in the universal personal
 discovery path:
 
@@ -39,8 +42,8 @@ configuration, metadata schema, and layout. Runtime identity, latest-version
 checks, and personal skill registration belong to device readiness.
 
 Read a dialogue report's device advisory separately from its project
-observation. A global runtime reuses a successful npm `latest` result for less
-than 24 hours and validates personal discovery links against the running
+observation. A global runtime reuses a successful result from its installed npm
+channel for less than 24 hours and validates personal discovery links against the running
 package. Missing, broken, or stale links and registry failures require device
 repair but do not turn a valid project snapshot into
 `project-setup-required`. Healthy device facts remain in structured reports but

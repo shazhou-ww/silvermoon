@@ -84,7 +84,8 @@ skill paths.
 Treat `response.device` as a non-blocking execution-environment advisory, not a
 project finding. Surface an available global-runtime update and repair missing,
 broken, or stale personal skill links at the device or Agent host. Successful
-npm `latest` observations may be reused for less than 24 hours; registry
+observations of the installed version's npm channel may be reused for less
+than 24 hours; stable versions follow `latest`, canaries follow `canary`, and registry
 failure never makes a valid project snapshot fail. Snapshot-only `check`
 commands intentionally omit device readiness.
 

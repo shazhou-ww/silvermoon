@@ -7,7 +7,10 @@ import {
   inspectNpmTarball,
   requiredEntry,
 } from "../src/foundation/package-resource/index.ts";
-import { parseReleaseTag } from "./prepare-npm-release.ts";
+import {
+  deriveNpmDistTag,
+  parseReleaseTag,
+} from "./prepare-npm-release.ts";
 
 const npmRegistry = "https://registry.npmjs.org";
 const repository = "shazhou-ww/silvermoon";
@@ -40,7 +43,7 @@ type Release = {
   version: string;
   distTag: string;
   commit: string;
-  tag: string;
+  sourceRef: string;
   tarballPath: string;
 };
 type Retry = { attempt: number; attempts: number; error: unknown };
@@ -224,14 +227,14 @@ function verifyAttestations({
   version,
   sha512,
   commit,
-  tag,
+  sourceRef,
 }: {
   document: unknown;
   packageName: string;
   version: string;
   sha512: string;
   commit: string;
-  tag: string;
+  sourceRef: string;
 }): string {
   const documentRecord = requireRecord(document, "npm attestation response");
   if (!Array.isArray(documentRecord.attestations)) {
@@ -262,13 +265,12 @@ function verifyAttestations({
   const workflow = nestedRecord(
     provenanceStatement, "predicate", "buildDefinition", "externalParameters", "workflow",
   );
-  const expectedRef = `refs/tags/${tag}`;
   if (
     workflow?.repository !== `https://github.com/${repository}` ||
     workflow?.path !== workflowPath ||
-    workflow?.ref !== expectedRef
+    workflow?.ref !== sourceRef
   ) {
-    throw new Error("SLSA provenance workflow identity does not match the release tag.");
+    throw new Error("SLSA provenance workflow identity does not match the publication source.");
   }
   const dependencies = nestedRecord(
     provenanceStatement, "predicate", "buildDefinition",
@@ -279,7 +281,7 @@ function verifyAttestations({
     : undefined;
   if (
     (!isRecord(dependency) || dependency.uri !==
-    `git+https://github.com/${repository}@${expectedRef}`
+    `git+https://github.com/${repository}@${sourceRef}`
     )
   ) {
     throw new Error("SLSA provenance does not resolve the expected release commit.");
@@ -299,17 +301,32 @@ function verifyAttestations({
   return invocationId;
 }
 
+export function validatePublicationSource({
+  distTag,
+  sourceRef,
+  version,
+}: Pick<Release, "distTag" | "sourceRef" | "version">): void {
+  if (!sourceRef.startsWith("refs/tags/")) {
+    throw new Error("npm publication source must be an immutable release tag.");
+  }
+  const tag = sourceRef.slice("refs/tags/".length);
+  const parsedTag = parseReleaseTag(tag);
+  if (parsedTag.version !== version) {
+    throw new Error(`Release tag ${tag} does not select version ${version}.`);
+  }
+  if (deriveNpmDistTag(version) !== distTag) {
+    throw new Error(`Release version ${version} does not select npm dist-tag ${distTag}.`);
+  }
+}
+
 export async function verifyNpmRelease(
-  { packageName, version, distTag, commit, tag, tarballPath }: Release,
+  { packageName, version, distTag, commit, sourceRef, tarballPath }: Release,
   { fetchImpl = globalThis.fetch }: { fetchImpl?: typeof fetch } = {},
 ) {
   if (!/^[0-9a-f]{40,64}$/i.test(commit ?? "")) {
     throw new Error("Release commit must be a full hexadecimal Git object ID.");
   }
-  const parsedTag = parseReleaseTag(tag);
-  if (parsedTag.version !== version) {
-    throw new Error(`Release tag ${tag} does not select version ${version}.`);
-  }
+  validatePublicationSource({ distTag, sourceRef, version });
   for (const [name, value] of Object.entries({ packageName, version, distTag })) {
     if (typeof value !== "string" || value.length === 0) {
       throw new Error(`${name} is required for release verification.`);
@@ -477,7 +494,7 @@ export async function verifyNpmRelease(
     version,
     sha512: candidate.sha512,
     commit,
-    tag,
+    sourceRef,
   });
   return {
     packageName,
@@ -545,7 +562,7 @@ function parseArguments(argv: readonly string[]): Release {
     ["--version", "version"],
     ["--dist-tag", "distTag"],
     ["--commit", "commit"],
-    ["--tag", "tag"],
+    ["--source-ref", "sourceRef"],
     ["--tarball", "tarballPath"],
   ]);
   const values: Partial<Release> = {};
@@ -555,15 +572,15 @@ function parseArguments(argv: readonly string[]): Release {
     const name = option === undefined ? undefined : names.get(option);
     if (!name || !value) {
       throw new Error(
-        "Usage: node bin/verify-npm-release.mjs --package-name <name> --version <version> --dist-tag <tag> --commit <sha> --tag <release-tag> --tarball <path>",
+        "Usage: node bin/verify-npm-release.ts --package-name <name> --version <version> --dist-tag <tag> --commit <sha> --source-ref <git-ref> --tarball <path>",
       );
     }
     values[name] = value;
   }
-  const { packageName, version, distTag, commit, tag, tarballPath } = values;
-  if (!packageName || !version || !distTag || !commit || !tag || !tarballPath) {
+  const { packageName, version, distTag, commit, sourceRef, tarballPath } = values;
+  if (!packageName || !version || !distTag || !commit || !sourceRef || !tarballPath) {
     throw new Error(
-      "Usage: node bin/verify-npm-release.mjs --package-name <name> --version <version> --dist-tag <tag> --commit <sha> --tag <release-tag> --tarball <path>",
+      "Usage: node bin/verify-npm-release.ts --package-name <name> --version <version> --dist-tag <tag> --commit <sha> --source-ref <git-ref> --tarball <path>",
     );
   }
   return {
@@ -571,7 +588,7 @@ function parseArguments(argv: readonly string[]): Release {
     version,
     distTag,
     commit,
-    tag,
+    sourceRef,
     tarballPath,
   };
 }

@@ -1,15 +1,17 @@
 ---
 name: publish
-description: "Publish the allowlisted npm package from this repository through the protected GitHub Actions trusted-publishing workflow. Use only when the user explicitly invokes /publish with a release key and version intent."
-argument-hint: "[silvermoon] [major|minor|patch|x.y.z]"
+description: "Publish the allowlisted npm package from this repository through the protected stable or canary GitHub Actions trusted-publishing channel. Use only when the user explicitly invokes /publish with a release key and channel or version intent."
+argument-hint: "[silvermoon] [canary|major|minor|patch|x.y.z]"
 user-invocable: true
 disable-model-invocation: true
 ---
 
 # Publish npm package
 
-Publish the allowlisted package through this repository's protected
-tag-triggered GitHub Actions workflow. Never publish directly from the
+Publish the allowlisted package through this repository's protected GitHub
+Actions workflow. Stable releases are tag-triggered; canaries are planned from
+the exact `origin/main` head, whose protected deploy-key push creates an
+immutable canary tag and triggers publication. Never publish directly from the
 development machine.
 
 ## Safety boundary
@@ -28,6 +30,7 @@ development machine.
   `NODE_AUTH_TOKEN`.
 - Release versions and `npm/<release-key>/v<version>` tags are immutable. Never
   move, delete, or recreate a release tag to repair source or validation.
+  Canary versions are also immutable even though they do not have daily tags.
 - Preserve unrelated worktree changes. Stop if they prevent an isolated,
   reviewable release commit.
 - Before creating a tag, require the workflow to use a GitHub-hosted runner,
@@ -39,9 +42,9 @@ development machine.
 
 1. Resolve the release key from the invocation. When omitted and exactly one
    package is allowlisted, use that key; otherwise ask for the key.
-2. Resolve one explicit version intent: `major`, `minor`, `patch`, or an exact
-   canonical SemVer. Use stable SemVer unless the user explicitly requests a
-   named prerelease channel.
+2. Resolve one explicit intent: the `canary` channel, `major`, `minor`, `patch`,
+   or an exact canonical SemVer. A canary uses the committed next stable
+   manifest line and derives its immutable prerelease version in CI.
 3. Read the package manifest, current npm versions, existing release tags, and
    the latest package-specific release tag. Calculate the target from the
    highest relevant stable version rather than assuming the working manifest is
@@ -50,6 +53,10 @@ development machine.
    with current `origin/main` before preparing the release.
 5. Stop if the target npm version or exact release tag already exists. Report
    the immutable existing release rather than attempting to replace it.
+
+For `canary`, require a clean worktree and local `HEAD` equal to refreshed
+`origin/main`. Confirm the committed manifest identifies the intended next
+stable line and that this stable version is not already published.
 
 ## Prepare and publish the release commit
 
@@ -117,11 +124,27 @@ commit because it leaves package contents unchanged.
 
 The tag is the release instruction. Do not run a second publication command.
 
+For a canary, do not create a version commit or GitHub Release. Dispatch the
+trusted workflow from `main`:
+
+```sh
+gh workflow run publish-npm.yml --ref main
+```
+
+The planning job derives
+`<next-stable>-canary.<run-number>.g<12-hex-commit>`, creates that immutable
+release tag at the exact `main` commit, and its dedicated deploy-key push
+triggers the publication job from the tag. If that tag already exists after an
+interrupted run, the planner explicitly dispatches it instead. The package
+version changes only inside the isolated staging tree and publishes only to
+the npm `canary` dist-tag. It creates no tag when that exact `main` commit is
+already the current canary.
+
 ## Verify GitHub Actions and npm
 
-1. Locate the `Publish npm package` run whose ref is the exact release tag and
-   whose commit is the tagged `origin/main` commit. Do not mistake an older run
-   for this release.
+1. Locate the `Publish npm package` run whose ref is the exact release tag for
+   a tagged release or `main` for a canary, and whose commit is the intended
+   `origin/main` commit. Do not mistake an older run for this publication.
 2. Follow the run to completion with GitHub CLI or the Actions API. If the npm
    environment requires a human reviewer, report that exact pending gate and
    wait rather than bypassing it.

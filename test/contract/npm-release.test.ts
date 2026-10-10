@@ -40,9 +40,58 @@ test("uses a protected, least-privilege trusted-publishing workflow", async () =
 
   const workflow = document.toJS();
   assert.deepEqual(workflow.on.push.tags, ["npm/**"]);
+  assert.deepEqual(workflow.on.schedule, [{ cron: "0 2 * * *" }]);
+  assert.equal(workflow.on.workflow_dispatch, null);
   assert.deepEqual(workflow.permissions, {});
 
+  const prepareCanary = workflow.jobs["prepare-canary"];
+  assert.match(prepareCanary.if, /github\.ref == 'refs\/heads\/main'/);
+  assert.match(prepareCanary.if, /github\.event_name == 'schedule'/);
+  assert.match(prepareCanary.if, /github\.event_name == 'workflow_dispatch'/);
+  assert.equal(prepareCanary.environment, undefined);
+  assert.deepEqual(prepareCanary.permissions, {
+    actions: "write",
+    contents: "read",
+  });
+  const prepareSteps = prepareCanary.steps;
+  const prepareCheckout = prepareSteps.find(
+    ({ name }: { name: string }) => name === "Check out full history",
+  );
+  const refreshCanary = prepareSteps.find(
+    ({ name }: { name: string }) => name === "Refresh and verify primary head",
+  );
+  const planCanary = prepareSteps.find(
+    ({ name }: { name: string }) => name === "Plan canary publication",
+  );
+  const dispatchCanary = prepareSteps.find(
+    ({ name }: { name: string }) =>
+      name === "Create immutable canary tag or resume publication",
+  );
+  assert.equal(prepareCheckout.with["fetch-depth"], 0);
+  assert.equal(
+    prepareCheckout.with["ssh-key"],
+    "${{ secrets.NPM_RELEASE_DEPLOY_KEY }}",
+  );
+  assert.match(
+    refreshCanary.run,
+    /test "\$GITHUB_SHA" = "\$\(git rev-parse refs\/remotes\/origin\/main\)"/,
+  );
+  assert.match(planCanary.run, /--channel canary/);
+  assert.match(planCanary.run, /--run-number "\$GITHUB_RUN_NUMBER"/);
+  assert.equal(
+    dispatchCanary.if,
+    "steps.canary.outputs.publication_state != 'unchanged'",
+  );
+  assert.equal(dispatchCanary.env.GH_TOKEN, "${{ github.token }}");
+  assert.match(dispatchCanary.run, /git tag "\$RELEASE_TAG" "\$GITHUB_SHA"/);
+  assert.match(dispatchCanary.run, /git push origin "refs\/tags\/\$RELEASE_TAG"/);
+  assert.match(
+    dispatchCanary.run,
+    /gh workflow run publish-npm\.yml --ref "\$RELEASE_TAG"/,
+  );
+
   const publish = workflow.jobs.publish;
+  assert.equal(publish.if, "startsWith(github.ref, 'refs/tags/npm/')");
   assert.equal(publish["runs-on"], "ubuntu-latest");
   assert.equal(publish.environment, "npm");
   assert.deepEqual(publish.permissions, {
@@ -80,9 +129,9 @@ test("uses a protected, least-privilege trusted-publishing workflow", async () =
     );
   }
   assert.ok(
-    stepNames.indexOf("Resolve release source tag") <
+    stepNames.indexOf("Resolve publication source") <
       stepNames.indexOf("Validate release instruction"),
-    "the source tag must be resolved before release planning",
+    "the publication source must be resolved before release planning",
   );
   assert.ok(
     stepNames.indexOf("Verify 0.4.0 recovery ancestry") <
@@ -123,7 +172,7 @@ test("uses a protected, least-privilege trusted-publishing workflow", async () =
 
   const checkout = publish.steps.find(({ name }: { name: string }) => name === "Check out full history");
   const sourceTag = publish.steps.find(
-    ({ name }: { name: string }) => name === "Resolve release source tag",
+    ({ name }: { name: string }) => name === "Resolve publication source",
   );
   const setupPnpm = publish.steps.find(({ name }: { name: string }) => name === "Install pnpm");
   const setupNode = publish.steps.find(({ name }: { name: string }) => name === "Set up Node.js");
@@ -131,7 +180,7 @@ test("uses a protected, least-privilege trusted-publishing workflow", async () =
     ({ name }: { name: string }) => name === "Install trusted-publishing npm",
   );
   const ancestry = publish.steps.find(
-    ({ name }: { name: string }) => name === "Refresh primary branch and verify ancestry",
+    ({ name }: { name: string }) => name === "Refresh and verify primary branch",
   );
   const recoveryAncestry = publish.steps.find(
     ({ name }: { name: string }) => name === "Verify 0.4.0 recovery ancestry",
@@ -179,6 +228,7 @@ test("uses a protected, least-privilege trusted-publishing workflow", async () =
   assert.match(sourceTag.run, /PLANNER_TAG=npm\/silvermoon\/v0\.4\.0/);
   assert.match(sourceTag.run, /planner_tag=\$PLANNER_TAG/);
   assert.match(sourceTag.run, /recovery_state=\$RECOVERY_STATE/);
+  assert.match(sourceTag.run, /source_ref=\$SOURCE_REF/);
   assert.equal(
     setupPnpm.uses,
     "pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413",
@@ -220,6 +270,8 @@ test("uses a protected, least-privilege trusted-publishing workflow", async () =
     release.env.RELEASE_TAG,
     "${{ steps.source.outputs.planner_tag }}",
   );
+  assert.match(release.run, /--tag "\$RELEASE_TAG"/);
+  assert.match(release.run, /--commit "\$RELEASE_COMMIT"/);
   assert.equal(repositoryBuild.run, "pnpm build");
   assert.equal(unit.run, "pnpm test:unit");
   assert.equal(contract.run, "pnpm test:contract");
@@ -228,14 +280,22 @@ test("uses a protected, least-privilege trusted-publishing workflow", async () =
   const staticChecks = publish.steps.find(({ name }: { name: string }) => name === "Validate local static checks");
   assert.equal(staticChecks.run, "pnpm lint:markdown\npnpm check:diff\nnode bin/silvermoon.ts check --commit HEAD --audience agent\n");
   for (const name of requiredChecks) {
-    assert.equal(publish.steps.find((candidate: { name: string; }) => candidate.name === name).if, undefined, name);
+    assert.equal(
+      publish.steps.find((candidate: { name: string; }) => candidate.name === name).if,
+      "steps.release.outputs.publication_state != 'unchanged'",
+      name,
+    );
   }
   assert.equal(stage.id, "stage");
   assert.equal(
     stage.env.PACKAGE_DIRECTORY,
     "${{ steps.release.outputs.package_directory }}",
   );
+  assert.equal(stage.env.PACKAGE_VERSION, "${{ steps.release.outputs.version }}");
+  assert.equal(stage.env.NPM_DIST_TAG, "${{ steps.release.outputs.dist_tag }}");
   assert.match(stage.run, /git archive "\$GITHUB_SHA" \| tar -x -C "\$STAGE_ROOT"/);
+  assert.match(stage.run, /stage-npm-canary\.ts/);
+  assert.match(stage.run, /--version "\$PACKAGE_VERSION"/);
   assert.match(stage.run, /package_directory=\$PACKAGE_ROOT/);
   assert.match(stage.run, /artifact_directory=\$ARTIFACT_DIRECTORY/);
   assert.equal(
@@ -338,10 +398,17 @@ test("uses a protected, least-privilege trusted-publishing workflow", async () =
     verification.env.SILVERMOON_TARBALL,
     "${{ steps.package.outputs.tarball_path }}",
   );
-  assert.equal(verification.env.RELEASE_TAG, "${{ github.ref_name }}");
+  assert.equal(
+    verification.if,
+    "steps.release.outputs.publication_state != 'unchanged'",
+  );
+  assert.equal(
+    verification.env.RELEASE_SOURCE_REF,
+    "${{ steps.source.outputs.source_ref }}",
+  );
   assert.match(verification.run, /verify-npm-release\.ts/);
   assert.match(verification.run, /--commit "\$RELEASE_COMMIT"/);
-  assert.match(verification.run, /--tag "\$RELEASE_TAG"/);
+  assert.match(verification.run, /--source-ref "\$RELEASE_SOURCE_REF"/);
   for (const required of [
     "dist-tags",
     "Candidate tarball gitHead mismatch",
@@ -373,6 +440,12 @@ test("documents trusted-publisher setup and the protected release procedure", as
     "Environment: `npm`",
     "Allowed action: direct `npm publish`",
     "tag ruleset targeting `npm/**`",
+    ".github/rulesets/npm-release-tags.json",
+    "exact refreshed `origin/main` commit",
+    "0.5.0-canary.42.g0123456789ab",
+    "gh workflow run publish-npm.yml --ref main",
+    "silvermoon@canary",
+    "silvermoon@latest",
     "git tag npm/silvermoon/v0.2.0-rc.1 origin/main",
     "RELEASE_PACKAGES",
     "Do not move or recreate the tag",
@@ -395,6 +468,7 @@ test("documents trusted-publisher setup and the protected release procedure", as
   ]) {
     assert.ok(guide.includes(required), `Release guide is missing: ${required}`);
   }
+  assert.match(guide, /GitHub Actions\s+integration/);
   assert.match(guide, /Do not\s+create an npm automation token/);
   assert.match(guide, /registry\s+integrity/);
   assert.match(guide, /new commit on `main`, choose a new version/);
@@ -411,8 +485,8 @@ test("provides an explicit project publish skill with immutable release safeguar
   assert.deepEqual(document.toJS(), {
     name: "publish",
     description:
-      "Publish the allowlisted npm package from this repository through the protected GitHub Actions trusted-publishing workflow. Use only when the user explicitly invokes /publish with a release key and version intent.",
-    "argument-hint": "[silvermoon] [major|minor|patch|x.y.z]",
+      "Publish the allowlisted npm package from this repository through the protected stable or canary GitHub Actions trusted-publishing channel. Use only when the user explicitly invokes /publish with a release key and channel or version intent.",
+    "argument-hint": "[silvermoon] [canary|major|minor|patch|x.y.z]",
     "user-invocable": true,
     "disable-model-invocation": true,
   });
@@ -425,6 +499,9 @@ test("provides an explicit project publish skill with immutable release safeguar
     "pnpm install --frozen-lockfile",
     "pnpm check",
     "git tag npm/<release-key>/v<version> origin/main",
+    "gh workflow run publish-npm.yml --ref main",
+    "npm `canary` dist-tag",
+    "<next-stable>-canary.<run-number>.g<12-hex-commit>",
     "Silvermoon phase handoff",
     "implementationAcceptedRevision",
     "require `deploy-idea` before creating the release",

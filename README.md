@@ -85,6 +85,9 @@ silvermoon list-ideas
 > store its skill. Since `0.4.0`, project compatibility is determined by the
 > runtime-owned per-file schema capability and migration graph.
 
+Stable installations use `silvermoon@latest`. Development devices can opt into
+daily `silvermoon@canary` builds without changing the stable `latest` channel.
+
 For workflows, see [Operating Silvermoon](./docs/operations.md); for command
 details, see the [Technical Reference](./docs/reference.md).
 

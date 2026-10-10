@@ -45,7 +45,7 @@ test("loads the packaged schema capability contract", async () => {
   const manifest = await loadSchemaCapabilityManifest();
 
   assert.equal(manifest.manifestVersion, 1);
-  assert.equal(manifest.releaseBoundary, "0.4.0");
+  assert.equal(manifest.releaseBoundary, "0.5.0");
   assert.deepEqual(manifest.families["project-config"]?.readVersions, [1, 2]);
   assert.equal(manifest.families["project-config"]?.targetVersion, 2);
   assert.deepEqual(

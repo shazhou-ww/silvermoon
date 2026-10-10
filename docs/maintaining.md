@@ -251,6 +251,13 @@ gate before merging.
 
 The branch ruleset protects `main` against deletion and non-fast-forward
 updates. Keep its configuration synchronized with `.github/rulesets/main.json`.
+The npm tag ruleset restricts creation, update, and deletion under `npm/**`.
+Only the release maintainer and repository deploy keys may bypass it. Keep one
+dedicated write-enabled deploy key whose private half is stored only in the
+`NPM_RELEASE_DEPLOY_KEY` Actions secret; its access exists solely so the
+protected canary planner can create immutable tags. Keep the ruleset
+synchronized with
+`.github/rulesets/npm-release-tags.json`.
 
 ## Documentation Ownership
 
@@ -271,9 +278,12 @@ Use [Repository idea workflow](./repository-tasks.md) for this repository's
 Silvermoon coordination rules.
 
 Use [npm package releases](./npm-package-releases.md) for trusted publishing,
-tag rules, release validation, and failure recovery. Publishing occurs only
-through `.github/workflows/publish-npm.yml` from an immutable
-`npm/silvermoon/v<version>` tag whose commit is reachable from `origin/main`.
+channel rules, release validation, and failure recovery. Publishing occurs
+only through `.github/workflows/publish-npm.yml`. Stable releases come from an
+immutable `npm/silvermoon/v<version>` tag whose commit is reachable from
+`origin/main`; scheduled or manually dispatched canaries first create their
+own immutable version tag at the exact protected `origin/main` head and never
+move npm `latest`.
 The workflow generates both package READMEs in an isolated staging tree,
 validates and publishes one tarball, then checks its registry integrity,
 package-level README, provenance, and commit-pinned jsDelivr assets. Never
