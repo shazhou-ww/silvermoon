@@ -105,7 +105,12 @@ slashes and never `file://` URIs.
 
 After an explicit decision, change only the corresponding status fact,
 validate it, prefer a status-only commit when practical, synchronize it to
-primary, and reobserve the resulting lifecycle state.
+primary, and reobserve the resulting lifecycle state. An acceptance is a
+transition, not the end of the Agent's turn: after `acceptIdeal` or
+`acceptInner`, immediately follow the fresh report's highest-priority safe
+instruction into the next phase without waiting for another user prompt.
+`acceptOuter` is terminal. Otherwise stop only for a human or external wait,
+an actionable blocker, or a terminal lifecycle state.
 
 The required idea-root `ledger.md` is an execution checklist only, not
 operational prose, a decision log, or a discussion record. After repository

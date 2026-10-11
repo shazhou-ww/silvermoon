@@ -202,6 +202,10 @@ abandonment, or resumption. This flag asserts authorization; it does not
 manufacture or prove it. Acceptance also requires the correct lifecycle phase,
 the exact world tree already on primary, and a prior `submit*` of that same
 revision. Keep the review-and-synchronization human gate from the main skill.
+After integrating an `acceptIdeal` or `acceptInner` event into primary,
+reobserve and immediately follow the fresh report into the next phase; the
+append is a lifecycle transition, not a stopping point. `acceptOuter` is
+terminal.
 
 Receipts distinguish `candidate-written`, `already-present` and
 `no-state-change`; none means integrated into primary. Retries recognize the

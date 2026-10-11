@@ -239,6 +239,11 @@ For v1, edit only the corresponding status fact:
 - `deploymentAcceptedRevision`
 - canonical `abandoned: true`, or remove it after an explicit reversal
 
+Acceptance is a lifecycle transition, not a turn boundary. After integrating
+and reobserving `acceptIdeal` or `acceptInner`, continue immediately with the
+fresh report's highest-priority safe instruction in the next phase.
+`acceptOuter` is terminal.
+
 Validate the complete candidate:
 
 ```sh

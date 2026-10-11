@@ -132,6 +132,12 @@ Apply the report in this order:
 5. Stop when waiting for a human or external result; do not poll an unchanged
    observation.
 
+The one-instruction rule applies per observation, not per user turn. After an
+instruction changes repository or external state, reobserve and continue from
+the new report in the same turn. Keep advancing through reports until one
+requires a human or external result, reports an actionable blocker, or reaches
+a terminal lifecycle state.
+
 `project-setup-required` blocks repository work,
 `repository-sync-required` blocks idea routing, and
 `repository-preparation-required` blocks creation. A selected idea reports its
@@ -414,6 +420,13 @@ change only the corresponding status fact:
 Validate a status change with `silvermoon check --worktree`, stage it, run
 `silvermoon check --staged`, commit it separately when practical, synchronize
 it to primary, and reobserve the resulting lifecycle state.
+
+Recording an `accept*` event or v1 acceptance fact is a transition, not the end
+of the Agent's turn. Except for terminal `acceptOuter`, the resulting report
+returns control downstream in the next phase. Immediately follow that fresh
+report's highest-priority safe instruction and begin the next phase without
+waiting for another user prompt. Stop only under the report-following rules
+above.
 
 Follow [adoption.md](./references/adoption.md) when creating or explicitly
 converting a repository to Silvermoon.
