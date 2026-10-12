@@ -6,7 +6,7 @@
 
 ## 结果
 
-在仓库内建立独立的专业能力 module，包含能力定义与拼装执行函数；让 `whats-next` 使用它，验证这套方法在 Silvermoon 场景中可用。讨论形成的语义见[导向模型](./professional-model.md)。
+在仓库内建立独立的专业能力 module，包含能力定义与拼装执行函数；让 `whats-next` 使用它，验证这套方法在 Silvermoon 场景中可用。语义见[导向模型](./professional-model.md)，概念与例子见[推演说明](./value-field-reasoning.md)。
 
 ## 边界
 
