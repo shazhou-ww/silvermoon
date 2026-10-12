@@ -3,6 +3,9 @@
 This page is the authoritative reference for Silvermoon storage, revisions,
 derived state, CLI reports, and validation.
 
+The internal [professional model module](./professional-model.md) organizes
+`whats-next` checks without changing these public contracts.
+
 ## Fixed Storage Layout
 
 Each idea is self-contained under one canonical uppercase ULID:

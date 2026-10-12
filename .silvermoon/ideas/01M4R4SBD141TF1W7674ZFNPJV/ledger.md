@@ -4,15 +4,15 @@
 
 ### Implementation steps
 
-- [ ] **I-S01:** 建立专业能力 module
-- [ ] **I-S02:** 适配 what's next
-- [ ] **I-S03:** 验证并记录抽象边界
+- [x] **I-S01:** 建立专业能力 module
+- [x] **I-S02:** 适配 what's next
+- [x] **I-S03:** 验证并记录抽象边界
 
 ### Implementation acceptance criteria
 
-- [ ] **I-AC01:** 拼装语义可验证
-- [ ] **I-AC02:** 导航行为兼容
-- [ ] **I-AC03:** 仓库验证通过
+- [x] **I-AC01:** 拼装语义可验证
+- [x] **I-AC02:** 导航行为兼容
+- [x] **I-AC03:** 仓库验证通过
 
 ## Deployment
 

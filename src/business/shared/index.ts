@@ -29,6 +29,6 @@ export { observeDevice } from "./observe-device.ts";
 export { observeIdea } from "./observe-idea.ts";
 export { observeProject } from "./observe-project.ts";
 export { observeSnapshot } from "./observe-snapshot.ts";
-export { readIdeaInventoryItem } from "./read-idea-inventory-item.ts";
+export { IdeaMetadataReadError, readIdeaInventoryItem } from "./read-idea-inventory-item.ts";
 export { resolveIdea } from "./resolve-idea.ts";
 export { withObservationLanguage } from "./with-observation-language.ts";

@@ -1,5 +1,12 @@
 # Source modules
 
+## 当前专业能力 module
+
+[professional-model](./professional-model/README.md) 是仓库内独立的通用契约与
+拼装执行 module，不新增架构层或独立 npm 包。[whats-next](./business/whats-next.ts)
+的有序检查实际由它组织，领域报告与精确生命周期事实仍由现有基础及业务能力提供。
+详情见[专业能力说明](../docs/professional-model.md)。
+
 ## 三层目标架构
 
 **本页是下一轮重构的目标设计，不是当前源码依赖图。** 现有顶层存在逻辑环，须归位职责，不能只改名／连线。

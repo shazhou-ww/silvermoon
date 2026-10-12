@@ -27,20 +27,19 @@ export class IdeaMetadataReadError extends Error {
 
 export async function readIdeaInventoryItem(root: string, idea: InventoryIdea) {
   const documentPath = idea.worlds.idealRevision.documentPath;
+  const path = resolve(root, ...documentPath.split("/"));
+  let source: string;
   try {
-    const source = await readFile(
-      resolve(root, ...documentPath.split("/")),
-      "utf8",
-    );
-    return ideaInventoryItem(
-      {
-        id: idea.id,
-        state: idea.state,
-        ...(idea.alias === undefined ? {} : { alias: idea.alias }),
-      },
-      extractIdeaTitle(source),
-    );
+    source = await readFile(path, "utf8");
   } catch (caught) {
     throw new IdeaMetadataReadError(idea.id, documentPath, caught);
   }
+  return ideaInventoryItem(
+    {
+      id: idea.id,
+      state: idea.state,
+      ...(idea.alias === undefined ? {} : { alias: idea.alias }),
+    },
+    extractIdeaTitle(source),
+  );
 }
