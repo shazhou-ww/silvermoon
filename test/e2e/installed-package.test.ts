@@ -106,6 +106,13 @@ try {
     ),
   );
   assert.equal(installedManifest.name, "silvermoon");
+  const installedModel = await readFile(
+    join(bootstrap, "node_modules", "silvermoon", "dist", "src", "business", "whats-next-model.yaml"),
+    "utf8",
+  );
+  assert.equal(installedModel, await readFile(
+    join(packageRoot, "src", "business", "whats-next-model.yaml"), "utf8",
+  ));
   const installedEntry = join(
     bootstrap,
     "node_modules",

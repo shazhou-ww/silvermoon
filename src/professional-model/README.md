@@ -7,13 +7,14 @@
 ## Capability boundary
 
 运行器验证目标，按层逐关执行，在首失败处停止；一次观察由 registry factory
-创建独立闭包。领域检查负责采样、时效、版本证据及预期不可用的显式 problem。
+注入 useState，注册独立的 `[getState, setState]` 句柄供异步 check 共享最新值，
+不使用 React 或隐式全局上下文。领域检查负责采样、时效、版本证据及预期不可用的显式 problem。
 配置和程序缺陷不能被正常业务未达成掩盖。
 
 ## Key exports
 
 `assembleProfessionalModel`、`ProfessionalModel`、固定 `Target`、
 `Observation`、`Problem`、`AtomicCheck`、`CheckResult`、
-`ConfigurationError` 与 `TargetError`。
+`UseState`、`StateHandle`、`ConfigurationError` 与 `TargetError`。
 
 完整契约与 Silvermoon 接入边界见[专业能力说明](../../docs/professional-model.md)。

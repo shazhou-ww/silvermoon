@@ -28,6 +28,11 @@ export type CheckResult =
   | { passed: false; problems: readonly [Problem, ...Problem[]] };
 export type AtomicCheck = (target: Target) => Promise<CheckResult>;
 export type CheckRegistry = Readonly<Record<string, AtomicCheck>>;
+export type StateHandle<State> = readonly [
+  getState: () => State,
+  setState: (value: State) => void,
+];
+export type UseState = <State>(initial: State) => StateHandle<State>;
 
 export class ConfigurationError extends TypeError {}
 export class TargetError extends TypeError {}
@@ -62,7 +67,7 @@ const FIELD_TYPES = new Set(["string", "number", "boolean"]);
 /** YAML contains references only; the registry factory owns observation-local state. */
 export function assembleProfessionalModel(
   source: string,
-  createChecks: () => CheckRegistry,
+  createChecks: (useState: UseState) => CheckRegistry,
 ): ProfessionalModel {
   let config: unknown;
   try {
@@ -126,7 +131,18 @@ export function assembleProfessionalModel(
           throw new TargetError(`Target field ${field} must be ${declaration}.`);
         }
       }
-      const checks = createChecks();
+      let registering = true;
+      const useState: UseState = <State>(initial: State): StateHandle<State> => {
+        if (!registering) throw new TypeError("useState must be called during check registration.");
+        let state = initial;
+        return [() => state, (value) => { state = value; }];
+      };
+      let checks: CheckRegistry;
+      try {
+        checks = createChecks(useState);
+      } finally {
+        registering = false;
+      }
       if (!record(checks)) throw new ConfigurationError("Check registry must be a key-value object.");
       for (const name of groups.flat()) {
         if (!Object.hasOwn(checks, name) || typeof checks[name] !== "function") {

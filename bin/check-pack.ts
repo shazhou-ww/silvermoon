@@ -204,6 +204,7 @@ if (packed.status !== 0) {
     "src/business/shared/with-observation-language.js",
     "src/business/whats-next.js",
     "src/business/whats-next-model.js",
+    "dist/src/business/whats-next-model.yaml",
     "src/professional-model/README.md",
     "src/professional-model/index.js",
     "src/professional-model/model.js",

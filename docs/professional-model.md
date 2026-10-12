@@ -29,19 +29,54 @@ YAML 必须包含且仅包含 `target`、`levels`、`checks`、`skills`、`guida
 所有检查引用，再从 0 顺序执行。层内首失败停止，全部通过才升级；
 空组自然通过，只有 0 层的定义也有效。
 
-Registry factory 仅创建本次观察的闭包与检查，不应在注册时执行采样。
+Registry factory 接收运行器为本次观察提供的 `useState`，仅注册状态与检查，
+不应在注册时执行采样。`useState(initial)` 返回 `[getState, setState]`：
+setter 立即存入给定值，getter 总是读取最新值，包括 `await` 之后。
+每次调用分配独立句柄，各 check 通过闭包复用同一句柄来共享状态。
+注册结束后不能再调用 useState；运行器不依赖调用顺序索引、全局上下文或 React。
+它不调度重渲染，initial 和 setter 参数均为直接值，不解释函数为 initializer
+或 updater；需要基于旧值更新时用 `setState(transform(getState()))`。
+
 原子检查接收 Target 并异步返回 `{ passed: true }` 或
 `{ passed: false, problems: [problem, ...] }`；非法返回值抛出程序错误。
-检查可通过同一 factory 的闭包共享一次观察内的采样；顺序或并发的新观察
-均创建新闭包，不能缓存上次通过结论。程序异常原样传播，不统一 catch。
+顺序或并发的新观察均调用 factory 并创建新的 state 句柄，失败的观察也不保留
+下次判定所用的状态。句柄不深拷贝 initial 对象；可变初值应在 factory 内
+创建，不能以外部可变对象绕过观察隔离。程序异常原样传播，不统一 catch。
 预期不可用应由领域检查明确返回 problem。
+
+```ts
+const model = assembleProfessionalModel(yamlSource, (useState) => {
+  const [getSample, setSample] = useState<string | undefined>(undefined);
+  return {
+    sample: async (target) => {
+      setSample(await readSample(target));
+      return { passed: true };
+    },
+    verify: async () => {
+      const sample = getSample();
+      return sample === "ready"
+        ? { passed: true }
+        : {
+          passed: false,
+          problems: [{ code: "unavailable", description: "Sample is not ready." }],
+        };
+    },
+  };
+});
+```
+
+此示例的 YAML 需声明 `sample`、`verify` 检查及其层级顺序；运行器不自行重跑
+检查，失败后仍需 Agent 采取行动，再发起新的 observe。
 
 观察是采样过程，不保证瞬时一致快照；时效与精确版本判据仍由领域负责。
 
 ## Silvermoon 接入边界
 
-[导航定义](../src/business/whats-next-model.ts) 使用内嵌 YAML，避免增加独立
-配置文件的构建复制和安装路径。它不是项目可覆盖的配置，也不执行脚本。
+[导航定义](../src/business/whats-next-model.yaml) 是独立 YAML 文件，
+[读取函数](../src/business/whats-next-model.ts) 使用 `import.meta.url` 相对路径，
+不依赖当前工作目录。构建将同一文件复制到 `dist/src/business/`，
+包白名单和已安装包测试验证该资源。每次导航读取定义，读取或解析失败直接诊断，
+不回退到内嵌配置。它不是项目可覆盖的配置，也不执行脚本。
 [whats-next](../src/business/whats-next.ts) 注册 project、repository、
 selection、guidance、ideal、inner、outer 原子检查，由 module 的运行器
 决定顺序、升级与停止。层级为：
@@ -62,6 +97,8 @@ repository readiness、对象选取与 lifecycle 投影仍提供唯一领域事�
 领域动态 nextSteps、review、localization、控制权、phase guidance、
 Git/schema 整备及提交同步继续使用原有实现。设备 advisory 不进入硬门槛。
 裸导航和未知对象在 selection 停止，不擅自选择 Idea。
+Snapshot、repository readiness、selected idea、selected report 和最终 outcome
+这五份跨 check 状态实际使用注入的 useState 句柄；不只在示例里演示该 API。
 
 专项证据见 [module 测试](../test/unit/professional-model.test.ts) 与
 [导航接入测试](../test/unit/whats-next-model.test.ts)；现有真实 Git/CLI、

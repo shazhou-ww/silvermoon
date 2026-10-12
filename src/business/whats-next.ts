@@ -1,7 +1,7 @@
 import { resolve } from "node:path";
 
 import { assembleProfessionalModel } from "../professional-model/index.ts";
-import { CHECK_PASSED, pending, WHATS_NEXT_MODEL } from "./whats-next-model.ts";
+import { CHECK_PASSED, pending, readWhatsNextModel } from "./whats-next-model.ts";
 import { createCommandRun } from "../foundation/command-message/index.ts";
 import { ACTIVE_STATES, diagnosticProblem, dialogueReadyObservation } from "../foundation/report/index.ts";
 import { inspectPhaseGuidance } from "../foundation/guidance/index.ts";
@@ -29,7 +29,7 @@ import type {
 export { CHANGE_SAMPLE_BYTE_LIMIT, CHANGE_SAMPLE_ITEM_LIMIT, phaseGuidanceInstructions, projectInstructions, summarizeWorktreeChanges } from "../foundation/report/index.ts";
 export { assessIdeaCreationReadiness, assessRepositoryReadiness } from "./shared/index.ts";
 
-const WHATSNEXT_PORTS = Object.freeze({ createCommandRun, observeSnapshot, assessRepositoryReadiness, readIdeaInventoryItem, assembleProfessionalModel });
+const WHATSNEXT_PORTS = Object.freeze({ createCommandRun, observeSnapshot, assessRepositoryReadiness, readIdeaInventoryItem, assembleProfessionalModel, readWhatsNextModel });
 
 function navigationSource(
   observation: ProjectReadyObservation,
@@ -72,7 +72,7 @@ export async function whatsNextUseCase({
   root = process.cwd(),
   userHome,
 }: WhatsNextOptions = {}, ports: typeof WHATSNEXT_PORTS = WHATSNEXT_PORTS) {
-  const { createCommandRun, observeSnapshot, assessRepositoryReadiness, readIdeaInventoryItem, assembleProfessionalModel } = ports;
+  const { createCommandRun, observeSnapshot, assessRepositoryReadiness, readIdeaInventoryItem, assembleProfessionalModel, readWhatsNextModel } = ports;
   const canonicalLanguage = language === undefined
     ? undefined
     : canonicalizeOutputLanguage(language);
@@ -91,23 +91,28 @@ export async function whatsNextUseCase({
   const recheckCommand = canonicalLanguage === undefined
     ? `${baseRecheckCommand} --audience agent`
     : `${baseRecheckCommand} --language ${canonicalLanguage} --audience agent`;
-  let outcome: { observation: Observation; responseContext: ResponseContext } | undefined;
-  const model = assembleProfessionalModel(WHATS_NEXT_MODEL, () => {
-    let snapshot: SnapshotObservation | undefined;
-    let repository: RepositoryReadiness | undefined;
-    let selected: ReadyObservation["layout"]["ideas"][number] | null = null;
-    let selectedIdea: IdeaSelectedObservation["selectedIdea"] | undefined;
+  type Outcome = { observation: Observation; responseContext: ResponseContext };
+  let readOutcome: (() => Outcome | undefined) | undefined;
+  const model = assembleProfessionalModel(await readWhatsNextModel(), (useState) => {
+    const [getSnapshot, setSnapshot] = useState<SnapshotObservation | undefined>(undefined);
+    const [getRepository, setRepository] = useState<RepositoryReadiness | undefined>(undefined);
+    const [getSelected, setSelected] = useState<ReadyObservation["layout"]["ideas"][number] | null>(null);
+    const [getSelectedIdea, setSelectedIdea] = useState<IdeaSelectedObservation["selectedIdea"] | undefined>(undefined);
+    const [getOutcome, setOutcome] = useState<Outcome | undefined>(undefined);
+    readOutcome = getOutcome;
 
     function readySnapshot(): ReadyObservation {
+      const snapshot = getSnapshot();
       if (!snapshot?.projectReady) throw new TypeError("Project check must pass before navigation.");
       return snapshot;
     }
     function readyRepository() {
+      const repository = getRepository();
       if (!repository?.ready) throw new TypeError("Repository check must pass before navigation.");
       return repository;
     }
     function finish(observation: Observation, responseContext: ResponseContext) {
-      outcome = { observation, responseContext };
+      setOutcome({ observation, responseContext });
     }
     function blocked(code: string, observation: Observation) {
       const description = observation.problems
@@ -123,7 +128,7 @@ export async function whatsNextUseCase({
           userHome,
           version: { type: "worktree" },
         });
-        snapshot = observed;
+        setSnapshot(observed);
         runtime.observe(observed.observation, { factType: "project.snapshot" });
         if (!observed.projectReady) {
           finish(
@@ -140,9 +145,10 @@ export async function whatsNextUseCase({
           return blocked("project", observed.observation);
         }
 
-        selected = selectIdea(observed.layout.ideas, selector);
+        const selected = selectIdea(observed.layout.ideas, selector);
+        setSelected(selected);
         if (selected?.status.language) {
-          snapshot = withObservationLanguage(observed, selected.status.language);
+          setSnapshot(withObservationLanguage(observed, selected.status.language));
         }
         return CHECK_PASSED;
       },
@@ -154,7 +160,7 @@ export async function whatsNextUseCase({
           recheckCommand,
           root: observed.observation.root,
         });
-        repository = readiness;
+        setRepository(readiness);
         if (!readiness.ready) {
           finish(
             readiness.observation,
@@ -167,6 +173,7 @@ export async function whatsNextUseCase({
       async selection() {
         const observed = readySnapshot();
         const readiness = readyRepository();
+        const selected = getSelected();
         const readyObservation = navigationSource(readiness.observation);
         let navigationObservation: NavigationReadyObservation = {
           state: "navigation-ready",
@@ -271,7 +278,7 @@ export async function whatsNextUseCase({
           return pending("selection", `Unknown idea selector: ${selector}.`);
         }
 
-        selectedIdea = {
+        setSelectedIdea({
           id: selected.id,
           ...(selected.alias === undefined ? {} : { alias: selected.alias }),
           state: selected.state,
@@ -282,12 +289,14 @@ export async function whatsNextUseCase({
           ...(selected.eventDigest === undefined
             ? {}
             : { eventDigest: selected.eventDigest }),
-        };
+        });
         return CHECK_PASSED;
       },
       async guidance() {
         const observed = readySnapshot();
         const readiness = readyRepository();
+        const selected = getSelected();
+        const selectedIdea = getSelectedIdea();
         if (selected === null || selectedIdea === undefined) {
           throw new TypeError("Selection check must pass before phase guidance.");
         }
@@ -360,17 +369,20 @@ export async function whatsNextUseCase({
         return CHECK_PASSED;
       },
       async ideal() {
+        const selected = getSelected();
         if (selected === null) throw new TypeError("Missing selected idea.");
         return selected.state === "implementing"
           || selected.state === "deploying" || selected.state === "completed"
           ? CHECK_PASSED : pending("ideal", `Idea lifecycle is ${selected.state}.`);
       },
       async inner() {
+        const selected = getSelected();
         if (selected === null) throw new TypeError("Missing selected idea.");
         return selected.state === "deploying" || selected.state === "completed"
           ? CHECK_PASSED : pending("inner", `Idea lifecycle is ${selected.state}.`);
       },
       async outer() {
+        const selected = getSelected();
         if (selected === null) throw new TypeError("Missing selected idea.");
         return selected.state === "completed"
           ? CHECK_PASSED : pending("outer", `Idea lifecycle is ${selected.state}.`);
@@ -378,6 +390,7 @@ export async function whatsNextUseCase({
     };
   });
   await model.observe({ root: requestedRoot, ...(selector === undefined ? {} : { idea: selector }) });
+  const outcome = readOutcome?.();
   if (outcome === undefined) throw new TypeError("Navigation checks omitted the report.");
   return runtime.complete(outcome.observation, outcome.responseContext);
 }

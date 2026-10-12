@@ -4,7 +4,7 @@ import { test } from "node:test";
 import {
   assembleProfessionalModel, ConfigurationError, TargetError,
 } from "../../src/professional-model/index.ts";
-import type { CheckRegistry, CheckResult } from "../../src/professional-model/index.ts";
+import type { CheckRegistry, CheckResult, UseState } from "../../src/professional-model/index.ts";
 
 const source = `
 target:
@@ -133,17 +133,36 @@ test("rejects malformed check results instead of returning success-shaped fallba
   }
 });
 
-test("shares closure state within one observation and isolates sequential and concurrent observations", async () => {
+test("injected useState shares latest values after await and isolates sequential and concurrent observations", async () => {
   let observations = 0;
   const samples: number[] = [];
-  const model = assembleProfessionalModel(source, () => {
+  const model = assembleProfessionalModel(source, (useState) => {
     observations += 1;
     const observation = observations;
-    let state = 0;
+    const [getState, setState] = useState(0);
+    const [getLabel, setLabel] = useState<string | undefined>(undefined);
     return {
-      first: async () => { state += 1; await Promise.resolve(); return pass; },
-      second: async () => { assert.equal(state, 1); state += 1; return pass; },
-      last: async () => { assert.equal(state, 2); samples.push(observation); return pass; },
+      first: async () => {
+        assert.equal(getState(), 0);
+        assert.equal(getLabel(), undefined);
+        await Promise.resolve();
+        setState(getState() + 1);
+        setLabel(`observation-${observation}`);
+        return pass;
+      },
+      second: async () => {
+        assert.equal(getState(), 1);
+        assert.equal(getLabel(), `observation-${observation}`);
+        await Promise.resolve();
+        setState(getState() + 1);
+        return pass;
+      },
+      last: async () => {
+        assert.equal(getState(), 2);
+        assert.equal(getLabel(), `observation-${observation}`);
+        samples.push(observation);
+        return pass;
+      },
     };
   });
   await model.observe(target);
@@ -151,6 +170,80 @@ test("shares closure state within one observation and isolates sequential and co
   await Promise.all([model.observe(target), model.observe(target)]);
   assert.equal(observations, 4);
   assert.deepEqual(samples.sort(), [1, 2, 3, 4]);
+});
+
+test("useState allocates independent handles and stores direct values without React rerenders", async () => {
+  let registrations = 0;
+  const value = () => "a stored function, not an initializer";
+  const model = assembleProfessionalModel(source, (useState) => {
+    registrations += 1;
+    const [getLeft, setLeft] = useState(0);
+    const [getRight] = useState(0);
+    const [getValue, setValue] = useState(value);
+    return {
+      first: async () => {
+        setLeft(7);
+        setLeft(getLeft() + 1);
+        assert.equal(getLeft(), 8);
+        assert.equal(getRight(), 0);
+        assert.equal(getValue(), value);
+        const next = () => "updated direct function";
+        setValue(next);
+        assert.equal(getValue(), next);
+        return pass;
+      },
+      second: async () => {
+        assert.equal(getLeft(), 8);
+        assert.equal(getRight(), 0);
+        assert.equal(getValue()(), "updated direct function");
+        return pass;
+      },
+      last: async () => pass,
+    };
+  });
+  await model.observe(target);
+  assert.equal(registrations, 1);
+});
+
+test("registration-only useState rejects late allocation even after a failed registry factory", async () => {
+  let retained: UseState | undefined;
+  const model = assembleProfessionalModel(source, (useState) => {
+    retained = useState;
+    return {
+      first: async () => { useState(0); return pass; },
+      second: async () => pass,
+      last: async () => pass,
+    };
+  });
+  await assert.rejects(model.observe(target), /during check registration/);
+  assert.ok(retained);
+  assert.throws(() => retained?.(0), /during check registration/);
+  const bug = new Error("registry defect");
+  const failed = assembleProfessionalModel(source, (useState) => {
+    retained = useState;
+    throw bug;
+  });
+  await assert.rejects(failed.observe(target), (caught) => caught === bug);
+  assert.throws(() => retained?.(0), /during check registration/);
+});
+
+test("failed observations cannot carry useState values into the next observation", async () => {
+  let failFirst = true;
+  const model = assembleProfessionalModel(source, (useState) => {
+    const [getState, setState] = useState(0);
+    return {
+      first: async () => {
+        assert.equal(getState(), 0);
+        setState(5);
+        return failFirst ? fail : pass;
+      },
+      second: async () => { assert.equal(getState(), 5); return pass; },
+      last: async () => pass,
+    };
+  });
+  assert.equal((await model.observe(target)).level, 0);
+  failFirst = false;
+  assert.equal((await model.observe(target)).level, 2);
 });
 
 test("preserves multiple explicit problems and propagates programmer defects unchanged", async () => {
