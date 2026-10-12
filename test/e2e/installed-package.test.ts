@@ -337,6 +337,17 @@ try {
     help,
     /silvermoon whatsnext|silvermoon task|silvermoon status|silvermoon init|silvermoon skill/,
   );
+  const eventHelp = installed(["event", "--help"], consumer);
+  assert.match(eventHelp, /replay \[options\] <idea>/);
+  assert.match(eventHelp, /append \[options\] <idea>/);
+  assert.doesNotMatch(eventHelp, /<operation>|--input|--after-length/);
+  const replayHelp = installed(["event", "replay", "--help"], consumer);
+  assert.match(replayHelp, /--after-length <bytes>/);
+  assert.doesNotMatch(replayHelp, /--input|--expected-digest/);
+  const appendHelp = installed(["event", "append", "--help"], consumer);
+  assert.match(appendHelp, /--input <file>/);
+  assert.match(appendHelp, /--expected-digest <prefix>/);
+  assert.doesNotMatch(appendHelp, /--after-length|--expected-length/);
   assert.equal(
     installed(["--version"], consumer),
     installedManifest.version,
