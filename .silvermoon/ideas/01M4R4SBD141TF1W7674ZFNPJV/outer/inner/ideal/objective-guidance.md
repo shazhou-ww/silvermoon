@@ -321,6 +321,42 @@ declare function createObjectiveGuide(
 ): ObjectiveGuide;
 ```
 
+对应的 YAML Manifest 可以保持很小，只声明目标层级、Wiki 来源与指导遍历
+预算；问题入口和页面链接仍由 Wiki 页面自身声明：
+
+```yaml
+schemaVersion: 1
+id: repository-readiness
+title: 仓库整备度
+levels:
+  - level: 0
+    title: 尚不可用
+    description: 尚无足够证据确认仓库可以开展工作
+    entryChecks: []
+    outcome:
+      currentCost: 无法安全推进依赖仓库事实的工作
+      nextLevelBenefit: 可以在已确认的仓库基础上开展工作
+  - level: 1
+    title: 可以开展工作
+    description: 项目与仓库事实已经满足本目标的基础判据
+    entryChecks:
+      - project-valid
+      - repository-ready
+    outcome:
+      currentCost: 仍需承担后续目标尚未完成的代价
+      nextLevelBenefit: null
+referenceWiki:
+  format: markdown-wiki
+  location: references
+guidanceLimits:
+  maxDepth: 3
+  maxNodes: 12
+```
+
+`referenceWiki.location` 相对 Manifest 解析；它只定位 Wiki 来源，不规定页面
+文件名、子目录或领域分类。上例中的 `references` 可以是一组平级 Markdown
+页面，也可以由自定义 `ReferenceWikiLoader` 映射到等价 Wiki 载体。
+
 0 层的 `entryChecks` 为空；每个后续层级的检查表示进入该层必须成立的
 条件。默认工厂从 0 层开始逐级、逐关检查，首个未通过处形成观测。Manifest
 只保存稳定 check ID，folder 或 package 中的 load bindings 提供对应代码；
