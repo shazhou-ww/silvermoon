@@ -6,8 +6,8 @@
 
 按[核心类型契约](./ideal/objective-guidance.md)调整 Loader、语言中立 Guide、
 subject/language-bound instance 与 Manifest。把 level、check、problem 和普通
-页面统一到语言位于最内层的 References 树，以固定协议执行 Manifest checks，
-并支持 prerequisite 的最低可接受 level。
+页面统一到语言位于最内层的 References 树，以固定协议执行按 `CheckId` 约定
+发现的 executables，并支持 prerequisite 的最低可接受 level。
 
 ### I-S02: 接入三个作用域的 Guide
 

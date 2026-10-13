@@ -9,29 +9,23 @@
 
 ## 结果
 
-形成可复用的 ObjectiveLoader、语言中立 ObjectiveGuide 和
-subject/language-bound ObjectiveGuideInstance 核心契约。Manifest 以稳定
-level、check 与 problem ID 描述目标，checks 是遵循固定 JSON 协议的独立
-可执行程序；全部面向人的本地化内容进入一棵语言无关的 References wiki，
-每个 Reference 节点在最内层提供完整语言文件。Silvermoon 设备、项目、Idea
-三个作用域的判据与路由继续建立在该核心上。类型见
-[核心契约](./objective-guidance.md)，领域判据见
-[Silvermoon 领域契约](./silvermoon-objectives.md)。
+形成以稳定 level、check 与 problem ID 描述目标的 Objective Guide 核心：
+Manifest 只引用 checks，runtime 按 ID 发现 executable 并把返回的 Problem ID
+映射到统一 References wiki；全部语言文件位于 Reference 叶子。Prerequisite
+可以声明最低可接受层。Silvermoon 三个作用域继续建立在
+[核心契约](./objective-guidance.md)和[领域契约](./silvermoon-objectives.md)上。
 
 ## 边界
 
-- 公开接口不使用势场、势能等物理隐喻；内部理论仍可追溯离散单洼地标量势场。
-- 本轮只把 Guide 核心落入 Silvermoon 实现范围；OR 与 OPS 保留为独立扩展
-  文档，不进入当前 source/runtime 依赖。References 只规定
-  `system/404`、`levels/<id>`、`checks/<id>`、`problems/<id>` 和
-  `pages/<id>` 两层身份结构，不扩展为任意知识分类平台。
-- Check runtime 不假设 JavaScript module；每个 check 由 Manifest 声明为
-  当前平台可执行入口。进程启动成本可接受，但必须有明确的协议、超时、输出和
+- 本轮只实现 Guide 核心；公开接口不使用物理隐喻，OR/OPS 不进入 runtime。
+  References 只规定 `system/404`、`levels/<id>`、`checks/<id>`、
+  `problems/<id>` 和 `pages/<id>`，不扩展为任意知识分类平台。
+- Check runtime 不假设 JavaScript module；每个 advancement `CheckId` 按约定
+  解析同名可执行入口。进程启动成本可接受，但必须有明确的协议、超时、输出和
   信任边界，不经 shell 执行，也不把业务失败伪装成运行错误。
 - Prerequisite 可以声明 immediate prerequisite 必须达到的最低 level；达到该
   level 或其后续 level 即可解锁当前 Guide，省略时仍要求 `terminal`。最低层
   只引用 immediate prerequisite 的本地 level，不跨 Guide 猜测同名 ID。
-- 层级只由单目标内有序、可读且稳定的 level ID 表达并允许中间稳态；公共契约不暴露 numeric level/index。观察不是原子快照，任何 Agent 行动都须重新观测，人工决定不得自动替代。
 
 ## 验收标准
 

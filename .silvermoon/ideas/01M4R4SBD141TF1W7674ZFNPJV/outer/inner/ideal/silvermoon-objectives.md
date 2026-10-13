@@ -2,9 +2,10 @@
 
 本页是 [Idea](./Idea.md) 的领域契约，建立在
 [Objective Guide 核心类型](./objective-guidance.md)之上；不定义实现步骤，不宣称
-下列 Guide 已可运行。Level、check 与 problem 名称为拟定的稳定 ID；每个
-check 由 Manifest 声明为独立 executable，判据复用现有 readiness/lifecycle
-语义，面向人的说明进入对应 References namespace。
+下列 Guide 已可运行。Level、check 与 problem 名称为拟定的稳定 ID；Manifest
+只在 advancement 中引用 Check ID，runtime 按约定发现同名 executable，并将其
+返回的 Problem ID 映射到对应 References namespace。判据复用现有
+readiness/lifecycle 语义。
 
 ## 组合与路由
 

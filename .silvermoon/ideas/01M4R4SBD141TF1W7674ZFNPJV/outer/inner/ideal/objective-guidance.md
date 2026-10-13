@@ -12,8 +12,9 @@
 - Level 是单个 Objective 内有序、可读且稳定的状态；系统可以长期停留在中间层。
 - `probe` 是允许 IO、成本、扰动和时序撕裂的现实采样，不是原子快照。
 - OG 只提供感知与参考知识，不修改现实；现实动作全部由 Agent 完成。
-- Manifest、checks 与 References 是自洽的传输单元，不依赖宿主 JavaScript
-  module binding。
+- Manifest、checks 与 References 是自洽的传输单元；Manifest 只引用 Check ID，
+  executable 和 Problem Reference 均按 ID 约定发现，不依赖宿主 JavaScript
+  module binding 或重复注册表。
 - 势场术语只用于[理论溯源](./value-field-reasoning.md)，不进入公共 API。
 
 ## 公共契约
@@ -152,7 +153,7 @@ minimum，不使用可能重名的跨 Guide level ID。
 my-objective-guide/
 ├── objective-guide.yaml
 ├── checks/
-│   ├── project-valid
+│   ├── project-valid          # CheckId 直接映射到同名 executable
 │   └── repository-ready
 └── references/
     ├── system/
@@ -184,8 +185,8 @@ Reference ID 始终是 `<namespace>/<id>`，目录路径是身份，language 文
 节点的 locale 投影：
 
 - `levels/<level-id>` 对应 Manifest level；
-- `checks/<check-id>` 对应 Manifest check；
-- `problems/<problem-id>` 对应 Manifest problem；
+- `checks/<check-id>` 对应 advancement 引用的 Check ID；
+- `problems/<problem-id>` 对应 check 实际返回的 Problem ID；
 - `pages/<page-id>` 是普通 wiki 页面；
 - runtime-owned `system` 当前只允许固定的 `system/404`。
 
@@ -226,16 +227,6 @@ interface ObjectiveLevelManifest {
   };
 }
 
-interface ObjectiveCheckManifest {
-  executable: string;
-  problems: readonly ProblemId[];
-  timeoutMs?: number;
-}
-
-interface ObjectiveProblemManifest {
-  id: ProblemId;
-}
-
 interface ObjectiveGuideManifest {
   schemaVersion: 1;
   domainSchema: ObjectiveDomainSchema;
@@ -244,8 +235,6 @@ interface ObjectiveGuideManifest {
     ObjectiveLevelManifest,
     ...ObjectiveLevelManifest[],
   ];
-  checks: Readonly<Record<CheckId, ObjectiveCheckManifest>>;
-  problems: readonly ObjectiveProblemManifest[];
   defaultLanguage: LanguageTag;
   languages: readonly [LanguageTag, ...LanguageTag[]];
   references: {
@@ -278,20 +267,6 @@ levels:
         - project-valid
         - repository-ready
 
-checks:
-  project-valid:
-    executable: checks/project-valid
-    problems:
-      - project-invalid
-  repository-ready:
-    executable: checks/repository-ready
-    problems:
-      - repository-unready
-
-problems:
-  - id: project-invalid
-  - id: repository-unready
-
 defaultLanguage: zh-CN
 languages:
   - zh-CN
@@ -302,9 +277,11 @@ guidePage: pages/objective
 terminalPage: pages/terminal
 ```
 
-Level、check 与 problem ID 在各自 namespace 内唯一；level 只能引用已声明
-check，check 只能声明已定义 problem。Guide 与合成 terminal 的展示内容使用
-Manifest 显式引用的普通 pages，不增加额外 primitive namespace。
+Level ID 在 Manifest 内唯一。每个 advancement `CheckId` 固定解析为 Guide 根
+目录的 `checks/<check-id>`，并读取 `references/checks/<check-id>`；check 返回
+的每个 `ProblemId` 固定解析为 `references/problems/<problem-id>`。Manifest
+不重复声明 executable path、check 注册表或允许的 problem 列表。Guide 与合成
+terminal 的展示内容使用 Manifest 显式引用的普通 pages。
 
 `domainSchema` 固定为 Draft 2020-12 root object schema，只允许本地
 `#/$defs/...`，不远程取 schema、不 coercion，也不用 `default` 改写 subject。
@@ -313,7 +290,7 @@ Prerequisite subject 继续使用受限 JSONata profile，不读取环境、文�
 
 ## Check executable 协议
 
-每个 check 是 Manifest 声明的独立 executable，不是宿主函数：
+每个 check 是 `checks/<check-id>` 约定发现的独立 executable，不是宿主函数：
 
 ```ts
 interface CheckRequest {
@@ -340,12 +317,12 @@ Runtime 向 stdin 写入单个 JSON request，check 向 stdout 写入单个 JSON
 非法 JSON、额外 stdout、未知 problem 或协议不匹配都是 operation error。
 Check 不接收 language，也不返回 title、description 或其他本地化文本。
 
-Executable 相对 Manifest URI 解析，只能从允许的本地 Guide 根目录启动；不得
-跟随 symlink 逃逸，也不得从远程 Manifest 隐式下载后执行。Runtime 不经 shell
-拼接命令，使用固定 cwd、受控环境、超时和 stdout/stderr 大小限制。第一版只
-承诺当前 OS 可直接启动的入口：POSIX 可以使用 shebang 与 executable bit；
-Windows 作者提供 `.exe`、`.cmd` 等入口。Runtime 不猜测解释器，也不承担通用
-shebang launcher。
+Executable 固定从 Manifest 所在 Guide 根目录的 `checks/<check-id>` 解析，不
+接受 Manifest path override；不得跟随 symlink 逃逸，也不得从远程 Manifest
+隐式下载后执行。Runtime 不经 shell 拼接命令，使用固定 cwd、受控环境、统一
+超时和 stdout/stderr 大小限制。第一版只承诺当前 OS 可直接启动的入口：
+POSIX 可以使用 shebang 与 executable bit；Windows 提供平台可启动的同名入口。
+Runtime 不猜测解释器，也不承担通用 shebang launcher。
 
 Probe 按 level 与 check 声明顺序执行，首个失败 check 形成 observation；一个
 失败 check 返回的 problems 保持声明顺序。每次 probe 都重新启动适用 checks，
@@ -358,11 +335,12 @@ Probe 按 level 与 check 声明顺序执行，首个失败 check 形成 observa
 - Language 必须是 canonical BCP 47。省略 instance language 才使用 default；
   不做父语言或字段 fallback。
 - 每个 Reference 节点必须拥有 `languages` 声明的完整文件集合，不允许 locale
-  独有节点。Manifest 声明的全部 level、check 和 problem 都必须有同名节点，
-  且不得出现没有对应 primitive 的这些 namespace 节点。
+  独有节点。Manifest 声明的全部 level 和引用的 check 必须有同名 Reference；
+  problem 节点定义 check 可返回的稳定 Problem ID vocabulary。
 - `system/404` 必须存在且覆盖全部 languages；Manifest 不能改变其 identity。
-- Prerequisite URI 循环、未知 minimum level、References 结构不完整、未知
-  check/problem 和不可安全解析的 executable 都在 load 阶段失败。
+- Prerequisite URI 循环、未知 minimum level、References 结构不完整、缺失
+  check Reference 或不可安全解析的同名 executable 都在 load 阶段失败。未知
+  Problem ID 只能在 check 返回结果时发现，并作为 operation error 明确失败。
 - Prerequisite 未达到 minimum 时不运行本地 checks；达到后不要求 prerequisite
   terminal。省略 minimum 时行为与原来的 terminal barrier 一致。
 - 全部适用 checks 通过后合成唯一 terminal；公共契约不暴露 numeric level 或
