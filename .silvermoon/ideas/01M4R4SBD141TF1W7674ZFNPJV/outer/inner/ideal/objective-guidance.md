@@ -4,6 +4,7 @@
 
 | 构件 | 职责 |
 | --- | --- |
+| ObjectiveLoader | 以 Manifest URI 解析、缓存并递归组合 language-bound ObjectiveGuide |
 | ObjectiveGuide（OG） | 定义单一 Objective 怎么观测、问题怎么处理、层级进阶有什么损益 |
 | ObjectiveRegulator（OR） | 持有一个 OG，执行探测、Agent 单步行动、复测和终止保护 |
 | Objective Portfolio Supervisor（OPS） | 监督多个 subject-bound OR，采集组合观测并做阈值、资源和时机取舍 |
@@ -13,14 +14,14 @@
   相加或比较；系统可以长期停留在中间层。
 - `probe` 是允许 IO、成本、扰动和时序撕裂的现实采样，不是原子快照。
 - OG 只提供感知、参考知识和损益评估，现实修改全部由 Agent 完成。
-- Folder、package、Manifest 和 reference pages 只是传输形式；运行时只协作
-  `ObjectiveGuide`。
+- Folder、package、Manifest 和 reference pages 只是传输形式；Loader 是装载与
+  identity-map 边界，其他运行时构件只协作 `ObjectiveGuide`。
 - 势场术语只用于[理论溯源](./value-field-reasoning.md)，不进入公共 API。
 
 ## 公共基础类型
 
 ```ts
-type ObjectiveId = string;
+type ObjectiveManifestUri = string;
 type CheckId = string;
 type ObjectiveRegistrationId = string;
 type ReferencePageId = string;
@@ -83,6 +84,12 @@ interface ObjectiveObservation {
   problems: readonly ObservedProblem[];
   gapSummary: string;
 }
+
+interface ObjectivePrerequisite {
+  // 运行时直接持有 Loader 解析出的同 language Guide。
+  readonly guide: ObjectiveGuide;
+  mapSubject(subject: ObjectiveSubject): ObjectiveSubject;
+}
 ```
 
 所有 ID 必须非空且在所属作用域内稳定。观测中的问题按建议处理顺序排列；
@@ -92,11 +99,13 @@ interface ObjectiveObservation {
 
 ```ts
 interface ObjectiveGuide {
-  readonly id: ObjectiveId;
+  // canonical Manifest URI 是 Objective 的唯一稳定身份。
+  readonly manifestUri: ObjectiveManifestUri;
   readonly language: LanguageTag;
   readonly title: string;
   readonly description: string;
   readonly domainSchema: ObjectiveDomainSchema;
+  readonly prerequisite: ObjectivePrerequisite | null;
 
   // 返回 prerequisite 前缀、本地显式层和唯一 terminal 的本地化描述。
   describeLevels(): readonly ObjectiveLevelDescription[];
@@ -164,7 +173,8 @@ interface ObjectiveLevelAdvancementManifest {
 }
 
 interface ObjectivePrerequisiteManifest {
-  objectiveId: ObjectiveId;
+  // 相对 URI 以当前 Manifest URI 为 base 解析。
+  manifestUri: ObjectiveManifestUri;
   // 输入仅为当前 subject；输出是 prerequisite subject。
   subject: JsonataExpression;
 }
@@ -209,7 +219,6 @@ interface ObjectiveLocalizationManifest {
 
 interface ObjectiveGuideManifest {
   schemaVersion: 1;
-  id: ObjectiveId;
   domainSchema: ObjectiveDomainSchema;
 
   // 第一版只允许一个 immediate prerequisite；递归形成全序链。
@@ -239,20 +248,29 @@ type ObjectiveCheck = (
 interface ObjectiveGuideLoadBindings {
   checks: Readonly<Record<CheckId, ObjectiveCheck>>;
   // prerequisite 已装载成同 language 的运行时 Guide。
-  guides?: Readonly<Record<ObjectiveId, ObjectiveGuide>>;
+  prerequisite?: ObjectiveGuide;
 }
 
-interface CreateObjectiveGuideOptions {
+interface ObjectiveLoadOptions {
   // 省略时使用 defaultLanguage；显式不支持的 language 直接失败。
   language?: LanguageTag;
 }
 
-// 仅传输/装载边界调用；业务代码只持有返回的 ObjectiveGuide。
+// Loader 内部工厂；manifestUri 已由 Loader canonicalize。
 declare function createObjectiveGuide(
+  manifestUri: ObjectiveManifestUri,
   manifest: ObjectiveGuideManifest,
   bindings: ObjectiveGuideLoadBindings,
-  options?: CreateObjectiveGuideOptions,
+  options?: ObjectiveLoadOptions,
 ): ObjectiveGuide;
+
+interface ObjectiveLoader {
+  // 相同 canonical URI + resolved language 始终返回同一 Guide 对象。
+  load(
+    manifestUri: ObjectiveManifestUri,
+    options?: ObjectiveLoadOptions,
+  ): Promise<ObjectiveGuide>;
+}
 ```
 
 ### YAML 示例
@@ -260,8 +278,9 @@ declare function createObjectiveGuide(
 Project 级 Objective：
 
 ```yaml
+# Manifest URI:
+# file:///workspace/objectives/repository-readiness/objective-guide.yaml
 schemaVersion: 1
-id: repository-readiness
 domainSchema:
   $schema: https://json-schema.org/draft/2020-12/schema
   type: object
@@ -311,8 +330,9 @@ levels:
 Idea 级 Objective 把 Project levels 作为语义前缀：
 
 ```yaml
+# Manifest URI:
+# file:///workspace/objectives/idea-progress/objective-guide.yaml
 schemaVersion: 1
-id: idea-progress
 domainSchema:
   $schema: https://json-schema.org/draft/2020-12/schema
   type: object
@@ -329,7 +349,7 @@ domainSchema:
   additionalProperties: false
 
 prerequisite:
-  objectiveId: repository-readiness
+  manifestUri: ../repository-readiness/objective-guide.yaml
   # JSONata 直接把 Idea subject 投影为 Project subject。
   subject: |
     {
@@ -354,6 +374,12 @@ localizations:
 
 ### 装载不变量
 
+- Manifest 内不重复声明身份字段。Loader 以当前 Manifest URI 为 base 解析
+  相对引用并 canonicalize；canonical URI 是 Objective 的稳定身份。
+  相同 URI 与 resolved language 命中同一 Guide 对象。不同 language 可以有
+  不同对象实例，但共享同一个 Objective 身份。
+- 一个 application runtime 使用共享 ObjectiveLoader；其 cache 是所有已装载
+  Guides 的 identity map。“全局”只指该 runtime，不承诺跨进程对象单例。
 - `domainSchema` 固定为 Draft 2020-12 root object schema，只解析本地
   `#/$defs/...`；不远程取 schema、不 coercion，也不用 `default` 改写 subject。
 - `levels` 非空，ID 局部唯一且不能为保留 ID `terminal`。每项都必须有
@@ -375,8 +401,11 @@ localizations:
   不能读取环境变量、文件或网络，不允许扩展函数、动态求值、用户递归、
   时间或随机能力，并限制表达式长度、AST 深度、执行时间和输出大小。输出必须是
   普通 JSON object，且通过 prerequisite `domainSchema`。
-- Loader 拒绝未知、自引用或循环 prerequisite。整条 chain 使用同一 resolved
-  language；第一版不支持会引入任意排序的多个 prerequisites。
+- Loader 递归调用 `load` 解析 prerequisite，并把缓存中的 Guide 直接写入
+  `ObjectiveGuide.prerequisite.guide`；它按 canonical URI 拒绝无法解析、
+  自引用或循环 prerequisite，也拒绝缺失、多余或 URI 不匹配的 prerequisite
+  binding。整条 chain 使用同一 resolved language；第一版不支持会引入任意
+  排序的多个 prerequisites。
 - Language key 必须是 canonical BCP 47。省略选择时才使用
   `defaultLanguage`；不做父语言或字段级 fallback，也不混合不同 language。
   每个 locale 必须完整覆盖 terminal、全部 level IDs 和 References。
@@ -388,8 +417,9 @@ localizations:
   check 显式返回唯一 unknown fallback 的 ID。Agent 调用
   `observation.current.guide.readPage(problem.pageId)`。
 
-路径相对 Manifest 解析。默认工厂只装载上述 Markdown page 协议；高级传输单元
-可以保留 Manifest 用于身份与发现，再由自定义 loader 直接产出手写 OG。
+资源路径相对 Manifest URI 解析。默认 Loader 只装载上述 Markdown page 协议；
+高级 resolver 可以从 folder、package、数据库或网络取得同一传输结构，再由
+自定义 factory 产出手写 OG，但仍以 canonical Manifest URI 参与缓存与身份判断。
 
 ## ObjectiveRegulator
 
@@ -480,7 +510,8 @@ interface ObjectiveRegistration {
 
 interface ObjectivePortfolioEntry {
   registrationId: ObjectiveRegistrationId;
-  objectiveId: ObjectiveId;
+  // registration 的根 Guide；当前 prerequisite Guide 在 observation.current。
+  guide: ObjectiveGuide;
   subject: ObjectiveSubject;
   observation: ObjectiveObservation;
   safety: ObjectiveSafetyThresholds;
