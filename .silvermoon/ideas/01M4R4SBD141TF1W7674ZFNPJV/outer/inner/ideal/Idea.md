@@ -22,8 +22,9 @@ Manifest 只引用 checks，runtime 按 ID 发现 executable 并把返回的 Pro
   `levels/<id>`、`checks/<id>`、`problems/<id>` 和 `pages/<id>`，不扩展为
   任意知识分类平台；合成 terminal 使用保留节点 `levels/terminal`。
 - Check runtime 不假设 JavaScript module；每个 advancement `CheckId` 按约定
-  解析同名目录及平台入口。进程启动成本可接受，但必须有明确的协议、超时、
-  输出和信任边界，不依赖环境扩展名猜测，也不把业务失败伪装成运行错误。
+  解析同名目录中唯一的 `run` 或 `run.*` 入口。进程启动成本可接受，但必须有
+  明确的 JSON 与受限 shebang 协议、超时、输出和信任边界；扩展名不决定
+  interpreter，也不把业务失败伪装成运行错误。
 - Prerequisite 可以声明 immediate prerequisite 必须达到的最低 level；达到该
   level 或其后续 level 即可解锁当前 Guide，省略时仍要求 `terminal`。最低层
   只引用 immediate prerequisite 的本地 level，不跨 Guide 猜测同名 ID。

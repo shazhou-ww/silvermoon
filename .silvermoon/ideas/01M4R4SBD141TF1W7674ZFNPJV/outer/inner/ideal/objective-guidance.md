@@ -154,11 +154,10 @@ my-objective-guide/
 ├── objective-guide.yaml
 ├── checks/
 │   ├── project-valid/         # CheckId 直接映射到同名目录
-│   │   ├── run               # POSIX
-│   │   └── run.cmd           # Windows script wrapper
+│   │   ├── run.py             # 唯一 entry；shebang 声明 interpreter
+│   │   └── schema.json        # 可选的 check 私有资源
 │   └── repository-ready/
-│       ├── run
-│       └── run.exe            # Windows native executable
+│       └── run.exe            # native entry 也遵循 run.* pattern
 └── references/
     ├── system/
     │   ├── overview/
@@ -295,7 +294,7 @@ Prerequisite subject 继续使用受限 JSONata profile，不读取环境、文�
 
 ## Check executable 协议
 
-每个 check 是 `checks/<check-id>/` 约定发现的平台入口，不是宿主函数：
+每个 check 是 `checks/<check-id>/` 中约定发现的单一入口，不是宿主函数：
 
 ```ts
 interface CheckRequest {
@@ -323,13 +322,21 @@ Runtime 向 stdin 写入单个 JSON request，check 向 stdout 写入单个 JSON
 Check 不接收 language，也不返回 title、description 或其他本地化文本。
 
 入口固定从 Manifest 所在 Guide 根目录的 `checks/<check-id>/` 解析，不接受
-Manifest path override。POSIX 必须提供普通可执行文件 `run`，可以是 native
-binary 或带 shebang 的脚本。Windows 必须恰好提供 `run.exe` 或 `run.cmd`
-之一；缺失或同时存在都属于配置错误。Runtime 不读取 `PATHEXT`、不尝试
-`.bat` 或其他扩展名，也不承担通用 shebang launcher。
+Manifest path override。该目录必须恰好包含一个名为 `run` 或匹配 `run.*` 的
+普通文件；其他资源可以共存，但多个或缺失 entry 都是配置错误。扩展名只服务
+编辑器与人类，不用于选择 interpreter，也不读取 `PATHEXT`、Windows 文件关联
+或 registry。
 
-`run.exe` 直接创建进程；`run.cmd` 通过固定的 Windows command processor
-启动，但不拼接任何 subject、Problem ID 或其他动态参数，全部业务输入仍只走
+Native executable 直接创建进程。文本 script 必须以受支持的 shebang 声明
+interpreter；第一版只支持不带动态表达式的
+`#!/usr/bin/env <interpreter>`。POSIX 要求 entry executable bit，并可由内核
+处理 shebang；Windows 由 runtime 识别同一 shebang、从受控 PATH 解析
+interpreter，再以 `<interpreter> <absolute-entry-path>` 参数数组直接启动，
+不经过 shell。由此 `run.py`、`run.js`、`run.mjs`、`run.ps1` 或自定义扩展名
+都使用同一协议；没有 shebang 的文本、复杂 `env -S`、重定向、管道与 command
+string 不受支持。
+
+Runtime 不拼接任何 subject、Problem ID 或其他动态参数，全部业务输入只走
 stdin JSON。所有平台都使用固定 cwd、受控环境、统一超时和 stdout/stderr
 大小限制，并拒绝 check directory、入口或资源通过 symlink/reparse point
 逃逸。远程 Manifest 不能被隐式下载后执行。
@@ -350,7 +357,8 @@ Probe 按 level 与 check 声明顺序执行，首个失败 check 形成 observa
 - `system/overview`、`system/404` 和 `levels/terminal` 必须存在并覆盖全部
   languages；Manifest 不能改变其 identity。`system` 不允许其他节点。
 - Prerequisite URI 循环、未知 minimum level、References 结构不完整、缺失
-  check Reference、check directory 或当前平台入口都在 load 阶段失败。未知
+  check Reference、check directory、唯一 entry 或合法启动方式都在 load
+  阶段失败。未知
   Problem ID 只能在 check 返回结果时发现，并作为 operation error 明确失败。
 - Prerequisite 未达到 minimum 时不运行本地 checks；达到后不要求 prerequisite
   terminal。省略 minimum 时行为与原来的 terminal barrier 一致。
