@@ -4,11 +4,11 @@
 
 ### I-S01: 演进 ObjectiveGuide 基础契约
 
-以现有 ProfessionalModel 为兼容基线，在独立 module 中落实 ObjectiveGuide、ObservationResult、Guidance、OutcomeAssessment、可序列化 ObjectiveGuideManifest 与装载 bindings 类型。保持逐级逐关、观察内 state、程序错误传播和未知问题知识缺口语义；明确传输 loader 与运行时 OG 的边界，不把代码函数塞进 YAML/JSON Manifest，也不让 OR/OPS 依赖传输结构。
+以现有 ProfessionalModel 为兼容基线，在独立 module 中落实 ObjectiveGuide、ObjectiveObservation、ObjectiveGuidance、ObjectiveOutcomeAssessment、可序列化 ObjectiveGuideManifest 与装载 bindings 类型。保持逐级逐关、观察内 state、程序错误传播和未知问题知识缺口语义；明确传输 loader 与运行时 OG 的边界，不把代码函数塞进 YAML/JSON Manifest，也不让 OR/OPS 依赖传输结构。
 
 ### I-S02: 建立 OR 与 OPS 类型边界
 
-定义 ObjectiveRegulator、Agent 单步 action、受控终止结果、阈值注册、portfolio snapshot、调度 directive、policy 与 Objective Portfolio Supervisor 公共类型。类型必须表达仅探测与激活调节的差异、非原子多目标观测以及防御/进取任务；本候选不实现生产循环、Agent 自主循环或具体资源调度算法。
+定义 ObjectiveRegulator、Agent 单步 action、受控调节状态、阈值注册、portfolio observation、调度 directive、policy 与 Objective Portfolio Supervisor 公共类型。类型必须表达仅探测与激活调节的差异、非原子多目标观测以及防御/进取任务；本候选不实现生产循环、Agent 自主循环或具体资源调度算法。
 
 ### I-S03: 保持现有导航兼容
 
@@ -22,7 +22,7 @@
 
 ### I-AC02: OR 与 OPS 契约无职责泄漏
 
-类型检查证明 OR 只持有一个 OG 并接收单步 action executor，终止状态可判定且异常不伪装成成功；OPS 只通过注册、snapshot、plan 和 directive 调度多个 OR，跨目标策略不进入 OG，也不比较或求和不同 Objective 的 level。
+类型检查证明 OR 只持有一个 OG 并接收单步 action executor，调节状态可判定且异常不伪装成成功；OPS 只通过注册、portfolio observation、plan 和 directive 调度多个 OR，跨目标策略不进入 OG，也不比较或求和不同 Objective 的 level。
 
 ### I-AC03: 仓库验证通过
 
