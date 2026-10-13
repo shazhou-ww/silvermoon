@@ -42,13 +42,6 @@ type JsonValue =
 type JsonObject = Readonly<Record<string, JsonValue>>;
 type ObjectiveDomainSchema = JsonObject;
 type ObjectiveSubject = JsonObject;
-type ObjectiveRuntimeContext = Readonly<Record<string, unknown>>;
-
-interface ObjectiveContext {
-  // subject 是持久身份；runtime 是窗口、预算等单次运行信息。
-  subject: ObjectiveSubject;
-  runtime: ObjectiveRuntimeContext;
-}
 
 interface ObservedProblem {
   id: ProblemId;
@@ -76,22 +69,6 @@ interface ReferencePage extends ReferencePageSummary {
   unknownProblemFallback: boolean;
   content: string;
   links: readonly ReferencePageId[];
-}
-
-interface ObjectiveReferences {
-  // ID 在 source OG 内解释；不同 OG 可以复用局部 ID。
-  // 未知 problemId 返回该 source 唯一的 unknown fallback page。
-  openProblem(
-    sourceObjectiveId: ObjectiveId,
-    problemId: ProblemId,
-  ): Promise<ReferencePage>;
-
-  readPage(
-    sourceObjectiveId: ObjectiveId,
-    pageId: ReferencePageId,
-  ): Promise<ReferencePage>;
-
-  search(query: string): Promise<readonly ReferencePageSummary[]>;
 }
 
 interface ObjectiveAdvancementAssessment {
@@ -132,22 +109,37 @@ interface ObjectiveGuide {
   describeLevels(): readonly ObjectiveLevelDescription[];
 
   // 允许 IO 和观测扰动；不执行现实修改。
-  probe(ctx: ObjectiveContext): Promise<ObjectiveObservation>;
+  probe(subject: ObjectiveSubject): Promise<ObjectiveObservation>;
 
-  // 只绑定查询上下文，不预取页面或替 Agent 选择知识。
-  openReferences(
-    ctx: ObjectiveContext,
-  ): Promise<ObjectiveReferences>;
+  // ID 在 source OG 内解释；未知 problemId 返回其唯一 fallback page。
+  openProblem(
+    sourceObjectiveId: ObjectiveId,
+    problemId: ProblemId,
+  ): Promise<ReferencePage>;
+
+  readPage(
+    sourceObjectiveId: ObjectiveId,
+    pageId: ReferencePageId,
+  ): Promise<ReferencePage>;
+
+  // 搜索整个组合 Guide，结果保留 sourceObjectiveId。
+  searchPages(
+    query: string,
+  ): Promise<readonly ReferencePageSummary[]>;
 
   assessOutcome(
     observation: ObjectiveObservation,
-    ctx: ObjectiveContext,
+    subject: ObjectiveSubject,
   ): Promise<ObjectiveOutcomeAssessment>;
 }
 ```
 
-每个公开操作先验证 `ctx.subject` 满足 `domainSchema`。定义域、配置、探测或
-执行错误必须 reject，不能伪装成低 level 或成功结果。
+`probe` 与 `assessOutcome` 先验证 `subject` 满足 `domainSchema`；page 查询只
+依赖 loaded Guide 的 source 和 language。定义域、配置、探测或执行错误必须
+reject，不能伪装成低 level 或成功结果。
+时钟、文件系统、远端客户端和鉴权等执行依赖在装载时显式注入；窗口、预算与
+优先级属于 OPS policy。公共 Objective API 不保留通用
+`Record<string, unknown>` runtime context。
 
 ## Manifest 与装载
 
@@ -262,13 +254,13 @@ type CheckResult =
     };
 
 type ObjectiveCheck = (
-  ctx: ObjectiveContext,
+  subject: ObjectiveSubject,
   language: LanguageTag,
 ) => Promise<CheckResult>;
 
 type OutcomeAssessor = (
   observation: ObjectiveObservation,
-  ctx: ObjectiveContext,
+  subject: ObjectiveSubject,
   language: LanguageTag,
 ) => Promise<ObjectiveOutcomeAssessment>;
 
@@ -407,7 +399,7 @@ localizations:
   而与下一 Guide 的本地 level 0 边界合并。Level offset、outcome、
   `sourceObjectiveId`、`sourceSubject` 和 References 路由必须使用同一组合结果。
 - `prerequisite.subject` 使用固定的受限 JSONata profile：只能读取当前 subject，
-  不能读取 runtime、环境变量、文件或网络，不允许扩展函数、动态求值、用户递归、
+  不能读取环境变量、文件或网络，不允许扩展函数、动态求值、用户递归、
   时间或随机能力，并限制表达式长度、AST 深度、执行时间和输出大小。输出必须是
   普通 JSON object，且通过 prerequisite `domainSchema`。
 - Loader 拒绝未知、自引用或循环 prerequisite。整条 chain 使用同一 resolved
@@ -437,8 +429,20 @@ interface ObjectiveActionRequest {
   targetLevel: ObjectiveLevel;
   observation: ObjectiveObservation;
   problem: ObservedProblem;
-  references: ObjectiveReferences;
-  context: ObjectiveContext;
+  subject: ObjectiveSubject;
+
+  // OR 直接绑定 Guide 的 page 查询方法。
+  openProblem(
+    sourceObjectiveId: ObjectiveId,
+    problemId: ProblemId,
+  ): Promise<ReferencePage>;
+  readPage(
+    sourceObjectiveId: ObjectiveId,
+    pageId: ReferencePageId,
+  ): Promise<ReferencePage>;
+  searchPages(
+    query: string,
+  ): Promise<readonly ReferencePageSummary[]>;
 }
 
 type ObjectiveActionResult =
@@ -452,7 +456,7 @@ type ObjectiveActionExecutor = (
 
 interface RegulationRequest {
   targetLevel: ObjectiveLevel;
-  context: ObjectiveContext;
+  subject: ObjectiveSubject;
   limits: RegulationLimits;
 }
 
@@ -475,13 +479,13 @@ interface ObjectiveRegulator {
   readonly guide: ObjectiveGuide;
 
   // 仅探测；不会调用 Agent。
-  probe(ctx: ObjectiveContext): Promise<ObjectiveObservation>;
+  probe(subject: ObjectiveSubject): Promise<ObjectiveObservation>;
 
   /**
    * 框架持有循环：
    * 1. probe；
    * 2. level >= targetLevel 时结束；
-   * 3. 取首个问题并把 References 交给 Agent；
+   * 3. 取首个问题并把 Guide 的 page 查询方法交给 Agent；
    * 4. Agent 只执行一次现实动作；
    * 5. 重新 probe；
    * 6. 应用超时、迭代和连续无进展保护。
@@ -493,7 +497,7 @@ interface ObjectiveRegulator {
 }
 ```
 
-OR 只到达本轮 `targetLevel`，不强制追求最高层。References 查询属于一次行动
+OR 只到达本轮 `targetLevel`，不强制追求最高层。Page 查询属于一次行动
 的认知过程，不额外增加 OR iteration；未建模异常必须 reject，不包装成
 `RegulationStatus` 的成功形状。
 
@@ -550,7 +554,6 @@ interface ObjectivePortfolioPlan {
 
 type ObjectivePortfolioPolicy = (
   observation: ObjectivePortfolioObservation,
-  runtime: ObjectiveRuntimeContext,
 ) => Promise<ObjectivePortfolioPlan>;
 
 interface ObjectivePortfolioRunResult {
@@ -561,21 +564,17 @@ interface ObjectivePortfolioRunResult {
 }
 
 interface ObjectivePortfolioSupervisor {
-  // 对每个 registration 组合 subject + runtime，仅探测并评估 outcome。
-  observe(
-    runtime: ObjectiveRuntimeContext,
-  ): Promise<ObjectivePortfolioObservation>;
+  // 使用 registration 的 subject，仅探测并评估 outcome。
+  observe(): Promise<ObjectivePortfolioObservation>;
 
-  // 先守防御阈值，再按 policy 分配剩余预算和窗口。
+  // 先守防御阈值，再由已注入依赖的 policy 分配预算和窗口。
   plan(
     observation: ObjectivePortfolioObservation,
-    runtime: ObjectiveRuntimeContext,
   ): Promise<ObjectivePortfolioPlan>;
 
   // 按计划下发给 OR；不修改 OG 的层级、checks 或 References。
   execute(
     plan: ObjectivePortfolioPlan,
-    runtime: ObjectiveRuntimeContext,
     executeAction: ObjectiveActionExecutor,
   ): Promise<ObjectivePortfolioRunResult>;
 }
@@ -583,9 +582,9 @@ interface ObjectivePortfolioSupervisor {
 
 同一 OG 可以绑定多个 subject，所以 OPS 以 `ObjectiveRegistrationId` 调度。
 Project→Idea 等语义前置由 OG `prerequisite` 组合，不在 OPS 重复建模。
-Portfolio policy 可以处理预算、互斥、窗口和延后，但不能比较或求和不同
-Objective 的 level。执行可串行或受控并发，但必须保留计划优先级、终止保护和
-独立结果。
+Portfolio policy 通过自身有类型的构造依赖读取预算、互斥、窗口和其他规划事实，
+而不是接收通用 runtime bag；它不能比较或求和不同 Objective 的 level。执行可
+串行或受控并发，但必须保留计划优先级、终止保护和独立结果。
 
 ## 与现有 ProfessionalModel 的关系
 
@@ -593,7 +592,7 @@ Objective 的 level。执行可串行或受控并发，但必须保留计划优�
 | --- | --- |
 | `ProfessionalModel.observe` | `ObjectiveGuide.probe` |
 | `Problem.code` | `ObservedProblem.id` |
-| `ProfessionalModel.guide` | `ObjectiveReferences.openProblem` 的单页静态基线 |
+| `ProfessionalModel.guide` | `ObjectiveGuide.openProblem` 的单页静态基线 |
 | `ProfessionalModel.describe` | `ObjectiveGuide.describeLevels` |
 | 尚无对应能力 | `ObjectiveGuide.assessOutcome` |
 
