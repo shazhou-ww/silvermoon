@@ -6,7 +6,7 @@
 
 ## 结果
 
-在已验证的专业能力基础上，为 Silvermoon 形成 ObjectiveLoader、语言中立 ObjectiveGuide（OG）和 subject/language-bound ObjectiveGuideInstance 的公开术语与可实施 TypeScript 核心契约；用一份语言无关的语义 Manifest 配合完整 locale content 与平级 reference pages，在不复制 checks、定义域或层级结构的前提下提供多语言知识。问题页面只承担入口角色，Agent 从问题入口主动读取和搜索知识，而不是由工具预取指导子图。核心语义见[Objective Guide 类型体系](./objective-guidance.md)，后续自动闭环与多目标调度分别见独立的 [ObjectiveRegulator](./objective-regulator.md) 和 [Objective Portfolio Supervisor](./objective-portfolio-supervisor.md) 扩展契约，理论溯源与例子见[推演说明](./value-field-reasoning.md)。
+形成可复用的 ObjectiveLoader、语言中立 ObjectiveGuide 和 subject/language-bound ObjectiveGuideInstance 核心契约，并明确 Silvermoon 设备、项目、Idea 三个作用域的层级与 checks。类型见[核心契约](./objective-guidance.md)，领域判据与路由见[Silvermoon 领域契约](./silvermoon-objectives.md)；[ObjectiveRegulator](./objective-regulator.md) 与 [Objective Portfolio Supervisor](./objective-portfolio-supervisor.md) 保留为可选扩展，理论见[推演说明](./value-field-reasoning.md)。
 
 ## 边界
 
@@ -16,6 +16,6 @@
 
 ## 验收标准
 
-- 核心类型严格分离语言中立 OG 与绑定 subject/language 的 ObjectiveGuideInstance；Manifest 用受限 Draft 2020-12 `domainSchema` 描述可接受的 project/Idea subject，`createInstance` 以同步 discriminated result 区分根 subject 无效、prerequisite chain 的投影 subject 无效和 chain 中 language 不受支持，不用 Promise rejection 表达这些预期失败；成功后 Objective API 不重复接收 subject，也不暴露通用 runtime context，执行依赖由 bindings 注入。
-- Objective 以 canonical Manifest URI 作为唯一身份，Loader 只按 URI 缓存语言中立 Guide；Guide 为每个确定的 subject 与 language 创建不可变 instance，Loader 不按任意 JSON subject 缓存 instance。Manifest 用有序、可读且稳定的 level ID 保存同型、都带 advancement 的本地显式层，全部通过后合成唯一 terminal“价值达成”层；完整 locale bundles 提供价值描述、层级文本、单段 outcome prompt 和 References，instance 的 `describeLevels` 返回引用实际 instance 的完整静态 descriptions，并把单段损益直接拍平为 `advancementOutcome`，不再返回 numeric level/index 或单字段 advancement 对象。Project→Idea 等单个 optional `prerequisite` 以 Manifest URI 引用目标，其 `subject` 用受限 JSONata 投影当前定义域；Loader 解析为 Guide 对象，instance 再以同一 language 和投影 subject 创建 prerequisite instance，未 terminal 时直接返回其 observation。Observed problem 直接给出入口 page ID，Agent 调用 observation 当前 instance 的 `readPage`；ReferencePage 不单列 links、tags 或 unknown-problem 布尔值，内部链接直接属于正文，缺页返回 locale 配置的普通 `notFoundPageId` 页面。
-- 新契约明确映射现有 ProfessionalModel 基线并保留 `whats-next` 行为；Silvermoon source 只依赖 Guide 核心，OR 与 OPS 的独立扩展文档不得被误报为当前运行能力。
+- [核心契约](./objective-guidance.md)明确 URI 身份、Guide/Instance 边界、typed creation failures、定义域与 prerequisite projection、多语言、有序 level 与平级 reference pages；不重复暴露 numeric index、通用 runtime context 或可派生中间对象。
+- [领域契约](./silvermoon-objectives.md)明确三个作用域的配置兜底与 checks、非阻塞 Device、Project→Idea 前置、项目级 guidance、selector 路由和精确 submit/accept 分层；配置、装载与 instance 创建错误不混淆。
+- 映射现有 ProfessionalModel 基线，保留导航的四投影、语言、控制权与精确 revision；项目 guidance 校验范围扩展明确标出并验证，OR/OPS 不进入当前 source/runtime。设计只定义在 Ideal World 辅助文件，实现契约仅列 Steps 与可验证 AC。

@@ -5,13 +5,13 @@
 ### Implementation steps
 
 - [ ] **I-S01:** 演进 ObjectiveGuide 基础契约
-- [ ] **I-S02:** 隔离调节与调度扩展
+- [ ] **I-S02:** 接入三个作用域的 Guide
 - [ ] **I-S03:** 保持现有导航兼容
 
 ### Implementation acceptance criteria
 
 - [ ] **I-AC01:** OG 传输与运行时边界可验证
-- [ ] **I-AC02:** 扩展契约不进入核心运行时
+- [ ] **I-AC02:** 三个作用域的契约可验证
 - [ ] **I-AC03:** 仓库验证通过
 
 ## Deployment

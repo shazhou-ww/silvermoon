@@ -517,3 +517,6 @@ Silvermoon 当前只需要 Loader、Guide 和 Guide instance 完成一次定向�
 `whats-next` 已验证单目标观察和指导；Silvermoon 当前只需演进这份 Guide 核心
 契约。后续实现必须保持现有导航、语言、控制权和精确 revision 语义，不因扩展
 文档存在而引入 OR 或 OPS 运行依赖。
+
+Silvermoon 三个作用域的具体 levels、checks 与命令边界见
+[领域契约](./silvermoon-objectives.md)，不进入本页通用类型或实现 Steps/AC。
