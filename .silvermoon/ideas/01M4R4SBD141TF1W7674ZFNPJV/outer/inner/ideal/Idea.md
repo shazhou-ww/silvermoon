@@ -1,4 +1,4 @@
-# 规范目标向导与多目标监督
+# 建立 Objective Guidance 类型体系
 
 ## 问题
 
@@ -6,7 +6,7 @@
 
 ## 结果
 
-在已验证的专业能力基础上，形成 ObjectiveGuide（OG）、ObjectiveRegulator（OR）与 Objective Portfolio Supervisor（OPS）的公开术语和可实施 TypeScript 契约；明确 Manifest、同目录代码与文档只组成 OG 传输单元，运行时代码仅使用装载后的 ObjectiveGuide。语义见[目标导向体系](./professional-model.md)，理论溯源与例子见[推演说明](./value-field-reasoning.md)。
+在已验证的专业能力基础上，形成 ObjectiveGuide（OG）、ObjectiveRegulator（OR）与 Objective Portfolio Supervisor（OPS）的公开术语和可实施 TypeScript 契约；明确 Manifest、同目录代码与文档只组成 OG 传输单元，运行时代码仅使用装载后的 ObjectiveGuide。语义见[Objective Guidance 类型体系](./objective-guidance.md)，理论溯源与例子见[推演说明](./value-field-reasoning.md)。
 
 ## 边界
 
