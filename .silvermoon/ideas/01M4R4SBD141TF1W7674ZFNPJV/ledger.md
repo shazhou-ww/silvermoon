@@ -4,24 +4,24 @@
 
 ### Implementation steps
 
-- [x] **I-S01:** 建立专业能力 module
-- [x] **I-S02:** 适配 what's next
-- [x] **I-S03:** 验证并记录抽象边界
+- [ ] **I-S01:** 演进 ObjectiveGuide 基础契约
+- [ ] **I-S02:** 建立 OR 与 OPS 类型边界
+- [ ] **I-S03:** 保持现有导航兼容
 
 ### Implementation acceptance criteria
 
-- [x] **I-AC01:** 拼装语义可验证
-- [x] **I-AC02:** 导航行为兼容
-- [x] **I-AC03:** 仓库验证通过
+- [ ] **I-AC01:** OG 传输与运行时边界可验证
+- [ ] **I-AC02:** OR 与 OPS 契约无职责泄漏
+- [ ] **I-AC03:** 仓库验证通过
 
 ## Deployment
 
 ### Deployment steps
 
-- [ ] **D-S01:** 整备开发运行时
-- [ ] **D-S02:** 验证真实 CLI 导航
+- [ ] **D-S01:** 整备契约候选运行时
+- [ ] **D-S02:** 验证现有 CLI 兼容边界
 
 ### Deployment acceptance criteria
 
 - [ ] **D-AC01:** 全局运行时指向本仓库
-- [ ] **D-AC02:** 现实导航结果可用
+- [ ] **D-AC02:** 现实导航保持兼容
