@@ -7,7 +7,7 @@
 按[核心类型契约](./ideal/objective-guidance.md)调整 Loader、语言中立 Guide、
 subject/language-bound instance 与 Manifest。把 level、check、problem 和普通
 页面统一到语言位于最内层的 References 树，以固定协议执行按 `CheckId` 约定
-发现的 executables，并支持 prerequisite 的最低可接受 level。
+发现的跨平台 check entries，并支持 prerequisite 的最低可接受 level。
 
 ### I-S02: 接入三个作用域的 Guide
 
@@ -26,7 +26,7 @@ advisory、语言、精确 revision 与人工交接。显式验证领域契约�
 ### I-AC01: OG 传输与运行时边界可验证
 
 类型检查与专项测试覆盖 URI identity/cache、typed creation failures、定义域与
-受限 JSONata、prerequisite 最低层、可执行 check 协议与隔离边界、稳定
+受限 JSONata、prerequisite 最低层、POSIX/Windows check 入口协议与隔离边界、稳定
 Problem ID、References namespace、完整 locale 叶子，以及固定
 `system/{overview,404}` 与 `levels/terminal`；错误不伪装成成功。
 证据见[核心边界验证](./objective-guidance-evidence.md#i-ac01)。

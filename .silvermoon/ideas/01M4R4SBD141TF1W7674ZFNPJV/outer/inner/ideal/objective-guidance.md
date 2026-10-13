@@ -153,8 +153,12 @@ minimum，不使用可能重名的跨 Guide level ID。
 my-objective-guide/
 ├── objective-guide.yaml
 ├── checks/
-│   ├── project-valid          # CheckId 直接映射到同名 executable
-│   └── repository-ready
+│   ├── project-valid/         # CheckId 直接映射到同名目录
+│   │   ├── run               # POSIX
+│   │   └── run.cmd           # Windows script wrapper
+│   └── repository-ready/
+│       ├── run
+│       └── run.exe            # Windows native executable
 └── references/
     ├── system/
     │   ├── overview/
@@ -277,10 +281,10 @@ languages:
 ```
 
 Level ID 在 Manifest 内唯一。References 固定从 Guide 根目录的 `references/`
-装载，不由 Manifest 覆盖。每个 advancement `CheckId` 固定解析为 Guide 根
-目录的 `checks/<check-id>`，并读取 `references/checks/<check-id>`；check 返回
-的每个 `ProblemId` 固定解析为 `references/problems/<problem-id>`。Manifest
-不重复声明 executable path、check 注册表或允许的 problem 列表。Guide 与合成
+装载，不由 Manifest 覆盖。每个 advancement `CheckId` 固定解析为 Guide 根目录
+的 `checks/<check-id>/` 和 `references/checks/<check-id>`；check 返回的每个
+`ProblemId` 固定解析为 `references/problems/<problem-id>`。Manifest 不重复
+声明 executable path、check 注册表或允许的 problem 列表。Guide 与合成
 terminal 的展示内容也不由 Manifest 指定，分别固定使用 `system/overview` 和
 `levels/terminal`。
 
@@ -291,7 +295,7 @@ Prerequisite subject 继续使用受限 JSONata profile，不读取环境、文�
 
 ## Check executable 协议
 
-每个 check 是 `checks/<check-id>` 约定发现的独立 executable，不是宿主函数：
+每个 check 是 `checks/<check-id>/` 约定发现的平台入口，不是宿主函数：
 
 ```ts
 interface CheckRequest {
@@ -318,12 +322,17 @@ Runtime 向 stdin 写入单个 JSON request，check 向 stdout 写入单个 JSON
 非法 JSON、额外 stdout、未知 problem 或协议不匹配都是 operation error。
 Check 不接收 language，也不返回 title、description 或其他本地化文本。
 
-Executable 固定从 Manifest 所在 Guide 根目录的 `checks/<check-id>` 解析，不
-接受 Manifest path override；不得跟随 symlink 逃逸，也不得从远程 Manifest
-隐式下载后执行。Runtime 不经 shell 拼接命令，使用固定 cwd、受控环境、统一
-超时和 stdout/stderr 大小限制。第一版只承诺当前 OS 可直接启动的入口：
-POSIX 可以使用 shebang 与 executable bit；Windows 提供平台可启动的同名入口。
-Runtime 不猜测解释器，也不承担通用 shebang launcher。
+入口固定从 Manifest 所在 Guide 根目录的 `checks/<check-id>/` 解析，不接受
+Manifest path override。POSIX 必须提供普通可执行文件 `run`，可以是 native
+binary 或带 shebang 的脚本。Windows 必须恰好提供 `run.exe` 或 `run.cmd`
+之一；缺失或同时存在都属于配置错误。Runtime 不读取 `PATHEXT`、不尝试
+`.bat` 或其他扩展名，也不承担通用 shebang launcher。
+
+`run.exe` 直接创建进程；`run.cmd` 通过固定的 Windows command processor
+启动，但不拼接任何 subject、Problem ID 或其他动态参数，全部业务输入仍只走
+stdin JSON。所有平台都使用固定 cwd、受控环境、统一超时和 stdout/stderr
+大小限制，并拒绝 check directory、入口或资源通过 symlink/reparse point
+逃逸。远程 Manifest 不能被隐式下载后执行。
 
 Probe 按 level 与 check 声明顺序执行，首个失败 check 形成 observation；一个
 失败 check 返回的 problems 保持声明顺序。每次 probe 都重新启动适用 checks，
@@ -341,7 +350,7 @@ Probe 按 level 与 check 声明顺序执行，首个失败 check 形成 observa
 - `system/overview`、`system/404` 和 `levels/terminal` 必须存在并覆盖全部
   languages；Manifest 不能改变其 identity。`system` 不允许其他节点。
 - Prerequisite URI 循环、未知 minimum level、References 结构不完整、缺失
-  check Reference 或不可安全解析的同名 executable 都在 load 阶段失败。未知
+  check Reference、check directory 或当前平台入口都在 load 阶段失败。未知
   Problem ID 只能在 check 返回结果时发现，并作为 operation error 明确失败。
 - Prerequisite 未达到 minimum 时不运行本地 checks；达到后不要求 prerequisite
   terminal。省略 minimum 时行为与原来的 terminal barrier 一致。
