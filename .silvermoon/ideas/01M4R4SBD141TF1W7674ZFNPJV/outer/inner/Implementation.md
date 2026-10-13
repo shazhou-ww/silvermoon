@@ -9,7 +9,8 @@ subject/language-bound instance 与 Manifest。把 level、check、problem 和�
 页面统一到语言位于最内层的 References 树，以固定协议执行按 `CheckId` 约定
 发现的唯一 `run`/`run.*` entry，并支持跨平台受限 shebang 和 prerequisite 的
 最低可接受 level。每次 probe 用独立 temp directory 取代注入式
-`useState`，供 prerequisite chain 与顺序 checks 通过文件 memo 复用本轮采样。
+`useState`，供 prerequisite chain 与顺序 checks 通过约定相对路径复用本轮
+临时文件，不新增语言专用 cache helper。
 
 ### I-S02: 接入三个作用域的 Guide
 

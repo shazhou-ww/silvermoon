@@ -336,11 +336,13 @@ Check 不接收 language，也不返回 title、description 或其他本地化�
 同一个 `probeWithContext(context)`，不能递归调用会另建目录的公开 `probe()`。
 单独调用 prerequisite instance 的公开 `probe()` 则自然创建自己的新 context。
 
-核心不提供旧 ProfessionalModel 的注入式 `useState`。若语言 SDK 提供
-`useMemo(key, producer)`，它必须把 key 映射到 `probe.tempDirectory` 内的受控
-文件，以原子写入保存本 probe 的 JSON/blob 结果；cache miss 才运行 producer。该
-helper 不触发重渲染、不允许任意跨 probe state，也不能把缓存路径或内容写到
-Guide、Manifest、References 或 event history。
+核心不提供旧 ProfessionalModel 的注入式 `useState`，也不新增 `useMemo` 或
+其他语言专用 helper。Runtime 把 `probe.tempDirectory` 视为 opaque workspace；
+同一 Objective 的 checks 自行约定相对路径、文件格式、schema/version 和
+producer/consumer。Cache miss 正常触发重新采样；损坏或 schema 不匹配必须明确
+失败。写入使用同目录临时文件与原子 rename，禁止绝对路径、`..`、symlink 或
+reparse point 逃逸。目录内容不进入 Guide、Manifest、References、trace、event
+history 或 Git，也不能作为 probe 结束后的持久证据。
 
 入口固定从 Manifest 所在 Guide 根目录的 `checks/<check-id>/` 解析，不接受
 Manifest path override。该目录必须恰好包含一个名为 `run` 或匹配 `run.*` 的
@@ -366,7 +368,7 @@ stdin JSON；唯一额外能力是 request 中 runtime-owned 的
 
 Probe 按 level 与 check 声明顺序执行，首个失败 check 形成 observation；一个
 失败 check 返回的 problems 保持声明顺序。每次 probe 都重新启动适用 checks，
-只允许在本 probe directory 内 memoize，不缓存跨 probe 现实结果，也不为了
+只允许在本 probe directory 内复用临时文件，不缓存跨 probe 现实结果，也不为了
 抵消进程成本而并行化并改变诊断优先级。
 
 ## 装载不变量
