@@ -81,7 +81,7 @@ Portfolio 实体。公开类型不使用势场、势能等物理隐喻。
 
 | 名称 | 当前结论 | 说明 |
 | --- | --- | --- |
-| `ObjectiveObservation` | 采用 | 比 `ObservationResult` 更具体，也避免把非原子观测称为 snapshot |
+| `ObjectiveObservation` | 采用 | 明确表达目标维度的非原子观测，避免泛化的结果或瞬时快照语义 |
 | `CheckId` / `ObjectiveCheck` | 采用 | 检查允许 IO 并返回问题；`Assertion` 容易被误解为测试断言或抛错 |
 | `RegulationStatus` | 采用 | 同时包含 `target-reached` 和停止原因，比 `Termination` 更中性 |
 | `RegulationTrigger` | 采用 | `defensive` / `opportunistic` 表达任务来源，比泛化的 `Reason` 更准确 |
@@ -180,7 +180,7 @@ OG 可以通过 folder、package、数据库记录或其他可加载单元传输
 my-objective-guide/
 ├── objective-guide.yaml
 ├── index.ts
-├── assertions/
+├── checks/
 ├── guidance/
 └── docs/
 ```
