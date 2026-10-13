@@ -106,6 +106,40 @@ try {
     ),
   );
   assert.equal(installedManifest.name, "silvermoon");
+  const objectiveSmoke = run(process.execPath, ["--input-type=module", "-e", `
+    import { createObjectiveLoader } from "silvermoon";
+    const manifest = {
+      schemaVersion: 1, domainSchema: { type: "object" },
+      levels: [{ id: "unready", advancement: { checks: ["ready"] } }],
+      defaultLanguage: "en-US",
+      localizations: { "en-US": { content: "content", references: { source: "refs/" } } },
+    };
+    const content = {
+      title: "Project", description: "Ready project",
+      terminal: { title: "Ready", description: "Ready" },
+      levels: { unready: { title: "Unready", description: "Pending", outcome: "Repair" } },
+    };
+    const loader = createObjectiveLoader({
+      checks: { ready: async () => ({ pass: false, problems: [{ pageId: "problem", description: "Repair" }] }) },
+      resources: {
+        readText: async (uri) => JSON.stringify(uri.endsWith("/manifest") ? manifest : content),
+        readPages: async (uri) => ["404", "problem"].map((id) => ({
+          uri: new URL(id + ".md", uri).href,
+          source: "---\\nid: " + JSON.stringify(id) + "\\n---\\n# " + id + "\\n\\nReference.\\n",
+        })),
+      },
+    });
+    const guide = await loader.load("https://objective.test/manifest");
+    const result = guide.createInstance({ subject: {} });
+    if (!result.ok) throw new Error(result.error.type);
+    const sample = await result.instance.probe();
+    console.log(JSON.stringify({
+      levelId: sample.current.id,
+      page: (await sample.current.instance.readPage(sample.problems[0].pageId)).id,
+      missing: (await result.instance.readPage("missing")).id,
+    }));
+  `], bootstrap);
+  assert.deepEqual(JSON.parse(objectiveSmoke), { levelId: "unready", page: "problem", missing: "404" });
   const installedModel = await readFile(
     join(bootstrap, "node_modules", "silvermoon", "dist", "src", "business", "whats-next-model.yaml"),
     "utf8",

@@ -3,7 +3,8 @@
 本仓库内的 [module](../src/professional-model/index.ts) 提供能力定义及
 `assembleProfessionalModel`，暂不作为独立 npm 包或公共 package export。
 它只组织判据与指导，不执行 skill、不代替 Agent 解题，也不产生人工决定。
-本次仅验证 Silvermoon 场景，不据此宣称跨行业普适性。
+本次仅验证 Silvermoon 场景，不据此宣称跨行业普适性。它现在是保留的兼容基线；
+实际导航已迁移到 [Objective Guide runtime](./objective-guidance.md)。
 
 ## 公共契约
 
@@ -72,34 +73,14 @@ const model = assembleProfessionalModel(yamlSource, (useState) => {
 
 ## Silvermoon 接入边界
 
-[导航定义](../src/business/whats-next-model.yaml) 是独立 YAML 文件，
-[读取函数](../src/business/whats-next-model.ts) 使用 `import.meta.url` 相对路径，
-不依赖当前工作目录。构建将同一文件复制到 `dist/src/business/`，
-包白名单和已安装包测试验证该资源。每次导航读取定义，读取或解析失败直接诊断，
-不回退到内嵌配置。它不是项目可覆盖的配置，也不执行脚本。
-[whats-next](../src/business/whats-next.ts) 注册 project、repository、
-selection、guidance、ideal、inner、outer 原子检查，由 module 的运行器
-决定顺序、升级与停止。层级为：
+[旧导航定义](../src/business/whats-next-model.yaml) 与
+[读取函数](../src/business/whats-next-model.ts) 保留为历史兼容资源，不再决定
+`whats-next` 的运行顺序。旧 module 契约由
+[module 测试](../test/unit/professional-model.test.ts) 独立验证。
 
-| level | 含义 |
-| --- | --- |
-| 0 | 项目观察或整备尚不可用 |
-| 1 | 项目整备完成 |
-| 2 | 仓库同步完成，尚未完成显式对象选取或 guidance |
-| 3 | Idea 已选取且 guidance 有效，理想尚未接受或已废弃 |
-| 4 | 精确理想已接受，实现阶段尚未接受 |
-| 5 | 精确实现已接受，部署阶段尚未接受 |
-| 6 | 精确部署已接受，Idea completed |
-
-层级仅为内部组织，不增加第五个 CLI 投影或更改报告 shape。现有 snapshot、
-repository readiness、对象选取与 lifecycle 投影仍提供唯一领域事实；
-接受检查只消费已有生命周期状态，不另行比较 revision 或推断人工接受。
-领域动态 nextSteps、review、localization、控制权、phase guidance、
-Git/schema 整备及提交同步继续使用原有实现。设备 advisory 不进入硬门槛。
-裸导航和未知对象在 selection 停止，不擅自选择 Idea。
-Snapshot、repository readiness、selected idea、selected report 和最终 outcome
-这五份跨 check 状态实际使用注入的 useState 句柄；不只在示例里演示该 API。
-
-专项证据见 [module 测试](../test/unit/professional-model.test.ts) 与
-[导航接入测试](../test/unit/whats-next-model.test.ts)；现有真实 Git/CLI、
-guidance、控制权及精确 revision 测试作为外部兼容证据。
+现有导航使用 [Device、Project、Idea 定义](../src/business/objective-guides.ts)，
+以稳定 level ID、实际 instance 引用和 reference page ID 取代 numeric level、
+problem code 路由与惰性 skill 字符串。四投影、控制权、语言与精确 revision
+仍由现有报告和 lifecycle reducer 提供；详见
+[运行时说明](./objective-guidance.md)和
+[导航接入测试](../test/unit/whats-next-model.test.ts)。

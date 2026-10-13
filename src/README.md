@@ -1,11 +1,13 @@
 # Source modules
 
-## 当前专业能力 module
+## 当前 Objective Guide module
 
-[professional-model](./professional-model/README.md) 是仓库内独立的通用契约与
-拼装执行 module，不新增架构层或独立 npm 包。[whats-next](./business/whats-next.ts)
-的有序检查实际由它组织，领域报告与精确生命周期事实仍由现有基础及业务能力提供。
-详情见[专业能力说明](../docs/professional-model.md)。
+[objective-guide](./objective-guide/README.md) 提供 URI-keyed Loader、语言中立 Guide
+和绑定 subject/language 的 instance；[whats-next](./business/whats-next.ts) 使用
+设备、项目、Idea 三个作用域的 Guide，领域报告与精确生命周期事实仍由现有能力
+提供。详情见[运行时说明](../docs/objective-guidance.md)。
+[professional-model](./professional-model/README.md) 保留旧 module 兼容基线，不再
+驱动导航；不新增架构层或独立 npm 包。
 
 ## 三层目标架构
 

@@ -1,4 +1,19 @@
 export { checkRepository } from "./business/index.ts";
+export { createObjectiveLoader, canonicalManifestUri, fileObjectiveResources, ObjectiveConfigurationError, ObjectiveOperationError, SUBJECT_PROJECTION_LIMITS } from "./objective-guide/index.ts";
+export type {
+  ObjectiveManifestUri, CheckId, ReferencePageId, ObjectiveLevelId, LanguageTag,
+  JsonValue, JsonObject, ObjectiveSubject, ObjectiveDomainSchema, ObservedProblem,
+  ReferencePageSummary, ReferencePage, ObjectiveLevelDescription, ObjectiveObservation,
+  ObjectiveSubjectValidationIssue, ObjectiveValidationIssues, ObjectivePrerequisiteSubjectFailure,
+  ObjectiveGuideInstanceCreationError, ObjectiveGuideInstanceCreationResult,
+  ObjectiveGuideInstanceOptions, ObjectivePrerequisite, ObjectiveGuide,
+  ObjectiveGuideInstance, ObjectiveLevelAdvancementManifest, ObjectiveLevelManifest,
+  ObjectiveLevelsManifest, ObjectivePrerequisiteManifest, ObjectiveLevelContentManifest,
+  ObjectiveTerminalContentManifest, ObjectiveGuideContentManifest, ObjectiveReferencesManifest,
+  ObjectiveLocalizationManifest, ObjectiveGuideManifest, CheckResult, ObjectiveCheck,
+  ObjectiveGuideLoadBindings, ObjectiveLoader, ObjectivePageResource,
+  ObjectiveResourceResolver, ObjectiveLoaderOptions,
+} from "./objective-guide/index.ts";
 
 export { ACTIVE_IDEA_STATES, deriveIdeaState, IDEA_STATES, isValidUlid, parseIdeaStatus, serializeIdeaStatus, validateIdeaStatus } from "./foundation/idea-model/index.ts";
 export { IDEA_EVENT_TYPES, EVENT_PERMISSIONS, IdeaEventFormatError, checkEventChange, eventsFromStatus, initialEventState, parseIdeaEvents, reduceIdeaEvent, replayIdeaEvents, serializeIdeaEvent, serializeIdeaEvents, validateIdeaEvent } from "./foundation/event-codec/index.ts";

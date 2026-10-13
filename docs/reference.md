@@ -3,8 +3,8 @@
 This page is the authoritative reference for Silvermoon storage, revisions,
 derived state, CLI reports, and validation.
 
-The internal [professional model module](./professional-model.md) organizes
-`whats-next` checks without changing these public contracts.
+The [Objective Guide runtime](./objective-guidance.md) organizes Device,
+Project and Idea checks without adding another CLI report projection.
 
 ## Fixed Storage Layout
 
@@ -62,13 +62,14 @@ and report content is normalized to LF. Silvermoon treats the body as inert
 Markdown: it does not parse frontmatter, interpolate values, resolve includes,
 fetch URLs, execute snippets, translate content, or write it to traces.
 
-Lifecycle commands use on-demand validation. Selected `whats-next` reads only
-the selected actionable phase after project, local repository, fetch, and
-ancestry readiness. `create-idea` reads only preparing guidance after local
-preflight and before writing any scaffold path. Errors in another phase and
-extra directory entries do not preempt those commands. Bare navigation,
-selector misses, completed or abandoned ideas, and readiness blocks do not
-read or return guidance.
+`whats-next` validates all project guidance locally during project preparation,
+then again in the confirmed primary snapshot. Invalid unselected phases or
+extra directory entries block project readiness, including bare navigation and
+terminal Idea routes. After repository readiness, only a selected actionable
+phase's content is returned. `create-idea` still reads only preparing guidance
+after local preflight and before writing a scaffold; its scope is unchanged.
+Bare navigation, selector misses, terminal ideas and readiness blocks never
+return guidance content.
 
 All `check` targets use complete validation: they reject any invalid phase file
 or extra entry in their selected HEAD, worktree, index, commit, or remote
@@ -608,8 +609,8 @@ Observations are discriminated by command intent and `state`:
   `idea-not-found` with the same enriched active `candidates`, not a fabricated
   selected idea. An actionable selection may also contain snapshot-bound
   guidance provenance; captured content is in the response.
-- `phase-guidance-invalid` means command readiness reached the current
-  actionable phase, but that phase's optional file exists and is invalid. It
+- `phase-guidance-invalid` means applicable project guidance validation failed
+  (all phases for `whats-next`, preparing for `create-idea`). It
   contains problems and repair instructions, not lifecycle instructions or
   guidance content.
 - After a successful `create-idea` preflight, `idea-created` carries

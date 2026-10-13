@@ -1,59 +1,57 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-
 import { whatsNextUseCase } from "../../src/business/whats-next.ts";
-import { readWhatsNextModel } from "../../src/business/whats-next-model.ts";
+import { createSilvermoonObjectiveLoader, SILVERMOON_OBJECTIVE_URIS } from "../../src/business/objective-guides.ts";
+import type { SilvermoonCheckId } from "../../src/business/objective-guides.ts";
+import type { ObjectiveObservation } from "../../src/objective-guide/index.ts";
 import { createCommandRun } from "../../src/foundation/command-message/index.ts";
 import { ideaPaths } from "../../src/foundation/coordinates/index.ts";
+import { inspectPhaseGuidance } from "../../src/foundation/guidance/index.ts";
+import { observeDevice } from "../../src/business/shared/observe-device.ts";
 import { IdeaMetadataReadError, readIdeaInventoryItem } from "../../src/business/shared/read-idea-inventory-item.ts";
-import { assembleProfessionalModel } from "../../src/professional-model/index.ts";
-import type { Observation as ModelObservation } from "../../src/professional-model/index.ts";
 import type { ReadyObservation, SnapshotObservation } from "../../src/business/shared/business-types.ts";
 import type { ObservedIdea } from "../../src/business/shared/idea-layout.ts";
+import type { IdeaSubmissionsProjection, PhaseSubmissionProjection } from "../../src/foundation/report/types.ts";
 
 const id = "01M36QGPNTXEPP61DA4KP4AVZF";
 const primary = "a".repeat(40);
 const paths = ideaPaths(id);
-const config = {
-  version: 2 as const,
-  primaryRepository: "https://example.test/owner/repository.git",
-  primaryBranch: "main",
-};
-
+const config = { version: 2 as const, primaryRepository: "https://example.test/owner/repository.git", primaryBranch: "main" };
 function idea(state: string): ObservedIdea {
-  const revisions = {
-    idealRevision: "b".repeat(40),
-    implementationRevision: "c".repeat(40),
-    deploymentRevision: "d".repeat(40),
-  };
+  const revisions = { idealRevision: "b".repeat(40), implementationRevision: "c".repeat(40), deploymentRevision: "d".repeat(40) };
   return {
     id, alias: "fixture", state, revisions, ...revisions,
     status: { version: 1, id, language: "zh-CN" },
     path: paths.ideaPath, relativePath: paths.ideaPath,
     statusPath: paths.statusPath, ledgerPath: paths.ledgerPath,
-    eventDigest: "e".repeat(40),
-    control: { owner: "downstream", lastTransfer: null },
+    eventDigest: "e".repeat(40), control: { owner: "downstream", lastTransfer: null },
     worlds: {
-      idealRevision: {
-        name: "idealRevision", displayName: "Ideal", path: paths.idealPath,
-        documentPath: paths.ideaDocumentPath,
-      },
-      implementationRevision: {
-        name: "implementationRevision", displayName: "Inner", path: paths.innerPath,
-        documentPath: paths.implementationDocumentPath,
-      },
-      deploymentRevision: {
-        name: "deploymentRevision", displayName: "Outer", path: paths.outerPath,
-        documentPath: paths.deploymentDocumentPath,
-      },
+      idealRevision: { name: "idealRevision", displayName: "Ideal", path: paths.idealPath, documentPath: paths.ideaDocumentPath },
+      implementationRevision: { name: "implementationRevision", displayName: "Inner", path: paths.innerPath, documentPath: paths.implementationDocumentPath },
+      deploymentRevision: { name: "deploymentRevision", displayName: "Outer", path: paths.outerPath, documentPath: paths.deploymentDocumentPath },
     },
   };
 }
-
+function submissions(selected: ObservedIdea, phase: "ideal" | "inner" | "outer", state: "unsubmitted" | "submitted" | "stale"): IdeaSubmissionsProjection {
+  const make = (key: "ideal" | "inner" | "outer"): PhaseSubmissionProjection => {
+    const field = key === "ideal" ? "idealRevision" : key === "inner" ? "implementationRevision" : "deploymentRevision";
+    const preceding = ["ideal", "inner", "outer"].indexOf(key) < ["ideal", "inner", "outer"].indexOf(phase);
+    const current = selected.revisions[field];
+    return {
+      phase: key,
+      submit: key === "ideal" ? "submitIdeal" as const : key === "inner" ? "submitInner" as const : "submitOuter" as const,
+      decision: key === "ideal" ? "acceptIdeal" as const : key === "inner" ? "acceptInner" as const : "acceptOuter" as const,
+      state: preceding ? "accepted" as const : key === phase ? state : "unsubmitted" as const,
+      revision: { field, value: current },
+      ...(preceding ? { acceptedRevision: current, submittedRevision: current }
+        : key === phase && state !== "unsubmitted" ? { submittedRevision: state === "stale" ? "f".repeat(40) : current } : {}),
+    };
+  };
+  return { current: phase, ideal: make("ideal"), inner: make("inner"), outer: make("outer") };
+}
 function ready(selected = idea("implementing")): ReadyObservation {
   return {
-    config, contentLanguage: "en-US", findings: [],
-    layout: { diagnostics: [], ideas: [selected] },
+    config, contentLanguage: "en-US", findings: [], layout: { diagnostics: [], ideas: [selected] },
     outputLanguage: "en-US", projectReady: true,
     observation: {
       state: "project-ready", root: "D:\\fixture", outputLanguage: "en-US",
@@ -62,186 +60,177 @@ function ready(selected = idea("implementing")): ReadyObservation {
     },
   };
 }
-
 function harness(snapshot: SnapshotObservation = ready(), blockRepository = false) {
   const calls: string[] = [];
-  const observations: ModelObservation[] = [];
-  const stateRegistrations: number[] = [];
+  const observations: ObjectiveObservation[] = [];
   const ports: NonNullable<Parameters<typeof whatsNextUseCase>[1]> = {
     createCommandRun: (intent) => createCommandRun(intent, { eventSink: () => {} }),
     observeSnapshot: async () => { calls.push("snapshot"); return snapshot; },
     assessRepositoryReadiness: async ({ observed }) => {
       calls.push("repository");
-      return blockRepository
-        ? {
-          ready: false,
-          observation: { ...observed.observation, state: "repository-sync-required" },
-          instructions: "Synchronize the exact primary first.",
-        }
-        : {
-          ready: true, observation: observed.observation, primary, head: primary,
-          branch: { branch: "topic", remote: "origin", repository: config.primaryRepository, upstreamBranch: "main" },
-        };
-    },
-    readIdeaInventoryItem,
-    readWhatsNextModel,
-    assembleProfessionalModel: (source, createChecks) => {
-      const model = assembleProfessionalModel(source, (useState) => {
-        let count = 0;
-        const checks = createChecks((initial) => { count += 1; return useState(initial); });
-        stateRegistrations.push(count);
-        return Object.fromEntries(Object.entries(checks).map(([name, check]) => [
-          name, async (target) => { calls.push(name); return check(target); },
-        ]));
-      });
-      return {
-        ...model,
-        async observe(target) {
-          const observed = await model.observe(target);
-          observations.push(observed);
-          return observed;
-        },
+      return blockRepository ? {
+        ready: false,
+        observation: { ...observed.observation, state: "repository-sync-required", problems: [{ type: "worktree-changes", summary: "Dirty candidate." }] },
+        instructions: "Synchronize the exact primary first.",
+      } : {
+        ready: true, observation: observed.observation, primary, head: primary,
+        branch: { branch: "topic", remote: "origin", repository: config.primaryRepository, upstreamBranch: "main" },
       };
+    },
+    readIdeaInventoryItem, observeDevice,
+    observeIdea: async () => {
+      if (snapshot.layout === null) throw new Error("Project must precede local Idea sampling.");
+      return { ...snapshot.layout, project: undefined };
+    },
+    worktreeSnapshot: () => ({ tree: "local-guidance-tree" }),
+    createSilvermoonObjectiveLoader: (checks) => {
+      const wrapped = { ...checks };
+      for (const key of Object.keys(checks) as SilvermoonCheckId[]) {
+        wrapped[key] = async (subject, language) => { calls.push(key); return checks[key](subject, language); };
+      }
+      return createSilvermoonObjectiveLoader(wrapped);
+    },
+    probeObjective: async (instance) => {
+      const sample = await instance.probe();
+      observations.push(sample);
+      return sample;
     },
   };
   const options = {
     root: "D:\\fixture", idea: "fixture",
-    guidanceReader: async () => {
-      calls.push("guidance-reader");
+    guidanceInspector: async () => ({ state: "valid" as const, diagnostics: [] }),
+    guidanceReader: async ({ phase, snapshotTree }: Parameters<typeof inspectPhaseGuidance>[0]) => {
+      calls.push(`guidance:${phase}:${snapshotTree}`);
       return { state: "valid" as const, diagnostics: [] };
     },
   };
-  return { calls, observations, stateRegistrations, ports, options };
+  return { calls, observations, ports, options };
 }
 
-test("real whats-next use case is driven by the ordered model and preserves the four projections", async () => {
+test("Guide-driven navigation preserves four projections and direct instance ownership", async () => {
   const context = harness();
   const report = await whatsNextUseCase(context.options, context.ports);
-  assert.deepEqual(context.calls, [
-    "project", "snapshot", "repository", "repository", "selection",
-    "guidance", "guidance-reader", "ideal", "inner",
-  ]);
-  assert.deepEqual(context.observations.map(({ level }) => level), [4]);
-  assert.deepEqual(context.stateRegistrations, [5]);
-  assert.equal(context.observations[0]?.problems[0]?.code, "inner");
   assert.deepEqual(Object.keys(report), ["intention", "observation", "actions", "response"]);
   assert.equal(report.observation.state, "idea-selected");
   assert.equal(report.observation.outputLanguage, "zh-CN");
   assert.equal(report.response.details?.contentLanguage, "zh-CN");
+  const sample = context.observations.at(-1)!;
+  assert.equal(sample.current.id, "implementation-unsubmitted");
+  assert.equal(sample.current.instance.guide.manifestUri, SILVERMOON_OBJECTIVE_URIS.idea);
+  assert.equal(sample.current.instance.prerequisite?.guide.manifestUri, SILVERMOON_OBJECTIVE_URIS.project);
+  assert.equal(sample.current.instance.language, "zh-CN");
+  assert.equal(sample.current.instance.prerequisite?.language, "zh-CN");
   if (report.response.kind !== "next-steps") assert.fail("Expected next steps.");
   assert.match(report.response.nextSteps.map(({ text }) => text).join("\n"), /submitInner/);
   assert.deepEqual(report.actions, []);
 });
 
-test("reads the standalone YAML and propagates read or parsing errors before any check", async () => {
-  const source = await readWhatsNextModel();
-  assert.match(source, /^target:\r?\n/);
-  assert.deepEqual(assembleProfessionalModel(source, () => ({})).describe()
-    .map(({ level }) => level), [0, 1, 2, 3, 4, 5, 6]);
-  const context = harness();
-  const unavailable = new Error("standalone YAML unavailable");
-  await assert.rejects(whatsNextUseCase(context.options, {
-    ...context.ports, readWhatsNextModel: async () => { throw unavailable; },
-  }), (caught) => caught === unavailable);
-  await assert.rejects(whatsNextUseCase(context.options, {
-    ...context.ports, readWhatsNextModel: async () => "levels: [",
-  }), /Invalid professional model YAML/);
-  assert.deepEqual(context.calls, []);
-  assert.deepEqual(context.stateRegistrations, []);
-});
-
-test("real navigation state handles stay isolated across concurrent use cases", async () => {
-  const preparing = harness(ready(idea("preparing")));
-  const deploying = harness(ready(idea("deploying")));
-  const [first, second] = await Promise.all([
-    whatsNextUseCase(preparing.options, preparing.ports),
-    whatsNextUseCase(deploying.options, deploying.ports),
+test("concurrent command instances do not share snapshot or lifecycle state", async () => {
+  const first = harness(ready(idea("preparing")));
+  const second = harness(ready(idea("deploying")));
+  const reports = await Promise.all([
+    whatsNextUseCase(first.options, first.ports), whatsNextUseCase(second.options, second.ports),
   ]);
-  assert.equal(preparing.observations[0]?.level, 3);
-  assert.equal(deploying.observations[0]?.level, 5);
-  assert.equal(first.observation.state, "idea-selected");
-  assert.equal(second.observation.state, "idea-selected");
-  if (first.observation.state !== "idea-selected" || second.observation.state !== "idea-selected") {
-    assert.fail("Expected independent selected reports.");
-  }
-  assert.equal(first.observation.selectedIdea.state, "preparing");
-  assert.equal(second.observation.selectedIdea.state, "deploying");
-  assert.deepEqual(preparing.stateRegistrations, [5]);
-  assert.deepEqual(deploying.stateRegistrations, [5]);
+  assert.equal(first.observations.at(-1)?.current.id, "ideal-unsubmitted");
+  assert.equal(second.observations.at(-1)?.current.id, "deployment-unsubmitted");
+  assert.notEqual(first.observations[0]?.current.instance, second.observations[0]?.current.instance);
+  assert.ok(reports.every(({ observation }) => observation.state === "idea-selected"));
 });
 
-test("project and repository failures stop later checks without changing report priority", async () => {
+test("project and repository failures gate Idea checks and retain report diagnostics", async () => {
   const unavailable: SnapshotObservation = {
-    config: null, contentLanguage: "en-US", findings: [{ instruction: "Repair schema." }],
-    layout: null, outputLanguage: "en-US", projectReady: false,
-    observation: {
-      state: "project-setup-required", root: "D:\\fixture", outputLanguage: "en-US",
-      observedThrough: "configuration", version: { type: "worktree" },
-      problems: [{ type: "schema-invalid", summary: "Unsupported schema." }],
-    },
+    config: null, contentLanguage: "en-US", findings: [{ instruction: "Repair schema." }], layout: null,
+    outputLanguage: "en-US", projectReady: false,
+    observation: { state: "project-setup-required", root: "D:\\fixture", outputLanguage: "en-US",
+      observedThrough: "configuration", problems: [{ type: "schema-invalid", summary: "Unsupported schema." }] },
   };
-  const project = harness(unavailable);
-  const blocked = await whatsNextUseCase(project.options, project.ports);
-  assert.deepEqual(project.calls, ["project", "snapshot"]);
-  assert.equal(project.observations[0]?.level, 0);
-  assert.equal(project.observations[0]?.problems[0]?.description, "schema-invalid: Unsupported schema.");
+  const first = harness(unavailable);
+  const blocked = await whatsNextUseCase(first.options, first.ports);
+  assert.deepEqual(first.calls, ["snapshot", "project-config-valid"]);
+  assert.equal(first.observations[0]?.current.id, "configuration-invalid");
   assert.equal(blocked.observation.state, "project-setup-required");
-  const repository = harness(ready(), true);
-  const sync = await whatsNextUseCase(repository.options, repository.ports);
-  assert.deepEqual(repository.calls, ["project", "snapshot", "repository", "repository"]);
-  assert.equal(repository.observations[0]?.level, 1);
+  const second = harness(ready(), true);
+  const sync = await whatsNextUseCase(second.options, second.ports);
+  assert.equal(second.observations[0]?.current.id, "repository-unready");
+  assert.equal(second.observations[0]?.current.instance.guide.manifestUri, SILVERMOON_OBJECTIVE_URIS.project);
+  assert.ok(!second.calls.includes("idea-metadata-valid"));
   assert.equal(sync.observation.state, "repository-sync-required");
 });
 
-test("unselected and unknown objects stop before guidance without implicit selection", async () => {
+test("no selector stays Project-only even for one Idea; invalid selectors do not silently fall back", async () => {
   for (const selector of [undefined, "missing", ""]) {
     const context = harness();
     const { idea: _idea, ...options } = context.options;
-    const report = await whatsNextUseCase({
-      ...options, ...(selector === undefined ? {} : { idea: selector }),
-    }, context.ports);
+    const report = await whatsNextUseCase({ ...options, ...(selector === undefined ? {} : { idea: selector }) }, context.ports);
     assert.equal(report.observation.state, selector === undefined ? "navigation-ready" : "idea-not-found");
-    assert.equal(context.observations[0]?.level, 2);
-    assert.ok(!context.calls.includes("guidance"));
+    assert.equal(context.observations[0]?.current.id, "terminal");
+    assert.equal(context.observations[0]?.current.instance.guide.manifestUri, SILVERMOON_OBJECTIVE_URIS.project);
+    assert.ok(!context.calls.includes("idea-metadata-valid"));
+    assert.ok(context.calls.includes("project-primary-guidance-valid"));
   }
 });
 
-test("invalid phase guidance stops acceptance checks and returns the original diagnostic", async () => {
+test("Project validates every phase, missing guidance is allowed and another invalid phase blocks", async () => {
   const context = harness();
   const report = await whatsNextUseCase({
     ...context.options,
-    guidanceReader: async () => ({
-      state: "invalid",
-      diagnostics: [{
-        code: "guidance.invalid", level: "error", message: "Invalid phase body.", path: "guidance/implementing.md",
-        remediation: "Repair phase guidance.",
-      }],
-    }),
+    guidanceInspector: async () => ({ state: "invalid", diagnostics: [{ code: "guidance.invalid", level: "error",
+      message: "Invalid unselected phase.", path: "guidance/deploying.md", remediation: "Repair phase guidance." }] }),
   }, context.ports);
-  assert.equal(context.observations[0]?.level, 2);
-  assert.ok(!context.calls.includes("ideal"));
+  assert.equal(context.observations[0]?.current.id, "project-unprepared");
+  assert.equal(context.observations[0]?.current.instance.guide.manifestUri, SILVERMOON_OBJECTIVE_URIS.project);
+  assert.ok(!context.calls.includes("repository"));
   assert.equal(report.observation.state, "phase-guidance-invalid");
   assert.equal(report.observation.problems[0]?.type, "guidance-invalid");
 });
 
-test("lifecycle projections determine levels without inferring acceptance from progress", async () => {
-  for (const [state, level] of [
-    ["preparing", 3], ["implementing", 4], ["deploying", 5],
-    ["completed", 6], ["abandoned", 3],
+test("v2 exact submission and acceptance occupy separate levels; stale submission returns to unsubmitted", async () => {
+  for (const [phase, lifecycle, prefix] of [
+    ["ideal", "preparing", "ideal"], ["inner", "implementing", "implementation"], ["outer", "deploying", "deployment"],
   ] as const) {
-    const context = harness(ready(idea(state)));
-    const report = await whatsNextUseCase(context.options, context.ports);
-    assert.equal(context.observations[0]?.level, level);
-    assert.equal(report.observation.state, "idea-selected");
-    if (report.observation.state !== "idea-selected") assert.fail("Expected selected idea.");
-    assert.equal(report.observation.selectedIdea.state, state);
-    assert.equal(context.calls.includes("guidance-reader"),
-      ["preparing", "implementing", "deploying"].includes(state));
-    assert.ok(!("review" in report.response) || report.response.review === undefined);
+    for (const state of ["unsubmitted", "submitted", "stale"] as const) {
+      const selected = idea(lifecycle);
+      selected.submissions = submissions(selected, phase, state);
+      const context = harness(ready(selected));
+      await whatsNextUseCase(context.options, context.ports);
+      assert.equal(context.observations[0]?.current.id, `${prefix}-${state === "submitted" ? "unaccepted" : "unsubmitted"}`);
+    }
   }
 });
 
-test("navigation defects propagate rather than becoming normal model problems", async () => {
+test("v1 lifecycle remains compatible; completed is terminal and abandoned stops without becoming completed", async () => {
+  for (const [state, level] of [
+    ["preparing", "ideal-unsubmitted"], ["implementing", "implementation-unsubmitted"],
+    ["deploying", "deployment-unsubmitted"], ["completed", "terminal"], ["abandoned", "terminal"],
+  ]) {
+    const context = harness(ready(idea(state!)));
+    const report = await whatsNextUseCase(context.options, context.ports);
+    assert.equal(context.observations[0]?.current.id, level);
+    assert.equal(report.observation.state, "idea-selected");
+    if (state === "abandoned") {
+      assert.ok(!context.calls.includes("idea-ideal-submitted"));
+      assert.ok(!context.calls.includes("idea-metadata-valid"));
+      assert.equal(context.observations[0]?.current.instance.guide.manifestUri, SILVERMOON_OBJECTIVE_URIS.project);
+    }
+  }
+});
+
+test("primary guidance is checked again, and active content remains bound to primary", async () => {
+  const context = harness();
+  const report = await whatsNextUseCase({
+    ...context.options,
+    guidanceReader: async ({ phase, snapshotTree }) => ({
+      state: "valid", diagnostics: [], guidance: { phase, path: `.silvermoon/guidance/${phase}.md`,
+        contentRevision: String(snapshotTree), content: "Do not execute inert text." },
+    }),
+  }, context.ports);
+  if (report.response.kind !== "next-steps") assert.fail("Expected next steps.");
+  assert.equal(report.response.guidance?.contentRevision, primary);
+  assert.ok(context.calls.includes("project-guidance-valid"));
+  assert.ok(context.calls.includes("project-primary-guidance-valid"));
+});
+
+test("navigation defects and typed instance configuration errors propagate", async () => {
   const context = harness();
   const bug = new Error("snapshot defect");
   await assert.rejects(whatsNextUseCase(context.options, {
@@ -250,7 +239,7 @@ test("navigation defects propagate rather than becoming normal model problems", 
   assert.deepEqual(context.observations, []);
 });
 
-test("metadata I/O unavailability is explicit but metadata programmer defects propagate", async () => {
+test("metadata I/O is explicit, while metadata programmer defects propagate", async () => {
   const snapshot = ready();
   snapshot.observation.ideas = { counts: { implementing: 1 }, activeIdeas: [{ id, state: "implementing" }] };
   const context = harness(snapshot);
@@ -260,12 +249,26 @@ test("metadata I/O unavailability is explicit but metadata programmer defects pr
     ...context.ports, readIdeaInventoryItem: async () => { throw bug; },
   }), (caught) => caught === bug);
   const report = await whatsNextUseCase(options, {
-    ...context.ports,
-    readIdeaInventoryItem: async () => {
+    ...context.ports, readIdeaInventoryItem: async () => {
       throw new IdeaMetadataReadError(id, paths.ideaDocumentPath, new Error("unavailable"));
     },
   });
   assert.equal(report.observation.state, "project-setup-required");
   assert.equal(report.observation.problems[0]?.type, "idea-metadata-unavailable");
-  assert.equal(context.observations[0]?.level, 2);
+});
+
+test("fresh Idea metadata faults and concurrent changes cannot produce stale lifecycle review", async () => {
+  for (const changed of [false, true]) {
+    const context = harness();
+    const report = await whatsNextUseCase(context.options, {
+      ...context.ports,
+      observeIdea: async () => ({
+        diagnostics: [], project: undefined,
+        ideas: changed ? [{ ...idea("implementing"), eventDigest: "f".repeat(40) }] : [],
+      }),
+    });
+    assert.equal(report.observation.state, changed ? "repository-sync-required" : "project-setup-required");
+    assert.ok(!context.calls.includes("idea-ideal-submitted"));
+    assert.ok(!("review" in report.response) || report.response.review === undefined);
+  }
 });

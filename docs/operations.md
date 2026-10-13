@@ -27,7 +27,8 @@ entries, same-world supporting artifacts, and the ledger. A caller may use
 markers, and verbatim tool output retain their original form.
 
 Every `whats-next` invocation follows three strict layers. It first checks Git,
-configuration compatibility, metadata schema, and layout. It then checks local
+configuration compatibility, metadata schema, layout and all optional project
+guidance. It then checks local
 conflicts, changes, HEAD, and upstream identity before any remote access. Only
 after those checks pass does it fetch primary, compare ancestry, and route idea
 work. Runtime and personal skill health belong to device readiness, never the
@@ -69,13 +70,16 @@ capability, and an unavailable registry. Snapshot-only `check` remains
 deterministic and performs no registry access.
 
 When a selector resolves to an actionable phase and synchronization is ready,
-Silvermoon reads only `.silvermoon/guidance/<phase>.md` from the same Git
-snapshot. Missing guidance preserves the previous report shape. Valid guidance
+Silvermoon returns only `.silvermoon/guidance/<phase>.md` from the confirmed Git
+snapshot. All three files and the guidance directory are validated locally and
+again at primary as Project Guide checks; invalid unselected phases also block.
+Missing guidance preserves the previous report shape. Valid guidance
 content appears in `response.guidance`, while `observation.guidance` exposes
-only its path, phase, and content revision. Invalid current-phase guidance
+only its path, phase, and content revision. Invalid project guidance
 returns a `phase-guidance-invalid` observation with remediation instead of
 lifecycle next steps. Bare navigation, unknown selectors, terminal ideas, and any
-higher-priority setup, hygiene, fetch, or ancestry block do not read guidance.
+higher-priority setup, hygiene, fetch, or ancestry block do not return guidance
+content; project-wide validity checks are separate from content delivery.
 
 ## Query The Local Inventory
 

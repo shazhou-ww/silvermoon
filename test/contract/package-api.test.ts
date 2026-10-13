@@ -17,6 +17,14 @@ test("does not expose the removed criteria evidence contract", () => {
   assert.equal(Object.hasOwn(silvermoon, "verifyCriteriaEvidence"), false);
 });
 
+test("exports the Objective Guide core without regulator or portfolio APIs", () => {
+  for (const name of ["createObjectiveLoader", "canonicalManifestUri", "ObjectiveConfigurationError", "ObjectiveOperationError"] as const) {
+    assert.equal(typeof silvermoon[name], "function");
+  }
+  assert.equal(Object.hasOwn(silvermoon, "ObjectiveRegulator"), false);
+  assert.equal(Object.hasOwn(silvermoon, "ObjectivePortfolioSupervisor"), false);
+});
+
 test("exports schema migration discovery and dispatch", () => {
   assert.deepEqual(
     silvermoon.IMPLEMENTED_SCHEMA_MIGRATIONS,

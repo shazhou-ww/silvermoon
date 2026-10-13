@@ -20,9 +20,15 @@ importers:
       '@opentui/react':
         specifier: npm:@jitl/opentui-react@0.4.0
         version: '@jitl/opentui-react@0.4.0(react-devtools-core@7.0.1)(react@19.3.0)(typescript@5.9.3)(web-tree-sitter@0.25.10)(ws@8.22.0)'
+      ajv:
+        specifier: ^8.20.0
+        version: 8.20.0
       commander:
         specifier: ^15.0.0
         version: 15.0.0
+      jsonata:
+        specifier: ^2.1.0
+        version: 2.2.2
       marked:
         specifier: ^18.0.13
         version: 18.0.14
@@ -63,9 +69,6 @@ importers:
       '@types/ws':
         specifier: ^8.18.2
         version: 8.18.2
-      ajv:
-        specifier: ^8.20.0
-        version: 8.20.0
       markdownlint-cli2:
         specifier: ^0.23.3
         version: 0.23.3
@@ -571,6 +574,10 @@ packages:
 
   json-schema-traverse@1.0.0:
     resolution: {integrity: sha512-NM8/P9n3XjXhIZn1lLhkFaACTOURQXjWhV4BA/RnOv8xvgqtqpAX9IO4mRQxSx1Rlo4tqzeqb0sOlruaOy3dug==}
+
+  jsonata@2.2.2:
+    resolution: {integrity: sha512-XDFH2PuaAXv0AXJEWwElXbqADmKFGKMLMkFb+qOz0EhjQW2EIJ6pgtordLU+4u3IVERyBfqy6bi6kZKEncvRqA==}
+    engines: {node: '>= 8'}
 
   jsonc-parser@3.3.1:
     resolution: {integrity: sha512-HUgH65KyejrUFPvHFPbqOY0rsFip3Bo5wb4ngvdi1EpCYWUQDC5V+Y7mZws+DLkr4M//zQJoanu1SP+87Dv1oQ==}
@@ -1556,6 +1563,8 @@ snapshots:
       argparse: 2.0.1
 
   json-schema-traverse@1.0.0: {}
+
+  jsonata@2.2.2: {}
 
   jsonc-parser@3.3.1: {}
 

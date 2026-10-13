@@ -371,7 +371,7 @@ test("does not load guidance while setup, upstream, or fetch readiness is blocke
   assert.equal(reads, 0);
 });
 
-test("current guidance failures block lifecycle instructions without cross-phase leakage", async () => {
+test("project guidance failures block every selected phase without leaking guidance content", async () => {
   const repository = await fixture({
     ideas: [
       { id: FIRST_ID, status: { alias: "preparing" } },
@@ -418,18 +418,12 @@ test("current guidance failures block lifecycle instructions without cross-phase
     userHome: repository.base,
   });
 
-  assert.equal(preparing.observation.state, "idea-selected");
-  assert.equal(responseGuidance(preparing).content, "Prepare safely.\n");
-  assert.ok(preparing.observation.guidance);
-  assert.equal(
-    Object.hasOwn(preparing.observation.guidance, "content"),
-    false,
-  );
+  assert.equal(preparing.observation.state, "phase-guidance-invalid");
+  assert.equal(Object.hasOwn(preparing.observation, "guidance"), false);
+  assert.equal(Object.hasOwn(preparing.response, "guidance"), false);
   assert.equal(implementing.observation.state, "phase-guidance-invalid");
-  assert.deepEqual(
-    implementing.observation.problems.map(({ type }: { type: string }) => type),
-    ["guidance-file-invalid"],
-  );
+  assert.ok(implementing.observation.problems.some(({ type }) => type === "guidance-file-invalid"));
+  assert.deepEqual(preparing.observation.problems, implementing.observation.problems);
   assert.equal(Object.hasOwn(implementing.observation, "guidance"), false);
   assert.doesNotMatch(
     responseText(implementing),

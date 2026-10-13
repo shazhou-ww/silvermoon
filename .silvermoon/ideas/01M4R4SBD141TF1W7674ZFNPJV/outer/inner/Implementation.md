@@ -27,6 +27,7 @@ advisory、语言、精确 revision 与人工交接。显式验证领域契约�
 类型检查与专项测试覆盖核心契约的 URI identity/cache、typed creation failures、
 定义域与受限 JSONata、locale 完整性、有序 level descriptions 和 References
 默认/覆盖 not-found 行为；错误不伪装成成功。
+证据见[核心边界验证](./objective-guidance-evidence.md#i-ac01)。
 
 ### I-AC02: 三个作用域的契约可验证
 
@@ -35,6 +36,7 @@ Project prerequisite、项目 guidance 缺失/非法/primary snapshot、无 sele
 仅做项目级导航、无效 selector、准确与 stale submission/acceptance、
 v1 兼容和 abandoned/completed。源码与导出检查证明无 OR/OPS 依赖；
 `list-ideas` 和 snapshot `check` 不新增同步、网络或设备 readiness 门槛。
+证据见[三级 Guide 与兼容验证](./objective-guidance-evidence.md#i-ac02)。
 
 ### I-AC03: 仓库验证通过
 
@@ -42,3 +44,4 @@ v1 兼容和 abandoned/completed。源码与导出检查证明无 OR/OPS 依赖�
 `pnpm check:commit`，记录精确命令与结果。经全局运行时 worktree/staged 检查后
 普通提交及非强制同步，再对准确 implementationRevision 记录 submitInner；
 不推断 acceptInner。
+命令和结果见[仓库验证证据](./objective-guidance-evidence.md#i-ac03)。
