@@ -1,22 +1,29 @@
 import type { ValidateFunction } from "ajv";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import type {
-  CheckResult, ObjectiveGuide, ObjectiveGuideContentManifest, ObjectiveGuideInstance,
-  ObjectiveGuideInstanceCreationError, ObjectiveGuideLoadBindings, ObjectiveGuideManifest,
-  ObjectiveLevelDescription, ObjectiveObservation, ObjectiveSubject, ReferencePage,
+  CheckRequest, CheckResult, ObjectiveCheckRunner, ObjectiveGuide, ObjectiveGuideInstance,
+  ObjectiveGuideInstanceCreationError, ObjectiveGuideManifest, ObjectiveLevelDescription,
+  ObjectiveObservation, ObjectiveSubject, ReferencePage,
 } from "./types.ts";
 import { compileSubjectProjection } from "./projection.ts";
 import { canonicalManifestUri } from "./resources.ts";
+import type { LoadedLocale } from "./resources.ts";
 import {
-  compileDomain, immutable, json, ObjectiveConfigurationError, ObjectiveOperationError,
-  record, text, validateSubject,
+  compileDomain, identifier, immutable, json, ObjectiveConfigurationError,
+  ObjectiveOperationError, record, text, validateSubject,
 } from "./validation.ts";
 
-export interface LoadedLocale {
-  content: ObjectiveGuideContentManifest;
-  pages: ReadonlyMap<string, ReferencePage>;
-  fallbackId: string;
+interface ProbeContext {
+  tempDirectory: string;
 }
 const validators = new WeakMap<ObjectiveGuide, ValidateFunction>();
+const guideLevels = new WeakMap<ObjectiveGuide, readonly string[]>();
+const probeWithContext = new WeakMap<
+ObjectiveGuideInstance,
+(context: ProbeContext) => Promise<ObjectiveObservation>
+>();
 
 function checkResult(value: unknown, locale: LoadedLocale): CheckResult {
   if (!record(value) || typeof value.pass !== "boolean") throw new ObjectiveOperationError("Invalid check result.");
@@ -28,33 +35,42 @@ function checkResult(value: unknown, locale: LoadedLocale): CheckResult {
     throw new ObjectiveOperationError("Failed check must return nonempty problems.");
   }
   const problems = value.problems.map((entry: unknown) => {
-    if (!record(entry) || Object.keys(entry).length !== 2 || !text(entry.pageId) || !text(entry.description)
-      || !locale.pages.has(entry.pageId)) throw new ObjectiveOperationError("Check returned an invalid or unknown problem page.");
-    return Object.freeze({ pageId: entry.pageId, description: entry.description });
+    if (!record(entry) || Object.keys(entry).length !== 2 || !identifier(entry.id)
+      || !record(entry.parameters) || !json(entry.parameters)
+      || !locale.pages.has(`problems/${entry.id}`)) {
+      throw new ObjectiveOperationError("Check returned an invalid or unknown Problem ID.");
+    }
+    return Object.freeze({ id: entry.id, parameters: immutable(structuredClone(entry.parameters)) });
   });
   return { pass: false, problems: [problems[0]!, ...problems.slice(1)] };
+}
+
+function problemSummary(locale: LoadedLocale, problem: { id: string; parameters: Readonly<Record<string, unknown>> }) {
+  const page = locale.pages.get(`problems/${problem.id}`)!;
+  const detail = problem.parameters.description;
+  return typeof detail === "string" && detail.trim() !== "" ? detail : page.description ?? page.title;
 }
 
 export function createObjectiveGuide(
   manifestUri: string,
   manifest: ObjectiveGuideManifest,
-  bindings: ObjectiveGuideLoadBindings,
+  prerequisiteGuide: ObjectiveGuide | undefined,
+  runner: ObjectiveCheckRunner,
   locales: ReadonlyMap<string, LoadedLocale>,
 ): ObjectiveGuide {
   const prerequisiteUri = manifest.prerequisite === undefined ? undefined
     : canonicalManifestUri(manifest.prerequisite.manifestUri, manifestUri);
-  if (prerequisiteUri !== bindings.prerequisite?.manifestUri) {
-    throw new ObjectiveConfigurationError("Missing, extra or mismatched prerequisite binding.");
+  if (prerequisiteUri !== prerequisiteGuide?.manifestUri) {
+    throw new ObjectiveConfigurationError("Missing, extra or mismatched prerequisite Guide.");
   }
-  if (!record(bindings.checks)) throw new ObjectiveConfigurationError("Checks must be an owned function map.");
-  for (const level of manifest.levels) for (const name of level.advancement.checks) {
-    if (!Object.hasOwn(bindings.checks, name) || typeof bindings.checks[name] !== "function") {
-      throw new ObjectiveConfigurationError(`Unknown bound check: ${name}.`);
-    }
+  const minimumLevelId = manifest.prerequisite?.minimumLevelId ?? "terminal";
+  if (prerequisiteGuide !== undefined && minimumLevelId !== "terminal"
+    && !guideLevels.get(prerequisiteGuide)?.includes(minimumLevelId)) {
+    throw new ObjectiveConfigurationError(`Unknown prerequisite minimum level: ${minimumLevelId}.`);
   }
-  const checks = Object.freeze({ ...bindings.checks });
-  const prerequisite = bindings.prerequisite === undefined ? null : Object.freeze({
-    guide: bindings.prerequisite,
+  const prerequisite = prerequisiteGuide === undefined ? null : Object.freeze({
+    guide: prerequisiteGuide,
+    minimumLevelId,
     mapSubject: compileSubjectProjection(manifest.prerequisite!.subject),
   });
   const domain = compileDomain(manifest.domainSchema);
@@ -110,53 +126,85 @@ export function createObjectiveGuide(
       if (locale === undefined) return { ok: false, error: {
         type: "unsupported-language", guide, chain: [guide], language, supportedLanguages: [...locales.keys()],
       } };
+      const overview = locale.pages.get("system/overview")!;
       let descriptions: readonly ObjectiveLevelDescription[];
       const instance: ObjectiveGuideInstance = {
         guide, subject: stableSubject, language,
-        title: locale.content.title, description: locale.content.description,
+        title: overview.title, description: overview.description!,
         prerequisite: childInstance,
         describeLevels: () => descriptions,
         async probe(): Promise<ObjectiveObservation> {
-          if (childInstance !== null) {
-            const observation = await childInstance.probe();
-            if (observation.current.id !== "terminal") return observation;
+          const tempDirectory = await mkdtemp(join(tmpdir(), "silvermoon-probe-"));
+          try {
+            return await probeWithContext.get(instance)!({ tempDirectory });
+          } finally {
+            await rm(tempDirectory, { recursive: true, force: true });
           }
-          for (const level of manifest.levels) {
-            for (const name of level.advancement.checks) {
-              const result = checkResult(await checks[name]!(stableSubject, language), locale);
-              if (!result.pass) {
-                const current = descriptions.find((entry) => entry.instance === instance && entry.id === level.id)!;
-                return Object.freeze({ current, problems: Object.freeze([...result.problems]),
-                  gapSummary: result.problems.map(({ description }) => description).join("\n") });
-              }
-            }
-          }
-          return Object.freeze({ current: descriptions.at(-1)!, problems: Object.freeze([]), gapSummary: "" });
         },
         async readPage(pageId) {
           if (!text(pageId)) throw new ObjectiveOperationError("Page ID must be nonempty.");
-          return locale.pages.get(pageId) ?? locale.pages.get(locale.fallbackId)!;
+          return locale.pages.get(pageId) ?? locale.pages.get("system/404")!;
         },
         async searchPages(query) {
           if (typeof query !== "string") throw new ObjectiveOperationError("Search query must be a string.");
           const needle = query.trim().toLocaleLowerCase(language);
           return Object.freeze([...locale.pages.values()]
-            .filter(({ title, content }) => `${title}\n${content}`.toLocaleLowerCase(language).includes(needle))
+            .filter(({ title, description = "", content }) =>
+              `${title}\n${description}\n${content}`.toLocaleLowerCase(language).includes(needle))
             .map(({ id, title }) => Object.freeze({ id, title })));
         },
       };
+      const childDescriptions = childInstance?.describeLevels() ?? [];
+      const prefix = childInstance === null ? [] : minimumLevelId === "terminal"
+        ? childDescriptions.filter(({ id }) => id !== "terminal")
+        : childDescriptions.slice(0, childDescriptions.findIndex(
+          ({ instance: owner, id }) => owner === childInstance && id === minimumLevelId,
+        ));
       descriptions = Object.freeze([
-        ...(childInstance?.describeLevels().filter(({ id }) => id !== "terminal") ?? []),
+        ...prefix,
         ...manifest.levels.map(({ id }) => {
-          const content = locale.content.levels[id]!;
+          const content = locale.pages.get(`levels/${id}`)!;
           return Object.freeze({ instance, id, title: content.title,
-            description: content.description, advancementOutcome: content.outcome });
+            description: content.description!, advancementOutcome: content.outcome! });
         }),
-        Object.freeze({ instance, id: "terminal", ...locale.content.terminal, advancementOutcome: null }),
+        Object.freeze({ instance, id: "terminal", title: locale.pages.get("levels/terminal")!.title,
+          description: locale.pages.get("levels/terminal")!.description!, advancementOutcome: null }),
       ]);
+      probeWithContext.set(instance, async (context) => {
+        if (childInstance !== null) {
+          const observation = await probeWithContext.get(childInstance)!(context);
+          const localIndex = manifest.prerequisite!.minimumLevelId === undefined
+            || manifest.prerequisite!.minimumLevelId === "terminal"
+            ? -1 : guideLevels.get(childInstance.guide)!.indexOf(manifest.prerequisite!.minimumLevelId);
+          const currentIndex = observation.current.instance === childInstance
+            ? observation.current.id === "terminal" ? Number.POSITIVE_INFINITY
+              : guideLevels.get(childInstance.guide)!.indexOf(observation.current.id)
+            : -1;
+          if (minimumLevelId === "terminal"
+            ? !(observation.current.instance === childInstance && observation.current.id === "terminal")
+            : currentIndex < localIndex) return observation;
+        }
+        const request: CheckRequest = {
+          protocolVersion: 1,
+          subject: stableSubject,
+          probe: { tempDirectory: context.tempDirectory },
+        };
+        for (const level of manifest.levels) {
+          for (const name of level.advancement.checks) {
+            const result = checkResult(await runner.run(manifestUri, name, request), locale);
+            if (!result.pass) {
+              const current = descriptions.find((entry) => entry.instance === instance && entry.id === level.id)!;
+              return Object.freeze({ current, problems: Object.freeze([...result.problems]),
+                gapSummary: result.problems.map((problem) => problemSummary(locale, problem)).join("\n") });
+            }
+          }
+        }
+        return Object.freeze({ current: descriptions.at(-1)!, problems: Object.freeze([]), gapSummary: "" });
+      });
       return { ok: true, instance: Object.freeze(instance) };
     },
   };
   validators.set(guide, domain);
+  guideLevels.set(guide, manifest.levels.map(({ id }) => id));
   return Object.freeze(guide);
 }

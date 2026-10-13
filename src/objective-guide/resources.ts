@@ -2,8 +2,18 @@ import { lstat, readdir, readFile } from "node:fs/promises";
 import { isAbsolute, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { parseStrictYaml } from "../foundation/schema/index.ts";
-import type { ObjectivePageResource, ObjectiveResourceResolver, ReferencePage } from "./types.ts";
-import { fields, immutable, ObjectiveConfigurationError, record, text } from "./validation.ts";
+import type {
+  ObjectiveGuideManifest, ObjectivePageResource, ObjectiveResourceResolver, ReferencePage,
+} from "./types.ts";
+import { fields, identifier, immutable, ObjectiveConfigurationError, record, text } from "./validation.ts";
+
+export interface LoadedReferencePage extends ReferencePage {
+  outcome?: string;
+  instruction?: string;
+}
+export interface LoadedLocale {
+  pages: ReadonlyMap<string, LoadedReferencePage>;
+}
 
 export function canonicalManifestUri(uri: string, base?: string): string {
   try {
@@ -46,52 +56,98 @@ export const fileObjectiveResources: ObjectiveResourceResolver = {
       } else if (metadata.isFile() && path.endsWith(".md")) {
         pages.push({ uri: pathToFileURL(path).href,
           source: new TextDecoder("utf-8", { fatal: true }).decode(await readFile(path)) });
-      } else if (!metadata.isFile()) throw new ObjectiveConfigurationError(`Invalid References resource: ${path}.`);
+      } else {
+        throw new ObjectiveConfigurationError(`Invalid References resource: ${path}.`);
+      }
     }
     await walk(root);
     return pages;
   },
 };
 
-export function parsePage(resource: ObjectivePageResource): ReferencePage {
+function parsePage(resource: ObjectivePageResource, id: string, namespace: string): LoadedReferencePage {
   const normalized = resource.source.replace(/\r\n/g, "\n");
-  const match = /^---\n([\s\S]*?)\n---\n([\s\S]*)$/.exec(normalized);
+  const match = /^---\n([\s\S]*?)\n---(?:\n([\s\S]*))?$/.exec(normalized);
   if (match === null) throw new ObjectiveConfigurationError(`Reference page needs frontmatter: ${resource.uri}.`);
   const metadata: unknown = parseStrictYaml(match[1]!);
   if (!record(metadata)) throw new ObjectiveConfigurationError(`Invalid page metadata: ${resource.uri}.`);
-  fields(metadata, ["id"]);
-  const content = match[2]!.trim();
-  const heading = /^#\s+(.+)$/m.exec(content)?.[1]?.trim();
-  if (!text(metadata.id) || !text(heading) || !text(content)) {
-    throw new ObjectiveConfigurationError(`Reference page needs an ID, title and content: ${resource.uri}.`);
+  const required = namespace === "levels" && id !== "levels/terminal"
+    ? ["title", "description", "outcome"]
+    : namespace === "pages" ? ["title"] : ["title", "description"];
+  const optional = namespace === "pages" ? ["description"] : namespace === "problems" ? ["instruction"] : [];
+  fields(metadata, required, optional);
+  if (!required.every((field) => text(metadata[field]))
+    || optional.some((field) => Object.hasOwn(metadata, field) && !text(metadata[field]))) {
+    throw new ObjectiveConfigurationError(`Incomplete page metadata: ${resource.uri}.`);
   }
-  return immutable({ id: metadata.id, title: heading, content });
+  const content = (match[2] ?? "").trim();
+  return immutable({
+    id,
+    title: String(metadata.title),
+    ...(typeof metadata.description === "string" ? { description: metadata.description } : {}),
+    ...(typeof metadata.outcome === "string" ? { outcome: metadata.outcome } : {}),
+    ...(typeof metadata.instruction === "string" ? { instruction: metadata.instruction } : {}),
+    content,
+  });
 }
 
-export function validatePages(resources: readonly ObjectivePageResource[], sourceUri: string, notFoundPageId?: string) {
-  const pages = new Map<string, ReferencePage>();
-  const uris = new Set<string>();
-  const defaultUri = new URL("404.md", sourceUri.endsWith("/") ? sourceUri : `${sourceUri}/`).href;
-  let hasDefault = false;
+export function validateReferences(
+  resources: readonly ObjectivePageResource[],
+  sourceUri: string,
+  manifest: ObjectiveGuideManifest,
+): ReadonlyMap<string, LoadedLocale> {
+  const root = canonicalManifestUri(sourceUri.endsWith("/") ? sourceUri : `${sourceUri}/`);
+  const languages = new Set(manifest.languages);
+  const levelIds = new Set(manifest.levels.map(({ id }) => id));
+  const checkIds = new Set(manifest.levels.flatMap(({ advancement }) => advancement.checks));
+  const nodes = new Map<string, Map<string, LoadedReferencePage>>();
   for (const resource of resources) {
     const uri = canonicalManifestUri(resource.uri);
-    const page = parsePage(resource);
-    if (uris.has(uri) || pages.has(page.id)) throw new ObjectiveConfigurationError(`Duplicate References identity: ${page.id}.`);
-    uris.add(uri);
-    pages.set(page.id, page);
-    if (uri === defaultUri) {
-      if (notFoundPageId === undefined && page.id !== "404") throw new ObjectiveConfigurationError('Default 404.md must have id: "404".');
-      hasDefault = true;
+    if (!uri.startsWith(root)) throw new ObjectiveConfigurationError(`Reference escapes source: ${uri}.`);
+    const parts = decodeURIComponent(uri.slice(root.length)).split("/");
+    if (parts.length !== 3 || !parts[2]!.endsWith(".md")) {
+      throw new ObjectiveConfigurationError(`References require <namespace>/<id>/<language>.md: ${uri}.`);
+    }
+    const [namespace, localId, file] = parts as [string, string, string];
+    const language = file.slice(0, -3);
+    if (!["system", "levels", "checks", "problems", "pages"].includes(namespace)
+      || !identifier(localId) || !languages.has(language)) {
+      throw new ObjectiveConfigurationError(`Invalid Reference identity or language: ${uri}.`);
+    }
+    if (namespace === "system" && !["overview", "404"].includes(localId)) {
+      throw new ObjectiveConfigurationError(`Unknown system Reference: ${localId}.`);
+    }
+    if (namespace === "levels" && localId !== "terminal" && !levelIds.has(localId)) {
+      throw new ObjectiveConfigurationError(`Unknown level Reference: ${localId}.`);
+    }
+    if (namespace === "checks" && !checkIds.has(localId)) {
+      throw new ObjectiveConfigurationError(`Unknown check Reference: ${localId}.`);
+    }
+    const id = `${namespace}/${localId}`;
+    const locales = nodes.get(id) ?? new Map<string, LoadedReferencePage>();
+    if (locales.has(language)) throw new ObjectiveConfigurationError(`Duplicate Reference locale: ${id}/${language}.`);
+    locales.set(language, parsePage(resource, id, namespace));
+    nodes.set(id, locales);
+  }
+  const required = [
+    "system/overview", "system/404", "levels/terminal",
+    ...[...levelIds].map((id) => `levels/${id}`),
+    ...[...checkIds].map((id) => `checks/${id}`),
+  ];
+  for (const id of required) {
+    if (!nodes.has(id)) throw new ObjectiveConfigurationError(`Missing Reference: ${id}.`);
+  }
+  for (const [id, locales] of nodes) {
+    if (locales.size !== languages.size || [...languages].some((language) => !locales.has(language))) {
+      throw new ObjectiveConfigurationError(`Reference must cover every language: ${id}.`);
     }
   }
-  const fallbackId = notFoundPageId ?? "404";
-  if ((notFoundPageId === undefined && !hasDefault) || !pages.has(fallbackId)) {
-    throw new ObjectiveConfigurationError(`Missing not-found page: ${fallbackId}.`);
-  }
-  for (const page of pages.values()) {
+  for (const locales of nodes.values()) for (const page of locales.values()) {
     for (const match of page.content.matchAll(/\[\[([^\]|]+)(?:\|[^\]]*)?\]\]/g)) {
-      if (!pages.has(match[1]!)) throw new ObjectiveConfigurationError(`Dangling References link: ${match[1]}.`);
+      if (!nodes.has(match[1]!)) throw new ObjectiveConfigurationError(`Dangling References link: ${match[1]}.`);
     }
   }
-  return { pages, fallbackId };
+  return new Map(manifest.languages.map((language) => [language, {
+    pages: new Map([...nodes].map(([id, locales]) => [id, locales.get(language)!])),
+  }]));
 }

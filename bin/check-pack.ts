@@ -216,6 +216,7 @@ if (packed.status !== 0) {
     "src/objective-guide/validation.js",
     "src/objective-guide/projection.js",
     "src/objective-guide/resources.js",
+    "src/objective-guide/runner.js",
     "src/objective-guide/guide.js",
     "src/objective-guide/loader.js",
     "src/foundation/command-message/README.md",

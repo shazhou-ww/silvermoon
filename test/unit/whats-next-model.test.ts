@@ -86,7 +86,7 @@ function harness(snapshot: SnapshotObservation = ready(), blockRepository = fals
     createSilvermoonObjectiveLoader: (checks) => {
       const wrapped = { ...checks };
       for (const key of Object.keys(checks) as SilvermoonCheckId[]) {
-        wrapped[key] = async (subject, language) => { calls.push(key); return checks[key](subject, language); };
+        wrapped[key] = async (subject) => { calls.push(key); return checks[key](subject); };
       }
       return createSilvermoonObjectiveLoader(wrapped);
     },

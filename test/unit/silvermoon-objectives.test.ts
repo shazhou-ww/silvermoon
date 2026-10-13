@@ -3,17 +3,18 @@ import { test } from "node:test";
 import {
   createSilvermoonObjectiveLoader, SILVERMOON_OBJECTIVE_LEVELS, SILVERMOON_OBJECTIVE_URIS,
 } from "../../src/business/objective-guides.ts";
-import type { SilvermoonObjectiveChecks } from "../../src/business/objective-guides.ts";
-import type { ObjectiveCheck } from "../../src/objective-guide/index.ts";
+import type {
+  SilvermoonObjectiveCheck, SilvermoonObjectiveChecks,
+} from "../../src/business/objective-guides.ts";
 
 function checks(failing?: string) {
   const calls: string[] = [];
   const bindings = Object.fromEntries(Object.values(SILVERMOON_OBJECTIVE_LEVELS)
     .flatMap((levels) => levels.flatMap(([, ids]) => ids))
-    .map((id): [string, ObjectiveCheck] => [id, async () => {
+    .map((id): [string, SilvermoonObjectiveCheck] => [id, async () => {
       calls.push(id);
       return id === failing
-        ? { pass: false, problems: [{ pageId: "project", description: `Failed ${id}` }] }
+        ? { pass: false, problems: [{ id: "project", parameters: { description: `Failed ${id}` } }] }
         : { pass: true };
     }])) as SilvermoonObjectiveChecks;
   return { bindings, calls };
@@ -37,7 +38,7 @@ test("every scope advancement stops at its declared first failing check", async 
         assert.equal(sample.current.id, level, id);
         assert.equal(context.calls.at(-1), id);
         assert.equal(sample.current.instance.guide, guide);
-        assert.equal((await sample.current.instance.readPage("missing")).id, "404");
+        assert.equal((await sample.current.instance.readPage("missing")).id, "system/404");
       }
     }
   }

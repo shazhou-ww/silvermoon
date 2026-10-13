@@ -1,139 +1,213 @@
 # Objective Guide Runtime
 
 Silvermoon exports a URI-keyed Objective Guide core from its package root.
-The [module](../src/objective-guide/README.md) does not execute repairs,
-regulators, autonomous Agent loops or portfolio scheduling.
+The [module](../src/objective-guide/README.md) observes one ordered objective;
+it does not execute repairs, autonomous loops or portfolio scheduling.
 
-## Loading and binding
+## Guide package
 
-`createObjectiveLoader({ checks, resources?, resolveChecks? })` creates an
-application-runtime identity map. `load(manifestUri)` accepts an absolute URI
-or an absolute filesystem path and returns the same language-neutral Guide
-for the same canonical URI, including concurrent requests. Relative
-prerequisite and resource references resolve against their Manifest URI.
-Cycles, unavailable resources and invalid configuration reject explicitly;
-failed loads may be retried without poisoning the cache.
+A file-based Guide is self-contained:
 
-The default resolver reads JSON/YAML files and recursively discovers Markdown
-pages in a file References directory without following symlinks. Other URI
-schemes require an explicit `ObjectiveResourceResolver`. The resolver supplies
-text and page resources; it does not fetch implicitly. `resolveChecks(uri)`
-can bind different typed checks for different definitions.
-
-A Manifest declares `schemaVersion: 1`, a Draft 2020-12 root-object
-`domainSchema`, optional immediate `prerequisite`, ordered `levels`,
-`defaultLanguage`, and complete `localizations`. Levels use nonempty stable
-IDs, each with `advancement.checks`; `terminal` is reserved and synthesized.
-Only local `#/$defs/...` schema references are allowed. Validation neither
-coerces subject fields nor applies defaults or remote schemas.
-
-```ts
-const loader = createObjectiveLoader({
-  checks: {
-    "project-ready": async (subject, language) => {
-      const ready = await inspectProject(subject.root, language);
-      return ready
-        ? { pass: true }
-        : {
-            pass: false,
-            problems: [{
-              pageId: "project-unready",
-              description: "Project configuration needs repair.",
-            }],
-          };
-    },
-  },
-});
-const guide = await loader.load(manifestUri);
-const created = guide.createInstance({
-  subject: { root: projectRoot },
-  language: "en-US",
-});
-if (!created.ok) {
-  handleCreationError(created.error);
-} else {
-  const observation = await created.instance.probe();
-  for (const problem of observation.problems) {
-    const page = await observation.current.instance.readPage(problem.pageId);
-    presentReference(page);
-  }
-}
+```text
+my-guide/
+├── manifest.yaml
+├── checks/
+│   └── project-valid/
+│       └── run.js
+└── references/
+    ├── system/
+    │   ├── overview/
+    │   │   ├── en-US.md
+    │   │   └── zh-CN.md
+    │   └── 404/
+    │       ├── en-US.md
+    │       └── zh-CN.md
+    ├── levels/
+    │   ├── unready/
+    │   │   ├── en-US.md
+    │   │   └── zh-CN.md
+    │   └── terminal/
+    │       ├── en-US.md
+    │       └── zh-CN.md
+    ├── checks/
+    ├── problems/
+    └── pages/
 ```
 
-The example's inspection and presentation functions are application bindings,
-not runtime exports. A loader is shared within that application runtime; it is
-not a cross-process singleton or a subject-indexed instance cache.
+The Manifest declares a Draft 2020-12 root-object domain, ordered levels,
+canonical languages and an optional immediate prerequisite:
 
-## Instances and observations
+```yaml
+schemaVersion: 1
+domainSchema:
+  type: object
+  required: [root]
+  properties:
+    root:
+      type: string
+  additionalProperties: false
+levels:
+  - id: unready
+    advancement:
+      checks: [project-valid]
+defaultLanguage: en-US
+languages: [en-US, zh-CN]
+```
 
-`createInstance` is synchronous and returns a discriminated result. Failures
-are `invalid-subject`, `invalid-prerequisite-subject` or
-`unsupported-language`; chains contain direct Guide objects. Prerequisite
-failures distinguish projection from schema validation. Subject validation
-precedes language validation, and the nearest unsupported Guide is reported.
+Manifest, Reference and check IDs use lowercase kebab case. A prerequisite
+projects the current subject with the bounded JSONata profile. It normally
+requires prerequisite `terminal`; `minimumLevelId` can instead unlock the
+current Guide once the immediate prerequisite reaches that local level:
 
-Successful instances snapshot and freeze the subject. Their methods do not
-accept another subject or a generic runtime context. Omitted language uses
-the root default; an explicit unsupported language fails, without parent or
-field fallback. Every prerequisite instance uses the same resolved language.
+```yaml
+prerequisite:
+  manifestUri: ../project/manifest.yaml
+  subject: '{"root": root}'
+  minimumLevelId: repository-unready
+```
 
-`describeLevels()` returns prerequisite non-terminal descriptions followed by
-local levels and one terminal. Each description contains its owning instance,
-stable `id`, localized text and `advancementOutcome`; terminal outcome is
-`null`. No numeric level/index or objective ID is exposed.
-
-`probe()` checks the prerequisite first, then local checks in order, stopping
-at the first failure. It returns that owning instance, problems containing
-page IDs, and a concise gap summary. Every probe samples again; observations
-are not atomic truth. Invalid check results, unknown problem pages and
-unexpected operation failures are explicit errors, not low-level successes.
-
-## Prerequisite projection
-
-The deterministic JSONata profile supports literal object/array construction,
-subject paths, `$` as the current subject, numeric arithmetic and string-only
-concatenation. It rejects functions, named variables, assignment, dynamic
-evaluation, recursion, time/random and external capabilities. Expressions are
-limited to 4096 bytes, 512 AST nodes and depth 32; execution is limited to
-25 ms and output to 64 KiB of finite JSON. The projected result must satisfy
-the prerequisite object schema.
+Reaching a level means all earlier advancement passed; that level's own checks
+need not pass. The composed description prefix includes only prerequisite
+levels strictly before the configured minimum.
 
 ## References
 
-Locale content covers every local level and terminal. Reference Markdown
-starts with `id` frontmatter and a level-one title; filenames are not identity.
-Internal links use `[[page-id]]` or `[[page-id|label]]` in the body. Loader
-validation rejects duplicate IDs, dangling links, incomplete locale page sets
-and empty pages, while allowing shared pages and link cycles.
+Every Reference identity is `<namespace>/<id>` and every locale is a leaf
+file at:
 
-By default the References root must contain `404.md` with `id: "404"`.
-An explicit `notFoundPageId` selects another existing ID regardless of filename.
-Only an absent requested ID returns that normal page; resource/permission/
-parsing errors are never concealed by it. `searchPages(query)` searches the
-instance's localized title/body and returns only `{ id, title }` summaries;
-no matches return an empty list. Pages do not expose separate links/tags.
+```text
+references/<namespace>/<id>/<language>.md
+```
+
+Namespaces are:
+
+- `system/overview` for Guide title, description and overview content;
+- `system/404` for the fixed missing-page result;
+- `levels/<id>` plus the synthesized `levels/terminal`;
+- `checks/<check-id>`;
+- `problems/<problem-id>`;
+- flat general knowledge under `pages/<page-id>`.
+
+Every node must contain exactly the Manifest language set. There is no locale
+fallback and no Manifest override for the References root, overview, terminal
+or 404 identities. Frontmatter carries localized properties, while the path
+carries identity:
+
+```markdown
+---
+title: Repository is not ready
+description: The configured primary has not been confirmed.
+instruction: Preserve local work and synchronize without rewriting history.
+---
+
+See [[pages/repository-synchronization]].
+```
+
+Level pages additionally require `outcome`. Problem `instruction` and ordinary
+page `description` are optional. Internal links use full Reference IDs.
+Missing IDs return `system/404`; malformed resources, dangling links, I/O and
+permission errors remain explicit failures.
+
+## Check protocol
+
+Each advancement Check ID maps to:
+
+```text
+checks/<check-id>/
+```
+
+That directory contains exactly one `run` or `run.*` entry. Other private
+resources may coexist. File extensions are informational and never select an
+interpreter. Native executables run directly. Text scripts require the limited
+portable shebang:
+
+```text
+#!/usr/bin/env <interpreter>
+```
+
+On POSIX the entry must be executable. On Windows Silvermoon resolves the
+declared interpreter from its controlled environment and starts it directly;
+it does not use `PATHEXT`, file associations, command strings, pipes or shell
+expansion.
+
+The runtime writes one JSON request to stdin:
+
+```json
+{
+  "protocolVersion": 1,
+  "subject": { "root": "/workspace" },
+  "probe": { "tempDirectory": "/tmp/silvermoon-probe-..." }
+}
+```
+
+The check writes exactly one JSON result to stdout:
+
+```json
+{
+  "pass": false,
+  "problems": [
+    {
+      "id": "project-invalid",
+      "parameters": { "description": "Configuration is invalid." }
+    }
+  ]
+}
+```
+
+`pass: false` is a normal exit-zero result. Nonzero exit, timeout, invalid or
+oversized output, unknown Problem ID and protocol violations are operation
+errors. Checks do not receive language and do not return localized text.
+
+## Probe workspace
+
+One public `probe()` invocation creates one temporary workspace. The same
+absolute directory is passed through its prerequisite chain and local ordered
+checks. Concurrent or later probes receive different directories.
+
+Checks may share expensive observations through agreed relative paths and
+formats inside this directory. The runtime treats contents as opaque and
+provides no `useState`, `useMemo` or language-specific cache helper. Producers
+should write atomically; cache corruption or schema mismatch must fail
+explicitly. Absolute paths, traversal and symlink/reparse-point escapes are
+invalid. The runtime removes the workspace when probe succeeds, fails or is
+cancelled.
+
+## Instances and observations
+
+`createInstance` synchronously validates and snapshots a JSON subject and
+resolved language. Expected failures are typed as `invalid-subject`,
+`invalid-prerequisite-subject` or `unsupported-language`. Manifest and resource
+configuration errors reject `load`; check execution failures reject `probe`.
+
+`describeLevels()` returns the prerequisite prefix, local explicit levels and
+one synthesized terminal without exposing numeric indexes. `probe()` runs
+checks in declaration order and stops at the first failing check. Problems
+carry stable IDs and JSON parameters; read their localized explanation with:
+
+```ts
+const page = await observation.current.instance.readPage(
+  `problems/${observation.problems[0].id}`,
+);
+```
+
+Every probe samples again. Observations and probe workspaces are not persistent
+state or authorization.
+
+## Loading
+
+`createObjectiveLoader()` uses file resources and executable checks by default.
+Canonical Manifest URI is the Guide identity, including concurrent loads;
+instances are never cached by subject. Failed loads can be retried.
+
+Applications with virtual URI schemes may explicitly supply both an
+`ObjectiveResourceResolver` and `ObjectiveCheckRunner`. This is a transport
+adapter boundary, not Manifest check binding: the Manifest still references
+only stable Check IDs and keeps no JavaScript module paths.
 
 ## Silvermoon scopes
 
-The [bundled definitions](../src/business/objective-guides.ts) are serializable
-Manifest and locale resources for Device, Project and Idea. Every scope starts
-with `configuration-invalid`; Device remains independent advisory, and Idea
-directly composes the cached Project Guide. No selector means Project-only
-navigation, never a selection-required Idea level.
-
-Project validates all three optional guidance files locally and again at the
-confirmed primary. Only a selected active phase's captured content is returned.
-Idea separates submission and acceptance for Ideal, Inner and Outer revisions;
-stale submissions return to unsubmitted. Existing lifecycle reduction remains
-authoritative, v1 does not gain fabricated submission events, and abandoned is
-stopped rather than completed.
-Abandoned command routes stop after Project readiness without constructing an
-Idea instance or mislabeling the abandoned object as invalid configuration.
-
-Business navigation uses the existing content-template resolution to select
-the bundled `en-US` or `zh-CN` Guide locale, independently of temporary output
-language. This does not rewrite the Idea's arbitrary canonical content-language
-preference; the Guide core itself never falls back from an explicit language.
-The CLI retains its four report projections without serializing runtime object
-references. `list-ideas` and snapshot `check` retain their own limited readiness
-boundaries.
+The bundled Device, Project and Idea definitions use the same Manifest,
+Reference, Problem and CheckRequest shapes through a virtual resource adapter.
+Device remains advisory; Idea directly composes the cached Project Guide and
+currently keeps the default terminal prerequisite barrier. Existing command
+reports, language, control and exact revision semantics remain authoritative.

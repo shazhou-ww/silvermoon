@@ -2,9 +2,12 @@ import { resolve } from "node:path";
 import { homedir } from "node:os";
 
 import { CHECK_PASSED, pending } from "./whats-next-model.ts";
-import { createSilvermoonObjectiveLoader, probeObjective, SILVERMOON_OBJECTIVE_URIS } from "./objective-guides.ts";
+import {
+  createSilvermoonObjectiveLoader, probeObjective, SILVERMOON_OBJECTIVE_URIS,
+} from "./objective-guides.ts";
+import type { SilvermoonObjectiveCheck } from "./objective-guides.ts";
 import { ObjectiveOperationError } from "../objective-guide/index.ts";
-import type { CheckResult, ObjectiveCheck, ObjectiveLoader } from "../objective-guide/index.ts";
+import type { CheckResult, ObjectiveLoader } from "../objective-guide/index.ts";
 import { worktreeSnapshot } from "../foundation/git/index.ts";
 import { observeDevice, observeIdea } from "./shared/index.ts";
 import { createCommandRun } from "../foundation/command-message/index.ts";
@@ -386,8 +389,8 @@ export async function whatsNextUseCase({
     },
   };
   const passed: CheckResult = { pass: true };
-  function failed(pageId: string, description: string): CheckResult {
-    return { pass: false, problems: [{ pageId, description }] };
+  function failed(id: string, description: string): CheckResult {
+    return { pass: false, problems: [{ id, parameters: { description } }] };
   }
   function sampleDevice() {
     if (deviceSample === undefined) throw new ObjectiveOperationError("Device observation is unavailable.");
@@ -429,7 +432,7 @@ export async function whatsNextUseCase({
     }
     return passed;
   }
-  const lifecycleCheck = (phase: "ideal" | "inner" | "outer", acceptance: boolean): ObjectiveCheck => async () => {
+  const lifecycleCheck = (phase: "ideal" | "inner" | "outer", acceptance: boolean): SilvermoonObjectiveCheck => async () => {
     if (selected === null) throw new ObjectiveOperationError("Selected Idea sample is unavailable.");
     const submission = selected.submissions?.[phase];
     const accepted = phase === "ideal"

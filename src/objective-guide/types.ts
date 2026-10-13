@@ -1,5 +1,6 @@
 export type ObjectiveManifestUri = string;
 export type CheckId = string;
+export type ProblemId = string;
 export type ReferencePageId = string;
 export type ObjectiveLevelId = string;
 export type LanguageTag = string;
@@ -9,14 +10,15 @@ export type ObjectiveSubject = JsonObject;
 export type ObjectiveDomainSchema = JsonObject;
 
 export interface ObservedProblem {
-  pageId: ReferencePageId;
-  description: string;
+  id: ProblemId;
+  parameters: JsonObject;
 }
 export interface ReferencePageSummary {
   id: ReferencePageId;
   title: string;
 }
 export interface ReferencePage extends ReferencePageSummary {
+  description?: string;
   content: string;
 }
 export interface ObjectiveLevelDescription {
@@ -66,6 +68,7 @@ export interface ObjectiveGuideInstanceOptions {
 }
 export interface ObjectivePrerequisite {
   readonly guide: ObjectiveGuide;
+  readonly minimumLevelId: ObjectiveLevelId | "terminal";
   mapSubject(subject: ObjectiveSubject): unknown;
 }
 export interface ObjectiveGuide {
@@ -97,29 +100,7 @@ export type ObjectiveLevelsManifest = readonly [ObjectiveLevelManifest, ...Objec
 export interface ObjectivePrerequisiteManifest {
   manifestUri: ObjectiveManifestUri;
   subject: string;
-}
-export interface ObjectiveLevelContentManifest {
-  title: string;
-  description: string;
-  outcome: string;
-}
-export interface ObjectiveTerminalContentManifest {
-  title: string;
-  description: string;
-}
-export interface ObjectiveGuideContentManifest {
-  title: string;
-  description: string;
-  terminal: ObjectiveTerminalContentManifest;
-  levels: Readonly<Record<ObjectiveLevelId, ObjectiveLevelContentManifest>>;
-}
-export interface ObjectiveReferencesManifest {
-  source: string;
-  notFoundPageId?: ReferencePageId;
-}
-export interface ObjectiveLocalizationManifest {
-  content: string;
-  references: ObjectiveReferencesManifest;
+  minimumLevelId?: ObjectiveLevelId | "terminal";
 }
 export interface ObjectiveGuideManifest {
   schemaVersion: 1;
@@ -127,15 +108,25 @@ export interface ObjectiveGuideManifest {
   prerequisite?: ObjectivePrerequisiteManifest;
   levels: ObjectiveLevelsManifest;
   defaultLanguage: LanguageTag;
-  localizations: Readonly<Record<LanguageTag, ObjectiveLocalizationManifest>>;
+  languages: readonly [LanguageTag, ...LanguageTag[]];
+}
+export interface CheckRequest {
+  protocolVersion: 1;
+  subject: ObjectiveSubject;
+  probe: { tempDirectory: string };
 }
 export type CheckResult =
   | { pass: true }
-  | { pass: false; problems: readonly [ObservedProblem, ...ObservedProblem[]] };
-export type ObjectiveCheck = (subject: ObjectiveSubject, language: LanguageTag) => Promise<CheckResult>;
-export interface ObjectiveGuideLoadBindings {
-  checks: Readonly<Record<CheckId, ObjectiveCheck>>;
-  prerequisite?: ObjectiveGuide;
+  | {
+    pass: false;
+    problems: readonly [
+      { id: ProblemId; parameters: JsonObject },
+      ...{ id: ProblemId; parameters: JsonObject }[],
+    ];
+  };
+export interface ObjectiveCheckRunner {
+  validate?(manifestUri: ObjectiveManifestUri, checkId: CheckId): Promise<void>;
+  run(manifestUri: ObjectiveManifestUri, checkId: CheckId, request: CheckRequest): Promise<unknown>;
 }
 export interface ObjectiveLoader {
   load(manifestUri: ObjectiveManifestUri): Promise<ObjectiveGuide>;
@@ -150,6 +141,5 @@ export interface ObjectiveResourceResolver {
 }
 export interface ObjectiveLoaderOptions {
   resources?: ObjectiveResourceResolver;
-  checks?: Readonly<Record<CheckId, ObjectiveCheck>>;
-  resolveChecks?: (manifestUri: ObjectiveManifestUri) => Readonly<Record<CheckId, ObjectiveCheck>>;
+  checkRunner?: ObjectiveCheckRunner;
 }

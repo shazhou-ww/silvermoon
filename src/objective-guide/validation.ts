@@ -3,8 +3,7 @@ import type { ValidateFunction } from "ajv";
 import { types } from "node:util";
 import { parseStrictYaml } from "../foundation/schema/index.ts";
 import type {
-  JsonValue, ObjectiveDomainSchema, ObjectiveGuideContentManifest,
-  ObjectiveGuideManifest, ObjectiveValidationIssues,
+  JsonValue, ObjectiveDomainSchema, ObjectiveGuideManifest, ObjectiveValidationIssues,
 } from "./types.ts";
 
 export class ObjectiveConfigurationError extends TypeError {}
@@ -16,6 +15,9 @@ export function record(value: unknown): value is Record<string, unknown> {
 }
 export function text(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
+}
+export function identifier(value: unknown): value is string {
+  return typeof value === "string" && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value);
 }
 export function json(value: unknown, ancestors = new Set<unknown>()): value is JsonValue {
   if (value === null || typeof value === "boolean" || typeof value === "string") return true;
@@ -58,21 +60,24 @@ function canonicalLanguage(language: string) {
 export function parseManifest(source: string): ObjectiveGuideManifest {
   const value: unknown = parseStrictYaml(source);
   if (!record(value)) throw new ObjectiveConfigurationError("Objective Manifest must be an object.");
-  fields(value, ["schemaVersion", "domainSchema", "levels", "defaultLanguage", "localizations"], ["prerequisite"]);
+  fields(value, ["schemaVersion", "domainSchema", "levels", "defaultLanguage", "languages"], ["prerequisite"]);
   if (value.schemaVersion !== 1 || !record(value.domainSchema) || !json(value.domainSchema)
     || !Array.isArray(value.levels) || value.levels.length === 0
     || !text(value.defaultLanguage) || !canonicalLanguage(value.defaultLanguage)
-    || !record(value.localizations) || !Object.hasOwn(value.localizations, value.defaultLanguage)) {
-    throw new ObjectiveConfigurationError("Invalid Manifest schema, levels or default language.");
+    || !Array.isArray(value.languages) || value.languages.length === 0
+    || !value.languages.every((language) => text(language) && canonicalLanguage(language))
+    || !value.languages.includes(value.defaultLanguage)
+    || new Set(value.languages).size !== value.languages.length) {
+    throw new ObjectiveConfigurationError("Invalid Manifest schema, levels or languages.");
   }
   const levels = value.levels.map((entry: unknown) => {
     if (!record(entry)) throw new ObjectiveConfigurationError("Invalid level.");
     fields(entry, ["id", "advancement"]);
-    if (!text(entry.id) || entry.id === "terminal" || !record(entry.advancement)) {
+    if (!identifier(entry.id) || entry.id === "terminal" || !record(entry.advancement)) {
       throw new ObjectiveConfigurationError("Levels require a non-reserved ID and advancement.");
     }
     fields(entry.advancement, ["checks"]);
-    if (!Array.isArray(entry.advancement.checks) || !entry.advancement.checks.every(text)) {
+    if (!Array.isArray(entry.advancement.checks) || !entry.advancement.checks.every(identifier)) {
       throw new ObjectiveConfigurationError("Advancement checks must be CheckIds.");
     }
     return { id: entry.id, advancement: { checks: entry.advancement.checks.map(String) } };
@@ -81,65 +86,31 @@ export function parseManifest(source: string): ObjectiveGuideManifest {
   if (new Set(levels.map(({ id }) => id)).size !== levels.length) {
     throw new ObjectiveConfigurationError("Duplicate level ID.");
   }
-  const localizations = Object.fromEntries(Object.entries(value.localizations).map(([language, locale]) => {
-    if (!canonicalLanguage(language) || !record(locale)) throw new ObjectiveConfigurationError("Invalid locale.");
-    fields(locale, ["content", "references"]);
-    if (!text(locale.content) || !record(locale.references)) throw new ObjectiveConfigurationError("Invalid locale resources.");
-    fields(locale.references, ["source"], ["notFoundPageId"]);
-    if (!text(locale.references.source)
-      || (Object.hasOwn(locale.references, "notFoundPageId") && !text(locale.references.notFoundPageId))) {
-      throw new ObjectiveConfigurationError("Invalid References source or not-found ID.");
-    }
-    return [language, {
-      content: locale.content,
-      references: {
-        source: locale.references.source,
-        ...(typeof locale.references.notFoundPageId === "string" ? { notFoundPageId: locale.references.notFoundPageId } : {}),
-      },
-    }];
-  }));
   let prerequisite;
   if (Object.hasOwn(value, "prerequisite")) {
     if (!record(value.prerequisite)) throw new ObjectiveConfigurationError("Invalid prerequisite.");
-    fields(value.prerequisite, ["manifestUri", "subject"]);
-    if (!text(value.prerequisite.manifestUri) || !text(value.prerequisite.subject)) {
-      throw new ObjectiveConfigurationError("Invalid prerequisite URI or projection.");
+    fields(value.prerequisite, ["manifestUri", "subject"], ["minimumLevelId"]);
+    if (!text(value.prerequisite.manifestUri) || !text(value.prerequisite.subject)
+      || (Object.hasOwn(value.prerequisite, "minimumLevelId")
+        && value.prerequisite.minimumLevelId !== "terminal"
+        && !identifier(value.prerequisite.minimumLevelId))) {
+      throw new ObjectiveConfigurationError("Invalid prerequisite URI, projection or minimum level.");
     }
-    prerequisite = { manifestUri: value.prerequisite.manifestUri, subject: value.prerequisite.subject };
+    prerequisite = {
+      manifestUri: value.prerequisite.manifestUri,
+      subject: value.prerequisite.subject,
+      ...(typeof value.prerequisite.minimumLevelId === "string"
+        ? { minimumLevelId: value.prerequisite.minimumLevelId } : {}),
+    };
   }
   return immutable({
     schemaVersion: 1,
     domainSchema: value.domainSchema,
     levels: [first, ...levels.slice(1)],
     defaultLanguage: value.defaultLanguage,
-    localizations,
+    languages: [value.languages[0], ...value.languages.slice(1)],
     ...(prerequisite === undefined ? {} : { prerequisite }),
   });
-}
-export function parseContent(source: string, levelIds: readonly string[]): ObjectiveGuideContentManifest {
-  const value: unknown = parseStrictYaml(source);
-  if (!record(value)) throw new ObjectiveConfigurationError("Locale content must be an object.");
-  fields(value, ["title", "description", "terminal", "levels"]);
-  if (!text(value.title) || !text(value.description) || !record(value.terminal) || !record(value.levels)) {
-    throw new ObjectiveConfigurationError("Incomplete locale content.");
-  }
-  fields(value.terminal, ["title", "description"]);
-  const levelContent = value.levels;
-  if (!text(value.terminal.title) || !text(value.terminal.description)
-    || Object.keys(levelContent).length !== levelIds.length
-    || levelIds.some((id) => !Object.hasOwn(levelContent, id))) {
-    throw new ObjectiveConfigurationError("Locale must cover exactly the Manifest levels and terminal.");
-  }
-  const levels = Object.fromEntries(Object.entries(value.levels).map(([id, entry]) => {
-    if (!record(entry)) throw new ObjectiveConfigurationError(`Invalid level content: ${id}.`);
-    fields(entry, ["title", "description", "outcome"]);
-    if (!text(entry.title) || !text(entry.description) || !text(entry.outcome)) {
-      throw new ObjectiveConfigurationError(`Incomplete level content: ${id}.`);
-    }
-    return [id, { title: entry.title, description: entry.description, outcome: entry.outcome }];
-  }));
-  return immutable({ title: value.title, description: value.description,
-    terminal: { title: value.terminal.title, description: value.terminal.description }, levels });
 }
 export function compileDomain(schema: ObjectiveDomainSchema): ValidateFunction {
   if (schema.type !== "object" || (schema.$schema !== undefined
@@ -147,41 +118,30 @@ export function compileDomain(schema: ObjectiveDomainSchema): ValidateFunction {
     throw new ObjectiveConfigurationError("Domain must be a Draft 2020-12 root object schema.");
   }
   function inspect(value: unknown) {
-    if (Array.isArray(value)) { value.forEach(inspect); return; }
+    if (Array.isArray(value)) {
+      for (const child of value) inspect(child);
+      return;
+    }
     if (!record(value)) return;
-    if ((value.$ref !== undefined && (typeof value.$ref !== "string" || !value.$ref.startsWith("#/$defs/")))
-      || value.$id !== undefined || value.$dynamicRef !== undefined || value.$recursiveRef !== undefined) {
-      throw new ObjectiveConfigurationError("Only local #/$defs references are allowed.");
-    }
-    for (const key of ["$defs", "properties", "patternProperties", "dependentSchemas"]) {
-      const children = value[key];
-      if (record(children)) Object.values(children).forEach(inspect);
-    }
-    for (const key of ["additionalProperties", "unevaluatedProperties", "propertyNames",
-      "contains", "items", "unevaluatedItems", "not", "if", "then", "else"]) inspect(value[key]);
-    for (const key of ["allOf", "anyOf", "oneOf", "prefixItems"]) {
-      const children = value[key];
-      if (Array.isArray(children)) children.forEach(inspect);
+    for (const [key, child] of Object.entries(value)) {
+      if (key === "$ref" && (typeof child !== "string" || !child.startsWith("#/$defs/"))) {
+        throw new ObjectiveConfigurationError("Only local #/$defs schema references are allowed.");
+      }
+      inspect(child);
     }
   }
   inspect(schema);
-  const ajv = new Ajv2020({ allErrors: true, strict: true, coerceTypes: false, useDefaults: false });
   try {
-    return ajv.compile(schema);
+    return new Ajv2020({ strict: true, allErrors: true }).compile(schema);
   } catch (caught) {
-    if (!(caught instanceof Error)) throw caught;
-    throw new ObjectiveConfigurationError(`Invalid subject schema: ${caught.message}`, { cause: caught });
+    throw new ObjectiveConfigurationError("Invalid Objective domain schema.", { cause: caught });
   }
 }
-export function validateSubject(value: unknown, validate: ValidateFunction): ObjectiveValidationIssues | null {
-  if (!record(value) || !json(value)) {
-    return [{ instancePath: "", keyword: "type", message: "Subject must be an ordinary JSON object." }];
+export function validateSubject(subject: unknown, validate: ValidateFunction): ObjectiveValidationIssues | null {
+  if (!record(subject) || !json(subject) || !validate(subject)) {
+    const issues = (validate.errors ?? [{ instancePath: "", keyword: "type", message: "Subject must be a JSON object." }])
+      .map(({ instancePath = "", keyword, message = "Validation failed." }) => ({ instancePath, keyword, message }));
+    return [issues[0]!, ...issues.slice(1)];
   }
-  if (validate(value)) return null;
-  const issues = (validate.errors ?? []).map(({ instancePath, keyword, message }) => ({
-    instancePath, keyword, message: message ?? `Failed ${keyword}.`,
-  }));
-  const first = issues[0];
-  if (first === undefined) throw new ObjectiveOperationError("Schema validator failed without diagnostics.");
-  return [first, ...issues.slice(1)];
+  return null;
 }
