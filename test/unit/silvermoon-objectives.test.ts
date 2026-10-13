@@ -25,7 +25,7 @@ test("every scope advancement stops at its declared first failing check", async 
     for (const [level, ids] of SILVERMOON_OBJECTIVE_LEVELS[scope]) {
       for (const id of ids) {
         const context = checks(id);
-        const loader = createSilvermoonObjectiveLoader(context.bindings);
+        const loader = createSilvermoonObjectiveLoader(context.bindings, { executeEntries: false });
         const guide = await loader.load(SILVERMOON_OBJECTIVE_URIS[scope]);
         const created = guide.createInstance({
           subject: scope === "device" ? { userHome: "home" }
@@ -46,7 +46,9 @@ test("every scope advancement stops at its declared first failing check", async 
 
 test("Device is independent, Project has no prerequisite and Idea directly references cached Project", async () => {
   const context = checks("device-update-current");
-  const loader = createSilvermoonObjectiveLoader(context.bindings);
+  const loader = createSilvermoonObjectiveLoader(context.bindings, { executeEntries: false });
+  assert.equal(new URL(SILVERMOON_OBJECTIVE_URIS.device).protocol, "file:");
+  assert.match(new URL(SILVERMOON_OBJECTIVE_URIS.project).pathname, /\/objectives\/project\/manifest\.yaml$/);
   const project = await loader.load(SILVERMOON_OBJECTIVE_URIS.project);
   const idea = await loader.load(SILVERMOON_OBJECTIVE_URIS.idea);
   assert.equal(project.prerequisite, null);
@@ -60,7 +62,7 @@ test("Device is independent, Project has no prerequisite and Idea directly refer
 });
 
 test("the Idea domain requires a valid resolved ULID, not an optional selector or objective ID", async () => {
-  const loader = createSilvermoonObjectiveLoader(checks().bindings);
+  const loader = createSilvermoonObjectiveLoader(checks().bindings, { executeEntries: false });
   const idea = await loader.load(SILVERMOON_OBJECTIVE_URIS.idea);
   for (const subject of [
     { root: "project", userHome: "home" },

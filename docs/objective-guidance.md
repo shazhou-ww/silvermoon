@@ -206,8 +206,12 @@ only stable Check IDs and keeps no JavaScript module paths.
 
 ## Silvermoon scopes
 
-The bundled Device, Project and Idea definitions use the same Manifest,
-Reference, Problem and CheckRequest shapes through a virtual resource adapter.
-Device remains advisory; Idea directly composes the cached Project Guide and
-currently keeps the default terminal prerequisite barrier. Existing command
-reports, language, control and exact revision semantics remain authoritative.
+The bundled Device, Project and Idea definitions are complete Guide package
+trees: real Manifest YAML, localized Markdown References and one `run.js` per
+Check ID. Build and package copy these resources unchanged. Silvermoon's
+application adapter prepares its existing business samples in the probe
+workspace, then the normal file runner starts the real entry and validates its
+JSON result. Device remains advisory; Idea directly composes the cached Project
+Guide and currently keeps the default terminal prerequisite barrier. Existing
+command reports, language, control and exact revision semantics remain
+authoritative.

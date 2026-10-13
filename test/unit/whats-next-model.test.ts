@@ -88,7 +88,7 @@ function harness(snapshot: SnapshotObservation = ready(), blockRepository = fals
       for (const key of Object.keys(checks) as SilvermoonCheckId[]) {
         wrapped[key] = async (subject) => { calls.push(key); return checks[key](subject); };
       }
-      return createSilvermoonObjectiveLoader(wrapped);
+      return createSilvermoonObjectiveLoader(wrapped, { executeEntries: false });
     },
     probeObjective: async (instance) => {
       const sample = await instance.probe();

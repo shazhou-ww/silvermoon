@@ -32,11 +32,17 @@ Ideal 契约，也不记录人工接受或现实部署结论。
 
 ## I-AC02
 
-Device、Project 与 Idea Guide 已迁移到新的 Manifest、Reference、Problem 和
-CheckRequest 形状。Silvermoon 的虚拟 URI 定义通过显式 resource/check-runner
-transport adapter 保留原有有序业务采样；Manifest 不再保存 JS module 路径或
-locale content。Idea 仍直接组合缓存的 Project Guide，当前保持默认 terminal
-barrier；核心 minimum-level 能力由独立专项测试覆盖。
+Device、Project 与 Idea Guide 已迁移为完整真实 package tree：YAML Manifest、
+双语 Markdown References 和每个 Check ID 的 `checks/<id>/run.js`。构建将完整
+目录原样复制到 dist 与 npm 包；Loader 从文件读取 Manifest/References，普通
+file runner 预检并启动真实 entry。Silvermoon 应用 adapter 只把既有业务采样
+结果原子写入 probe workspace，entry 再按标准 stdin/stdout 协议返回；Manifest
+不再由 TypeScript 合成，也不保存 JS module 路径或 locale content。Idea 仍
+直接组合缓存的 Project Guide，当前保持默认 terminal barrier；核心
+minimum-level 能力由独立专项测试覆盖。
+
+旧 professional-model 源码、注入式 `useState`、YAML、单测、文档与打包条目已
+删除。`whats-next` 仅保留其实际需要的本地 gate result，不再依赖旧 module。
 
 `whats-next` 保留四投影、诊断优先级、设备 advisory、selector、guidance、
 精确 revision、submission/acceptance 与 upstream/downstream control。三作用域
@@ -58,8 +64,8 @@ barrier；核心 minimum-level 能力由独立专项测试覆盖。
 | `pnpm typecheck` | 通过 |
 | `node --test test\unit\objective-guide.test.ts test\unit\silvermoon-objectives.test.ts test\unit\whats-next-model.test.ts test\integration\objective-guide.test.ts` | 通过，23 tests |
 | `pnpm check:sanity` | 通过；typecheck、build、syntax、pure 与 sanity tests |
-| `pnpm check` | 通过；unit/runtime 231、contract 58、integration 158 passed / 2 skipped、installed-package e2e 1 |
-| `npm pack --dry-run`（由 `pnpm check` 执行） | 通过，872 files；新增 runner 已进入显式白名单 |
+| `pnpm check` | 通过；unit/runtime 219、contract 58、integration 159 passed / 2 skipped、installed-package e2e 1 |
+| `npm pack --dry-run`（由 `pnpm check` 执行） | 通过，1056 files；完整内置 Guide packages 与 runner 已进入校验清单 |
 | `silvermoon check --worktree --audience agent` | 通过；candidate snapshot 与 v2 event history 有效 |
 | `silvermoon check --staged --audience agent` | 通过；验证准确 index metadata |
 | `pnpm check:commit` | 通过；worktree tests、contract、smoke、Markdown、diff 与 staged metadata gates |

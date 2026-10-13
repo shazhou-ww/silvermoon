@@ -106,6 +106,20 @@ try {
     ),
   );
   assert.equal(installedManifest.name, "silvermoon");
+  for (const scope of ["device", "project", "idea"]) {
+    assert.equal((await stat(join(
+      bootstrap, "node_modules", "silvermoon", "dist", "src", "business",
+      "objectives", scope, "manifest.yaml",
+    ))).isFile(), true);
+  }
+  assert.equal((await stat(join(
+    bootstrap, "node_modules", "silvermoon", "dist", "src", "business",
+    "objectives", "project", "checks", "project-config-valid", "run.js",
+  ))).isFile(), true);
+  assert.equal((await stat(join(
+    bootstrap, "node_modules", "silvermoon", "dist", "src", "business",
+    "objectives", "idea", "references", "levels", "ideal-unsubmitted", "zh-CN.md",
+  ))).isFile(), true);
   const objectiveSmoke = run(process.execPath, ["--input-type=module", "-e", `
     import { createObjectiveLoader } from "silvermoon";
     const manifest = {
@@ -147,13 +161,6 @@ try {
   assert.deepEqual(JSON.parse(objectiveSmoke), {
     levelId: "unready", page: "problems/problem", missing: "system/404",
   });
-  const installedModel = await readFile(
-    join(bootstrap, "node_modules", "silvermoon", "dist", "src", "business", "whats-next-model.yaml"),
-    "utf8",
-  );
-  assert.equal(installedModel, await readFile(
-    join(packageRoot, "src", "business", "whats-next-model.yaml"), "utf8",
-  ));
   const installedEntry = join(
     bootstrap,
     "node_modules",

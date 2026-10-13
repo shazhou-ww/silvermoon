@@ -1,7 +1,6 @@
 import { resolve } from "node:path";
 import { homedir } from "node:os";
 
-import { CHECK_PASSED, pending } from "./whats-next-model.ts";
 import {
   createSilvermoonObjectiveLoader, probeObjective, SILVERMOON_OBJECTIVE_URIS,
 } from "./objective-guides.ts";
@@ -36,6 +35,17 @@ import type {
 } from "../foundation/report/types.ts";
 export { CHANGE_SAMPLE_BYTE_LIMIT, CHANGE_SAMPLE_ITEM_LIMIT, phaseGuidanceInstructions, projectInstructions, summarizeWorktreeChanges } from "../foundation/report/index.ts";
 export { assessIdeaCreationReadiness, assessRepositoryReadiness } from "./shared/index.ts";
+
+type NavigationGateResult =
+  | { passed: true }
+  | {
+    passed: false;
+    problems: readonly [{ code: string; description: string }, ...{ code: string; description: string }[]];
+  };
+const CHECK_PASSED: NavigationGateResult = Object.freeze({ passed: true });
+function pending(code: string, description: string): NavigationGateResult {
+  return { passed: false, problems: [{ code, description }] };
+}
 
 const WHATSNEXT_PORTS = Object.freeze({ createCommandRun, observeSnapshot, assessRepositoryReadiness, readIdeaInventoryItem, createSilvermoonObjectiveLoader, probeObjective, observeDevice, observeIdea, worktreeSnapshot });
 

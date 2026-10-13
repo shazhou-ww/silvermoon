@@ -6,8 +6,8 @@
 和绑定 subject/language 的 instance；[whats-next](./business/whats-next.ts) 使用
 设备、项目、Idea 三个作用域的 Guide，领域报告与精确生命周期事实仍由现有能力
 提供。详情见[运行时说明](../docs/objective-guidance.md)。
-[professional-model](./professional-model/README.md) 保留旧 module 兼容基线，不再
-驱动导航；不新增架构层或独立 npm 包。
+旧 professional-model module 已由 Objective Guide 取代并移除；不保留并行的
+numeric-level、JS check registry 或注入式状态运行时。
 
 ## 三层目标架构
 

@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, join, resolve } from "node:path";
@@ -128,6 +128,17 @@ if (packed.status !== 0) {
   ].map((path) =>
     `src/foundation/report/templates/whats-next/${path}.js`
   );
+  const objectiveRoot = join(packageRoot, "dist", "src", "business", "objectives");
+  const objectiveGuideResources: string[] = [];
+  function collectObjectiveResources(path: string, prefix = "dist/src/business/objectives") {
+    for (const entry of readdirSync(path, { withFileTypes: true })) {
+      const resource = join(path, entry.name);
+      const packaged = `${prefix}/${entry.name}`;
+      if (entry.isDirectory()) collectObjectiveResources(resource, packaged);
+      else objectiveGuideResources.push(packaged);
+    }
+  }
+  collectObjectiveResources(objectiveRoot);
   const maintained = [
     "LICENSE",
     "README.md",
@@ -150,7 +161,6 @@ if (packed.status !== 0) {
     "docs/npm-package-releases.md",
     "docs/operations.md",
     "docs/objective-guidance.md",
-    "docs/professional-model.md",
     "docs/reference.md",
     "docs/repository-tasks.md",
     "package.json",
@@ -205,11 +215,6 @@ if (packed.status !== 0) {
     "src/business/shared/resolve-idea.js",
     "src/business/shared/with-observation-language.js",
     "src/business/whats-next.js",
-    "src/business/whats-next-model.js",
-    "dist/src/business/whats-next-model.yaml",
-    "src/professional-model/README.md",
-    "src/professional-model/index.js",
-    "src/professional-model/model.js",
     "src/objective-guide/README.md",
     "src/objective-guide/index.js",
     "src/objective-guide/types.js",
@@ -219,6 +224,7 @@ if (packed.status !== 0) {
     "src/objective-guide/runner.js",
     "src/objective-guide/guide.js",
     "src/objective-guide/loader.js",
+    ...objectiveGuideResources,
     "src/foundation/command-message/README.md",
     "src/foundation/command-message/index.js",
     "src/foundation/command-message/observation.js",

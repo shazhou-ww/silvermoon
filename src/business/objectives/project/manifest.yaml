@@ -1,0 +1,44 @@
+schemaVersion: 1
+domainSchema:
+  type: object
+  required:
+    - root
+    - userHome
+  additionalProperties: false
+  properties:
+    root:
+      type: string
+      minLength: 1
+    userHome:
+      type: string
+      minLength: 1
+levels:
+  - id: configuration-invalid
+    advancement:
+      checks:
+        - project-config-valid
+        - project-user-config-valid
+        - project-layout-valid
+  - id: project-unprepared
+    advancement:
+      checks:
+        - project-adopted
+        - project-schema-ready
+        - project-guidance-valid
+  - id: repository-unready
+    advancement:
+      checks:
+        - repository-worktree-clean
+        - repository-head-present
+        - repository-upstream-matches
+  - id: primary-unconfirmed
+    advancement:
+      checks:
+        - repository-primary-fetched
+        - repository-primary-aligned
+        - repository-event-history-valid
+        - project-primary-guidance-valid
+defaultLanguage: en-US
+languages:
+  - en-US
+  - zh-CN
