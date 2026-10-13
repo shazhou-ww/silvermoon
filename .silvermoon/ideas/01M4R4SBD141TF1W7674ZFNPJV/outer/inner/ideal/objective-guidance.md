@@ -157,11 +157,17 @@ my-objective-guide/
 │   └── repository-ready
 └── references/
     ├── system/
+    │   ├── overview/
+    │   │   ├── en-US.md
+    │   │   └── zh-CN.md
     │   └── 404/
     │       ├── en-US.md
     │       └── zh-CN.md
     ├── levels/
-    │   └── unavailable/
+    │   ├── unavailable/
+    │   │   ├── en-US.md
+    │   │   └── zh-CN.md
+    │   └── terminal/
     │       ├── en-US.md
     │       └── zh-CN.md
     ├── checks/
@@ -173,10 +179,7 @@ my-objective-guide/
     │       ├── en-US.md
     │       └── zh-CN.md
     └── pages/
-        ├── objective/
-        │   ├── en-US.md
-        │   └── zh-CN.md
-        └── terminal/
+        └── repository-synchronization/
             ├── en-US.md
             └── zh-CN.md
 ```
@@ -188,13 +191,16 @@ Reference ID 始终是 `<namespace>/<id>`，目录路径是身份，language 文
 - `checks/<check-id>` 对应 advancement 引用的 Check ID；
 - `problems/<problem-id>` 对应 check 实际返回的 Problem ID；
 - `pages/<page-id>` 是普通 wiki 页面；
-- runtime-owned `system` 当前只允许固定的 `system/404`。
+- runtime-owned `system/overview` 提供整个 Objective 的 title、description 和
+  overview 正文，`system/404` 是固定 not-found；
+- 合成 terminal 不进入 Manifest levels，但固定使用 `levels/terminal`。
 
 每个节点严格位于 `<namespace>/<id>/<language>.md`，不允许继续嵌套。
 Frontmatter 不重复路径已经编码的 ID、类型或语言。不同 namespace 使用严格的
-properties profile：level 提供 `title`、`description` 和 `outcome`；check 提供
-`title` 与 `description`；problem 提供 `title`、`description` 和可选
-`instruction`；普通 page 至少提供 `title`。
+properties profile：`system/overview` 提供 `title` 与 `description`；普通
+level 提供 `title`、`description` 和 `outcome`；`levels/terminal` 提供
+`title` 与 `description`；check 提供 `title` 与 `description`；problem 提供
+`title`、`description` 和可选 `instruction`；普通 page 至少提供 `title`。
 
 ```markdown
 ---
@@ -208,8 +214,10 @@ instruction: Preserve both histories and integrate them without rewriting.
 
 内部链接使用完整 Reference ID，并由 instance language 选择叶子文件。Loader
 拒绝悬空链接，允许链接环。Manifest 不配置或覆盖 not-found identity；只有请求
-的 Reference ID 不存在时才返回当前语言的 `system/404`。权限、IO、编码、
-frontmatter 和协议错误必须明确失败；搜索无匹配返回空数组，不返回 404。
+的 Reference ID 不存在时才返回当前语言的 `system/404`。Instance 的
+`title`、`description` 与整体 overview 来自固定的 `system/overview`；
+`readPage("system/overview")` 返回完整页面。权限、IO、编码、frontmatter 和
+协议错误必须明确失败；搜索无匹配返回空数组，不返回 404。
 
 ## Manifest
 
@@ -237,11 +245,6 @@ interface ObjectiveGuideManifest {
   ];
   defaultLanguage: LanguageTag;
   languages: readonly [LanguageTag, ...LanguageTag[]];
-  references: {
-    source: string;
-  };
-  guidePage: ReferencePageId;
-  terminalPage: ReferencePageId;
 }
 ```
 
@@ -271,17 +274,15 @@ defaultLanguage: zh-CN
 languages:
   - zh-CN
   - en-US
-references:
-  source: references
-guidePage: pages/objective
-terminalPage: pages/terminal
 ```
 
-Level ID 在 Manifest 内唯一。每个 advancement `CheckId` 固定解析为 Guide 根
+Level ID 在 Manifest 内唯一。References 固定从 Guide 根目录的 `references/`
+装载，不由 Manifest 覆盖。每个 advancement `CheckId` 固定解析为 Guide 根
 目录的 `checks/<check-id>`，并读取 `references/checks/<check-id>`；check 返回
 的每个 `ProblemId` 固定解析为 `references/problems/<problem-id>`。Manifest
 不重复声明 executable path、check 注册表或允许的 problem 列表。Guide 与合成
-terminal 的展示内容使用 Manifest 显式引用的普通 pages。
+terminal 的展示内容也不由 Manifest 指定，分别固定使用 `system/overview` 和
+`levels/terminal`。
 
 `domainSchema` 固定为 Draft 2020-12 root object schema，只允许本地
 `#/$defs/...`，不远程取 schema、不 coercion，也不用 `default` 改写 subject。
@@ -337,7 +338,8 @@ Probe 按 level 与 check 声明顺序执行，首个失败 check 形成 observa
 - 每个 Reference 节点必须拥有 `languages` 声明的完整文件集合，不允许 locale
   独有节点。Manifest 声明的全部 level 和引用的 check 必须有同名 Reference；
   problem 节点定义 check 可返回的稳定 Problem ID vocabulary。
-- `system/404` 必须存在且覆盖全部 languages；Manifest 不能改变其 identity。
+- `system/overview`、`system/404` 和 `levels/terminal` 必须存在并覆盖全部
+  languages；Manifest 不能改变其 identity。`system` 不允许其他节点。
 - Prerequisite URI 循环、未知 minimum level、References 结构不完整、缺失
   check Reference 或不可安全解析的同名 executable 都在 load 阶段失败。未知
   Problem ID 只能在 check 返回结果时发现，并作为 operation error 明确失败。

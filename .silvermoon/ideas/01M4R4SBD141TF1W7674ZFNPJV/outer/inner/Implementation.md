@@ -27,8 +27,8 @@ advisory、语言、精确 revision 与人工交接。显式验证领域契约�
 
 类型检查与专项测试覆盖 URI identity/cache、typed creation failures、定义域与
 受限 JSONata、prerequisite 最低层、可执行 check 协议与隔离边界、稳定
-Problem ID、References namespace、完整 locale 叶子和固定 `system/404`；
-错误不伪装成成功。
+Problem ID、References namespace、完整 locale 叶子，以及固定
+`system/{overview,404}` 与 `levels/terminal`；错误不伪装成成功。
 证据见[核心边界验证](./objective-guidance-evidence.md#i-ac01)。
 
 ### I-AC02: 三个作用域的契约可验证

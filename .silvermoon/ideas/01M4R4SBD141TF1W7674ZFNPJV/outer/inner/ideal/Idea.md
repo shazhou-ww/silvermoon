@@ -18,8 +18,9 @@ Manifest 只引用 checks，runtime 按 ID 发现 executable 并把返回的 Pro
 ## 边界
 
 - 本轮只实现 Guide 核心；公开接口不使用物理隐喻，OR/OPS 不进入 runtime。
-  References 只规定 `system/404`、`levels/<id>`、`checks/<id>`、
-  `problems/<id>` 和 `pages/<id>`，不扩展为任意知识分类平台。
+  References 固定在 Guide 根目录，使用 `system/{overview,404}`、
+  `levels/<id>`、`checks/<id>`、`problems/<id>` 和 `pages/<id>`，不扩展为
+  任意知识分类平台；合成 terminal 使用保留节点 `levels/terminal`。
 - Check runtime 不假设 JavaScript module；每个 advancement `CheckId` 按约定
   解析同名可执行入口。进程启动成本可接受，但必须有明确的协议、超时、输出和
   信任边界，不经 shell 执行，也不把业务失败伪装成运行错误。

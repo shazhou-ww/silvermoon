@@ -122,7 +122,7 @@ Guide 知识而执行完整 Project advancement、增加 fetch、要求仓库同
 prerequisite chain 使用一致的 resolved content language，临时 `--language`
 不成为 Idea content-language 决定。
 
-核心类型、固定 `system/404`、typed instance creation failures、subject
-projection、check executable 与 locale 完整性均以
+核心类型、固定 `system/{overview,404}` 与 `levels/terminal`、
+typed instance creation failures、subject projection、check executable 与 locale 完整性均以
 [核心契约](./objective-guidance.md)为准，不在
 本页重复定义。
