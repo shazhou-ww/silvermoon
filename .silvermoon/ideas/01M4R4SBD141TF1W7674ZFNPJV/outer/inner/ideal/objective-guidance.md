@@ -35,12 +35,13 @@
 | `ReferenceWikiPageSummary` | Wiki 页面摘要 | Agent 搜索 Wiki 时取得的页面 ID、标题与开放标签 |
 | `ReferenceWikiPage` | 引用 Wiki 页面 | 已装载页面的入口声明、正文及其内部 Wiki link |
 | `ObjectiveReferenceWiki` | 目标引用 Wiki | 绑定当前上下文并交给 Agent 主动打开问题、读取页面和搜索的查询接口 |
-| `ObjectiveOutcomeAssessment` | 目标损益评估 | 当前层代价、下一层及其潜在收益的语义化说明 |
+| `ObjectiveTransitionAssessment` | 目标转换损益 | 下一层标识与一段整体描述停留代价和前进收益的 prompt |
+| `ObjectiveOutcomeAssessment` | 目标损益评估 | 当前 level 及其可选下一层 transition；最高层的 transition 为 `null` |
 | `ObjectiveLevelDescription` | 层级说明 | OG 对一个层级的稳定名称和含义描述 |
 | OG transport unit | OG 传输单元 | 装载前承载 Manifest、代码与 Reference Wiki 的 folder、package 或等价载体 |
 | `ObjectiveGuideManifest` | 目标向导清单 | 传输单元内可序列化的身份、层级、检查、Wiki 位置和静态损益索引 |
-| `ObjectiveLevelManifest` | 层级清单项 | 一个层级的说明、从该层进入下一层的检查和静态损益 |
-| `StaticOutcomeDescription` | 静态损益说明 | Manifest 中当前代价与下一层收益的默认文本 |
+| `ObjectiveLevelManifest` | 层级清单项 | 一个层级的说明及其可选下一层 transition |
+| `ObjectiveLevelTransitionManifest` | 层级转换清单 | 从当前层进入下一层的 checks 与整体 outcome prompt |
 | `CheckResult` | 检查结果 | 目标检查的通过结果，或带非空问题的未通过结果 |
 | `ObjectiveCheck` | 目标检查 | 可执行且允许 IO 的单个层级进入判据 |
 | `OutcomeAssessor` | 损益评估器 | 可依据本次观测和上下文动态生成损益评估的装载绑定 |
@@ -132,11 +133,14 @@ interface ObjectiveReferenceWiki {
   search(query: string): Promise<readonly ReferenceWikiPageSummary[]>;
 }
 
+interface ObjectiveTransitionAssessment {
+  nextLevel: ObjectiveLevel;
+  prompt: string;
+}
+
 interface ObjectiveOutcomeAssessment {
   level: ObjectiveLevel;
-  currentCost: string;
-  nextLevel: ObjectiveLevel | null;
-  nextLevelBenefit: string | null;
+  transition: ObjectiveTransitionAssessment | null;
 }
 
 interface ObjectiveLevelDescription {
@@ -157,8 +161,8 @@ ID 必须非空且在所属 OG 内稳定。层级是从 0 开始的连续非负�
 `readPage` 沿内部链接阅读，或用 `search` 主动查找页面。Wiki 调用次数、分页
 和 Agent token 预算属于通用执行环境限制，不进入 OG Manifest 的领域语义。
 
-`nextLevel` 和 `nextLevelBenefit` 在最高层级为 `null`。损益字段保持语义化，
-不把序数层级伪装成可跨目标求和的效用分数。
+最高层没有下一条边，因此 `ObjectiveOutcomeAssessment.transition` 为 `null`。
+转换损益保持语义化，不把序数层级伪装成可跨目标求和的效用分数。
 
 ## ObjectiveGuide
 
@@ -237,16 +241,15 @@ tags:
 入口语义。内部 Wiki link 使用稳定页面 ID，文件名和目录不是节点身份。
 
 ```ts
-interface StaticOutcomeDescription {
-  currentCost: string;
-  nextLevelBenefit: string | null;
+interface ObjectiveLevelTransitionManifest {
+  checks: readonly CheckId[];
+  outcome: string;
 }
 
 interface ObjectiveLevelManifest {
   title: string;
   description: string;
-  checks: readonly CheckId[];
-  outcome: StaticOutcomeDescription;
+  transition: ObjectiveLevelTransitionManifest | null;
 }
 
 interface ObjectiveGuideManifest {
@@ -292,18 +295,16 @@ title: 仓库整备度
 levels:
   - title: 尚不可用
     description: 尚无足够证据确认仓库可以开展工作
-    checks:
-      - project-valid
-      - repository-ready
-    outcome:
-      currentCost: 无法安全推进依赖仓库事实的工作
-      nextLevelBenefit: 可以在已确认的仓库基础上开展工作
+    transition:
+      checks:
+        - project-valid
+        - repository-ready
+        outcome: >
+          停留在当前层意味着无法安全推进依赖仓库事实的工作；进入下一层后，
+          可以在已确认的项目与仓库基础上开展工作。
   - title: 可以开展工作
     description: 项目与仓库事实已经满足本目标的基础判据
-    checks: []
-    outcome:
-      currentCost: 仍需承担后续目标尚未完成的代价
-      nextLevelBenefit: null
+    transition: null
 referenceWiki: references
 ```
 
@@ -312,13 +313,15 @@ Reference Wiki，不通过 `format` 提供多种协议选择；其他载体应�
 自行适配，而不是扩大默认 Manifest。该位置只定位 Wiki，不规定页面文件名、
 子目录或领域分类。
 
-`levels` 的数组下标就是 level，不重复保存数字。`levels[i].checks` 是当前
-第 i 层为了进入第 i+1 层需要执行的有序检查，因此 0 层可以且通常会有检查；
-最高层没有下一层，其 `checks` 必须为空且 `nextLevelBenefit` 必须为 `null`。
-空的非最高层检查组自然升级。默认工厂从 0 层开始逐级、逐关检查，首个未通过
-处形成观测。Manifest 只保存稳定 check ID，folder 或 package 中的 load
-bindings 提供对应代码，因此同一契约可由 YAML、JSON 或 TypeScript 数据
-表达，而不要求序列化函数。
+`levels` 的数组下标就是 level，不重复保存数字。`levels[i].transition` 是从
+当前第 i 层到第 i+1 层的边，把进入下一层所需的有序 checks 和这次转换的
+outcome 聚合在一起，因此 0 层可以且通常会有 transition checks。所有非最高层
+必须有 transition，最高层必须为 `transition: null`。空 checks 的 transition
+自然升级。默认工厂从 0 层开始逐级、逐关检查，首个未通过处形成观测。
+Manifest 只保存稳定 check ID，folder 或 package 中的 load bindings 提供对应
+代码，因此同一契约可由 YAML、JSON 或 TypeScript 数据表达，而不要求序列化
+函数。`transition.outcome` 是一段非空 prompt，同时描述接受当前层的代价与
+进入下一层的收益；框架不解析它的内部格式，也不要求作者拆成两个字段。
 
 Loader 必须拒绝重复页面 ID、同一 ProblemId 的重复入口、多个未知问题兜底、
 悬空内部链接与空页面；它不按目录或 tags 推断语义。Reference Wiki 允许环，
