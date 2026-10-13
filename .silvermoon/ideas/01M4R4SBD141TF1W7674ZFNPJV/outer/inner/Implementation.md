@@ -8,7 +8,8 @@
 subject/language-bound instance 与 Manifest。把 level、check、problem 和普通
 页面统一到语言位于最内层的 References 树，以固定协议执行按 `CheckId` 约定
 发现的唯一 `run`/`run.*` entry，并支持跨平台受限 shebang 和 prerequisite 的
-最低可接受 level。
+最低可接受 level。每次 probe 用独立 round temp directory 取代注入式
+`useState`，供顺序 checks 通过文件 memo 复用本轮采样。
 
 ### I-S02: 接入三个作用域的 Guide
 
@@ -27,8 +28,8 @@ advisory、语言、精确 revision 与人工交接。显式验证领域契约�
 ### I-AC01: OG 传输与运行时边界可验证
 
 类型检查与专项测试覆盖 URI identity/cache、typed creation failures、定义域与
-受限 JSONata、prerequisite 最低层、跨平台 check/shebang 协议与隔离边界、稳定
-Problem ID、References namespace、完整 locale 叶子，以及固定
+受限 JSONata、prerequisite 最低层、跨平台 check/shebang 协议、round cache
+生命周期与隔离边界、稳定 Problem ID、References namespace、完整 locale 叶子，以及固定
 `system/{overview,404}` 与 `levels/terminal`；错误不伪装成成功。
 证据见[核心边界验证](./objective-guidance-evidence.md#i-ac01)。
 

@@ -300,6 +300,8 @@ Prerequisite subject 继续使用受限 JSONata profile，不读取环境、文�
 interface CheckRequest {
   protocolVersion: 1;
   subject: ObjectiveSubject;
+  // 本次完整 probe/check round 唯一的绝对临时目录。
+  roundDirectory: string;
 }
 
 type CheckResult =
@@ -321,6 +323,19 @@ Runtime 向 stdin 写入单个 JSON request，check 向 stdout 写入单个 JSON
 非法 JSON、额外 stdout、未知 problem 或协议不匹配都是 operation error。
 Check 不接收 language，也不返回 title、description 或其他本地化文本。
 
+每次根 instance `probe()` 创建一个新的空 `roundDirectory`。同一次 probe 的
+整个 prerequisite chain 与随后执行的本地 checks 都收到同一个绝对路径，因此
+前序 check 可以把昂贵采样写成文件，后序 check 可以复用；并发 probe 必须使用
+不同目录。目录不得在不同 probe、进程重启或 Agent 行动后复用，缓存内容也不是
+持久状态或成功证据。Runtime 在 probe 完成、失败或取消后回收目录，并对创建、
+权限、配额与清理失败给出明确 operation diagnostics。
+
+核心不提供旧 ProfessionalModel 的注入式 `useState`。若语言 SDK 提供
+`useMemo(key, producer)`，它必须把 key 映射到 `roundDirectory` 内的受控文件，
+以原子写入保存本 round 的 JSON/blob 结果；cache miss 才运行 producer。该
+helper 不触发重渲染、不允许任意跨 round state，也不能把缓存路径或内容写到
+Guide、Manifest、References 或 event history。
+
 入口固定从 Manifest 所在 Guide 根目录的 `checks/<check-id>/` 解析，不接受
 Manifest path override。该目录必须恰好包含一个名为 `run` 或匹配 `run.*` 的
 普通文件；其他资源可以共存，但多个或缺失 entry 都是配置错误。扩展名只服务
@@ -337,13 +352,15 @@ interpreter，再以 `<interpreter> <absolute-entry-path>` 参数数组直接启
 string 不受支持。
 
 Runtime 不拼接任何 subject、Problem ID 或其他动态参数，全部业务输入只走
-stdin JSON。所有平台都使用固定 cwd、受控环境、统一超时和 stdout/stderr
-大小限制，并拒绝 check directory、入口或资源通过 symlink/reparse point
+stdin JSON；唯一额外能力是 request 中 runtime-owned 的 `roundDirectory`。
+所有平台都使用固定 cwd、受控环境、统一超时和 stdout/stderr 大小限制，并
+拒绝 check directory、入口、资源或 round cache 通过 symlink/reparse point
 逃逸。远程 Manifest 不能被隐式下载后执行。
 
 Probe 按 level 与 check 声明顺序执行，首个失败 check 形成 observation；一个
 失败 check 返回的 problems 保持声明顺序。每次 probe 都重新启动适用 checks，
-不缓存现实结果，也不为了抵消进程成本而并行化并改变诊断优先级。
+只允许在本 round directory 内 memoize，不缓存跨 round 现实结果，也不为了
+抵消进程成本而并行化并改变诊断优先级。
 
 ## 装载不变量
 
