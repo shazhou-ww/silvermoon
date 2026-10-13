@@ -40,8 +40,11 @@
 | `ObjectiveLevelDescription` | 层级说明 | OG 对一个层级的稳定名称和含义描述 |
 | OG transport unit | OG 传输单元 | 装载前承载 Manifest、代码与 reference pages 的 folder、package 或等价载体 |
 | `ObjectiveGuideManifest` | 目标向导清单 | 传输单元内可序列化的身份、层级、检查、references 位置和静态损益索引 |
-| `ObjectiveLevelManifest` | 层级清单项 | 一个层级的说明及其可选下一层 advancement |
 | `ObjectiveLevelAdvancementManifest` | 层级进阶清单 | 从当前层进阶到下一层的 checks 与整体 outcome prompt |
+| `ObjectiveLevelManifestBase` | 层级清单基础项 | 每个 Manifest 层级共有的标题与说明 |
+| `ObjectiveNonTerminalLevelManifest` | 非终止层清单项 | 必须声明下一层 advancement 的非最高层 |
+| `ObjectiveTerminalLevelManifest` | 终止层清单项 | 必须省略 advancement 的唯一最高层 |
+| `ObjectiveLevelsManifest` | 层级序列清单 | 由零到多个非终止层和最后一个终止层组成的非空 tuple |
 | `CheckResult` | 检查结果 | 目标检查的通过结果，或带非空问题的未通过结果 |
 | `ObjectiveCheck` | 目标检查 | 可执行且允许 IO 的单个层级进入判据 |
 | `OutcomeAssessor` | 损益评估器 | 可依据本次观测和上下文动态生成损益评估的装载绑定 |
@@ -246,17 +249,31 @@ interface ObjectiveLevelAdvancementManifest {
   outcome: string;
 }
 
-interface ObjectiveLevelManifest {
+interface ObjectiveLevelManifestBase {
   title: string;
   description: string;
-  advancement: ObjectiveLevelAdvancementManifest | null;
 }
+
+interface ObjectiveNonTerminalLevelManifest
+  extends ObjectiveLevelManifestBase {
+  advancement: ObjectiveLevelAdvancementManifest;
+}
+
+interface ObjectiveTerminalLevelManifest
+  extends ObjectiveLevelManifestBase {
+  advancement?: never;
+}
+
+type ObjectiveLevelsManifest = readonly [
+  ...ObjectiveNonTerminalLevelManifest[],
+  ObjectiveTerminalLevelManifest,
+];
 
 interface ObjectiveGuideManifest {
   schemaVersion: 1;
   id: ObjectiveId;
   title: string;
-  levels: readonly ObjectiveLevelManifest[];
+  levels: ObjectiveLevelsManifest;
   references: string;
 }
 
@@ -304,7 +321,6 @@ levels:
         可以在已确认的项目与仓库基础上开展工作。
   - title: 可以开展工作
     description: 项目与仓库事实已经满足本目标的基础判据
-    advancement: null
 references: references
 ```
 
@@ -316,8 +332,10 @@ references: references
 `levels` 的数组下标就是 level，不重复保存数字。`levels[i].advancement` 是从
 当前第 i 层进阶到第 i+1 层的边，把进入下一层所需的有序 checks 和这次进阶的
 outcome 聚合在一起，因此 0 层可以且通常会有 advancement checks。所有非最高层
-必须有 advancement，最高层必须为 `advancement: null`。空 checks 的 advancement
-自然升级。默认工厂从 0 层开始逐级、逐关检查，首个未通过处形成观测。
+必须有 advancement，最高层必须省略该字段。`ObjectiveLevelsManifest` 用可变长
+tuple 在 TypeScript 中表达“零到多个非终止层，最后一个终止层”，所以层级序列
+非空且只有最后一项可以没有 advancement。空 checks 的 advancement 自然升级。
+默认工厂从 0 层开始逐级、逐关检查，首个未通过处形成观测。
 Manifest 只保存稳定 check ID，folder 或 package 中的 load bindings 提供对应
 代码，因此同一契约可由 YAML、JSON 或 TypeScript 数据表达，而不要求序列化
 函数。`advancement.outcome` 是一段非空 prompt，同时描述接受当前层的代价与
@@ -328,7 +346,11 @@ Loader 必须拒绝重复页面 ID、同一 ProblemId 的重复入口、多个�
 也允许一个页面处理多个问题或由多个问题入口共同引用。默认工厂装载这一种
 页面集合并通过 `openReferences` 暴露主动查询接口；它不按深度或页面数量替
 Agent 预取知识。Load bindings 仍可提供动态 assessor，例如依据发布窗口改变
-损益描述。
+损益描述。对 YAML、JSON 等外部数据，Loader 还必须重复验证 tuple 约束，并拒绝
+缺少中间层 advancement、最高层仍声明 advancement 或显式使用
+`advancement: null`。标准 JSON Schema 可以约束层级非空、恰有一个 terminal
+item 且其余 item 均为 non-terminal，但无法对任意长度数组声明该 terminal
+必须位于最后；这一顺序不变量由 Loader refinement 补足。
 `createObjectiveGuide` 属于装载边界，其参数不会泄漏到运行时协作接口。高级
 传输单元仍保留 Manifest 用于身份与发现，但可以使用自定义 loader 直接产出
 手写 `ObjectiveGuide`，绕过默认探测和 reference pages 装载。
