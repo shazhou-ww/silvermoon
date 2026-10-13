@@ -2,8 +2,9 @@
 
 本页是 [Idea](./Idea.md) 的领域契约，建立在
 [Objective Guide 核心类型](./objective-guidance.md)之上；不定义实现步骤，不宣称
-下列 Guide 已可运行。Check 名称为拟定的稳定 `CheckId`，判据复用现有
-readiness/lifecycle 语义。
+下列 Guide 已可运行。Level、check 与 problem 名称为拟定的稳定 ID；每个
+check 由 Manifest 声明为独立 executable，判据复用现有 readiness/lifecycle
+语义，面向人的说明进入对应 References namespace。
 
 ## 组合与路由
 
@@ -30,7 +31,7 @@ advancement checks；全部通过后合成唯一 `terminal`，不额外保存 nu
 
 ## 设备级：Device Guide
 
-Subject 为 `{ userHome }`；运行入口、环境、平台及观察器通过 bindings 注入。
+Subject 为 `{ userHome }`；运行入口、环境和平台事实由 checks 自行观测。
 设备状态不写进项目 metadata。
 
 | 本地 level ID | 当前语义 | Advancement checks |
@@ -53,7 +54,7 @@ runtime/schema 能力不足，分别保留既有阻塞规则。Snapshot-only `ch
 ## 项目级：Project Guide
 
 Subject 为 `{ root, userHome }`；`root` 是解析后的项目路径。Git、filesystem、
-schema 和所需设备能力通过 bindings 注入，不要求 Device terminal。
+schema 和所需设备能力由 checks 自行观测，不要求 Device terminal。
 
 | 本地 level ID | 当前语义 | Advancement checks |
 | --- | --- | --- |
@@ -81,9 +82,10 @@ Idea 所有的检查，当前不预留空层。
 ## Idea 级：Idea Guide
 
 Subject 为 `{ root, userHome, ideaId }`；`ideaId` 必须是已解析的有效 ULID。
-Prerequisite JSONata 只投影 `{ root, userHome }`；Project 未 terminal 时不运行
-本地 checks。以下 `configuration-invalid` 是首个本地层，组合顺序仍以前置
-Project 的非 terminal descriptions 为前缀。
+Prerequisite JSONata 只投影 `{ root, userHome }`。Silvermoon 当前仍省略
+`minimumLevelId`，因此 Project 未 terminal 时不运行本地 checks；核心契约允许
+其他 Guide 选择 immediate prerequisite 的中间最低层。以下
+`configuration-invalid` 是首个本地层。
 
 | 本地 level ID | 当前语义 | Advancement checks |
 | --- | --- | --- |
@@ -119,6 +121,7 @@ Guide 知识而执行完整 Project advancement、增加 fetch、要求仓库同
 prerequisite chain 使用一致的 resolved content language，临时 `--language`
 不成为 Idea content-language 决定。
 
-核心类型、References 默认 `404.md`、typed instance creation failures、subject
-projection 与 locale 完整性均以[核心契约](./objective-guidance.md)为准，不在
+核心类型、固定 `system/404`、typed instance creation failures、subject
+projection、check executable 与 locale 完整性均以
+[核心契约](./objective-guidance.md)为准，不在
 本页重复定义。

@@ -4,15 +4,16 @@
 
 ### I-S01: 演进 ObjectiveGuide 基础契约
 
-按[核心类型契约](./ideal/objective-guidance.md)实现 Loader、语言中立 Guide、
-subject/language-bound instance、Manifest 和 References；复用现有
-ProfessionalModel 基线与有类型的执行依赖。
+按[核心类型契约](./ideal/objective-guidance.md)调整 Loader、语言中立 Guide、
+subject/language-bound instance 与 Manifest。把 level、check、problem 和普通
+页面统一到语言位于最内层的 References 树，以固定协议执行 Manifest checks，
+并支持 prerequisite 的最低可接受 level。
 
 ### I-S02: 接入三个作用域的 Guide
 
-按[Silvermoon 领域契约](./ideal/silvermoon-objectives.md)落实 Device、Project 和
-Idea 的 levels/checks、Project→Idea prerequisite 及命令路由。项目 guidance
-检查和 Idea submit/accept 分层按契约接入；OR/OPS 只保留扩展文档。
+按[Silvermoon 领域契约](./ideal/silvermoon-objectives.md)把 Device、Project 和
+Idea 的 levels、checks、problems、Project→Idea prerequisite 及命令路由迁移到
+新协议。项目 guidance 检查和 Idea submit/accept 分层保持原有语义。
 
 ### I-S03: 保持现有导航兼容
 
@@ -24,9 +25,10 @@ advisory、语言、精确 revision 与人工交接。显式验证领域契约�
 
 ### I-AC01: OG 传输与运行时边界可验证
 
-类型检查与专项测试覆盖核心契约的 URI identity/cache、typed creation failures、
-定义域与受限 JSONata、locale 完整性、有序 level descriptions 和 References
-默认/覆盖 not-found 行为；错误不伪装成成功。
+类型检查与专项测试覆盖 URI identity/cache、typed creation failures、定义域与
+受限 JSONata、prerequisite 最低层、可执行 check 协议与隔离边界、稳定
+Problem ID、References namespace、完整 locale 叶子和固定 `system/404`；
+错误不伪装成成功。
 证据见[核心边界验证](./objective-guidance-evidence.md#i-ac01)。
 
 ### I-AC02: 三个作用域的契约可验证
