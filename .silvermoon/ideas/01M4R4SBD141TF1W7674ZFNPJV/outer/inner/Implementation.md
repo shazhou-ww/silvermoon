@@ -4,7 +4,7 @@
 
 ### I-S01: 演进 ObjectiveGuide 基础契约
 
-以现有 ProfessionalModel 为兼容基线，在独立 module 中落实 ObjectiveGuide、ObjectiveObservation、ObjectiveGuidance、ObjectiveOutcomeAssessment、可序列化 ObjectiveGuideManifest 与装载 bindings 类型。保持逐级逐关、观察内 state、程序错误传播和未知问题知识缺口语义；明确传输 loader 与运行时 OG 的边界，不把代码函数塞进 YAML/JSON Manifest，也不让 OR/OPS 依赖传输结构。
+以现有 ProfessionalModel 为兼容基线，在独立 module 中落实 ObjectiveGuide、ObjectiveObservation、ObjectiveGuidance、Reference Wiki、ObjectiveReferenceGraph、ObjectiveOutcomeAssessment、可序列化 ObjectiveGuideManifest 与装载 bindings 类型。Manifest 只声明 Wiki 来源与遍历限制；平级页面通过 frontmatter 声明稳定 ID、问题入口、开放 tags 和唯一未知问题兜底，通过内部 Wiki link 构图。Loader 解析 Wiki 并只产出运行时 OG，默认 resolver 返回有限闭合子图，不让 OR/OPS 依赖传输结构。
 
 ### I-S02: 建立 OR 与 OPS 类型边界
 
@@ -18,7 +18,7 @@
 
 ### I-AC01: OG 传输与运行时边界可验证
 
-公共类型和专项测试证明 Manifest 只含可序列化声明与稳定 ID，load bindings 提供代码，loader 只产出 ObjectiveGuide，OR/OPS 不接触路径、Manifest 或资源布局；默认静态指导/损益、动态 resolver/assessor 与手写 OG 均能通过装载边界得到同一运行时接口。层级连续、问题有序、最高层损益和无效引用得到明确验证。
+公共类型和专项测试证明 Manifest 只含可序列化声明、Wiki 来源和遍历限制，load bindings 提供代码，loader 只产出 ObjectiveGuide，OR/OPS 不接触路径、Manifest、完整 Wiki 或资源布局。验证平级页面、路径与身份分离、开放 tags、共享页面、允许的环、重复页面 ID 或问题入口、唯一未知问题兜底、悬空内部链接、空页面与非法深度/页面上限，以及默认和动态 resolver 返回的入口存在、链接端点闭合并遵守上限；动态 assessor 与手写 OG 仍通过同一运行时接口。
 
 ### I-AC02: OR 与 OPS 契约无职责泄漏
 
