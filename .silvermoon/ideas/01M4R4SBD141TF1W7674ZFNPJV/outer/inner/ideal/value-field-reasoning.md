@@ -27,10 +27,13 @@ Happy path 仍然有用，但只是这个导向下的一条可能路径。
 
 这里的“世界”不是要求程序穷尽整个宇宙，而是概念上承认：影响工作成立与否的事实可能分散在文件、远端系统、人和交互历史中。
 
-观察对象则用于限定本次工作，例如某个项目和 Idea ID。每个 ObjectiveGuide
-用 JSON Schema 描述可接受对象的定义域，具体 `ObjectiveSubject` 是该定义域
-中的一点。对象不是世界状态的完整输入；观察一个 Idea，也可能需要通过装载时
-注入的能力查询它所在的项目、设备与远端仓库。发布窗口、预算和优先级属于
+观察对象则用于限定本次工作，例如某个项目和 Idea ID。语言中立
+ObjectiveGuide 用 JSON Schema 描述可接受对象的定义域；
+ObjectiveGuideInstance 把其中一个 `ObjectiveSubject` 与一种 resolved language
+绑定为具体使用上下文。绑定可能因根 subject、某个 prerequisite 投影 subject
+或 chain 中的 language 不成立而失败；这些是 typed creation result，不是
+Promise rejection。对象不是世界状态的完整输入；观察一个 Idea，也可能需要通过
+装载时注入的能力查询它所在的项目、设备与远端仓库。发布窗口、预算和优先级属于
 portfolio policy 的规划事实，不通过通用 runtime context 注入每个 Objective。
 
 ## 3. 如何把世界状态定义成标量场
@@ -38,13 +41,13 @@ portfolio policy 的规划事实，不通过通用 runtime context 注入每个 
 选定工作对象和目标后，专业人士定义一组有序层级：
 
 ```text
-0 < 1 < 2 < ... < N
+unavailable ≺ operable ≺ terminal
 ```
 
 并为每层给出判定条件，把相关世界状态分类到其中一层：
 
 ```text
-level(世界状态) -> 一个非负整数层级
+level(世界状态) -> 有序集合中的稳定 level ID
 ```
 
 这就是将高维状态投影到有限全序集。可以把它想象成梯田：
@@ -56,17 +59,18 @@ level(世界状态) -> 一个非负整数层级
 
 在默认传输模型中，Manifest 只列出尚未达到最终价值的显式层级；每层都描述
 通往下一层的 advancement。全部 advancement 通过后，框架合成唯一的 terminal
-“价值达成”层。最终价值由 ObjectiveGuide 顶层描述，不在层级数组中重复声明。
+“价值达成”层。最终价值由 Guide 的 locale content 描述，并通过 instance 暴露，
+不在层级数组中重复声明。
 
-同一个标量场只维护一份语言无关的层级顺序、判据、定义域与前置关系。稳定
-level ID 把这些语义关联到不同 language 的完整 content 和 References；
-切换 language 改变表达与检索内容，不产生另一套层级，也不改变对象在场中的
-位置。若这些结构语义本身不同，就应定义不同的 Objective，而不是把差异伪装
-成翻译。
+同一个 Guide 只维护一份语言无关的层级顺序、判据、定义域与前置关系。稳定
+level ID 把这些语义关联到不同 language 的完整 content 和 References；创建
+instance 时选择 language 和 subject，只改变本次表达、检索内容与观察对象，
+不产生另一套 Guide 或层级。若这些结构语义本身不同，就应定义不同的 Objective，
+而不是把差异伪装成翻译。
 
 这种场是离散、分片常量的，不需要假设世界具有连续坐标，也不需要把所有专业判断换算成一个效用总分。
 
-0 层是分类的兜底。实际观察证据不足时，也可以报告 0，但必须同时报告信息不足的问题，不能据此断言对象在现实中完全没有进展。
+首个显式层是分类的兜底。实际观察证据不足时，也可以报告该层，但必须同时报告信息不足的问题，不能据此断言对象在现实中完全没有进展。
 
 ## 4. 标量场怎样表达价值导向
 
@@ -74,8 +78,8 @@ level ID 把这些语义关联到不同 language 的完整 content 和 Reference
 
 例如，对一个 Idea，导向可以是：整备工作条件，明确并确认目标，完成实现，最后让现实结果得到验证和接受。越高的层级表示越接近这一特定终局，不表示这个状态在所有人的所有价值维度上都更好。
 
-ObjectiveGuide 负责解释当前层与下一层，ObjectiveRegulator 据此完成单目标
-复测闭环：
+ObjectiveGuideInstance 负责解释当前层与下一层。可选的
+[ObjectiveRegulator](./objective-regulator.md) 扩展可据此完成单目标复测闭环：
 
 ```text
 现在已经成立的条件是什么？
@@ -128,14 +132,19 @@ ObjectiveGuide 负责解释当前层与下一层，ObjectiveRegulator 据此完�
 ```
 
 Reference page ID 连接可复用的专业经验，具体说明描述本次情况。只有证据支持
-的原因才能作为诊断；无法定位原因时，应返回知识缺口 page，而不是猜测。
+的原因才能作为诊断；无法定位原因时，可以返回普通知识缺口 page，而不是猜测。
+若请求的 page ID 根本不存在，则默认返回当前 locale References 根目录的
+`404.md`（page ID 为 `404`），也可用 `notFoundPageId` 覆盖；这不是“未知问题”
+专用角色，不能用来掩盖装载或 IO 错误。
 
 专业知识序列化为由平级 reference pages 组成的参考知识集。入口页面说明问题
-及首要处置方向，再通过内部链接引用其他知识页面；页面标签开放，目录层级和
-预定义种类不决定语义。同一页面可以被多个问题共享，链接图也不要求是无环树。
+及首要处置方向，再通过正文中的内部链接引用其他知识页面；links 和 tags 不作为
+独立的 ReferencePage 字段，目录层级和搜索索引元数据不决定语义。同一页面可以
+被多个问题共享，链接图也不要求是无环树。
 Observation 中的问题直接给出入口 page ID，当前 level description 引用实际
-负责的 OG；Agent 调用该 OG 的 `readPage`，再按需沿链接阅读或搜索参考知识。
-OG 不预先决定遍历深度或返回节点数量，知识缺口 page 也不能伪装成已知解法。
+负责的 ObjectiveGuideInstance；Agent 调用该 instance 的 `readPage`，再按需沿
+链接阅读或搜索参考知识。Instance 不预先决定遍历深度或返回节点数量，知识缺口
+或 not-found page 也不能伪装成已知解法。
 
 于是专业能力的积累分成两部分：
 
@@ -213,14 +222,16 @@ Agent 根据这些信息决定一次具体行动。它可以主动查询参考�
 
 一个项目可以在 PMO 导向下接近完成，却在设计师导向下仍待验证。这不是矛盾，因为投影的目的不同。
 
-多个场不应自动相加成总分；各场的层级只是序数。Objective Portfolio
-Supervisor 通过 portfolio policy 表达主导、门槛、资源、窗口与延后关系，
-但不能篡改单个 ObjectiveGuide 的内部判据或把不同层级直接换算成总分。
-同一个 OG 可以绑定不同 subject。如果一个 Objective 的定义本身以另一个
-Objective 的完整层级为前缀，例如 Idea 推进以 Project 整备为前提，则通过
-带 JSONata subject projection 的单个 `prerequisite` 递归组合标量场：前置 Objective 未达到
-terminal 时，本地场不被观测。它不是 References 知识链接、Portfolio 调度关系，也不应隐藏
-在一个会调用另一 OG 的 check 中。
+多个场不应自动相加成总分；各场的层级只表达各自的次序。可选的
+[Objective Portfolio Supervisor](./objective-portfolio-supervisor.md) 扩展可通过
+portfolio policy 表达主导、门槛、资源、窗口与延后关系，但不能篡改单个
+ObjectiveGuide 的内部判据或把不同层级直接换算成总分。
+同一个 OG 可以创建不同 subject/language-bound instances。如果一个 Objective
+的定义本身以另一个 Objective 的完整层级为前缀，例如 Idea 推进以 Project 整备
+为前提，则通过带 JSONata subject projection 的单个 `prerequisite` 递归组合
+Guide；创建 instance 时再用同一 language 和投影 subject 创建 prerequisite
+instance。前置 Objective 未达到 terminal 时，本地场不被观测。它不是 References
+知识链接、Portfolio 调度关系，也不应隐藏在一个会调用另一 OG 的 check 中。
 本 Idea 只定义该协调边界和类型，不预写具体调度算法。
 
 ## 9. 从理论走向可迭代的专业能力
@@ -233,7 +244,8 @@ terminal 时，本地场不被观测。它不是 References 知识链接、Portf
 这是一种专业求解能力的通用建模候选，不是已证明适用于所有领域的万能算法。可靠采样、正确诊断和有效行动依然需要专业知识；目标也可能需要人工修订或放弃。
 
 首轮验证已经在仓库内形成独立 module，并让 Silvermoon 的 `whats-next`
-实际使用它，证明单目标观察与指导可以保留真实行为。下一轮先规范
-ObjectiveGuide、ObjectiveRegulator 与 Objective Portfolio Supervisor 的
-类型边界，再分别验证单目标循环与多目标监督；在取得这些证据前，不宣称跨
-领域适用，也不以独立拆包或 npm 分发替代模型验证。
+实际使用它，证明单目标观察与指导可以保留真实行为。下一轮只把
+ObjectiveGuide 与 ObjectiveGuideInstance 核心落入 Silvermoon；ObjectiveRegulator
+和 Objective Portfolio Supervisor 保留为独立扩展契约，分别等待真实的单目标
+循环与多目标监督需求。在取得这些证据前，不宣称跨领域适用，也不以独立拆包或
+npm 分发替代模型验证。
