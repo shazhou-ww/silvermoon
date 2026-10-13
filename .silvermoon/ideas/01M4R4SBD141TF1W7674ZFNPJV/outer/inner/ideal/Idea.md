@@ -17,5 +17,5 @@
 ## 验收标准
 
 - 类型契约严格分离 OG 的领域知识、OR 的单目标闭环与 OPS 的多目标权衡；Manifest 用受限 Draft 2020-12 `domainSchema` 描述可接受的 project/Idea subject，公共 Objective API 只接收 subject，不暴露通用 runtime context；执行依赖由 bindings 注入，窗口和预算归 OPS policy。
-- Manifest 用稳定 level ID 保存同型、都带 advancement 的本地显式层，全部通过后合成唯一 terminal“价值达成”层；价值描述、层级文本、单段 outcome prompt 和 References 由完整 locale bundles 提供，装载后的 Guide 绑定一种 language 且不做字段级混合 fallback。Project→Idea 等语义前置关系声明为单个 optional `prerequisite`，其 `subject` 直接使用受限 JSONata 投影当前定义域并递归形成确定的同语言层级链；prerequisite 未 terminal 时不得 probe 本地 levels。Reference pages 由 Guide 直接按问题来源暴露给 Agent 查询；OPS 不重写层级组合。
+- Manifest 用稳定 level ID 保存同型、都带 advancement 的本地显式层，全部通过后合成唯一 terminal“价值达成”层；完整 locale bundles 提供价值描述、层级文本、单段 outcome prompt 和 References，`describeLevels` 返回引用实际 Guide 的完整静态 descriptions。Project→Idea 等语义前置关系声明为单个 optional `prerequisite`，其 `subject` 直接使用受限 JSONata 投影当前定义域并递归形成确定的同语言层级链；prerequisite 未 terminal 时直接返回其 observation，不 probe 本地 levels，也不通过 Objective ID 二次查找。Observed problem 直接给出入口 page ID，Agent 调用 observation 当前 Guide 的 `readPage`；OPS 不重写层级组合。
 - 新契约明确映射现有 ProfessionalModel 基线并保留 `whats-next` 行为；下游实现和部署种子不预先宣称 OR 或 OPS 已可运行。

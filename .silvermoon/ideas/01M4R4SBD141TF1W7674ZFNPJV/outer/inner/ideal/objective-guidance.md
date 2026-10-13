@@ -21,7 +21,6 @@
 
 ```ts
 type ObjectiveId = string;
-type ProblemId = string;
 type CheckId = string;
 type ObjectiveRegistrationId = string;
 type ReferencePageId = string;
@@ -29,7 +28,7 @@ type JsonataExpression = string;
 type LanguageTag = string; // canonical BCP 47
 
 type ObjectiveLevel = number; // 从 0 开始的连续序数
-type ObjectiveLevelId = string; // source OG 内稳定；不依赖数组位置
+type ObjectiveLevelId = string; // owning Guide 内稳定；不依赖数组位置
 
 type JsonValue =
   | string
@@ -44,51 +43,45 @@ type ObjectiveDomainSchema = JsonObject;
 type ObjectiveSubject = JsonObject;
 
 interface ObservedProblem {
-  id: ProblemId;
+  // pageId 同时是稳定问题入口；同一 page 可服务多个具体问题。
+  pageId: ReferencePageId;
   description: string;
 }
 
-interface ObjectiveObservation {
-  // prerequisite 的问题保留真实来源及投影后的 subject。
-  sourceObjectiveId: ObjectiveId;
-  sourceSubject: ObjectiveSubject;
-  level: ObjectiveLevel;
-  problems: readonly ObservedProblem[];
-  gapSummary: string;
-}
-
 interface ReferencePageSummary {
-  sourceObjectiveId: ObjectiveId;
   id: ReferencePageId;
   title: string;
   tags: readonly string[];
 }
 
 interface ReferencePage extends ReferencePageSummary {
-  problemIds: readonly ProblemId[];
   unknownProblemFallback: boolean;
   content: string;
   links: readonly ReferencePageId[];
 }
 
-interface ObjectiveAdvancementAssessment {
-  nextLevel: ObjectiveLevel;
+interface ObjectiveAdvancementDescription {
   // 单段 prompt 同时描述停留代价和进阶收益。
-  prompt: string;
-}
-
-interface ObjectiveOutcomeAssessment {
-  level: ObjectiveLevel;
-  advancement: ObjectiveAdvancementAssessment | null; // terminal 为 null
+  outcome: string;
 }
 
 interface ObjectiveLevelDescription {
-  // sourceObjectiveId + id 在组合 Guide 中唯一。
-  sourceObjectiveId: ObjectiveId;
+  // prerequisite level 直接引用实际负责观测与 page 查询的 Guide。
+  guide: ObjectiveGuide;
   id: ObjectiveLevelId;
   level: ObjectiveLevel;
   title: string;
   description: string;
+  // 数组下一项就是目标层；terminal 为 null。
+  advancement: ObjectiveAdvancementDescription | null;
+}
+
+interface ObjectiveObservation {
+  // prerequisite 未通过时，这里是投影后的 prerequisite subject。
+  subject: ObjectiveSubject;
+  current: ObjectiveLevelDescription;
+  problems: readonly ObservedProblem[];
+  gapSummary: string;
 }
 ```
 
@@ -111,32 +104,19 @@ interface ObjectiveGuide {
   // 允许 IO 和观测扰动；不执行现实修改。
   probe(subject: ObjectiveSubject): Promise<ObjectiveObservation>;
 
-  // ID 在 source OG 内解释；未知 problemId 返回其唯一 fallback page。
-  openProblem(
-    sourceObjectiveId: ObjectiveId,
-    problemId: ProblemId,
-  ): Promise<ReferencePage>;
+  // 只读取当前 Guide 自己的 locale References。
+  readPage(pageId: ReferencePageId): Promise<ReferencePage>;
 
-  readPage(
-    sourceObjectiveId: ObjectiveId,
-    pageId: ReferencePageId,
-  ): Promise<ReferencePage>;
-
-  // 搜索整个组合 Guide，结果保留 sourceObjectiveId。
+  // prerequisite pages 通过 observation.current.guide 查询。
   searchPages(
     query: string,
   ): Promise<readonly ReferencePageSummary[]>;
-
-  assessOutcome(
-    observation: ObjectiveObservation,
-    subject: ObjectiveSubject,
-  ): Promise<ObjectiveOutcomeAssessment>;
 }
 ```
 
-`probe` 与 `assessOutcome` 先验证 `subject` 满足 `domainSchema`；page 查询只
-依赖 loaded Guide 的 source 和 language。定义域、配置、探测或执行错误必须
-reject，不能伪装成低 level 或成功结果。
+`probe` 先验证 `subject` 满足 `domainSchema`；page 查询只依赖 loaded Guide
+和 language。定义域、配置、探测或执行错误必须 reject，不能伪装成低 level
+或成功结果。
 时钟、文件系统、远端客户端和鉴权等执行依赖在装载时显式注入；窗口、预算与
 优先级属于 OPS policy。公共 Objective API 不保留通用
 `Record<string, unknown>` runtime context。
@@ -148,7 +128,7 @@ reject，不能伪装成低 level 或成功结果。
 ```text
 my-objective-guide/
 ├── objective-guide.yaml       # 语言无关的结构语义
-├── index.ts                   # checks 与可选动态 assessor
+├── index.ts                   # checks 与装载 bindings
 ├── checks/
 ├── locales/
 │   ├── zh-CN.yaml             # 完整 locale content
@@ -163,8 +143,6 @@ Reference page 使用稳定 ID 和内部链接；文件名与目录不是节点�
 ```markdown
 ---
 id: repository-not-ready
-problemIds:
-  - repository-not-ready
 tags:
   - repository
   - diagnosis
@@ -258,18 +236,10 @@ type ObjectiveCheck = (
   language: LanguageTag,
 ) => Promise<CheckResult>;
 
-type OutcomeAssessor = (
-  observation: ObjectiveObservation,
-  subject: ObjectiveSubject,
-  language: LanguageTag,
-) => Promise<ObjectiveOutcomeAssessment>;
-
 interface ObjectiveGuideLoadBindings {
   checks: Readonly<Record<CheckId, ObjectiveCheck>>;
   // prerequisite 已装载成同 language 的运行时 Guide。
   guides?: Readonly<Record<ObjectiveId, ObjectiveGuide>>;
-  // 省略时直接读取 locale content 中当前 level 的 outcome。
-  assessOutcome?: OutcomeAssessor;
 }
 
 interface CreateObjectiveGuideOptions {
@@ -389,15 +359,18 @@ localizations:
 - `levels` 非空，ID 局部唯一且不能为保留 ID `terminal`。每项都必须有
   advancement；`checks: []` 可以自然通过，但不接受 `advancement: null`。
 - 默认工厂按顺序执行 checks，首个失败处形成观测；全部显式 advancement
-  通过后合成唯一 terminal。递归 prerequisite chain 的 terminal level 为：
+  通过后合成唯一 terminal。`describeLevels()` 把 locale outcome 写入每个
+  非 terminal description 的 `advancement`；terminal 的 advancement 为
+  `null`。递归 prerequisite chain 的 terminal level 为：
 
   ```text
   所有 prerequisite 显式 level 数量 + 当前 Guide 的 levels.length
   ```
 
 - Prerequisite 未 terminal 时，本地 checks 不运行；其 terminal 不单独插入，
-  而与下一 Guide 的本地 level 0 边界合并。Level offset、outcome、
-  `sourceObjectiveId`、`sourceSubject` 和 References 路由必须使用同一组合结果。
+  而与下一 Guide 的本地 level 0 边界合并。组合 Guide 复用 prerequisite 的
+  非 terminal level descriptions 作为前缀，因此可以直接返回 prerequisite
+  observation；`current.guide` 与 `subject` 已指向实际来源，无需 ID 路由。
 - `prerequisite.subject` 使用固定的受限 JSONata profile：只能读取当前 subject，
   不能读取环境变量、文件或网络，不允许扩展函数、动态求值、用户递归、
   时间或随机能力，并限制表达式长度、AST 深度、执行时间和输出大小。输出必须是
@@ -407,10 +380,13 @@ localizations:
 - Language key 必须是 canonical BCP 47。省略选择时才使用
   `defaultLanguage`；不做父语言或字段级 fallback，也不混合不同 language。
   每个 locale 必须完整覆盖 terminal、全部 level IDs 和 References。
-- 各 locale 的 References 保持相同 page IDs、ProblemId 入口映射、unknown
-  fallback 角色和链接目标；标题、正文与 tags 可以本地化。Loader 拒绝重复 ID、
-  重复问题入口、多个 unknown fallback、悬空链接和空页面；允许链接环和多个
-  ProblemId 共享页面，不从目录或 tags 推断封闭语义。
+- 各 locale 的 References 保持相同 page IDs、unknown fallback 角色和链接目标；
+  标题、正文与 tags 可以本地化。Loader 拒绝重复 ID、多个 unknown fallback、
+  悬空链接和空页面；允许链接环和多个问题共享页面，不从目录或 tags 推断封闭
+  语义。
+- Check 直接返回入口 `pageId`；Loader 验证该 page 存在。无法确定已知处置页时，
+  check 显式返回唯一 unknown fallback 的 ID。Agent 调用
+  `observation.current.guide.readPage(problem.pageId)`。
 
 路径相对 Manifest 解析。默认工厂只装载上述 Markdown page 协议；高级传输单元
 可以保留 Manifest 用于身份与发现，再由自定义 loader 直接产出手写 OG。
@@ -425,24 +401,9 @@ interface RegulationLimits {
 }
 
 interface ObjectiveActionRequest {
-  objectiveId: ObjectiveId;
   targetLevel: ObjectiveLevel;
   observation: ObjectiveObservation;
   problem: ObservedProblem;
-  subject: ObjectiveSubject;
-
-  // OR 直接绑定 Guide 的 page 查询方法。
-  openProblem(
-    sourceObjectiveId: ObjectiveId,
-    problemId: ProblemId,
-  ): Promise<ReferencePage>;
-  readPage(
-    sourceObjectiveId: ObjectiveId,
-    pageId: ReferencePageId,
-  ): Promise<ReferencePage>;
-  searchPages(
-    query: string,
-  ): Promise<readonly ReferencePageSummary[]>;
 }
 
 type ObjectiveActionResult =
@@ -484,8 +445,8 @@ interface ObjectiveRegulator {
   /**
    * 框架持有循环：
    * 1. probe；
-   * 2. level >= targetLevel 时结束；
-   * 3. 取首个问题并把 Guide 的 page 查询方法交给 Agent；
+   * 2. observation.current.level >= targetLevel 时结束；
+   * 3. 取首个问题；Agent 通过 current.guide 查询 page；
    * 4. Agent 只执行一次现实动作；
    * 5. 重新 probe；
    * 6. 应用超时、迭代和连续无进展保护。
@@ -522,7 +483,6 @@ interface ObjectivePortfolioEntry {
   objectiveId: ObjectiveId;
   subject: ObjectiveSubject;
   observation: ObjectiveObservation;
-  outcome: ObjectiveOutcomeAssessment;
   safety: ObjectiveSafetyThresholds;
 }
 
@@ -564,7 +524,7 @@ interface ObjectivePortfolioRunResult {
 }
 
 interface ObjectivePortfolioSupervisor {
-  // 使用 registration 的 subject，仅探测并评估 outcome。
+  // 使用 registration 的 subject 探测；损益读取 current.advancement.outcome。
   observe(): Promise<ObjectivePortfolioObservation>;
 
   // 先守防御阈值，再由已注入依赖的 policy 分配预算和窗口。
@@ -591,10 +551,9 @@ Portfolio policy 通过自身有类型的构造依赖读取预算、互斥、窗
 | 现有契约 | 新契约 |
 | --- | --- |
 | `ProfessionalModel.observe` | `ObjectiveGuide.probe` |
-| `Problem.code` | `ObservedProblem.id` |
-| `ProfessionalModel.guide` | `ObjectiveGuide.openProblem` 的单页静态基线 |
-| `ProfessionalModel.describe` | `ObjectiveGuide.describeLevels` |
-| 尚无对应能力 | `ObjectiveGuide.assessOutcome` |
+| `Problem.code` | `ObservedProblem.pageId` |
+| `ProfessionalModel.guide` | `ObjectiveGuide.readPage` 的单页静态基线 |
+| `ProfessionalModel.describe` | `ObjectiveGuide.describeLevels`，并增加静态 advancement outcome |
 
 `whats-next` 已验证单目标观察和指导，但不是 OR 或 OPS 的生产实现。本轮只稳定
 类型和装载边界；后续实现必须保持现有导航、语言、控制权和精确 revision 语义。
