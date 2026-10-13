@@ -6,7 +6,7 @@
 
 ## 结果
 
-在已验证的专业能力基础上，形成 ObjectiveGuide（OG）、ObjectiveRegulator（OR）与 Objective Portfolio Supervisor（OPS）的公开术语和可实施 TypeScript 契约；用平级页面及相互链接组成 Reference Wiki，问题页面只承担入口角色，loader 装载后运行时代码仅使用 ObjectiveGuide 及其裁剪出的指导子图。语义见[Objective Guidance 类型体系](./objective-guidance.md)，理论溯源与例子见[推演说明](./value-field-reasoning.md)。
+在已验证的专业能力基础上，形成 ObjectiveGuide（OG）、ObjectiveRegulator（OR）与 Objective Portfolio Supervisor（OPS）的公开术语和可实施 TypeScript 契约；用平级页面及相互链接组成 Reference Wiki，问题页面只承担入口角色，Agent 从问题入口主动读取和搜索知识，而不是由工具预取指导子图。语义见[Objective Guidance 类型体系](./objective-guidance.md)，理论溯源与例子见[推演说明](./value-field-reasoning.md)。
 
 ## 边界
 
@@ -17,5 +17,5 @@
 ## 验收标准
 
 - 类型契约严格分离 OG 的领域知识、OR 的单目标闭环与 OPS 的多目标权衡，并定义可判定的终止结果。
-- Manifest 只声明 Wiki 来源与遍历限制；页面自身声明稳定 ID、问题入口、开放标签和内部链接，默认 loader 校验并解析后返回 ObjectiveGuide，运行时 guidance 是有限闭合子图，OR 与 OPS 不感知传输结构。
+- Manifest 以数组下标定义 level，每层 checks 决定如何进入下一层，并只声明唯一支持的 Wiki 位置；页面自身声明稳定 ID、问题入口、开放标签和内部链接，Agent 通过运行时 Wiki 接口主动查询，OR 与 OPS 不感知传输结构。
 - 新契约明确映射现有 ProfessionalModel 基线并保留 `whats-next` 行为；下游实现和部署种子不预先宣称 OR 或 OPS 已可运行。

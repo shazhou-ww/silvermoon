@@ -4,7 +4,7 @@
 
 ### I-S01: 演进 ObjectiveGuide 基础契约
 
-以现有 ProfessionalModel 为兼容基线，在独立 module 中落实 ObjectiveGuide、ObjectiveObservation、ObjectiveGuidance、Reference Wiki、ObjectiveReferenceGraph、ObjectiveOutcomeAssessment、可序列化 ObjectiveGuideManifest 与装载 bindings 类型。Manifest 只声明 Wiki 来源与遍历限制；平级页面通过 frontmatter 声明稳定 ID、问题入口、开放 tags 和唯一未知问题兜底，通过内部 Wiki link 构图。Loader 解析 Wiki 并只产出运行时 OG，默认 resolver 返回有限闭合子图，不让 OR/OPS 依赖传输结构。
+以现有 ProfessionalModel 为兼容基线，在独立 module 中落实 ObjectiveGuide、ObjectiveObservation、ObjectiveReferenceWiki、ObjectiveOutcomeAssessment、可序列化 ObjectiveGuideManifest 与装载 bindings 类型。Manifest 由数组下标定义 level，每层 checks 决定是否进入下一层，并只声明唯一支持的 Markdown Reference Wiki 位置；平级页面通过 frontmatter 声明稳定 ID、问题入口、开放 tags 和唯一未知问题兜底，通过内部 Wiki link 构图。Agent 通过运行时 Wiki 接口主动打开问题、读取页面和搜索，不让 OR/OPS 依赖传输结构。
 
 ### I-S02: 建立 OR 与 OPS 类型边界
 
@@ -18,7 +18,7 @@
 
 ### I-AC01: OG 传输与运行时边界可验证
 
-公共类型和专项测试证明 Manifest 只含可序列化声明、Wiki 来源和遍历限制，load bindings 提供代码，loader 只产出 ObjectiveGuide，OR/OPS 不接触路径、Manifest、完整 Wiki 或资源布局。验证平级页面、路径与身份分离、开放 tags、共享页面、允许的环、重复页面 ID 或问题入口、唯一未知问题兜底、悬空内部链接、空页面与非法深度/页面上限，以及默认和动态 resolver 返回的入口存在、链接端点闭合并遵守上限；动态 assessor 与手写 OG 仍通过同一运行时接口。
+公共类型和专项测试证明 Manifest 不重复保存 level 数字，0 层 checks 可执行，`levels[i].checks` 只控制 i→i+1，最高层 checks 为空；Manifest 只含可序列化声明和单一 Wiki 位置，load bindings 提供检查代码，OR/OPS 不接触路径、Manifest 或资源布局。验证平级页面、路径与身份分离、开放 tags、共享页面、允许的环、重复页面 ID 或问题入口、唯一未知问题兜底、悬空内部链接和空页面，并证明 Agent 可按问题主动 open/read/search；动态 assessor 与手写 OG 仍通过同一运行时接口。
 
 ### I-AC02: OR 与 OPS 契约无职责泄漏
 

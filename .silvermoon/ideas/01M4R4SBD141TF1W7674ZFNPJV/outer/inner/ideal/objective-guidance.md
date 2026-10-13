@@ -32,22 +32,17 @@
 | `ObjectiveObservation` | 目标观测 | OG 对当前 level、按处置顺序排列的问题和总体 gap 的近似样本 |
 | Reference Wiki | 引用 Wiki | OG 知识的序列化和编辑形式，由平级页面及其内部链接构成 |
 | `WikiPageId` | Wiki 页面标识 | 与文件路径无关的稳定非空页面 ID |
-| `ReferenceWikiPage` | 引用 Wiki 页面 | 已装载页面的 ID、问题入口声明、开放标签、标题与正文 |
-| `ReferenceWikiLink` | 引用 Wiki 链接 | 从一个页面 ID 指向另一个页面 ID 的内部链接 |
-| `ReferenceWikiSource` | 引用 Wiki 来源 | Manifest 对 Wiki 格式和装载位置的传输层描述 |
-| `ReferenceWikiLoader` | 引用 Wiki Loader | 把 Wiki 来源解析为运行时图的装载绑定 |
-| `ObjectiveReferenceGraph` | 目标引用图 | Reference Wiki 装载后的运行时投影；允许共享页面和环 |
-| `ReferenceTraversalLimits` | 引用遍历限制 | Resolver 可返回的最大图深度和页面数量 |
-| `ObjectiveGuidance` | 目标指导 | 以问题入口页面为起点、依据当前上下文裁剪出的有限闭合 Wiki 子图 |
+| `ReferenceWikiPageSummary` | Wiki 页面摘要 | Agent 搜索 Wiki 时取得的页面 ID、标题与开放标签 |
+| `ReferenceWikiPage` | 引用 Wiki 页面 | 已装载页面的入口声明、正文及其内部 Wiki link |
+| `ObjectiveReferenceWiki` | 目标引用 Wiki | 绑定当前上下文并交给 Agent 主动打开问题、读取页面和搜索的查询接口 |
 | `ObjectiveOutcomeAssessment` | 目标损益评估 | 当前层代价、下一层及其潜在收益的语义化说明 |
 | `ObjectiveLevelDescription` | 层级说明 | OG 对一个层级的稳定名称和含义描述 |
 | OG transport unit | OG 传输单元 | 装载前承载 Manifest、代码与 Reference Wiki 的 folder、package 或等价载体 |
-| `ObjectiveGuideManifest` | 目标向导清单 | 传输单元内可序列化的身份、层级、检查、Wiki 来源、遍历限制和静态损益索引 |
-| `ObjectiveLevelManifest` | 层级清单项 | 一个层级的说明、进入检查和静态损益 |
+| `ObjectiveGuideManifest` | 目标向导清单 | 传输单元内可序列化的身份、层级、检查、Wiki 位置和静态损益索引 |
+| `ObjectiveLevelManifest` | 层级清单项 | 一个层级的说明、从该层进入下一层的检查和静态损益 |
 | `StaticOutcomeDescription` | 静态损益说明 | Manifest 中当前代价与下一层收益的默认文本 |
 | `CheckResult` | 检查结果 | 目标检查的通过结果，或带非空问题的未通过结果 |
 | `ObjectiveCheck` | 目标检查 | 可执行且允许 IO 的单个层级进入判据 |
-| `GuidanceResolver` | 指导解析器 | 可依据本次观测和上下文动态生成指导的装载绑定 |
 | `OutcomeAssessor` | 损益评估器 | 可依据本次观测和上下文动态生成损益评估的装载绑定 |
 | `ObjectiveGuideLoadBindings` | OG 装载绑定 | Loader 将 Manifest 中稳定 ID 连接到检查和动态实现的代码表 |
 | `createObjectiveGuide` | OG 创建工厂 | 传输/装载边界使用的默认工厂；成功后只返回运行时 `ObjectiveGuide` |
@@ -57,7 +52,7 @@
 | 类型或术语 | 中文 | 定义 |
 | --- | --- | --- |
 | `RegulationLimits` | 调节限制 | 最大动作次数、总超时和连续无进展上限 |
-| `ObjectiveActionRequest` | 目标行动请求 | OR 交给 Agent 的单步问题、指导、目标水位、观测与上下文 |
+| `ObjectiveActionRequest` | 目标行动请求 | OR 交给 Agent 的单步问题、Reference Wiki、目标水位、观测与上下文 |
 | `ObjectiveActionResult` | 目标行动结果 | Agent 对一次行动报告完成或阻塞；不直接证明 level 已改变 |
 | `ObjectiveActionExecutor` | 目标行动执行器 | OR 用于请求 Agent 只执行一次现实动作的边界 |
 | `RegulationRequest` | 调节请求 | 一轮 OR 调节的目标水位、上下文和保护限制 |
@@ -118,34 +113,23 @@ interface ObjectiveObservation {
   gapSummary: string;
 }
 
-interface ReferenceWikiPage {
+interface ReferenceWikiPageSummary {
   id: WikiPageId;
+  title: string;
+  tags: readonly string[];
+}
+
+interface ReferenceWikiPage extends ReferenceWikiPageSummary {
   problemIds: readonly ProblemId[];
   unknownProblemFallback: boolean;
-  tags: readonly string[];
-  title: string;
   content: string;
+  links: readonly WikiPageId[];
 }
 
-interface ReferenceWikiLink {
-  from: WikiPageId;
-  to: WikiPageId;
-}
-
-interface ObjectiveReferenceGraph {
-  pages: Readonly<Record<WikiPageId, ReferenceWikiPage>>;
-  links: readonly ReferenceWikiLink[];
-}
-
-interface ReferenceTraversalLimits {
-  maxDepth: number;
-  maxNodes: number;
-}
-
-interface ObjectiveGuidance {
-  problemId: ProblemId;
-  entryPageId: WikiPageId;
-  graph: ObjectiveReferenceGraph;
+interface ObjectiveReferenceWiki {
+  openProblem(problemId: ProblemId): Promise<ReferenceWikiPage>;
+  readPage(pageId: WikiPageId): Promise<ReferenceWikiPage>;
+  search(query: string): Promise<readonly ReferenceWikiPageSummary[]>;
 }
 
 interface ObjectiveOutcomeAssessment {
@@ -168,12 +152,10 @@ ID 必须非空且在所属 OG 内稳定。层级是从 0 开始的连续非负�
 `gapSummary` 仍需给出简短结论。证据不足时 OG 返回它能支持的层级，并用
 问题明确表达知识缺口，不能把近似样本伪装成现实真值。
 
-`ObjectiveGuidance.entryPageId` 必须指向声明当前 `problemId` 的入口页面；
-未知问题则指向唯一的 `unknownProblemFallback` 页面。其 `graph` 是本次
-resolver 选择的有限闭合子图：入口存在，且每条内部链接的两个端点都包含在
-`pages` 中。子图可以包含环和多个路径，但不能要求 Agent 继续无界抓取完整
-Wiki 或隐式远端内容；页面数和入口起算的最短链接深度不得
-超过 Manifest 的 `guidanceLimits`。
+`ObjectiveReferenceWiki.openProblem` 返回声明当前 `problemId` 的入口页面；
+未知问题返回唯一的 `unknownProblemFallback` 页面。Agent 可以按需调用
+`readPage` 沿内部链接阅读，或用 `search` 主动查找页面。Wiki 调用次数、分页
+和 Agent token 预算属于通用执行环境限制，不进入 OG Manifest 的领域语义。
 
 `nextLevel` 和 `nextLevelBenefit` 在最高层级为 `null`。损益字段保持语义化，
 不把序数层级伪装成可跨目标求和的效用分数。
@@ -188,11 +170,9 @@ interface ObjectiveGuide {
 
   probe(ctx: ObjectiveContext): Promise<ObjectiveObservation>;
 
-  resolveGuidance(
-    problemId: ProblemId,
-    observation: ObjectiveObservation,
+  openReferenceWiki(
     ctx: ObjectiveContext,
-  ): Promise<ObjectiveGuidance>;
+  ): Promise<ObjectiveReferenceWiki>;
 
   assessOutcome(
     observation: ObjectiveObservation,
@@ -202,10 +182,10 @@ interface ObjectiveGuide {
 ```
 
 `probe` 是定向现实探测，允许 IO 和观测扰动，也可能经历时序撕裂。它不执行
-现实修改，不保证事务性原子快照。`resolveGuidance` 接收本次完整观测，动态
-实现无需为取得问题事实而再次探测。它从问题入口页面出发，根据上下文选择
-相关 Wiki 页面并物化为有界子图。未知 `problemId` 必须从明确的知识缺口页面
-返回指导，或抛出契约规定的配置错误，不能伪装成已知解法。
+现实修改，不保证事务性原子快照。`openReferenceWiki` 只把当前上下文绑定到
+Wiki 查询接口，不替 Agent 选择、预取或裁剪知识。Agent 收到问题后主动打开
+入口页面并按需阅读；未知 `problemId` 必须落到明确的知识缺口页面，不能伪装
+成已知解法。
 
 OG 只说明怎么看、问题怎么处理以及不同层级的损益。它不调用 Agent、不循环
 修复，也不替代权限、人工接受或外部决定。
@@ -263,16 +243,10 @@ interface StaticOutcomeDescription {
 }
 
 interface ObjectiveLevelManifest {
-  level: ObjectiveLevel;
   title: string;
   description: string;
-  entryChecks: readonly CheckId[];
+  checks: readonly CheckId[];
   outcome: StaticOutcomeDescription;
-}
-
-interface ReferenceWikiSource {
-  format: "markdown-wiki";
-  location: string;
 }
 
 interface ObjectiveGuideManifest {
@@ -280,8 +254,7 @@ interface ObjectiveGuideManifest {
   id: ObjectiveId;
   title: string;
   levels: readonly ObjectiveLevelManifest[];
-  referenceWiki: ReferenceWikiSource;
-  guidanceLimits: ReferenceTraversalLimits;
+  referenceWiki: string;
 }
 
 type CheckResult =
@@ -292,16 +265,6 @@ type ObjectiveCheck = (
   ctx: ObjectiveContext,
 ) => Promise<CheckResult>;
 
-type ReferenceWikiLoader = (
-  source: ReferenceWikiSource,
-) => Promise<ObjectiveReferenceGraph>;
-
-type GuidanceResolver = (
-  problemId: ProblemId,
-  observation: ObjectiveObservation,
-  ctx: ObjectiveContext,
-) => Promise<ObjectiveGuidance>;
-
 type OutcomeAssessor = (
   observation: ObjectiveObservation,
   ctx: ObjectiveContext,
@@ -309,8 +272,6 @@ type OutcomeAssessor = (
 
 interface ObjectiveGuideLoadBindings {
   checks: Readonly<Record<CheckId, ObjectiveCheck>>;
-  loadReferenceWiki?: ReferenceWikiLoader;
-  resolveGuidance?: GuidanceResolver;
   assessOutcome?: OutcomeAssessor;
 }
 
@@ -321,58 +282,53 @@ declare function createObjectiveGuide(
 ): ObjectiveGuide;
 ```
 
-对应的 YAML Manifest 可以保持很小，只声明目标层级、Wiki 来源与指导遍历
-预算；问题入口和页面链接仍由 Wiki 页面自身声明：
+对应的 YAML Manifest 可以保持很小，只声明按数组顺序排列的目标层级和唯一
+支持的 Reference Wiki 位置；问题入口和页面链接仍由 Wiki 页面自身声明：
 
 ```yaml
 schemaVersion: 1
 id: repository-readiness
 title: 仓库整备度
 levels:
-  - level: 0
-    title: 尚不可用
+  - title: 尚不可用
     description: 尚无足够证据确认仓库可以开展工作
-    entryChecks: []
-    outcome:
-      currentCost: 无法安全推进依赖仓库事实的工作
-      nextLevelBenefit: 可以在已确认的仓库基础上开展工作
-  - level: 1
-    title: 可以开展工作
-    description: 项目与仓库事实已经满足本目标的基础判据
-    entryChecks:
+    checks:
       - project-valid
       - repository-ready
     outcome:
+      currentCost: 无法安全推进依赖仓库事实的工作
+      nextLevelBenefit: 可以在已确认的仓库基础上开展工作
+  - title: 可以开展工作
+    description: 项目与仓库事实已经满足本目标的基础判据
+    checks: []
+    outcome:
       currentCost: 仍需承担后续目标尚未完成的代价
       nextLevelBenefit: null
-referenceWiki:
-  format: markdown-wiki
-  location: references
-guidanceLimits:
-  maxDepth: 3
-  maxNodes: 12
+referenceWiki: references
 ```
 
-`referenceWiki.location` 相对 Manifest 解析；它只定位 Wiki 来源，不规定页面
-文件名、子目录或领域分类。上例中的 `references` 可以是一组平级 Markdown
-页面，也可以由自定义 `ReferenceWikiLoader` 映射到等价 Wiki 载体。
+`referenceWiki` 相对 Manifest 解析。默认工厂只支持这一种 Markdown
+Reference Wiki，不通过 `format` 提供多种协议选择；其他载体应由手写 OG
+自行适配，而不是扩大默认 Manifest。该位置只定位 Wiki，不规定页面文件名、
+子目录或领域分类。
 
-0 层的 `entryChecks` 为空；每个后续层级的检查表示进入该层必须成立的
-条件。默认工厂从 0 层开始逐级、逐关检查，首个未通过处形成观测。Manifest
-只保存稳定 check ID，folder 或 package 中的 load bindings 提供对应代码；
-因此同一契约可由 YAML、JSON 或 TypeScript 数据表达，而不要求序列化函数。
+`levels` 的数组下标就是 level，不重复保存数字。`levels[i].checks` 是当前
+第 i 层为了进入第 i+1 层需要执行的有序检查，因此 0 层可以且通常会有检查；
+最高层没有下一层，其 `checks` 必须为空且 `nextLevelBenefit` 必须为 `null`。
+空的非最高层检查组自然升级。默认工厂从 0 层开始逐级、逐关检查，首个未通过
+处形成观测。Manifest 只保存稳定 check ID，folder 或 package 中的 load
+bindings 提供对应代码，因此同一契约可由 YAML、JSON 或 TypeScript 数据
+表达，而不要求序列化函数。
 
 Loader 必须拒绝重复页面 ID、同一 ProblemId 的重复入口、多个未知问题兜底、
 悬空内部链接与空页面；它不按目录或 tags 推断语义。Reference Wiki 允许环，
-也允许一个页面处理多个问题或由多个问题入口共同引用。默认 resolver 从声明
-当前 ProblemId 的页面或唯一兜底页面出发，返回上下文相关的有限闭合子图；
-`maxDepth` 必须是非负整数，`maxNodes` 必须是正整数且至少容纳入口。Load
-bindings 可以提供自定义 Wiki loader、动态 resolver 或 assessor，例如从远端
-Wiki 选择页面或依据发布窗口改变损益描述，但实际返回内容必须物化、闭合且
-不超过相同限制。
+也允许一个页面处理多个问题或由多个问题入口共同引用。默认工厂装载这一种
+Wiki 并通过 `openReferenceWiki` 暴露主动查询接口；它不按深度或页面数量替
+Agent 预取知识。Load bindings 仍可提供动态 assessor，例如依据发布窗口改变
+损益描述。
 `createObjectiveGuide` 属于装载边界，其参数不会泄漏到运行时协作接口。高级
 传输单元仍保留 Manifest 用于身份与发现，但可以使用自定义 loader 直接产出
-手写 `ObjectiveGuide`，绕过默认探测和引用图拼装。
+手写 `ObjectiveGuide`，绕过默认探测和 Reference Wiki 装载。
 
 ## ObjectiveRegulator
 
@@ -388,7 +344,7 @@ interface ObjectiveActionRequest {
   targetLevel: ObjectiveLevel;
   observation: ObjectiveObservation;
   problem: ObservedProblem;
-  guidance: ObjectiveGuidance;
+  referenceWiki: ObjectiveReferenceWiki;
   context: ObjectiveContext;
 }
 
@@ -435,8 +391,10 @@ interface ObjectiveRegulator {
 
 `probe` 是仅探测入口：它不会调用 Agent，但仍可能产生 OG 探测固有的 IO、
 成本和扰动。`regulate` 的生产语义由框架持有循环：探测；判断是否达到
-`targetLevel`；选择首个问题并取得 guidance；让 Agent 只执行一次动作；
-然后重新探测。Agent 不在 prompt 内自行维持循环。
+`targetLevel`；选择首个问题并把 Reference Wiki 作为查询工具交给 Agent；
+Agent 主动查阅知识后只执行一次现实动作；然后框架重新探测。Wiki 查询属于
+这次行动的认知过程，不是额外的 OR 迭代。Agent 不在 prompt 内自行维持复归
+循环。
 
 OR 不强制追求最高层，只到达本轮目标水位。迭代数是已请求的 Agent 动作次数；
 Agent 报告 `completed` 不构成进展证据，新的 `probe` 才能确认状态。受控停止
@@ -534,7 +492,7 @@ OG。实现可以串行或受控并发，但必须保留计划顺序、终止保
 | --- | --- |
 | `ProfessionalModel.observe` | `ObjectiveGuide.probe` |
 | `Problem.code` | `ObservedProblem.id` |
-| `ProfessionalModel.guide` | `ObjectiveGuide.resolveGuidance` 的静态基线 |
+| `ProfessionalModel.guide` | `ObjectiveReferenceWiki.openProblem` 的单页静态基线 |
 | `ProfessionalModel.describe` | `ObjectiveGuide.describeLevels` |
 | 尚无对应能力 | `ObjectiveGuide.assessOutcome` |
 
