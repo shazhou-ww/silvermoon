@@ -6,7 +6,7 @@
 
 ## 结果
 
-在已验证的专业能力基础上，形成 ObjectiveGuide（OG）、ObjectiveRegulator（OR）与 Objective Portfolio Supervisor（OPS）的公开术语和可实施 TypeScript 契约；用平级 reference pages 及相互链接组成参考知识集，问题页面只承担入口角色，Agent 从问题入口主动读取和搜索知识，而不是由工具预取指导子图。语义见[Objective Guidance 类型体系](./objective-guidance.md)，理论溯源与例子见[推演说明](./value-field-reasoning.md)。
+在已验证的专业能力基础上，形成 ObjectiveGuide（OG）、ObjectiveRegulator（OR）与 Objective Portfolio Supervisor（OPS）的公开术语和可实施 TypeScript 契约；用一份语言无关的语义 Manifest 配合完整 locale content 与平级 reference pages，在不复制 checks、定义域或层级结构的前提下提供多语言知识。问题页面只承担入口角色，Agent 从问题入口主动读取和搜索知识，而不是由工具预取指导子图。语义见[Objective Guidance 类型体系](./objective-guidance.md)，理论溯源与例子见[推演说明](./value-field-reasoning.md)。
 
 ## 边界
 
@@ -16,6 +16,6 @@
 
 ## 验收标准
 
-- 类型契约严格分离 OG 的领域知识、OR 的单目标闭环与 OPS 的多目标权衡，并定义可判定的终止结果。
-- Manifest 以数组下标定义 level，并用非空 tuple 保证所有非最高层都声明 advancement、唯一最高层省略该字段；每个 advancement 聚合进阶到下一层的 checks 与单段 outcome prompt。Manifest 只声明 references 位置，页面自身声明稳定 ID、问题入口、开放标签和内部链接，Agent 通过运行时 `ObjectiveReferences` 主动查询，OR 与 OPS 不感知传输结构。
+- 类型契约严格分离 OG 的领域知识、OR 的单目标闭环与 OPS 的多目标权衡；Manifest 用受限 Draft 2020-12 `domainSchema` 描述可接受的 project/Idea subject，运行时把 subject 身份与 transient context 分开。
+- Manifest 用稳定 level ID 保存同型、都带 advancement 的本地显式层，全部通过后合成唯一 terminal“价值达成”层；价值描述、层级文本、单段 outcome prompt 和 References 由完整 locale bundles 提供，装载后的 Guide 绑定一种 language 且不做字段级混合 fallback。Project→Idea 等语义前置关系声明为单个 optional `prerequisite`，其 `subject` 直接使用受限 JSONata 投影当前定义域并递归形成确定的同语言层级链；prerequisite 未 terminal 时不得 probe 本地 levels。References 按问题来源由 Agent 主动查询；OPS 不重写层级组合。
 - 新契约明确映射现有 ProfessionalModel 基线并保留 `whats-next` 行为；下游实现和部署种子不预先宣称 OR 或 OPS 已可运行。
