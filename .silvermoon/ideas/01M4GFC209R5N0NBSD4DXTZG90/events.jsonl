@@ -5,3 +5,4 @@
 {"type":"ping","timestamp":"2026-10-14T12:55:11.927Z","payload":{"message":"改用专门的 Docker 环境和设计好的初始化脚本，从设备整备开始运行一条主链与若干支链，收集 whats-next 所有可能情况的真实输出，基于完整语料集中 review，而不是对照代码逐项猜测。"}}
 {"type":"ping","timestamp":"2026-10-14T12:56:41.167Z","payload":{"message":"链路设计必须复用连续状态：不要为每个 case 从头初始化；设计少量链路，每条链路只初始化一次并在多个 checkpoint 采集多个 case，只有互斥或不可逆状态才拆分支链。"}}
 {"type":"ping","timestamp":"2026-10-14T12:58:02.898Z","payload":{"message":"覆盖单位应是 Device、Project、Idea 三个 objective 中的每个 check；这些 check 与给出 instruction 的 case 一一对应。链路设计负责用连续 checkpoint 高效覆盖这些 check case，而不是以 template ID 为主清单。"}}
+{"type":"submitIdeal","timestamp":"2026-10-14T12:59:25.937Z","payload":{"idealRevision":"02741d7fff9c8bf9662222483b1e522887e5e7da"}}
