@@ -1,2 +1,3 @@
 {"type":"setAlias","timestamp":"2026-10-11T04:15:13.289Z","payload":{"alias":"whats-next-template-review"}}
 {"type":"submitIdeal","timestamp":"2026-10-11T04:19:13.165Z","payload":{"idealRevision":"8f2c4e6a9fcf1589823f166eec2552bf1a65471c"}}
+{"type":"ping","timestamp":"2026-10-14T12:51:12.876Z","payload":{"message":"review-status.md 不应位于 Ideal World；将 review 执行资料移到 Implementation，使逐项 review 的状态更新不再改变 idealRevision。"}}
