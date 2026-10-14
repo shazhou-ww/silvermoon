@@ -1,3 +1,9 @@
+packages:
+  - .
+
+config:
+  strictPeerDependencies: true
+
 allowBuilds:
   koffi: true
   unsafe-pointer: true
@@ -12,3 +18,6 @@ minimumReleaseAgeExclude:
   - '@github/copilot-sdk-win32-arm64@1.0.16'
   - '@github/copilot-sdk-win32-x64@1.0.16'
   - '@github/copilot-sdk@1.0.16'
+peerDependencyRules:
+  allowedVersions:
+    'bun-ffi-structs>typescript': ^6

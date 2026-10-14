@@ -31,6 +31,13 @@ pnpm check
 See [Maintaining Silvermoon](./docs/maintaining.md) for validation tiers,
 documentation ownership, and release guidance.
 
+## Preset updates
+
+Silvermoon derives from `preset-npm-package`. Maintainers merge updates from
+that immediate parent with `git-lineage update` from a clean worktree, then
+resolve preset defaults in favor of Silvermoon-specific behavior where they
+differ.
+
 ## Pull Requests
 
 - Keep each pull request focused.
