@@ -1,23 +1,26 @@
 # Template review method
 
 review 以 Docker 场景集生成的完整输出语料为对象，而不是从模板源码推测最终文本。
-场景集优先是一条线性主链：只做一次基础初始化，每个 checkpoint 采集输出后修复
-当前 case 并推进状态。只有互斥、不可逆或会污染后续 checkpoint 的状态才从最近可
-复用 checkpoint 开支链，并记录分支原因。
+状态图将所有 check 的唯一通过出口连成主链；每个 check 的失败按可能的不同 problems
+分支到对应报告阶段。失败支路修复后回归主链，只有互斥或不可逆状态才从最近
+checkpoint 派生独立场景。
 
 ## Agent 采集
 
-在请求人工 comment 前，Agent 必须从全新环境执行场景集，并为每个输出保留：
+在请求人工 comment 前，Agent 必须从 Docker 空设备执行全部状态转移，并为每个输出
+保留：
 
-1. 链路 ID、checkpoint ID、前置 checkpoint、本次状态变更和继续主链或分支的理由；
-2. checkout revision、全局 Silvermoon 版本和项目 revision；
-3. 实际执行的完整命令与 locale；
-4. routing 覆盖标识及最终完整输出。
+1. check ID、通过/失败边、触发的 problems、报告阶段和状态变更；
+2. 失败分支如何修复并回到主链，或为何需要独立场景；
+3. checkout revision、全局 Silvermoon 版本、项目 revision、实际命令与 locale；
+4. routing 覆盖标识及 whats-next 的完整输出。
 
-覆盖检查必须从 Device、Project、Idea manifest 读取有序 check，并映射每个实际
-instruction case 到 checkpoint；一个 checkpoint 可以同时覆盖共享同一实际输出的
-检查。模板 ID 只用于解释输出实现；无 check 的 navigation 和 terminal 输出另列
-补充场景。任何未覆盖项都不能用源码片段或手写 sample 补齐。
+覆盖检查必须从 Device、Project、Idea manifest 读取有序 check，并验证每个 check
+恰有一个通过后继，失败边覆盖其所有可达 problem/阶段结果。失败结果可包含多个
+problems；同一 check 也可能因状态不同返回不同 problem 集。必须采集每个不同的实际
+语料，而不能只按模板 ID 或通用 Problem ID 计数。模板 ID 仅作输出追踪；无 check 的
+navigation 和 terminal 输出另列补充场景。任何未覆盖项都不能用源码片段或手写 sample
+补齐。
 
 ## 人工 comment
 

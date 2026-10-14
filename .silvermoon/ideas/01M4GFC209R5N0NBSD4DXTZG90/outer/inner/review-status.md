@@ -4,7 +4,8 @@
 单位。场景集一次性采集完整语料；只有人工明确完成对应 check case 的 review 后，
 才能把状态从 `pending` 改为 `reviewed`。review 使用
 [review-method.md](./review-method.md) 中定义的真实链路采集、集中 comment、精确
-修改和重新采集流程。
+修改和重新采集流程。主链、失败边和报告阶段映射见
+[scenario-graph.md](./scenario-graph.md)。
 
 ## Device objective
 

@@ -2,17 +2,17 @@
 
 ## Steps
 
-### I-S01: 设计场景链路
+### I-S01: 建立 check 与 problem 状态图
 
-从三个 objective manifest 的有序 check 建立场景矩阵，以一条设备整备到 lifecycle
-推进的线性主链覆盖可逐步修复的 instruction case。只有 case 互斥、不可逆或会
-污染后续 checkpoint 时，才从最近可复用状态开支链并记录原因。
+将每个 check 的唯一通过出口串成主链，并为失败时可能产生的不同 problems 标注
+报告阶段、状态变更、下游去向及回归路径，详见
+[scenario-graph.md](./scenario-graph.md)。
 
-### I-S02: 构建并采集语料
+### I-S02: 编写状态转移脚本与 Docker 场景
 
-在 Docker 中只初始化主链一次；每个 checkpoint 先通过当前 checkout 链接的全局
-`silvermoon` 执行双语 whats-next 并保存完整输出，再修复该 case、推进到后续状态。
-支链从最近可复用 checkpoint 派生，避免重做设备整备。
+从 Docker 内空设备开始，脚本依序构造每个 check 的通过状态及失败 problems；Docker
+按图推进主链和失败分支，通过当前 checkout 链接的全局 `silvermoon whats-next`
+收集双语完整输出。准备脚本、场景和语料均保存在本 idea 目录内。
 
 ### I-S03: 集中 review 并修正
 
@@ -21,13 +21,19 @@
 
 ## Acceptance criteria
 
-### I-AC01: 场景覆盖完整
+### I-AC01: check 与 problem 分支完整
+
+状态图证明每个 check 的通过边唯一，且各失败 Problem 集和报告阶段都有状态转移场景；
+失败分支可修复回归主链或记录独立分支理由。
 
 自动化检查证明 Device、Project、Idea 的每个 instruction case 都有 checkpoint，两种
 locale 和无 check 的补充输出也被覆盖；每条支链均有不能在线性主链继续的原因，且
 没有可由主链推进覆盖却重复初始化的 case。
 
 ### I-AC02: 语料可复现
+
+从 Docker 空设备可依状态图构造通过与失败状态，并记录 check、problem、阶段、
+locale 和 revision。
 
 全新 Docker 环境可从设备整备开始执行全部链路，并生成带场景与 revision 来源的
 完整输出语料。
