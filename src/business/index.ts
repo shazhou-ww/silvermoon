@@ -28,6 +28,7 @@ export {
   searchObjectiveReferences,
 } from "./objective-reference.ts";
 export type {
+  ObjectiveReferenceAudience,
   ObjectiveReferencePageResult,
   ObjectiveReferenceSearchResult,
   SilvermoonObjectiveId,

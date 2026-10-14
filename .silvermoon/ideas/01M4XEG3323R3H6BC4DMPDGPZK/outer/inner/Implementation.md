@@ -5,8 +5,9 @@
 ### I-S01: 定义 Reference CLI 契约
 
 定义 `reference page|search` 命令的 Objective selector、稳定 Reference ID、
-search query、locale、Markdown/JSON 输出与退出码；命令不接受 repository root，
-避免暗示查询依赖项目状态。
+search query、locale、Markdown/JSON 输出与退出码；human/agent audience 显式
+共享同一本地化 Markdown projection，命令不接受 repository root，避免暗示
+查询依赖项目状态。
 
 ### I-S02: 实现只读 page/search 用例
 
@@ -24,7 +25,8 @@ search query、locale、Markdown/JSON 输出与退出码；命令不接受 repos
 ### I-AC01: Page 查询准确
 
 unit 与 CLI 测试证明三种 Objective、双 locale、稳定 namespace、404、
-unsupported locale 和空 ID 保持 Guide 语义。
+unsupported locale 和空 ID 保持 Guide 语义，且 zh-CN 页面与搜索 chrome
+完整本地化。
 
 ### I-AC02: Search 与链接可导航
 

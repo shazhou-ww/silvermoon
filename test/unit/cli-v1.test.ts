@@ -203,6 +203,20 @@ test("Reference CLI preserves 404s, navigation commands, and explicit failures",
     /silvermoon reference page idea \S+ --language zh-CN/,
   );
 
+  const human = capture();
+  const agent = capture();
+  const audienceArgs = [
+    "reference", "search", "idea", "__no_reference_match__", "--language", "zh-CN",
+  ];
+  assert.equal(await runCli([...audienceArgs, "--audience", "human"], human.io), 0);
+  assert.equal(await runCli([...audienceArgs, "--audience", "agent"], agent.io), 0);
+  assert.equal(firstLog(human.logs), [
+    "# Objective 引用搜索：__no_reference_match__",
+    "",
+    "没有匹配的引用页面。",
+  ].join("\n"));
+  assert.equal(firstLog(agent.logs), firstLog(human.logs));
+
   const empty = capture();
   assert.equal(await runCli([
     "reference", "page", "device", "", "--language", "en-US",

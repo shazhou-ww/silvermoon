@@ -76,3 +76,44 @@ test("Markdown renderers turn internal links and search results into navigable c
     results: [{ id: "pages/revisions", title: "Revisions" }],
   }), /silvermoon reference page idea pages\/revisions --language en-US/);
 });
+
+test("zh-CN page chrome is localized exactly for both audiences", () => {
+  const result = {
+    objective: "device",
+    language: "zh-CN",
+    page: { id: "system/overview", title: "设备目标", content: "" },
+  } as const;
+  const expected = [
+    "# 设备目标",
+    "",
+    "引用 ID: `system/overview`",
+    "打开: `silvermoon reference page device system/overview --language zh-CN`",
+  ].join("\n");
+  assert.equal(renderObjectiveReferencePage(result, "human"), expected);
+  assert.equal(renderObjectiveReferencePage(result, "agent"), expected);
+});
+
+test("zh-CN search and no-results chrome are localized exactly for both audiences", () => {
+  const result = {
+    objective: "idea",
+    language: "zh-CN",
+    query: "修订",
+    results: [{ id: "pages/revisions", title: "修订" }],
+  } as const;
+  const expected = [
+    "# Objective 引用搜索：修订",
+    "",
+    "- 修订 (`silvermoon reference page idea pages/revisions --language zh-CN`)",
+  ].join("\n");
+  assert.equal(renderObjectiveReferenceSearch(result, "human"), expected);
+  assert.equal(renderObjectiveReferenceSearch(result, "agent"), expected);
+
+  const empty = { ...result, query: "", results: [] };
+  const emptyExpected = [
+    "# Objective 引用页面",
+    "",
+    "没有匹配的引用页面。",
+  ].join("\n");
+  assert.equal(renderObjectiveReferenceSearch(empty, "human"), emptyExpected);
+  assert.equal(renderObjectiveReferenceSearch(empty, "agent"), emptyExpected);
+});

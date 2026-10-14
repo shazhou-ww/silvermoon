@@ -42,7 +42,7 @@ type CliOptions = {
   afterLength?: number;
   all?: boolean;
   apply?: boolean;
-  audience?: string;
+  audience?: "human" | "agent";
   commit?: string;
   confirmDecision?: boolean;
   createdBefore?: string;
@@ -475,7 +475,7 @@ Examples:
     );
     io.log(options.json
       ? JSON.stringify(result, null, 2)
-      : renderObjectiveReferencePage(result));
+      : renderObjectiveReferencePage(result, options.audience ?? "human"));
     program.setOptionValue("resultCode", 0);
   });
 
@@ -496,7 +496,7 @@ Examples:
     );
     io.log(options.json
       ? JSON.stringify(result, null, 2)
-      : renderObjectiveReferenceSearch(result));
+      : renderObjectiveReferenceSearch(result, options.audience ?? "human"));
     program.setOptionValue("resultCode", 0);
   });
 

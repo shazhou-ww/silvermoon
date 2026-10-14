@@ -1,5 +1,6 @@
 import { ObjectiveOperationError } from "../objective-guide/index.ts";
 import type { JsonObject, ReferencePage, ReferencePageSummary } from "../objective-guide/index.ts";
+import { localize } from "../foundation/language/index.ts";
 import {
   createSilvermoonObjectiveLoader,
   SILVERMOON_OBJECTIVE_URIS,
@@ -7,6 +8,7 @@ import {
 import type { SilvermoonObjectiveChecks } from "./objective-guides.ts";
 
 export type SilvermoonObjectiveId = keyof typeof SILVERMOON_OBJECTIVE_URIS;
+export type ObjectiveReferenceAudience = "human" | "agent";
 
 export interface ObjectiveReferencePageResult {
   readonly objective: SilvermoonObjectiveId;
@@ -96,9 +98,12 @@ export async function searchObjectiveReferences(
   });
 }
 
-export function renderObjectiveReferencePage(result: ObjectiveReferencePageResult): string {
+export function renderObjectiveReferencePage(
+  result: ObjectiveReferencePageResult,
+  audience: ObjectiveReferenceAudience = "human",
+): string {
   const { objective, language, page } = result;
-  return [
+  const markdown = [
     `# ${page.title}`,
     ...(page.description === undefined ? [] : ["", page.description]),
     ...(page.content === "" ? [] : [
@@ -106,22 +111,45 @@ export function renderObjectiveReferencePage(result: ObjectiveReferencePageResul
       renderObjectiveReferenceContent(page.content, objective, language),
     ]),
     "",
-    `Reference ID: \`${page.id}\``,
-    `Open: \`${objectiveReferenceCommand(objective, page.id, language)}\``,
+    `${localize(language, "Reference ID", "引用 ID")}: \`${page.id}\``,
+    `${localize(language, "Open", "打开")}: \`${
+      objectiveReferenceCommand(objective, page.id, language)
+    }\``,
   ].join("\n");
+  switch (audience) {
+    case "human":
+    case "agent":
+      return markdown;
+  }
 }
 
-export function renderObjectiveReferenceSearch(result: ObjectiveReferenceSearchResult): string {
+export function renderObjectiveReferenceSearch(
+  result: ObjectiveReferenceSearchResult,
+  audience: ObjectiveReferenceAudience = "human",
+): string {
   const heading = result.query.trim() === ""
-    ? "Objective Reference pages"
-    : `Objective Reference search: ${result.query}`;
-  return [
+    ? localize(result.language, "Objective Reference pages", "Objective 引用页面")
+    : localize(
+      result.language,
+      `Objective Reference search: ${result.query}`,
+      `Objective 引用搜索：${result.query}`,
+    );
+  const markdown = [
     `# ${heading}`,
     "",
     ...(result.results.length === 0
-      ? ["No matching Reference pages."]
+      ? [localize(
+        result.language,
+        "No matching Reference pages.",
+        "没有匹配的引用页面。",
+      )]
       : result.results.map(({ id, title }) =>
         `- ${title} (\`${objectiveReferenceCommand(result.objective, id, result.language)}\`)`
       )),
   ].join("\n");
+  switch (audience) {
+    case "human":
+    case "agent":
+      return markdown;
+  }
 }

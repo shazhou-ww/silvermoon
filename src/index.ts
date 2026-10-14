@@ -27,6 +27,7 @@ export {
   searchObjectiveReferences,
 } from "./business/index.ts";
 export type {
+  ObjectiveReferenceAudience,
   ObjectiveReferencePageResult,
   ObjectiveReferenceSearchResult,
   SilvermoonObjectiveId,
