@@ -527,7 +527,47 @@ function renderObjectiveResponse(response: ReportResponse, language: string) {
       problem: "Problem",
     }[reference.kind];
     lines.push(
-      `- ${kind}: ${reference.title} (${codeSpan(reference.command)})`,
+      `#### ${kind}: ${reference.title} (${codeSpan(reference.id)})`,
+      "",
+    );
+    const guidance = [
+      ...(reference.description === undefined
+        ? []
+        : [{
+          label: localize(language, "Description", "说明"),
+          value: reference.description,
+        }]),
+      ...(reference.outcome === undefined
+        ? []
+        : [{
+          label: localize(language, "Outcome", "结果"),
+          value: reference.outcome,
+        }]),
+      ...(reference.instruction === undefined
+        ? []
+        : [{
+          label: localize(language, "Instruction", "指引"),
+          value: reference.instruction,
+        }]),
+      ...(reference.content === ""
+        ? []
+        : [{
+          label: localize(language, "Guidance", "指导"),
+          value: reference.content,
+        }]),
+    ];
+    for (const { label, value } of guidance) {
+      lines.push(`> **${label}:**`);
+      for (const line of value.split("\n")) {
+        lines.push(line === "" ? ">" : `> ${line}`);
+      }
+      lines.push(">");
+    }
+    if (lines.at(-1) === ">") lines.pop();
+    lines.push(
+      "",
+      `- ${localize(language, "Further details", "进一步详情")}: ${codeSpan(reference.command)}`,
+      "",
     );
   }
   return lines.join("\n");

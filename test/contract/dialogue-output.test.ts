@@ -28,20 +28,59 @@ test("renders Objective reports as position and downward-guidance sections", () 
       references: [
         {
           kind: "level", id: "levels/repository-unready", title: "Safe local repository",
+          description: "The repository is not ready.",
+          outcome: "Passing checks advances to the next level.",
+          content: "Read repository synchronization (`silvermoon reference page project pages/repository-synchronization --language en-US`).",
           command: "silvermoon reference page project levels/repository-unready --language en-US",
         },
         {
           kind: "check", id: "checks/repository-worktree-clean", title: "Worktree clean",
+          description: "Checks the current worktree.",
+          content: "## Check guidance\n\nInspect the sampled worktree.",
           command: "silvermoon reference page project checks/repository-worktree-clean --language en-US",
         },
         {
           kind: "problem", id: "problems/repository", title: "Repository recovery",
+          description: "Resolve the repository problem.",
+          instruction: "Preserve unknown work before recovery.",
+          content: "Use current parameters; do not substitute static examples.",
           command: "silvermoon reference page project problems/repository --language en-US",
         },
       ],
     },
     problems: [{ type: "worktree-changes", summary: "Preserve the worktree." }],
     nextSteps: [{ type: "instruction", text: "Inspect the exact paths, then rerun `silvermoon whats-next fixture --audience agent`." }],
+  });
+
+  test("terminal Objective keeps static guidance without required actions", () => {
+    const rendered = renderResponse({
+      kind: "objective",
+      language: "zh-CN",
+      summary: "project Objective 已到达 terminal；没有必做的下一步。",
+      objective: {
+        target: "project",
+        owner: "project",
+        level: "terminal",
+        failingCheck: null,
+        terminal: true,
+        problems: [],
+        references: [{
+          kind: "level",
+          id: "levels/terminal",
+          title: "目标已达成",
+          description: "本次 probe 的全部 checks 已通过。",
+          content: "## 含义\n\n这是采样结论，不是永久事实或人工授权。",
+          command: "silvermoon reference page project levels/terminal --language zh-CN",
+        }],
+      },
+      problems: [],
+      nextSteps: [],
+    });
+
+    assert.match(rendered, /### 向下指引/);
+    assert.match(rendered, /> 本次 probe 的全部 checks 已通过。/);
+    assert.match(rendered, /> ## 含义/);
+    assert.doesNotMatch(rendered, /必做动作/);
   });
 
   assert.equal((rendered.match(/^### /gm) ?? []).length, 2);
@@ -53,7 +92,14 @@ test("renders Objective reports as position and downward-guidance sections", () 
   assert.match(rendered, /"paths": \[\n    "first\.txt",\n    "second\.txt"/);
   assert.match(rendered, /#### Required actions/);
   assert.match(rendered, /### Downward guidance/);
+  assert.match(rendered, /#### Level: Safe local repository \(`levels\/repository-unready`\)/);
+  assert.match(rendered, /> \*\*Outcome:\*\*\n> Passing checks advances to the next level\./);
+  assert.match(rendered, /> \*\*Instruction:\*\*\n> Preserve unknown work before recovery\./);
+  assert.match(rendered, /> ## Check guidance/);
+  assert.match(rendered, /silvermoon reference page project pages\/repository-synchronization --language en-US/);
+  assert.match(rendered, /Further details:/);
   assert.match(rendered, /silvermoon reference page project checks\/repository-worktree-clean --language en-US/);
+  assert.doesNotMatch(rendered, /^## Check guidance/m);
   assert.doesNotMatch(rendered, /Issues to address|Preserve the worktree/);
 });
 

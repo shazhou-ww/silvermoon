@@ -28,6 +28,10 @@ export interface ObjectiveReference {
   kind: "level" | "check" | "problem";
   id: string;
   title: string;
+  description?: string;
+  outcome?: string;
+  instruction?: string;
+  content: string;
   command: string;
 }
 

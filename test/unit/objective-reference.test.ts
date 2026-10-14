@@ -26,6 +26,32 @@ test("reads every bundled Objective namespace in both locales", async () => {
   }
 });
 
+test("exposes typed static guidance metadata from Reference frontmatter", async () => {
+  const english = await readObjectiveReference(
+    "project",
+    "problems/repository",
+    "en-US",
+  );
+  assert.equal(english.page.description, "Resolve repository and probe again.");
+  assert.equal(
+    english.page.instruction,
+    "Preserve unknown work and use the current Problem parameters before applying recovery.",
+  );
+  assert.match(english.page.content, /## Problem guidance/);
+
+  const chinese = await readObjectiveReference(
+    "project",
+    "problems/repository",
+    "zh-CN",
+  );
+  assert.equal(chinese.page.description, "处理 repository 并重新观测。");
+  assert.equal(
+    chinese.page.instruction,
+    "先保留未知工作，并依据当前 Problem parameters 选择恢复动作。",
+  );
+  assert.match(chinese.page.content, /## 问题说明/);
+});
+
 test("preserves 404 semantics and rejects invalid IDs and unsupported locales", async () => {
   assert.equal(
     (await readObjectiveReference("project", "levels/not-present", "en-US")).page.id,
@@ -69,6 +95,17 @@ test("Markdown renderers turn internal links and search results into navigable c
     language: "en-US",
     page: { id: "system/overview", title: "Device", content: "" },
   }), /Reference ID: `system\/overview`/);
+  assert.match(renderObjectiveReferencePage({
+    objective: "project",
+    language: "en-US",
+    page: {
+      id: "problems/repository",
+      title: "Repository recovery",
+      description: "Resolve repository and probe again.",
+      instruction: "Preserve unknown work.",
+      content: "Use [[system/overview|the overview]].",
+    },
+  }), /\*\*Instruction:\*\* Preserve unknown work\.[\s\S]*silvermoon reference page project system\/overview --language en-US/);
   assert.match(renderObjectiveReferenceSearch({
     objective: "idea",
     language: "en-US",

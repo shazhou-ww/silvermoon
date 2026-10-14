@@ -267,6 +267,13 @@ test("[selector-none] naked navigation stops at the Project terminal", async () 
       kind: "level",
       id: "levels/terminal",
       title: "Objective attained",
+      description: "All checks passed in this probe.",
+      content: [
+        "## Meaning",
+        "",
+        "This terminal means every advancement check required by the current probe passed.",
+        "It is a sampled conclusion, not permanent truth, a real-world mutation, or human authorization.",
+      ].join("\n"),
       command: "silvermoon reference page project levels/terminal --language en-US",
     }],
   });
@@ -715,6 +722,21 @@ test("uses a canonical output override without changing content language or pers
     responseText(blocked),
     /silvermoon whats-next "localized" --language zh-CN --audience agent/,
   );
+  const blockedMarkdown = renderResponse(blocked.response);
+  assert.match(blockedMarkdown, /### 向下指引/);
+  assert.match(blockedMarkdown, /> ## Problem guidance/);
+  assert.match(
+    blockedMarkdown,
+    /> Preserve unknown work and use the current Problem parameters before applying recovery\./,
+  );
+  assert.match(
+    blockedMarkdown,
+    /进一步详情.*silvermoon reference page project problems\/repository --language en-US/,
+  );
+  assert.match(
+    blockedMarkdown,
+    /Project Objective overview \(`silvermoon reference page project system\/overview --language en-US`\)/,
+  );
 });
 
 test("drives gate presentation from content language instead of output language", async () => {
@@ -779,6 +801,8 @@ test("drives gate presentation from content language instead of output language"
 
   const rendered = renderResponse(selected.response);
   assert.match(rendered, /#### Review request template/);
+  assert.match(rendered, /> ## 问题说明/);
+  assert.match(rendered, /> \*\*Description:\*\*\n> 处理 ideal 并重新观测。/);
   assert.match(rendered, /```markdown\n## 构想验收/);
   assert.match(rendered, /- 构想: \{idea identity\}/);
   assert.match(

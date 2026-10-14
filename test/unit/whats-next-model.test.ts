@@ -226,6 +226,13 @@ test("no selector stays Project-only even for one Idea; invalid selectors do not
             kind: "level",
             id: "levels/terminal",
             title: "Objective attained",
+            description: "All checks passed in this probe.",
+            content: [
+              "## Meaning",
+              "",
+              "This terminal means every advancement check required by the current probe passed.",
+              "It is a sampled conclusion, not permanent truth, a real-world mutation, or human authorization.",
+            ].join("\n"),
             command: "silvermoon reference page project levels/terminal --language en-US",
           }],
         });
@@ -277,6 +284,13 @@ test("outside-worktree bare navigation targets Device and stops at terminal", as
       kind: "level",
       id: "levels/terminal",
       title: "Objective attained",
+      description: "All checks passed in this probe.",
+      content: [
+        "## Meaning",
+        "",
+        "This terminal means every advancement check required by the current probe passed.",
+        "It is a sampled conclusion, not permanent truth, a real-world mutation, or human authorization.",
+      ].join("\n"),
       command: "silvermoon reference page device levels/terminal --language en-US",
     }],
   });

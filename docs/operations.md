@@ -23,8 +23,12 @@ contains the target and owning Objective, level, failing check, the complete
 ordered Problem list with structured parameters, and invocation-specific
 paths, revisions, branches, and commands. **Downward guidance** links the
 matching level, check, and Problem Reference pages through copyable
-`silvermoon reference page` commands. Terminal reports retain the same shell,
-have no failing check or Problems, and contain no required actions.
+`silvermoon reference page` commands. Each entry directly includes localized
+static description/content and any level outcome or Problem instruction;
+internal Reference links are rewritten as detail commands without executing or
+interpolating the content. Terminal reports retain the same shell, have no
+failing check or Problems, and contain no required actions while still showing
+terminal guidance.
 
 The shared observation exposes the resolved content preference as
 `configuration.preferredLanguage` and the built-in rendering locale as

@@ -1,6 +1,7 @@
 ---
 title: "inner"
 description: "处理 inner 并重新观测。"
+instruction: "提交或验收前，使用准确的 implementation revision 和当前控制权事实。"
 ---
 
 ## 问题说明

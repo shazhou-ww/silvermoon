@@ -4,11 +4,13 @@
 
 ### I-S01: 建立统一报告投影
 
-组合目标、位置、Problem parameters、Reference guidance、动态上下文和 terminal 状态。
+组合目标、位置、Problem parameters、Reference Pages 的静态
+description/content/outcome/instruction、动态上下文和 terminal 状态。
 
 ### I-S02: 实现 Objective report shell
 
-用可复用 Markdown/结构组件渲染当前位置与向下指引，并保留必要的特殊交互组件。
+用可复用 Markdown/结构组件安全渲染当前位置与静态向下指引，把内部 Reference
+链接转换为详情命令，并保留必要的特殊交互组件。
 
 ### I-S03: 迁移 templates 与语料
 
@@ -18,7 +20,8 @@
 
 ### I-AC01: 两部分信息完整
 
-contract 测试证明 blocked 报告总能呈现准确位置和对应静态 guidance。
+contract 测试证明 blocked 报告总能呈现准确位置和对应 Reference Pages 的本地化
+静态 guidance，而不是只呈现详情链接。
 
 ### I-AC02: Terminal 没有伪下一步
 

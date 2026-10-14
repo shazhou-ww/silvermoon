@@ -18,7 +18,10 @@ import { canonicalizeOutputLanguage, localize, resolveContentTemplateLanguage, r
 import { observeSnapshot, withObservationLanguage } from "./shared/index.ts";
 
 import { joinInstructions, lifecycleInstruction, lifecycleReview, phaseGuidanceInstructions, projectInstructions, renderIdeaNotFound, selectIdea } from "../foundation/report/index.ts";
-import { objectiveReferenceCommand } from "./objective-reference.ts";
+import {
+  objectiveReferenceCommand,
+  renderObjectiveReferenceContent,
+} from "./objective-reference.ts";
 import { assessRepositoryReadiness } from "./shared/index.ts";
 import type { Diagnostic, ReadyObservation, RepositoryReadiness, SnapshotObservation } from "./shared/business-types.ts";
 import type {
@@ -81,6 +84,18 @@ async function objectiveProjection(
       kind,
       id,
       title: page.title,
+      ...(page.description === undefined
+        ? {}
+        : { description: page.description }),
+      ...(page.outcome === undefined ? {} : { outcome: page.outcome }),
+      ...(page.instruction === undefined
+        ? {}
+        : { instruction: page.instruction }),
+      content: renderObjectiveReferenceContent(
+        page.content,
+        owner,
+        position.owner.language,
+      ),
       command: objectiveReferenceCommand(owner, id, position.owner.language),
     };
   }));

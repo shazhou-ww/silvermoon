@@ -208,11 +208,15 @@ Silvermoon's `whats-next` adapter projects this position without flattening
 prerequisite ownership. Its fixed **Current position** section identifies the
 requested target, owning Objective, level, failing check, and every ordered
 Problem with complete parameters. **Downward guidance** points to the matching
-level, check, and Problem Reference pages with copyable
-`silvermoon reference page` commands. Reference content is stable explanatory
-knowledge; paths, revisions, branches, and recovery commands remain facts from
-the current invocation. Terminal positions keep the same shell and have no
-required actions.
+level, check, and Problem Reference pages, embeds their localized
+description/content plus optional level outcome or Problem instruction, and
+provides copyable `silvermoon reference page` commands for further detail.
+Internal Reference links become those commands before display. The report
+treats this content as inert Markdown data: it does not execute or interpolate
+it, and it never substitutes it for dynamic Problem parameters. Paths,
+revisions, branches, and recovery commands remain facts from the current
+invocation. Terminal positions keep the same shell and have no required
+actions while still displaying terminal Reference guidance.
 
 ## Loading
 

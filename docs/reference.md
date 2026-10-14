@@ -380,6 +380,8 @@ projections:
           "kind": "level",
           "id": "levels/terminal",
           "title": "Objective attained",
+          "description": "All checks passed in this probe.",
+          "content": "## Meaning\n\nThis terminal means every advancement check required by the current probe passed.",
           "command": "silvermoon reference page project levels/terminal --language en-US"
         }
       ]
@@ -402,6 +404,8 @@ projections:
           "kind": "level",
           "id": "levels/terminal",
           "title": "Objective attained",
+          "description": "All checks passed in this probe.",
+          "content": "## Meaning\n\nThis terminal means every advancement check required by the current probe passed.",
           "command": "silvermoon reference page project levels/terminal --language en-US"
         }
       ]
@@ -654,7 +658,11 @@ Observations are discriminated by command intent and `state`:
 - Every check-backed blocked or ready `whats-next` response projects the same
   Objective position: requested target, actual owner (including prerequisite
   ownership), level, failing check, complete ordered Problems with structured
-  parameters, and matching level/check/Problem Reference commands. Markdown
+  parameters, and matching level/check/Problem Reference guidance. Each
+  Reference projection preserves kind, ID, title, description, content,
+  optional level outcome or Problem instruction, and its further-detail
+  command. Internal links are rendered as `silvermoon reference page`
+  commands without executing or interpolating Reference content. Markdown
   renders these as the fixed **Current position** and **Downward guidance**
   sections. Dynamic paths, revisions, branches, and retry commands remain
   invocation facts; Reference pages remain stable explanatory knowledge.
