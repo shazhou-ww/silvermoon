@@ -181,12 +181,19 @@ configuration errors reject `load`; check execution failures reject `probe`.
 
 `describeLevels()` returns the prerequisite prefix, local explicit levels and
 one synthesized terminal without exposing numeric indexes. `probe()` runs
-checks in declaration order and stops at the first failing check. Problems
-carry stable IDs and JSON parameters; read their localized explanation with:
+checks in declaration order and stops at the first failing check.
+`observation.position` identifies the owning Objective instance, its level,
+the failing check (or `null` at terminal), and the complete ordered Problem
+list. A prerequisite failure therefore retains the prerequisite as its owner
+instead of being relabeled as a local level.
+
+Problems carry stable IDs and structured JSON parameters; checks do not put
+localized report prose in parameters. Read a Problem's localized explanation
+with:
 
 ```ts
-const page = await observation.current.instance.readPage(
-  `problems/${observation.problems[0].id}`,
+const page = await observation.position.owner.readPage(
+  `problems/${observation.position.problems[0].id}`,
 );
 ```
 

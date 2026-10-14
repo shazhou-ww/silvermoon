@@ -14,7 +14,7 @@ function checks(failing?: string) {
     .map((id): [string, SilvermoonObjectiveCheck] => [id, async () => {
       calls.push(id);
       return id === failing
-        ? { pass: false, problems: [{ id: "project", parameters: { description: `Failed ${id}` } }] }
+        ? { pass: false, problems: [{ id: "project", parameters: { failingCheck: id } }] }
         : { pass: true };
     }])) as SilvermoonObjectiveChecks;
   return { bindings, calls };
@@ -35,10 +35,11 @@ test("every scope advancement stops at its declared first failing check", async 
         });
         if (!created.ok) assert.fail("Expected valid instance.");
         const sample = await created.instance.probe();
-        assert.equal(sample.current.id, level, id);
+        assert.equal(sample.position.level.id, level, id);
+        assert.equal(sample.position.failingCheck, id);
         assert.equal(context.calls.at(-1), id);
-        assert.equal(sample.current.instance.guide, guide);
-        assert.equal((await sample.current.instance.readPage("missing")).id, "system/404");
+        assert.equal(sample.position.owner.guide, guide);
+        assert.equal((await sample.position.owner.readPage("missing")).id, "system/404");
       }
     }
   }
@@ -55,7 +56,7 @@ test("Device is independent, Project has no prerequisite and Idea directly refer
   assert.equal(idea.prerequisite?.guide, project);
   const created = idea.createInstance({ subject: { root: "project", userHome: "home", ideaId: "01M36QGPNTXEPP61DA4KP4AVZF" } });
   if (!created.ok) assert.fail("Expected instance.");
-  assert.equal((await created.instance.probe()).current.id, "terminal");
+  assert.equal((await created.instance.probe()).position.level.id, "terminal");
   assert.ok(context.calls.every((id) => !id.startsWith("device-")));
   assert.equal(created.instance.describeLevels()[0]?.id, "configuration-invalid");
   assert.equal(created.instance.describeLevels().filter(({ id }) => id === "terminal").length, 1);

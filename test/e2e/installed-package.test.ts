@@ -130,7 +130,7 @@ try {
     };
     const loader = createObjectiveLoader({
       checkRunner: { run: async () => ({
-        pass: false, problems: [{ id: "problem", parameters: { description: "Repair" } }]
+        pass: false, problems: [{ id: "problem", parameters: { path: "config.yaml" } }]
       }) },
       resources: {
         readText: async () => JSON.stringify(manifest),
@@ -153,13 +153,14 @@ try {
     if (!result.ok) throw new Error(result.error.type);
     const sample = await result.instance.probe();
     console.log(JSON.stringify({
-      levelId: sample.current.id,
-      page: (await sample.current.instance.readPage("problems/" + sample.problems[0].id)).id,
+      levelId: sample.position.level.id,
+      checkId: sample.position.failingCheck,
+      page: (await sample.position.owner.readPage("problems/" + sample.position.problems[0].id)).id,
       missing: (await result.instance.readPage("missing")).id,
     }));
   `], bootstrap);
   assert.deepEqual(JSON.parse(objectiveSmoke), {
-    levelId: "unready", page: "problems/problem", missing: "system/404",
+    levelId: "unready", checkId: "ready", page: "problems/problem", missing: "system/404",
   });
   const installedEntry = join(
     bootstrap,

@@ -45,10 +45,9 @@ function checkResult(value: unknown, locale: LoadedLocale): CheckResult {
   return { pass: false, problems: [problems[0]!, ...problems.slice(1)] };
 }
 
-function problemSummary(locale: LoadedLocale, problem: { id: string; parameters: Readonly<Record<string, unknown>> }) {
+function problemSummary(locale: LoadedLocale, problem: { id: string }) {
   const page = locale.pages.get(`problems/${problem.id}`)!;
-  const detail = problem.parameters.description;
-  return typeof detail === "string" && detail.trim() !== "" ? detail : page.description ?? page.title;
+  return page.description ?? page.title;
 }
 
 export function createObjectiveGuide(
@@ -176,12 +175,12 @@ export function createObjectiveGuide(
           const localIndex = manifest.prerequisite!.minimumLevelId === undefined
             || manifest.prerequisite!.minimumLevelId === "terminal"
             ? -1 : guideLevels.get(childInstance.guide)!.indexOf(manifest.prerequisite!.minimumLevelId);
-          const currentIndex = observation.current.instance === childInstance
-            ? observation.current.id === "terminal" ? Number.POSITIVE_INFINITY
-              : guideLevels.get(childInstance.guide)!.indexOf(observation.current.id)
+          const currentIndex = observation.position.owner === childInstance
+            ? observation.position.level.id === "terminal" ? Number.POSITIVE_INFINITY
+              : guideLevels.get(childInstance.guide)!.indexOf(observation.position.level.id)
             : -1;
           if (minimumLevelId === "terminal"
-            ? !(observation.current.instance === childInstance && observation.current.id === "terminal")
+            ? !(observation.position.owner === childInstance && observation.position.level.id === "terminal")
             : currentIndex < localIndex) return observation;
         }
         const request: CheckRequest = {
@@ -190,16 +189,27 @@ export function createObjectiveGuide(
           probe: { tempDirectory: context.tempDirectory },
         };
         for (const level of manifest.levels) {
-          for (const name of level.advancement.checks) {
-            const result = checkResult(await runner.run(manifestUri, name, request), locale);
+          for (const checkId of level.advancement.checks) {
+            const result = checkResult(await runner.run(manifestUri, checkId, request), locale);
             if (!result.pass) {
               const current = descriptions.find((entry) => entry.instance === instance && entry.id === level.id)!;
-              return Object.freeze({ current, problems: Object.freeze([...result.problems]),
+              return Object.freeze({ position: Object.freeze({
+                owner: instance,
+                level: current,
+                failingCheck: checkId,
+                problems: Object.freeze([...result.problems]),
+              }),
                 gapSummary: result.problems.map((problem) => problemSummary(locale, problem)).join("\n") });
             }
           }
         }
-        return Object.freeze({ current: descriptions.at(-1)!, problems: Object.freeze([]), gapSummary: "" });
+        const terminal = descriptions.at(-1)!;
+        return Object.freeze({ position: Object.freeze({
+          owner: instance,
+          level: terminal,
+          failingCheck: null,
+          problems: Object.freeze([]),
+        }), gapSummary: "" });
       });
       return { ok: true, instance: Object.freeze(instance) };
     },

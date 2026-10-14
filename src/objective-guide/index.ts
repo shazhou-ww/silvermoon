@@ -6,7 +6,7 @@ export { ObjectiveConfigurationError, ObjectiveOperationError } from "./validati
 export type {
   ObjectiveManifestUri, CheckId, ProblemId, ReferencePageId, ObjectiveLevelId, LanguageTag,
   JsonValue, JsonObject, ObjectiveSubject, ObjectiveDomainSchema, ObservedProblem,
-  ReferencePageSummary, ReferencePage, ObjectiveLevelDescription, ObjectiveObservation,
+  ReferencePageSummary, ReferencePage, ObjectiveLevelDescription, ObjectiveObservation, ObjectivePosition,
   ObjectiveSubjectValidationIssue, ObjectiveValidationIssues, ObjectivePrerequisiteSubjectFailure,
   ObjectiveGuideInstanceCreationError, ObjectiveGuideInstanceCreationResult,
   ObjectiveGuideInstanceOptions, ObjectivePrerequisite, ObjectiveGuide,

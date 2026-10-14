@@ -127,7 +127,7 @@ test("instance subjects are immutable and schema/language failures remain typed"
   if (unsupported.ok || unsupported.error.type !== "unsupported-language") assert.fail("Expected language failure.");
 });
 
-test("ordered checks share one probe directory, clean it and return stable Problem IDs", async () => {
+test("position identifies the owner, failing check and complete ordered Problems", async () => {
   const calls: string[] = [];
   const directories: string[] = [];
   let passing = false;
@@ -140,7 +140,10 @@ test("ordered checks share one probe directory, clean it and return stable Probl
       calls.push("first");
       directories.push(request.probe.tempDirectory);
       return passing ? { pass: true } : {
-        pass: false, problems: [{ id: "problem", parameters: { description: "Dynamic detail" } }],
+        pass: false, problems: [
+          { id: "problem", parameters: { path: "first" } },
+          { id: "problem", parameters: { path: "second" } },
+        ],
       };
     },
     second: async (request) => {
@@ -151,13 +154,25 @@ test("ordered checks share one probe directory, clean it and return stable Probl
   });
   const current = await instance(context);
   const failed = await current.probe();
-  assert.equal(failed.current.id, "one");
-  assert.equal(failed.gapSummary, "Dynamic detail");
-  assert.equal(failed.problems[0]?.id, "problem");
-  assert.equal((await failed.current.instance.readPage(`problems/${failed.problems[0]!.id}`)).id, "problems/problem");
+  assert.equal(failed.position.owner, current);
+  assert.equal(failed.position.level.id, "one");
+  assert.equal(failed.position.level.instance, current);
+  assert.equal(failed.position.failingCheck, "first");
+  assert.equal(failed.gapSummary, "Fix it en-US\nFix it en-US");
+  assert.deepEqual(failed.position.problems, [
+    { id: "problem", parameters: { path: "first" } },
+    { id: "problem", parameters: { path: "second" } },
+  ]);
+  assert.equal((await failed.position.owner.readPage(
+    `problems/${failed.position.problems[0]!.id}`,
+  )).id, "problems/problem");
   await assert.rejects(stat(directories[0]!));
   passing = true;
-  assert.equal((await current.probe()).current.id, "terminal");
+  const terminal = await current.probe();
+  assert.equal(terminal.position.level.id, "terminal");
+  assert.equal(terminal.position.owner, current);
+  assert.equal(terminal.position.failingCheck, null);
+  assert.deepEqual(terminal.position.problems, []);
   assert.deepEqual(calls, ["first", "first", "second"]);
   assert.equal(directories[1], directories[2]);
   assert.notEqual(directories[0], directories[1]);
@@ -186,11 +201,14 @@ test("prerequisite defaults to terminal and can unlock at a declared minimum lev
   });
   const current = await instance(context);
   assert.deepEqual(current.describeLevels().map(({ id }) => id), ["configured", "unready", "terminal"]);
-  assert.equal((await current.probe()).current.id, "configured");
+  const prerequisiteFailure = await current.probe();
+  assert.equal(prerequisiteFailure.position.level.id, "configured");
+  assert.equal(prerequisiteFailure.position.owner, current.prerequisite);
+  assert.equal(prerequisiteFailure.position.failingCheck, "first");
   passFirst = true;
   const sample = await current.probe();
-  assert.equal(sample.current.instance, current);
-  assert.equal(sample.current.id, "terminal");
+  assert.equal(sample.position.owner, current);
+  assert.equal(sample.position.level.id, "terminal");
   assert.deepEqual(calls, ["first", "first", "second", "root"]);
 
   const terminalContext = fixture({
@@ -200,7 +218,11 @@ test("prerequisite defaults to terminal and can unlock at a declared minimum lev
     first: async () => ({ pass: true }),
     second: async () => ({ pass: false, problems: [{ id: "problem", parameters: {} }] }),
   });
-  assert.equal((await (await instance(terminalContext)).probe()).current.id, "synchronized");
+  const terminalPrerequisite = await instance(terminalContext);
+  const blocked = await terminalPrerequisite.probe();
+  assert.equal(blocked.position.level.id, "synchronized");
+  assert.equal(blocked.position.owner, terminalPrerequisite.prerequisite);
+  assert.equal(blocked.position.failingCheck, "second");
 });
 
 test("invalid minimum levels, malformed References and unknown Problems fail explicitly", async () => {

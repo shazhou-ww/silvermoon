@@ -116,11 +116,11 @@ test("Guide-driven navigation preserves four projections and direct instance own
   assert.equal(report.observation.outputLanguage, "zh-CN");
   assert.equal(report.response.details?.contentLanguage, "zh-CN");
   const sample = context.observations.at(-1)!;
-  assert.equal(sample.current.id, "implementation-unsubmitted");
-  assert.equal(sample.current.instance.guide.manifestUri, SILVERMOON_OBJECTIVE_URIS.idea);
-  assert.equal(sample.current.instance.prerequisite?.guide.manifestUri, SILVERMOON_OBJECTIVE_URIS.project);
-  assert.equal(sample.current.instance.language, "zh-CN");
-  assert.equal(sample.current.instance.prerequisite?.language, "zh-CN");
+  assert.equal(sample.position.level.id, "implementation-unsubmitted");
+  assert.equal(sample.position.owner.guide.manifestUri, SILVERMOON_OBJECTIVE_URIS.idea);
+  assert.equal(sample.position.owner.prerequisite?.guide.manifestUri, SILVERMOON_OBJECTIVE_URIS.project);
+  assert.equal(sample.position.owner.language, "zh-CN");
+  assert.equal(sample.position.owner.prerequisite?.language, "zh-CN");
   if (report.response.kind !== "next-steps") assert.fail("Expected next steps.");
   assert.match(report.response.nextSteps.map(({ text }) => text).join("\n"), /submitInner/);
   assert.deepEqual(report.actions, []);
@@ -132,9 +132,9 @@ test("concurrent command instances do not share snapshot or lifecycle state", as
   const reports = await Promise.all([
     whatsNextUseCase(first.options, first.ports), whatsNextUseCase(second.options, second.ports),
   ]);
-  assert.equal(first.observations.at(-1)?.current.id, "ideal-unsubmitted");
-  assert.equal(second.observations.at(-1)?.current.id, "deployment-unsubmitted");
-  assert.notEqual(first.observations[0]?.current.instance, second.observations[0]?.current.instance);
+  assert.equal(first.observations.at(-1)?.position.level.id, "ideal-unsubmitted");
+  assert.equal(second.observations.at(-1)?.position.level.id, "deployment-unsubmitted");
+  assert.notEqual(first.observations[0]?.position.owner, second.observations[0]?.position.owner);
   assert.ok(reports.every(({ observation }) => observation.state === "idea-selected"));
 });
 
@@ -148,12 +148,26 @@ test("project and repository failures gate Idea checks and retain report diagnos
   const first = harness(unavailable);
   const blocked = await whatsNextUseCase(first.options, first.ports);
   assert.deepEqual(first.calls, ["snapshot", "project-config-valid"]);
-  assert.equal(first.observations[0]?.current.id, "configuration-invalid");
+  assert.equal(first.observations[0]?.position.level.id, "configuration-invalid");
+  assert.equal(first.observations[0]?.position.failingCheck, "project-config-valid");
+  assert.deepEqual(first.observations[0]?.position.problems[0]?.parameters, {
+    state: "project-setup-required",
+    problems: [{ type: "schema-invalid", summary: "Unsupported schema." }],
+  });
   assert.equal(blocked.observation.state, "project-setup-required");
   const second = harness(ready(), true);
   const sync = await whatsNextUseCase(second.options, second.ports);
-  assert.equal(second.observations[0]?.current.id, "repository-unready");
-  assert.equal(second.observations[0]?.current.instance.guide.manifestUri, SILVERMOON_OBJECTIVE_URIS.project);
+  assert.equal(second.observations[0]?.position.level.id, "repository-unready");
+  assert.equal(second.observations[0]?.position.failingCheck, "repository-worktree-clean");
+  assert.equal(second.observations[0]?.position.owner.guide.manifestUri, SILVERMOON_OBJECTIVE_URIS.project);
+  assert.deepEqual(second.observations[0]?.position.problems[0]?.parameters, {
+    state: "repository-sync-required",
+    problems: [{ type: "worktree-changes", summary: "Dirty candidate." }],
+    root: "D:\\fixture",
+    head: null,
+    primary: null,
+    branch: null,
+  });
   assert.ok(!second.calls.includes("idea-metadata-valid"));
   assert.equal(sync.observation.state, "repository-sync-required");
 });
@@ -164,8 +178,8 @@ test("no selector stays Project-only even for one Idea; invalid selectors do not
     const { idea: _idea, ...options } = context.options;
     const report = await whatsNextUseCase({ ...options, ...(selector === undefined ? {} : { idea: selector }) }, context.ports);
     assert.equal(report.observation.state, selector === undefined ? "objective-ready" : "idea-not-found");
-    assert.equal(context.observations[0]?.current.id, "terminal");
-    assert.equal(context.observations[0]?.current.instance.guide.manifestUri, SILVERMOON_OBJECTIVE_URIS.project);
+    assert.equal(context.observations[0]?.position.level.id, "terminal");
+    assert.equal(context.observations[0]?.position.owner.guide.manifestUri, SILVERMOON_OBJECTIVE_URIS.project);
     assert.ok(!context.calls.includes("idea-metadata-valid"));
     assert.ok(context.calls.includes("project-primary-guidance-valid"));
     if (selector === undefined) {
@@ -217,7 +231,7 @@ test("outside-worktree bare navigation targets Device and stops at terminal", as
   });
   assert.deepEqual(report.response.nextSteps, []);
   assert.ok(!context.calls.includes("snapshot"));
-  assert.equal(context.observations[0]?.current.instance.guide.manifestUri, SILVERMOON_OBJECTIVE_URIS.device);
+  assert.equal(context.observations[0]?.position.owner.guide.manifestUri, SILVERMOON_OBJECTIVE_URIS.device);
 });
 
 test("Project validates every phase, missing guidance is allowed and another invalid phase blocks", async () => {
@@ -227,8 +241,8 @@ test("Project validates every phase, missing guidance is allowed and another inv
     guidanceInspector: async () => ({ state: "invalid", diagnostics: [{ code: "guidance.invalid", level: "error",
       message: "Invalid unselected phase.", path: "guidance/deploying.md", remediation: "Repair phase guidance." }] }),
   }, context.ports);
-  assert.equal(context.observations[0]?.current.id, "project-unprepared");
-  assert.equal(context.observations[0]?.current.instance.guide.manifestUri, SILVERMOON_OBJECTIVE_URIS.project);
+  assert.equal(context.observations[0]?.position.level.id, "project-unprepared");
+  assert.equal(context.observations[0]?.position.owner.guide.manifestUri, SILVERMOON_OBJECTIVE_URIS.project);
   assert.ok(!context.calls.includes("repository"));
   assert.equal(report.observation.state, "phase-guidance-invalid");
   assert.equal(report.observation.problems[0]?.type, "guidance-invalid");
@@ -243,7 +257,12 @@ test("v2 exact submission and acceptance occupy separate levels; stale submissio
       selected.submissions = submissions(selected, phase, state);
       const context = harness(ready(selected));
       await whatsNextUseCase(context.options, context.ports);
-      assert.equal(context.observations[0]?.current.id, `${prefix}-${state === "submitted" ? "unaccepted" : "unsubmitted"}`);
+      assert.equal(context.observations[0]?.position.level.id, `${prefix}-${state === "submitted" ? "unaccepted" : "unsubmitted"}`);
+      if (state !== "submitted") {
+        assert.equal(context.observations[0]?.position.problems[0]?.parameters.revision,
+          selected.revisions[phase === "ideal" ? "idealRevision"
+            : phase === "inner" ? "implementationRevision" : "deploymentRevision"]);
+      }
     }
   }
 });
@@ -255,12 +274,12 @@ test("v1 lifecycle remains compatible; completed is terminal and abandoned stops
   ]) {
     const context = harness(ready(idea(state!)));
     const report = await whatsNextUseCase(context.options, context.ports);
-    assert.equal(context.observations[0]?.current.id, level);
+    assert.equal(context.observations[0]?.position.level.id, level);
     assert.equal(report.observation.state, "idea-selected");
     if (state === "abandoned") {
       assert.ok(!context.calls.includes("idea-ideal-submitted"));
       assert.ok(!context.calls.includes("idea-metadata-valid"));
-      assert.equal(context.observations[0]?.current.instance.guide.manifestUri, SILVERMOON_OBJECTIVE_URIS.project);
+      assert.equal(context.observations[0]?.position.owner.guide.manifestUri, SILVERMOON_OBJECTIVE_URIS.project);
     }
   }
 });

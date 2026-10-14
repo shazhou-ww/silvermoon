@@ -29,9 +29,14 @@ export interface ObjectiveLevelDescription {
   advancementOutcome: string | null;
 }
 export interface ObjectiveObservation {
-  current: ObjectiveLevelDescription;
-  problems: readonly ObservedProblem[];
+  position: ObjectivePosition;
   gapSummary: string;
+}
+export interface ObjectivePosition {
+  owner: ObjectiveGuideInstance;
+  level: ObjectiveLevelDescription;
+  failingCheck: CheckId | null;
+  problems: readonly ObservedProblem[];
 }
 export interface ObjectiveSubjectValidationIssue {
   instancePath: string;

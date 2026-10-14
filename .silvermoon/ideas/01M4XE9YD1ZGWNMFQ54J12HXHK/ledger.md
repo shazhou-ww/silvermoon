@@ -4,15 +4,15 @@
 
 ### Implementation steps
 
-- [ ] **I-S01:** 扩展 Objective observation
-- [ ] **I-S02:** 规范动态 Problem parameters
-- [ ] **I-S03:** 迁移消费者与测试
+- [x] **I-S01:** 扩展 Objective observation
+- [x] **I-S02:** 规范动态 Problem parameters
+- [x] **I-S03:** 迁移消费者与测试
 
 ### Implementation acceptance criteria
 
-- [ ] **I-AC01:** 位置契约完整
-- [ ] **I-AC02:** 动态事实结构化
-- [ ] **I-AC03:** Prerequisite 归属准确
+- [x] **I-AC01:** 位置契约完整
+- [x] **I-AC02:** 动态事实结构化
+- [x] **I-AC03:** Prerequisite 归属准确
 
 ## Deployment
 

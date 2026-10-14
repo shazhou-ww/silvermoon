@@ -15,7 +15,7 @@ test("bundled Silvermoon Guide loads real resources and executes its real check 
       id === "device-config-valid"
         ? {
           pass: false,
-          problems: [{ id: "device-configuration", parameters: { description: "Repair configuration." } }],
+          problems: [{ id: "device-configuration", parameters: { configurationPath: "config.yaml" } }],
         }
         : { pass: true }])) as SilvermoonObjectiveChecks;
   const loader = createSilvermoonObjectiveLoader(bindings);
@@ -23,7 +23,8 @@ test("bundled Silvermoon Guide loads real resources and executes its real check 
   const created = guide.createInstance({ subject: { userHome: "home" }, language: "zh-CN" });
   if (!created.ok) assert.fail("Expected bundled Guide instance.");
   const observation = await created.instance.probe();
-  assert.equal(observation.current.id, "configuration-invalid");
-  assert.equal(observation.problems[0]?.id, "device-configuration");
+  assert.equal(observation.position.level.id, "configuration-invalid");
+  assert.equal(observation.position.failingCheck, "device-config-valid");
+  assert.equal(observation.position.problems[0]?.id, "device-configuration");
   assert.match((await created.instance.readPage("checks/device-config-valid")).content, /检查内容/);
 });

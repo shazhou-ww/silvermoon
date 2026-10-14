@@ -56,7 +56,7 @@ process.stdin.on("end", async () => {
   );
   process.stdout.write(JSON.stringify({
     pass: false,
-    problems: [{ id: "project-unready", parameters: { description: "Fix configuration." } }]
+    problems: [{ id: "project-unready", parameters: { configurationPath: "config.yaml" } }]
   }));
 });
 `);
@@ -68,9 +68,11 @@ process.stdin.on("end", async () => {
     const result = guide.createInstance({ subject: {} });
     if (!result.ok) assert.fail("Expected instance.");
     const sample = await result.instance.probe();
-    assert.equal(sample.current.id, "configuration-invalid");
-    assert.equal(sample.problems[0]?.id, "project-unready");
-    assert.equal((await sample.current.instance.readPage("problems/project-unready")).title, "Repair project");
+    assert.equal(sample.position.level.id, "configuration-invalid");
+    assert.equal(sample.position.failingCheck, "ready");
+    assert.equal(sample.position.problems[0]?.id, "project-unready");
+    assert.equal(sample.position.problems[0]?.parameters.configurationPath, "config.yaml");
+    assert.equal((await sample.position.owner.readPage("problems/project-unready")).title, "Repair project");
     assert.equal((await result.instance.readPage("missing")).id, "system/404");
     assert.deepEqual(await result.instance.searchPages("repair"), [
       { id: "problems/project-unready", title: "Repair project" },

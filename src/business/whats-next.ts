@@ -7,6 +7,7 @@ import {
 import type { SilvermoonObjectiveCheck } from "./objective-guides.ts";
 import { ObjectiveOperationError } from "../objective-guide/index.ts";
 import type { CheckResult, ObjectiveLoader } from "../objective-guide/index.ts";
+import type { JsonObject } from "../objective-guide/index.ts";
 import { inspectWorktreeContext, worktreeSnapshot } from "../foundation/git/index.ts";
 import { observeDevice, observeIdea } from "./shared/index.ts";
 import { createCommandRun } from "../foundation/command-message/index.ts";
@@ -402,8 +403,24 @@ export async function whatsNextUseCase({
     },
   };
   const passed: CheckResult = { pass: true };
-  function failed(id: string, description: string): CheckResult {
-    return { pass: false, problems: [{ id, parameters: { description } }] };
+  function failed(id: string, parameters: JsonObject = {}): CheckResult {
+    return { pass: false, problems: [{ id, parameters }] };
+  }
+  function observedProblems(problems: readonly { type: string; summary: string }[], state?: string): JsonObject {
+    return {
+      ...(state === undefined ? {} : { state }),
+      problems: problems.map(({ type, summary }) => ({ type, summary })),
+    };
+  }
+  function dynamicProblemSummary(parameters: JsonObject, fallback: string): string {
+    const problems = parameters.problems;
+    if (!Array.isArray(problems)) return fallback;
+    const summaries = problems.flatMap((problem) =>
+      typeof problem === "object" && problem !== null && !Array.isArray(problem)
+        && typeof problem.type === "string" && typeof problem.summary === "string"
+        ? [`${problem.type}: ${problem.summary}`]
+        : []);
+    return summaries.length === 0 ? fallback : summaries.join("\n");
   }
   function sampleDevice() {
     if (deviceSample === undefined) throw new ObjectiveOperationError("Device observation is unavailable.");
@@ -422,7 +439,7 @@ export async function whatsNextUseCase({
     };
     return problems.some(({ type }) => category(type) === kind)
       || (problems.length === 0 && kind === "config")
-      ? failed("project", problems.map(({ type, summary }) => `${type}: ${summary}`).join("\n") || snapshot.observation.state)
+      ? failed("project", observedProblems(problems, snapshot.observation.state))
       : passed;
   }
   function repositoryProblems(types: readonly string[]): CheckResult {
@@ -430,7 +447,18 @@ export async function whatsNextUseCase({
     if (repository.ready) return passed;
     const problems = repository.observation.problems;
     return problems.some(({ type }) => types.includes(type))
-      ? failed("repository", problems.map(({ type, summary }) => `${type}: ${summary}`).join("\n"))
+      ? failed("repository", {
+        ...observedProblems(problems, repository.observation.state),
+        root: repository.observation.root,
+        head: repository.head ?? null,
+        primary: repository.primary ?? null,
+        branch: repository.branch === undefined ? null : {
+          name: repository.branch.branch,
+          remote: repository.branch.remote,
+          repository: repository.branch.repository,
+          upstreamBranch: repository.branch.upstreamBranch,
+        },
+      })
       : passed;
   }
   async function allGuidance(tree: string): Promise<CheckResult> {
@@ -441,7 +469,9 @@ export async function whatsNextUseCase({
       finish(dialogueReadyObservation(base, "phase-guidance-invalid", {
         problems: inspected.diagnostics.map((diagnostic) => diagnosticProblem(diagnostic, observed.outputLanguage)),
       }), { nextSteps: phaseGuidanceInstructions(inspected.diagnostics, base.root, observed.outputLanguage, recheckCommand) });
-      return failed("guidance", "Project guidance configuration is invalid.");
+      return failed("guidance", {
+        problems: inspected.diagnostics.map(({ code, path }) => ({ type: code, summary: path })),
+      });
     }
     return passed;
   }
@@ -458,19 +488,30 @@ export async function whatsNextUseCase({
         : (submission.state === "submitted" || submission.state === "accepted")
           && submission.revision.value === selected.revisions[submission.revision.field]
           && (submission.submittedRevision === submission.revision.value || submission.acceptedRevision === submission.revision.value);
-    return valid ? passed : failed(phase, `Idea lifecycle is ${selected.state}; exact ${phase} revision is ${acceptance ? "not accepted" : "not submitted"}.`);
+    return valid ? passed : failed(phase, {
+      lifecycleState: selected.state,
+      phase,
+      requirement: acceptance ? "accepted" : "submitted",
+      revision: selected.revisions[phase === "ideal" ? "idealRevision"
+        : phase === "inner" ? "implementationRevision" : "deploymentRevision"],
+    });
   };
   loader = createSilvermoonObjectiveLoader({
-    "device-config-valid": async () => sampleDevice().globalConfig.valid ? passed : failed("device-configuration", "Invalid personal configuration."),
+    "device-config-valid": async () => sampleDevice().globalConfig.valid ? passed : failed("device-configuration", {
+      configurationPath: sampleDevice().globalConfig.path,
+    }),
     "device-runtime-linked": async () => {
       const device = sampleDevice();
       return device.runtime !== null && device.runtime.source !== "source-checkout" && device.runtime.version !== null
-        ? passed : failed("device-runtime", "Device runtime link or version is not confirmed.");
+        ? passed : failed("device-runtime", {
+          source: device.runtime?.source ?? null,
+          version: device.runtime?.version ?? null,
+        });
     },
     "device-skill-discoverable": async () => ["ready", "managed-by-host"].includes(sampleDevice().readiness?.skill.status ?? "")
-      ? passed : failed("device-skill", "Canonical personal skill is not discoverable."),
+      ? passed : failed("device-skill", { status: sampleDevice().readiness?.skill.status ?? null }),
     "device-update-current": async () => ["current", "managed-by-host"].includes(sampleDevice().readiness?.update.status ?? "")
-      ? passed : failed("device-update", "Runtime update status needs attention."),
+      ? passed : failed("device-update", { status: sampleDevice().readiness?.update.status ?? null }),
     "project-config-valid": async () => {
       if (initialSample) initialSample = false;
       else await project();
@@ -503,7 +544,7 @@ export async function whatsNextUseCase({
         finish(dialogueReadyObservation(readyRepository().observation, "repository-sync-required", {
           problems: [{ type: "worktree-changes", summary: "Idea selector changed during observation; reobserve before continuing." }],
         }), { nextSteps: recheckCommand });
-        return failed("idea-configuration", "The selector no longer identifies the bound Idea.");
+        return failed("idea-configuration", { expectedIdeaId: bound.ideaId ?? null, observedIdeaId: prior.id });
       }
       const local = await observeIdea({ config: observed.config, root: observed.observation.root });
       const current = local.ideas.find(({ id }) => id === prior.id);
@@ -517,23 +558,36 @@ export async function whatsNextUseCase({
             findings: local.diagnostics.map(({ remediation }) => ({ instruction: remediation })),
           }, observation.root, observed.outputLanguage, recheckCommand),
         });
-        return failed("idea-configuration", problems.map(({ summary }) => summary).join("\n"));
+        return failed("idea-configuration", observedProblems(problems));
       }
       if (JSON.stringify(current.revisions) !== JSON.stringify(prior.revisions) || current.eventDigest !== prior.eventDigest) {
         finish(dialogueReadyObservation(readyRepository().observation, "repository-sync-required", {
           problems: [{ type: "worktree-changes", summary: "Idea changed during observation; reobserve before navigating its new revision." }],
         }), { nextSteps: recheckCommand });
-        return failed("repository", "Idea changed after the primary snapshot was confirmed.");
+        return failed("repository", {
+          reason: "idea-changed",
+          ideaId: prior.id,
+          primary: readyRepository().primary ?? null,
+        });
       }
       selected = current;
       const selection = await operations.selection();
       if (!selection.passed) throw new ObjectiveOperationError("Idea instance routing has no selected object.");
       const guidance = await operations.guidance();
-      if (!guidance.passed) return failed("guidance", "The selected phase guidance changed during observation.");
-      return selected?.state === "abandoned" ? failed("idea-inactive", "The selected Idea is abandoned.") : passed;
+      if (!guidance.passed) return failed("guidance", { reason: "phase-guidance-changed" });
+      return selected?.state === "abandoned"
+        ? failed("idea-inactive", { ideaId: selected.id, lifecycleState: selected.state })
+        : passed;
     },
     "idea-contracts-valid": async () => {
-      if (selected === null || snapshot?.layout?.diagnostics.length !== 0) return failed("idea-configuration", "Selected Idea contracts are invalid.");
+      if (selected === null || snapshot?.layout?.diagnostics.length !== 0) {
+        return failed("idea-configuration", {
+          ideaId: selected?.id ?? null,
+          problems: (snapshot?.layout?.diagnostics ?? []).map(
+            ({ code, path }) => ({ type: code, summary: path }),
+          ),
+        });
+      }
       return passed;
     },
     "idea-ideal-submitted": lifecycleCheck("ideal", false),
@@ -610,12 +664,10 @@ export async function whatsNextUseCase({
       throw new ObjectiveOperationError(`Device instance creation failed: ${created.error.type}.`);
     }
     const objective = await probeObjective(created.instance);
-    const terminal = objective.current.id === "terminal";
-    const problems = objective.problems.map(({ id, parameters }) => ({
+    const terminal = objective.position.level.id === "terminal";
+    const problems = objective.position.problems.map(({ id, parameters }) => ({
       type: id,
-      summary: typeof parameters.description === "string"
-        ? parameters.description
-        : objective.gapSummary,
+      summary: dynamicProblemSummary(parameters, objective.gapSummary),
     }));
     const observation: ObjectiveReportObservation = {
       state: terminal ? "objective-ready" : "objective-blocked",
@@ -623,7 +675,7 @@ export async function whatsNextUseCase({
       outputLanguage,
       problems,
       ...(deviceSample.readiness === undefined ? {} : { device: deviceSample.readiness }),
-      objective: { target: "device", level: objective.current.id, terminal },
+      objective: { target: "device", level: objective.position.level.id, terminal },
     };
     return runtime.complete(observation, {
       nextSteps: terminal ? [] : [
@@ -646,7 +698,7 @@ export async function whatsNextUseCase({
   });
   if (!created.ok) throw new ObjectiveOperationError(`Navigation instance creation failed: ${created.error.type}.`);
   const objective = await probeObjective(created.instance);
-  if (scoped === null && objective.current.id === "terminal") {
+  if (scoped === null && objective.position.level.id === "terminal") {
     if (selector === undefined) {
       const observed = readySnapshot();
       const ready = readyRepository().observation;
