@@ -1,0 +1,57 @@
+{
+  "scenarios": [
+    {
+      "id": "device-config-invalid",
+      "state": "invalid-user-config",
+      "idea": "whats-next-template-review",
+      "languages": ["en-US", "zh-CN"]
+    },
+    {
+      "id": "device-skill-not-discoverable",
+      "state": "skill-link-missing",
+      "idea": "whats-next-template-review",
+      "languages": ["en-US", "zh-CN"]
+    },
+    {
+      "id": "device-runtime-not-discoverable",
+      "state": "global-runtime-path-masked",
+      "idea": "whats-next-template-review",
+      "languages": ["en-US", "zh-CN"]
+    },
+    {
+      "id": "repository-worktree-untracked",
+      "state": "worktree-untracked",
+      "idea": "whats-next-template-review",
+      "languages": ["en-US", "zh-CN"]
+    },
+    {
+      "id": "repository-detached-head",
+      "state": "detached-head",
+      "idea": "whats-next-template-review",
+      "languages": ["en-US", "zh-CN"]
+    },
+    {
+      "id": "repository-upstream-missing",
+      "state": "upstream-missing",
+      "idea": "whats-next-template-review",
+      "languages": ["en-US", "zh-CN"]
+    },
+    {
+      "id": "idea-selector-not-found",
+      "state": "baseline",
+      "idea": "scenario-idea-does-not-exist",
+      "languages": ["en-US", "zh-CN"]
+    },
+    {
+      "id": "selected-idea-current-state",
+      "state": "baseline",
+      "idea": "whats-next-template-review",
+      "languages": ["en-US", "zh-CN"]
+    },
+    {
+      "id": "navigation-without-selector",
+      "state": "baseline",
+      "languages": ["en-US", "zh-CN"]
+    }
+  ]
+}

@@ -2,22 +2,23 @@
 
 ## Steps
 
-### I-S01: 建立 check 与 problem 状态图
+### I-S01: 建立 check/problem 状态图
 
 将每个 check 的唯一通过出口串成主链，并为失败时可能产生的不同 problems 标注
 报告阶段、状态变更、下游去向及回归路径，详见
 [scenario-graph.md](./scenario-graph.md)。
 
-### I-S02: 编写状态转移脚本与 Docker 场景
+### I-S02: 准备脚本与 Docker 语料场景
 
-从 Docker 内空设备开始，脚本依序构造每个 check 的通过状态及失败 problems；Docker
-按图推进主链和失败分支，通过当前 checkout 链接的全局 `silvermoon whats-next`
-收集双语完整输出。准备脚本、场景和语料均保存在本 idea 目录内。
+在本 idea 的 `scenario-lab/` 中准备状态转移和采集脚本。Docker 从空设备开始，只
+初始化一次；按状态图依序构造通过状态与失败 problems，使用当前 checkout 链接的
+全局 `silvermoon` 收集双语完整输出。生成的临时语料留在 idea 目录，不放到其他
+项目目录。
 
 ### I-S03: 集中 review 并修正
 
 向维护者呈现整套输出语料，只实现明确 comment，重新采集受影响输出，并依据明确
-结论收敛 `review-status.md`。
+结论更新 [review-status.md](./review-status.md)。
 
 ## Acceptance criteria
 
@@ -26,17 +27,10 @@
 状态图证明每个 check 的通过边唯一，且各失败 Problem 集和报告阶段都有状态转移场景；
 失败分支可修复回归主链或记录独立分支理由。
 
-自动化检查证明 Device、Project、Idea 的每个 instruction case 都有 checkpoint，两种
-locale 和无 check 的补充输出也被覆盖；每条支链均有不能在线性主链继续的原因，且
-没有可由主链推进覆盖却重复初始化的 case。
-
 ### I-AC02: 语料可复现
 
-从 Docker 空设备可依状态图构造通过与失败状态，并记录 check、problem、阶段、
-locale 和 revision。
-
-全新 Docker 环境可从设备整备开始执行全部链路，并生成带场景与 revision 来源的
-完整输出语料。
+全新 Docker 环境可从空设备按状态图构造通过与失败状态，并生成带 check、problem、
+阶段、locale 与 source revision 的完整输出语料，文件留在 idea 的 `scenario-lab/`。
 
 ### I-AC03: Review 结论可追溯
 

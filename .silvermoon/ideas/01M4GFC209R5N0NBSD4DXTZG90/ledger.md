@@ -4,7 +4,7 @@
 
 ### Implementation steps
 
-- [ ] **I-S01:** 建立 check 与 problem 状态图
+- [x] **I-S01:** 建立 check 与 problem 状态图
 - [ ] **I-S02:** 编写状态转移脚本与 Docker 场景
 - [ ] **I-S03:** 集中 review 并修正
 
