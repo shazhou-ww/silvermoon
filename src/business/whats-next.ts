@@ -7,30 +7,29 @@ import {
 import type { SilvermoonObjectiveCheck } from "./objective-guides.ts";
 import { ObjectiveOperationError } from "../objective-guide/index.ts";
 import type { CheckResult, ObjectiveLoader } from "../objective-guide/index.ts";
+import type { ObjectiveGuideInstance, ObjectiveObservation } from "../objective-guide/index.ts";
 import type { JsonObject } from "../objective-guide/index.ts";
 import { inspectWorktreeContext, worktreeSnapshot } from "../foundation/git/index.ts";
 import { observeDevice, observeIdea } from "./shared/index.ts";
 import { createCommandRun } from "../foundation/command-message/index.ts";
 import { ACTIVE_STATES, diagnosticProblem, dialogueReadyObservation } from "../foundation/report/index.ts";
 import { inspectAllGuidance, inspectPhaseGuidance } from "../foundation/guidance/index.ts";
-import {
-  metadataFailureObservation,
-  readIdeaInventoryItem,
-  IdeaMetadataReadError,
-} from "./shared/index.ts";
 import { canonicalizeOutputLanguage, localize, resolveContentTemplateLanguage, resolveOutputLanguage } from "../foundation/language/index.ts";
 import { observeSnapshot, withObservationLanguage } from "./shared/index.ts";
 
-import { joinInstructions, lifecycleInstruction, lifecycleReview, navigationInstruction, phaseGuidanceInstructions, projectInstructions, renderIdeaNotFound, selectIdea } from "../foundation/report/index.ts";
+import { joinInstructions, lifecycleInstruction, lifecycleReview, phaseGuidanceInstructions, projectInstructions, renderIdeaNotFound, selectIdea } from "../foundation/report/index.ts";
+import {
+  objectiveReferenceCommand,
+  renderObjectiveReferenceContent,
+} from "./objective-reference.ts";
 import { assessRepositoryReadiness } from "./shared/index.ts";
 import type { Diagnostic, ReadyObservation, RepositoryReadiness, SnapshotObservation } from "./shared/business-types.ts";
-import { traceBusinessAsync } from "./shared/business-types.ts";
 import type {
-  IdeaInventoryItem,
   IdeaNotFoundObservation,
   IdeaSelectedObservation,
   NavigationReadyObservation,
   ObjectiveObservation as ObjectiveReportObservation,
+  ObjectiveProjection,
   ProjectReadyObservation,
   Observation,
   ResponseContext,
@@ -49,7 +48,72 @@ function pending(code: string, description: string): NavigationGateResult {
   return { passed: false, problems: [{ code, description }] };
 }
 
-const WHATSNEXT_PORTS = Object.freeze({ createCommandRun, observeSnapshot, assessRepositoryReadiness, readIdeaInventoryItem, createSilvermoonObjectiveLoader, probeObjective, observeDevice, observeIdea, inspectWorktreeContext, worktreeSnapshot });
+type ObjectiveId = ObjectiveProjection["target"];
+
+function objectiveId(instance: ObjectiveGuideInstance): ObjectiveId {
+  const match = Object.entries(SILVERMOON_OBJECTIVE_URIS).find(
+    ([, uri]) => uri === instance.guide.manifestUri,
+  );
+  if (match === undefined) {
+    throw new ObjectiveOperationError(
+      `Unknown bundled Objective: ${instance.guide.manifestUri}.`,
+    );
+  }
+  return match[0] as ObjectiveId;
+}
+
+async function objectiveProjection(
+  target: ObjectiveId,
+  observation: ObjectiveObservation,
+): Promise<ObjectiveProjection> {
+  const { position } = observation;
+  const owner = objectiveId(position.owner);
+  const pageIds = [
+    { kind: "level" as const, id: `levels/${position.level.id}` },
+    ...(position.failingCheck === null
+      ? []
+      : [{ kind: "check" as const, id: `checks/${position.failingCheck}` }]),
+    ...position.problems.map(({ id }) => ({
+      kind: "problem" as const,
+      id: `problems/${id}`,
+    })),
+  ];
+  const references = await Promise.all(pageIds.map(async ({ kind, id }) => {
+    const page = await position.owner.readPage(id);
+    return {
+      kind,
+      id,
+      title: page.title,
+      ...(page.description === undefined
+        ? {}
+        : { description: page.description }),
+      ...(page.outcome === undefined ? {} : { outcome: page.outcome }),
+      ...(page.instruction === undefined
+        ? {}
+        : { instruction: page.instruction }),
+      content: renderObjectiveReferenceContent(
+        page.content,
+        owner,
+        position.owner.language,
+      ),
+      command: objectiveReferenceCommand(owner, id, position.owner.language),
+    };
+  }));
+  return {
+    target,
+    owner,
+    level: position.level.id,
+    failingCheck: position.failingCheck,
+    terminal: position.level.id === "terminal",
+    problems: position.problems.map(({ id, parameters }) => ({
+      id,
+      parameters,
+    })),
+    references,
+  };
+}
+
+const WHATSNEXT_PORTS = Object.freeze({ createCommandRun, observeSnapshot, assessRepositoryReadiness, createSilvermoonObjectiveLoader, probeObjective, observeDevice, observeIdea, inspectWorktreeContext, worktreeSnapshot });
 
 function navigationSource(
   observation: ProjectReadyObservation,
@@ -58,21 +122,6 @@ function navigationSource(
     throw new TypeError("Ready project observation omitted its idea summary.");
   }
   return { ...observation, ideas: observation.ideas };
-}
-
-function navigationItem(
-  item: Awaited<ReturnType<typeof readIdeaInventoryItem>>,
-): IdeaInventoryItem {
-  if (typeof item.createdAt !== "string") {
-    throw new TypeError(`Idea ${item.id} is missing required navigation metadata.`);
-  }
-  return {
-    id: item.id,
-    state: item.state,
-    createdAt: item.createdAt,
-    ...(item.alias === undefined ? {} : { alias: item.alias }),
-    ...(item.title === undefined ? {} : { title: item.title }),
-  };
 }
 
 interface WhatsNextOptions {
@@ -94,7 +143,7 @@ export async function whatsNextUseCase({
   root = process.cwd(),
   userHome,
 }: WhatsNextOptions = {}, ports: typeof WHATSNEXT_PORTS = WHATSNEXT_PORTS) {
-  const { createCommandRun, observeSnapshot, assessRepositoryReadiness, readIdeaInventoryItem, createSilvermoonObjectiveLoader, probeObjective, observeDevice, observeIdea, inspectWorktreeContext, worktreeSnapshot } = ports;
+  const { createCommandRun, observeSnapshot, assessRepositoryReadiness, createSilvermoonObjectiveLoader, probeObjective, observeDevice, observeIdea, inspectWorktreeContext, worktreeSnapshot } = ports;
   const canonicalLanguage = language === undefined
     ? undefined
     : canonicalizeOutputLanguage(language);
@@ -228,60 +277,8 @@ export async function whatsNextUseCase({
           activeIdeas: [],
         },
       };
-      if (selector === undefined || !selected) {
-        let activeItems;
-        try {
-          const activeIds = new Set(
-            readyObservation.ideas.activeIdeas.map(({ id }) => id),
-          );
-          activeItems = await traceBusinessAsync(
-            "ideas.navigation-metadata",
-            { ideaCount: activeIds.size },
-            () => Promise.all(
-              observed.layout.ideas
-                .filter(({ id }) => activeIds.has(id))
-                .map((idea) => readIdeaInventoryItem(observed.observation.root, idea)),
-            ),
-          );
-        } catch (caught) {
-          if (!(caught instanceof IdeaMetadataReadError)) throw caught;
-          const failure = metadataFailureObservation(
-            observed,
-            caught,
-            recheckCommand,
-          );
-          finish(failure.observation, failure.responseContext);
-          return blocked("selection", failure.observation);
-        }
-        const itemsById = new Map<string, Awaited<ReturnType<typeof readIdeaInventoryItem>>>(
-          activeItems.map((item: Awaited<ReturnType<typeof readIdeaInventoryItem>>) => [item.id, item]),
-        );
-        navigationObservation = {
-          ...navigationObservation,
-          ideas: {
-            counts: readyObservation.ideas.counts,
-            activeIdeas: readyObservation.ideas.activeIdeas.map(({ id }) => {
-              const item = itemsById.get(id);
-              if (item === undefined) {
-                throw new Error(`Missing observed navigation metadata for ${id}`);
-              }
-              return navigationItem(item);
-            }),
-          },
-        };
-      }
-
       if (selector === undefined) {
-        finish(
-          navigationObservation,
-          {
-            nextSteps: navigationInstruction(
-              observed.layout.ideas,
-              observed.outputLanguage,
-            ),
-          },
-        );
-        return pending("selection", "Select an explicit idea before lifecycle navigation.");
+        throw new TypeError("Bare navigation must terminate at the Project Objective.");
       }
       if (!selected) {
         const notFoundObservation: IdeaNotFoundObservation = {
@@ -306,7 +303,6 @@ export async function whatsNextUseCase({
               renderIdeaNotFound(observed.outputLanguage, {
                 selector,
               }),
-              navigationInstruction(observed.layout.ideas, observed.outputLanguage),
             ]),
           },
         );
@@ -660,7 +656,8 @@ export async function whatsNextUseCase({
       throw new ObjectiveOperationError(`Device instance creation failed: ${created.error.type}.`);
     }
     const objective = await probeObjective(created.instance);
-    const terminal = objective.position.level.id === "terminal";
+    const projectedObjective = await objectiveProjection("device", objective);
+    const terminal = projectedObjective.terminal;
     const problems = objective.position.problems.map(({ id }) => ({
       type: id,
       summary: objective.gapSummary,
@@ -671,7 +668,7 @@ export async function whatsNextUseCase({
       outputLanguage,
       problems,
       ...(deviceSample.readiness === undefined ? {} : { device: deviceSample.readiness }),
-      objective: { target: "device", level: objective.position.level.id, terminal },
+      objective: projectedObjective,
     };
     return runtime.complete(observation, {
       nextSteps: terminal ? [] : [
@@ -707,7 +704,7 @@ export async function whatsNextUseCase({
         ...(ready.schemas === undefined ? {} : { schemas: ready.schemas }),
         outputLanguage: ready.outputLanguage,
         problems: ready.problems,
-        objective: { target: "project", level: "terminal", terminal: true },
+        objective: await objectiveProjection("project", objective),
       };
       finish(terminalObservation, { nextSteps: [] });
       snapshot = observed;
@@ -717,7 +714,17 @@ export async function whatsNextUseCase({
     }
   }
   if (outcome === undefined) throw new TypeError("Navigation checks omitted the report.");
-  return runtime.complete(outcome.observation, outcome.responseContext);
+  const isExplicitMiss = outcome.observation.state === "idea-not-found";
+  const projectedObjective = await objectiveProjection(
+    selector === undefined ? "project" : "idea",
+    objective,
+  );
+  return runtime.complete(
+    isExplicitMiss
+      ? outcome.observation
+      : { ...outcome.observation, objective: projectedObjective } as Observation,
+    outcome.responseContext,
+  );
 }
 
 export async function whatsNext(options: WhatsNextOptions = {}) {

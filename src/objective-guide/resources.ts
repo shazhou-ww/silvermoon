@@ -7,10 +7,7 @@ import type {
 } from "./types.ts";
 import { fields, identifier, immutable, ObjectiveConfigurationError, record, text } from "./validation.ts";
 
-export interface LoadedReferencePage extends ReferencePage {
-  outcome?: string;
-  instruction?: string;
-}
+export type LoadedReferencePage = ReferencePage;
 export interface LoadedLocale {
   pages: ReadonlyMap<string, LoadedReferencePage>;
 }

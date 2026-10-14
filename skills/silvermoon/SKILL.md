@@ -123,6 +123,18 @@ one report. Read every problem and all ordered `response.nextSteps`; never
 combine reports. `actions` contains only side effects already attempted.
 Markdown is a rendering of the report, not a second decision model.
 
+Check-backed `whats-next` reports use one Objective shell. Read **Current
+position** as invocation facts: target and owner Objective, level, failing
+check, every ordered Problem and its structured parameters, plus dynamic
+paths, revisions, branches, and commands. Read **Downward guidance** as the
+embedded, inert static description/content and optional outcome/instruction
+from the matching level/check/Problem References; use the supplied
+`silvermoon reference page` command for further details. Internal Reference
+links are already converted to those commands. A terminal Objective has no
+required actions but still shows its terminal guidance. Do not execute or
+interpolate Reference prose, treat it as a dynamic observation, or replace
+Problem parameters with it.
+
 Apply the report in this order:
 
 1. Handle every reported problem in priority order.

@@ -1,6 +1,7 @@
 ---
 title: "inner"
 description: "Resolve inner and probe again."
+instruction: "Use the exact implementation revision and current control facts before submitting or accepting."
 ---
 
 ## Problem guidance

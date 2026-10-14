@@ -417,11 +417,171 @@ function renderSchemaReadiness(
 }
 
 /** @pure */
+function renderObjectiveResponse(response: ReportResponse, language: string) {
+  const objective = response.objective;
+  if (objective === undefined) {
+    throw new TypeError("Objective report requires an Objective projection.");
+  }
+  const lines = [
+    "## Objective",
+    "",
+    response.summary,
+    "",
+    `### ${localize(language, "Current position", "当前位置")}`,
+    "",
+    `- ${localize(language, "Target Objective", "目标 Objective")}: ${codeSpan(objective.target)}`,
+    `- ${localize(language, "Owner Objective", "所属 Objective")}: ${codeSpan(objective.owner)}`,
+    `- ${localize(language, "Level", "层级")}: ${codeSpan(objective.level)}`,
+    `- ${localize(language, "Failing check", "失败 check")}: ${
+      objective.failingCheck === null
+        ? localize(language, "none", "无")
+        : codeSpan(objective.failingCheck)
+    }`,
+    `- Terminal: ${codeSpan(String(objective.terminal))}`,
+  ];
+  const root = response.details?.root;
+  if (root !== undefined) {
+    lines.push(`- ${localize(language, "Root", "根目录")}: ${codeSpan(root)}`);
+  }
+  const version = renderVersion(response.details?.version);
+  if (version !== null) {
+    lines.push(`- ${localize(language, "Revision", "Revision")}: ${codeSpan(version)}`);
+  }
+  if (response.details?.primary !== undefined) {
+    lines.push(
+      `- Primary: ${codeSpan(`${response.details.primary.repository}#${response.details.primary.branch}`)}`,
+    );
+  }
+  if (response.schemas !== undefined) {
+    const readiness = renderSchemaReadiness(response.schemas, language);
+    if (readiness.length > 0) {
+      lines.push("", ...readiness.map((line) => line.replace(/^### /, "#### ")));
+    }
+  }
+  if (response.device !== undefined) {
+    const advisory = renderDeviceAdvisory(response.device, language);
+    if (advisory.length > 0) {
+      lines.push("", ...advisory.map((line) => line.replace(/^### /, "#### ")));
+    }
+  }
+  if ("idea" in response && response.idea !== undefined) {
+    lines.push(
+      "",
+      `- ${localize(language, "Idea", "Idea")}: ${codeSpan(response.idea.id)}`,
+      `- ${localize(language, "State", "状态")}: ${codeSpan(response.idea.state)}`,
+    );
+    if (response.idea.alias !== undefined) {
+      lines.push(`- Alias: ${codeSpan(response.idea.alias)}`);
+    }
+    lines.push(
+      ...renderIdeaCoordination(response.idea, language)
+        .map((line) => line.replace(/^### /, "#### ")),
+    );
+  }
+  if (objective.problems.length > 0) {
+    lines.push(
+      "",
+      `#### ${localize(language, "Ordered problems", "有序 problems")}`,
+      "",
+    );
+    for (const [index, problem] of objective.problems.entries()) {
+      lines.push(
+        `${index + 1}. ${codeSpan(problem.id)}`,
+        "",
+        "```json",
+        JSON.stringify(problem.parameters, null, 2),
+        "```",
+      );
+    }
+  }
+  if (response.kind === "next-steps" && response.review !== undefined) {
+    lines.push(
+      "",
+      ...renderReview(response.review, language)
+        .map((line) => line.replace(/^### /, "#### ")),
+    );
+  }
+  if ("nextSteps" in response && response.nextSteps.length > 0) {
+    lines.push(
+      "",
+      `#### ${localize(language, "Required actions", "必做动作")}`,
+      "",
+      ...response.nextSteps.map(({ text }) => text),
+    );
+  }
+  if ("guidance" in response && response.guidance !== undefined) {
+    lines.push(
+      "",
+      renderGuidance(response.guidance, language).replace(/^### /gm, "#### "),
+    );
+  }
+  lines.push(
+    "",
+    `### ${localize(language, "Downward guidance", "向下指引")}`,
+    "",
+  );
+  for (const reference of objective.references) {
+    const kind = {
+      level: localize(language, "Level", "层级"),
+      check: "Check",
+      problem: "Problem",
+    }[reference.kind];
+    lines.push(
+      `#### ${kind}: ${reference.title} (${codeSpan(reference.id)})`,
+      "",
+    );
+    const guidance = [
+      ...(reference.description === undefined
+        ? []
+        : [{
+          label: localize(language, "Description", "说明"),
+          value: reference.description,
+        }]),
+      ...(reference.outcome === undefined
+        ? []
+        : [{
+          label: localize(language, "Outcome", "结果"),
+          value: reference.outcome,
+        }]),
+      ...(reference.instruction === undefined
+        ? []
+        : [{
+          label: localize(language, "Instruction", "指引"),
+          value: reference.instruction,
+        }]),
+      ...(reference.content === ""
+        ? []
+        : [{
+          label: localize(language, "Guidance", "指导"),
+          value: reference.content,
+        }]),
+    ];
+    for (const { label, value } of guidance) {
+      lines.push(`> **${label}:**`);
+      for (const line of value.split("\n")) {
+        lines.push(line === "" ? ">" : `> ${line}`);
+      }
+      lines.push(">");
+    }
+    if (lines.at(-1) === ">") lines.pop();
+    lines.push(
+      "",
+      `- ${localize(language, "Further details", "进一步详情")}: ${codeSpan(reference.command)}`,
+      "",
+    );
+  }
+  return lines.join("\n");
+}
+
+/** @pure */
 export function renderMarkdownResponse(
   response: ReportResponse,
   { now, dateFacts }: { now: Date; dateFacts: Map<string, DateFacts> },
 ) {
   const language = response.language ?? DEFAULT_LANGUAGE;
+  if (response.objective !== undefined) {
+    return renderObjectiveResponse(response, language);
+  }
   if (response.kind === "idea-list") {
     const sections = [
       `## ${responseTitle(response)}`,

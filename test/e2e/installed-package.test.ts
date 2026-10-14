@@ -710,11 +710,22 @@ decision, risk, or disagreement requires it.
   );
   assert.match(
     lifecycleText,
-    /^## Blocked\n\nThe repository must be synchronized before this command can continue\./,
+    /^## Objective\n\nThe repository must be synchronized before this command can continue\./,
   );
   assert.match(
     lifecycleText,
-    /\n\n### Issues to address\n\n\| Type \| Summary \|\n\| --- \| --- \|\n\| worktree-changes \|/,
+    /\n\n### Current position[\s\S]*Target Objective: `idea`[\s\S]*Owner Objective: `project`[\s\S]*1\. `repository`/,
+  );
+  assert.match(lifecycleText, /\n\n### Downward guidance\n/);
+  assert.match(lifecycleText, /> ## Problem guidance/);
+  assert.match(
+    lifecycleText,
+    /> Preserve unknown work and use the current Problem parameters before applying recovery\./,
+  );
+  assert.match(lifecycleText, /Further details: `silvermoon reference page project problems\/repository --language en-US`/);
+  assert.match(
+    lifecycleText,
+    /Project Objective overview \(`silvermoon reference page project system\/overview --language en-US`\)/,
   );
   assert.doesNotMatch(lifecycleText, /### Ideas you can continue/);
   assert.doesNotMatch(lifecycleText, /## Actions and results/);

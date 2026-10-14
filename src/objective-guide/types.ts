@@ -20,6 +20,8 @@ export interface ReferencePageSummary {
 export interface ReferencePage extends ReferencePageSummary {
   description?: string;
   content: string;
+  outcome?: string;
+  instruction?: string;
 }
 export interface ObjectiveLevelDescription {
   instance: ObjectiveGuideInstance;

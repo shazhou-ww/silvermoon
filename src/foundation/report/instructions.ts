@@ -6,10 +6,8 @@ import {
   renderLifecycleDeploying,
   renderLifecycleImplemented,
   renderLifecycleImplementing,
-  renderLifecycleInactive,
   renderLifecyclePrepared,
   renderLifecyclePreparing,
-  renderNavigationReady,
   renderPhaseGuidanceInvalid,
   renderPreparationSeed,
   renderProjectRecheck,
@@ -340,6 +338,13 @@ export function lifecycleInstruction(
   contentLanguage: string,
   primaryCommit: string,
 ) {
+  if (
+    idea.state !== "preparing"
+    && idea.state !== "implementing"
+    && idea.state !== "deploying"
+  ) {
+    return "";
+  }
   const name = ideaName(idea);
   const submission = currentSubmission(idea);
   const submissionState = submission?.state ?? null;
@@ -415,10 +420,7 @@ export function lifecycleInstruction(
         submitAction: "submitOuter",
         worldPath: idea.worlds.deploymentRevision.path,
       })
-    : renderLifecycleInactive(language, {
-    name,
-    state: idea.state,
-  });
+    : "";
   return joinInstructions([
     instruction,
     idea.state === "preparing" ? preparationSeedInstruction(idea, language) : null,
@@ -429,12 +431,4 @@ export function lifecycleInstruction(
       : null,
     lifecycleContentLanguageInstruction(contentLanguage, language),
   ]);
-}
-
-/** @pure */
-export function navigationInstruction(ideas: Pick<IdeaReference, "state">[], language: string) {
-  const hasActiveIdea = ideas.some(({ state }) =>
-    state === "preparing" || state === "implementing" || state === "deploying"
-  );
-  return renderNavigationReady(language, { hasActiveIdea });
 }

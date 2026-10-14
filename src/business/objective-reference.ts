@@ -106,6 +106,18 @@ export function renderObjectiveReferencePage(
   const markdown = [
     `# ${page.title}`,
     ...(page.description === undefined ? [] : ["", page.description]),
+    ...(page.outcome === undefined
+      ? []
+      : [
+        "",
+        `**${localize(language, "Outcome", "结果")}:** ${page.outcome}`,
+      ]),
+    ...(page.instruction === undefined
+      ? []
+      : [
+        "",
+        `**${localize(language, "Instruction", "指引")}:** ${page.instruction}`,
+      ]),
     ...(page.content === "" ? [] : [
       "",
       renderObjectiveReferenceContent(page.content, objective, language),

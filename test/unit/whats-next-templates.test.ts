@@ -108,52 +108,11 @@ test("what's next templates select a catalog by language", () => {
     "Idea missing 未匹配任何已观察到的 ULID 或唯一 alias。",
   );
   assert.equal(
-    whatsNextTemplates("zh-Hans")["navigation-ready"]({
-      hasActiveIdea: false,
-    }),
-    [
-      "当前没有 active idea。",
-      "请先讨论目标，再运行 `silvermoon create-idea` 创建新 idea。",
-    ].join("\n"),
+    whatsNextTemplates("zh-Hans")["idea-not-found"]({ selector: "missing" }),
+    "Idea missing 未匹配任何已观察到的 ULID 或唯一 alias。",
   );
-});
-
-test("navigation templates distinguish available and absent active ideas", () => {
-  const english = whatsNextTemplates("en-US")["navigation-ready"];
-  assert.equal(
-    english({ hasActiveIdea: true }),
-    [
-      "Choose explicitly whether to continue an active idea or,",
-      "after discussing the goal, create a new one.",
-      "To continue, run `silvermoon whats-next <ULID-or-alias>`.",
-      "To start something else, discuss the goal, then run `silvermoon create-idea`.",
-    ].join(" "),
-  );
-  assert.equal(
-    english({ hasActiveIdea: false }),
-    [
-      "No active ideas are available.",
-      "Discuss the goal, then run `silvermoon create-idea` to create a new idea.",
-    ].join("\n"),
-  );
-
-  const chinese = whatsNextTemplates("zh-CN")["navigation-ready"];
-  assert.equal(
-    chinese({ hasActiveIdea: true }),
-    [
-      "请明确选择继续一个 active idea，",
-      "或先讨论目标，再创建一个新 idea。",
-      "如需继续，运行 `silvermoon whats-next <ULID-or-alias>`；",
-      "如需开始其他工作，先讨论目标，再运行 `silvermoon create-idea`。",
-    ].join(""),
-  );
-  assert.equal(
-    chinese({ hasActiveIdea: false }),
-    [
-      "当前没有 active idea。",
-      "请先讨论目标，再运行 `silvermoon create-idea` 创建新 idea。",
-    ].join("\n"),
-  );
+  assert.equal("navigation-ready" in whatsNextTemplates("en-US"), false);
+  assert.equal("lifecycle-inactive" in whatsNextTemplates("en-US"), false);
 });
 
 test("what's next templates render dynamic repository values", () => {

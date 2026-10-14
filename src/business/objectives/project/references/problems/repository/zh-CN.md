@@ -1,6 +1,7 @@
 ---
 title: "repository"
 description: "处理 repository 并重新观测。"
+instruction: "先保留未知工作，并依据当前 Problem parameters 选择恢复动作。"
 ---
 
 ## 问题说明
@@ -11,3 +12,5 @@ description: "处理 repository 并重新观测。"
 
 本页只提供稳定知识入口；动态路径、revision、诊断和恢复目标
 来自本次 check result。
+
+稳定范围边界见 [[system/overview|Project Objective 总览]]。

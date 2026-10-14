@@ -1,6 +1,7 @@
 ---
 title: "repository"
 description: "Resolve repository and probe again."
+instruction: "Preserve unknown work and use the current Problem parameters before applying recovery."
 ---
 
 ## Problem guidance
@@ -11,3 +12,5 @@ perform the applicable recovery, and probe again.
 
 This page is the stable knowledge entry. Dynamic paths, revisions, diagnostics,
 and recovery targets come from the current check result.
+
+For the stable scope boundary, read [[system/overview|the Project Objective overview]].

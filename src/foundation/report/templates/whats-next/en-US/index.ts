@@ -8,10 +8,8 @@ import lifecycleDeployed from "./lifecycle-deployed.ts";
 import lifecycleDeploying from "./lifecycle-deploying.ts";
 import lifecycleImplemented from "./lifecycle-implemented.ts";
 import lifecycleImplementing from "./lifecycle-implementing.ts";
-import lifecycleInactive from "./lifecycle-inactive.ts";
 import lifecyclePrepared from "./lifecycle-prepared.ts";
 import lifecyclePreparing from "./lifecycle-preparing.ts";
-import navigationReady from "./navigation-ready.ts";
 import phaseGuidanceInvalid from "./phase-guidance-invalid.ts";
 import preparationSeed from "./preparation-seed.ts";
 import primaryAhead from "./primary-ahead.ts";
@@ -49,8 +47,6 @@ const templates = {
   "lifecycle-implemented": lifecycleImplemented,
   "lifecycle-deploying": lifecycleDeploying,
   "lifecycle-deployed": lifecycleDeployed,
-  "lifecycle-inactive": lifecycleInactive,
-  "navigation-ready": navigationReady,
   "idea-not-found": ideaNotFound,
   "worktree-conflicts": worktreeConflicts,
   "head-missing": headMissing,
@@ -80,10 +76,8 @@ export {
   lifecycleDeploying,
   lifecycleImplemented,
   lifecycleImplementing,
-  lifecycleInactive,
   lifecyclePrepared,
   lifecyclePreparing,
-  navigationReady,
   phaseGuidanceInvalid,
   preparationSeed,
   primaryAhead,
