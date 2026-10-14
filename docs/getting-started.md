@@ -19,6 +19,11 @@ npm install --global silvermoon
 silvermoon whats-next
 ```
 
+在 Git worktree 外运行 bare `whats-next` 会检查 Device Objective；在 worktree
+内运行时会检查 Project Objective。任一 Objective 到达 terminal 后都不会隐式列出
+idea 或要求选择任务。需要浏览 idea 时使用 `silvermoon list-ideas`，然后把明确的
+ULID 或唯一 alias 传给 `silvermoon whats-next <idea>`。
+
 The default installation follows the stable npm `latest` channel. To opt into
 the daily development channel, install `silvermoon@canary`; return to stable
 with `silvermoon@latest`.
