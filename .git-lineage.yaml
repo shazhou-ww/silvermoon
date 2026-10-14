@@ -1,4 +1,4 @@
 version: 1
 createdFrom:
-  repository: https://github.com/shazhou-ww/preset-typescript-base.git
+  repository: https://github.com/shazhou-ww/preset-npm-package.git
   branch: main
