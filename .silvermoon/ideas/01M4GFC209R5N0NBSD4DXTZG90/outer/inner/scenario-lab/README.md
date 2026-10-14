@@ -24,8 +24,9 @@ URL 定向到该 bare repository，不访问或写入真实远端。初始场景
 输出按时间写入 `corpus/<UTC timestamp>/`，包含完整 stdout、必要的 stderr 和记录
 source revision/dirty 状态、runtime version、locale 与 argv 的 `manifest.json`。
 同一目录的 `review.html` 将每个 scenario 分页展示，英文与中文原文并排，并提供
-OK/有问题、冗余、缺失和缺少提示的评审字段。修改保存在浏览器 localStorage，可
-导出或导入与 source revision 绑定的 JSON。
+标题、表格、列表、引用和代码等 Markdown 组件渲染，以及 OK/有问题、冗余、缺失
+和缺少提示的评审字段。修改保存在浏览器 localStorage，可导出或导入与 source
+revision 绑定的 JSON。
 `corpus/` 被本目录 `.gitignore` 排除；其中报告只用于本地 review，不作为 idea
 contract 或提交内容。
 

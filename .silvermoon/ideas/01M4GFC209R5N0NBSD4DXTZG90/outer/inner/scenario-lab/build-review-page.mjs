@@ -1,9 +1,38 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+import { marked } from "marked";
 
 function scriptJson(value) {
   return JSON.stringify(value).replaceAll("<", "\\u003c");
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
+}
+
+function renderMarkdown(source) {
+  const renderer = new marked.Renderer();
+  renderer.html = ({ text }) => escapeHtml(text);
+  renderer.link = function ({ href, title, tokens }) {
+    const label = this.parser.parseInline(tokens);
+    if (!/^(?:https?:|mailto:)/i.test(href)) {
+      return `${label} <code>${escapeHtml(href)}</code>`;
+    }
+    const titleAttribute = title === null
+      ? ""
+      : ` title="${escapeHtml(title)}"`;
+    return `<a href="${escapeHtml(href)}"${titleAttribute} target="_blank" rel="noreferrer">${label}</a>`;
+  };
+  return marked.parse(source, {
+    gfm: true,
+    breaks: false,
+    renderer,
+  });
 }
 
 export async function buildReviewPage({ labRoot, outputDirectory }) {
@@ -31,6 +60,10 @@ export async function buildReviewPage({ labRoot, outputDirectory }) {
   }
   const pages = [...grouped.values()].map((page) => ({
     ...page,
+    renderedReports: {
+      "en-US": renderMarkdown(page.reports["en-US"]),
+      "zh-CN": renderMarkdown(page.reports["zh-CN"]),
+    },
     initialReview: reviews.get(page.scenario) ?? {
       verdict: "pending",
       redundancy: "unknown",
@@ -71,7 +104,23 @@ export async function buildReviewPage({ labRoot, outputDirectory }) {
     .materials { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
     .material { min-width: 0; }
     .material h2 { margin: 0; padding: 10px 12px; background: #1e293b; border: 1px solid #334155; border-radius: 8px 8px 0 0; }
-    pre { box-sizing: border-box; margin: 0; padding: 14px; height: 52vh; overflow: auto; white-space: pre-wrap; word-break: break-word; background: #020617; border: 1px solid #334155; border-top: 0; border-radius: 0 0 8px 8px; }
+    .markdown { box-sizing: border-box; padding: 14px 18px; height: 52vh; overflow: auto; overflow-wrap: anywhere; background: #020617; border: 1px solid #334155; border-top: 0; border-radius: 0 0 8px 8px; }
+    .markdown > :first-child { margin-top: 0; }
+    .markdown > :last-child { margin-bottom: 0; }
+    .markdown h1, .markdown h2, .markdown h3, .markdown h4 { line-height: 1.3; margin: 1.25em 0 .55em; }
+    .markdown h1 { font-size: 1.55rem; }
+    .markdown h2 { font-size: 1.35rem; border-bottom: 1px solid #334155; padding-bottom: .35em; }
+    .markdown h3 { font-size: 1.15rem; }
+    .markdown p, .markdown ul, .markdown ol, .markdown blockquote { line-height: 1.65; }
+    .markdown table { width: 100%; border-collapse: collapse; margin: 1em 0; font-size: .92rem; }
+    .markdown th, .markdown td { padding: 8px 10px; border: 1px solid #475569; text-align: left; vertical-align: top; }
+    .markdown th { background: #1e293b; }
+    .markdown tr:nth-child(even) td { background: #0f172a; }
+    .markdown code { padding: .15em .35em; border-radius: 4px; background: #1e293b; color: #f8fafc; }
+    .markdown pre { padding: 12px; overflow: auto; border-radius: 6px; background: #0f172a; border: 1px solid #334155; }
+    .markdown pre code { padding: 0; background: transparent; }
+    .markdown blockquote { margin-left: 0; padding-left: 14px; border-left: 4px solid #64748b; color: #cbd5e1; }
+    .markdown a { color: #7dd3fc; }
     .review { margin-top: 14px; }
     .review-grid { display: grid; grid-template-columns: repeat(4, minmax(150px, 1fr)); gap: 10px; }
     label { display: grid; gap: 5px; font-weight: 600; }
@@ -79,7 +128,7 @@ export async function buildReviewPage({ labRoot, outputDirectory }) {
     .hint { color: #94a3b8; font-size: 13px; }
     @media (max-width: 900px) {
       .materials, .review-grid { grid-template-columns: 1fr; }
-      pre { height: 38vh; }
+      .markdown { height: 38vh; }
     }
   </style>
 </head>
@@ -99,8 +148,8 @@ export async function buildReviewPage({ labRoot, outputDirectory }) {
   <main>
     <section class="metadata" id="metadata"></section>
     <section class="materials">
-      <article class="material"><h2>English (en-US)</h2><pre id="en"></pre></article>
-      <article class="material"><h2>简体中文 (zh-CN)</h2><pre id="zh"></pre></article>
+      <article class="material"><h2>English (en-US)</h2><div class="markdown" id="en"></div></article>
+      <article class="material"><h2>简体中文 (zh-CN)</h2><div class="markdown" id="zh"></div></article>
     </section>
     <section class="review">
       <h2>逐页评审意见</h2>
@@ -167,8 +216,8 @@ export async function buildReviewPage({ labRoot, outputDirectory }) {
         "<div><strong>Idea</strong><br>" + escapeHtml(page.idea ?? "(none)") + "</div>" +
         "<div><strong>Source</strong><br>" + escapeHtml(payload.sourceRevision.slice(0, 12)) +
         (payload.sourceDirty ? " (dirty)" : " (clean)") + "</div>";
-      byId("en").textContent = page.reports["en-US"];
-      byId("zh").textContent = page.reports["zh-CN"];
+      byId("en").innerHTML = page.renderedReports["en-US"];
+      byId("zh").innerHTML = page.renderedReports["zh-CN"];
       fields.forEach((field) => byId(field).value = review[field] ?? "");
     }
     fields.forEach((field) => byId(field).addEventListener("input", save));
