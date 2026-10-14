@@ -18,10 +18,10 @@
 
 ### Deployment steps
 
-- [ ] **D-S01:** 验证 packaged CLI
-- [ ] **D-S02:** 发布 Reference 导航说明
+- [x] **D-S01:** 验证 packaged CLI
+- [x] **D-S02:** 发布 Reference 导航说明
 
 ### Deployment acceptance criteria
 
-- [ ] **D-AC01:** 安装产物可查询
-- [ ] **D-AC02:** 文档示例可执行
+- [x] **D-AC01:** 安装产物可查询
+- [x] **D-AC02:** 文档示例可执行
