@@ -114,7 +114,7 @@ test("registers only the approved command surface", () => {
   const program = createProgram(capture().io);
   assert.deepEqual(
     program.commands.map((command) => command.name()).sort(),
-    ["check", "create-idea", "event", "list-ideas", "migrate", "whats-next"],
+    ["check", "create-idea", "event", "list-ideas", "migrate", "reference", "whats-next"],
   );
   const create = program.commands.find((command) =>
     command.name() === "create-idea"
@@ -122,7 +122,7 @@ test("registers only the approved command surface", () => {
   assert.ok(create);
   assert.ok(create.options.some(({ long }) => long === "--language"));
   for (const command of program.commands.filter((candidate) =>
-    !["event", "list-ideas", "migrate"].includes(candidate.name())
+    !["event", "list-ideas", "migrate", "reference"].includes(candidate.name())
   )) {
     assert.ok(command.options.some(({ long }) => long === "--audience"));
     assert.ok(command.options.some(({ long }) => long === "--trace"));
@@ -138,6 +138,21 @@ test("registers only the approved command surface", () => {
     assert.ok(operation.options.some(({ long }) => long === "--audience"));
     assert.ok(operation.options.some(({ long }) => long === "--trace"));
     assert.ok(operation.options.some(({ long }) => long === "--language"));
+  }
+  const reference = program.commands.find((command) =>
+    command.name() === "reference"
+  );
+  assert.ok(reference);
+  assert.deepEqual(
+    reference.commands.map((command) => command.name()),
+    ["page", "search"],
+  );
+  for (const operation of reference.commands) {
+    assert.ok(operation.options.some(({ long }) => long === "--audience"));
+    assert.ok(operation.options.some(({ long }) => long === "--json"));
+    assert.ok(operation.options.some(({ long }) => long === "--language"));
+    assert.equal(operation.options.some(({ long }) => long === "--root"), false);
+    assert.equal(operation.options.some(({ long }) => long === "--trace"), false);
   }
   const list = program.commands.find((command) => command.name() === "list-ideas");
   assert.ok(list);
@@ -170,6 +185,40 @@ test("registers only the approved command surface", () => {
   ]) {
     assert.ok(migrate.options.some(({ long }) => long === option), option);
   }
+});
+
+test("Reference CLI preserves 404s, navigation commands, and explicit failures", async () => {
+  const missing = capture();
+  assert.equal(await runCli([
+    "reference", "page", "project", "not/present", "--language", "en-US", "--json",
+  ], missing.io), 0);
+  assert.equal(JSON.parse(firstLog(missing.logs)).page.id, "system/404");
+
+  const search = capture();
+  assert.equal(await runCli([
+    "reference", "search", "idea", "revision", "--language", "zh-CN",
+  ], search.io), 0);
+  assert.match(
+    firstLog(search.logs),
+    /silvermoon reference page idea \S+ --language zh-CN/,
+  );
+
+  const empty = capture();
+  assert.equal(await runCli([
+    "reference", "page", "device", "", "--language", "en-US",
+  ], empty.io), 1);
+  assert.match(String(empty.errors[0]), /Page ID must be nonempty/);
+
+  const locale = capture();
+  assert.equal(await runCli([
+    "reference", "page", "device", "system/overview", "--language", "fr-FR",
+  ], locale.io), 1);
+  assert.match(String(locale.errors[0]), /Unsupported Reference locale/);
+
+  const objective = capture();
+  assert.equal(await runCli([
+    "reference", "page", "unknown", "system/overview",
+  ], objective.io), 2);
 });
 
 test("normalizes trace paths to the exact lowercase suffix", () => {

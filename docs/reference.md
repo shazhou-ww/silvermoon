@@ -331,7 +331,18 @@ silvermoon create-idea [--language <tag>] [--audience <human|agent>] [--trace <f
 silvermoon migrate [--apply --expected-digest <sha256> | --resume --confirm-stopped | --rollback --confirm-stopped]
 silvermoon check [--remote | --commit <revision> | --staged | --worktree] [--language <en|en-US|zh|zh-CN>] [--audience <human|agent>] [--trace <file.trace.jsonl>]
 silvermoon event <replay|append> <idea> [--input <request.json>] [--after-length <bytes>] [--after-digest <oid>] [--full-history] [--expected-digest <8+-hex-prefix>] [--expected-primary <commit>] [--confirm-decision] [--audience <human|agent>]
+silvermoon reference page <device|project|idea> <reference-id> [--language <tag>] [--audience <human|agent> | --json]
+silvermoon reference search <device|project|idea> <query> [--language <tag>] [--audience <human|agent> | --json]
 ```
+
+`reference` reads the packaged Objective Guide resources without inspecting or
+changing a repository. `page` preserves the Guide's `system/404` result for a
+missing stable ID, while malformed resources, unsupported locales, and other
+configuration failures exit explicitly. Markdown output expands every
+`[[reference-id|label]]` link into a copyable `silvermoon reference page`
+command. `search` delegates to the Guide's existing `searchPages` index and
+returns stable IDs with the same navigable commands. `--json` returns the
+read-only result directly; human and agent audiences receive Markdown.
 
 Every valid invocation starts one ordered domain-message stream with
 `intention.accepted`. Observation facts are folded through one immutable
@@ -340,7 +351,8 @@ one `action.finished` message with the same run-local action ID. A final
 `response.created` message is emitted only after the observation is terminal
 and no action is pending.
 
-All successful and trustworthy blocked commands return exactly four
+Except for the read-only `reference` resource query described above, all
+successful and trustworthy blocked commands return exactly four
 projections:
 
 ```json

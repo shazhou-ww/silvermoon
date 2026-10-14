@@ -18,6 +18,19 @@ export { IDEA_EVENT_TYPES, EVENT_PERMISSIONS, IdeaEventFormatError, checkEventCh
 export { eventCommand } from "./business/index.ts";
 export { extractIdeaTitle, ideaCreatedAt, ideaInventoryItem, normalizeIdeaQuery, queryIdeaInventory } from "./foundation/idea-query/index.ts";
 export { listIdeas } from "./business/index.ts";
+export {
+  objectiveReferenceCommand,
+  readObjectiveReference,
+  renderObjectiveReferenceContent,
+  renderObjectiveReferencePage,
+  renderObjectiveReferenceSearch,
+  searchObjectiveReferences,
+} from "./business/index.ts";
+export type {
+  ObjectiveReferencePageResult,
+  ObjectiveReferenceSearchResult,
+  SilvermoonObjectiveId,
+} from "./business/index.ts";
 export { createIdea, generateUlid } from "./business/index.ts";
 export { inspectAdoption, SILVERMOON_VERSION } from "./foundation/skill-registration/index.ts";
 export { findSchemaMigrationPath, loadSchemaCapabilityManifest } from "./foundation/schema-capability/index.ts";

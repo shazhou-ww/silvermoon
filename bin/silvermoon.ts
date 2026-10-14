@@ -3,6 +3,7 @@ import { readFileSync, realpathSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+  Argument,
   Command,
   CommanderError,
   InvalidArgumentError,
@@ -14,15 +15,22 @@ import {
   canonicalizeOutputLanguage,
 } from "../src/foundation/language/index.ts";
 import { normalizeIdeaQuery } from "../src/foundation/idea-query/index.ts";
-import { listIdeas } from "../src/business/index.ts";
-import { checkRepository } from "../src/business/index.ts";
-import { createIdea } from "../src/business/index.ts";
-import { eventCommand } from "../src/business/index.ts";
-import { runProjectSchemaMigration } from "../src/business/index.ts";
+import {
+  checkRepository,
+  createIdea,
+  eventCommand,
+  listIdeas,
+  readObjectiveReference,
+  renderObjectiveReferencePage,
+  renderObjectiveReferenceSearch,
+  runProjectSchemaMigration,
+  searchObjectiveReferences,
+  whatsNext,
+} from "../src/business/index.ts";
+import type { SilvermoonObjectiveId } from "../src/business/index.ts";
 import { renderResponse } from "../src/foundation/renderer/index.ts";
 import { traceAsync, withTraceFile } from "../src/foundation/trace/index.ts";
 import { writeTerminalLine } from "../src/foundation/terminal/index.ts";
-import { whatsNext } from "../src/business/index.ts";
 
 type Io = { log: (message: unknown) => unknown; error: (message: unknown) => unknown };
 type Terminal = {
@@ -124,6 +132,7 @@ if (typeof VERSION !== "string") {
 
 const TRACE_FILE_SUFFIX = ".trace.jsonl";
 const AUDIENCES = ["human", "agent"];
+const OBJECTIVES = ["device", "project", "idea"];
 
 export function normalizeTraceFileName(value: string): string {
   return value.endsWith(TRACE_FILE_SUFFIX)
@@ -290,6 +299,22 @@ function collectOption(value: string, previous: string[] = []): string[] {
   return [...previous, value];
 }
 
+function addReferenceOptions(command: Command): Command {
+  return command
+    .option(
+      "--language <tag>",
+      "select the Reference locale (default: en-US)",
+      contentLanguageArgument,
+      "en-US",
+    )
+    .option("--json", "serialize the Reference result as JSON")
+    .addOption(
+      new Option("--audience <audience>", "select human or agent Markdown output")
+        .choices(AUDIENCES)
+        .conflicts("json"),
+    );
+}
+
 export function createProgram(io: Io = console, runtime: Runtime = {}): Command {
   const program = new Command();
   program
@@ -425,6 +450,53 @@ Examples:
         root: options.root,
       }),
     }, io, runtime);
+    program.setOptionValue("resultCode", 0);
+  });
+
+  const reference = program.command("reference")
+    .description("read or search bundled Objective Reference pages")
+    .addHelpCommand(false)
+    .configureHelp({ sortOptions: true, sortSubcommands: false });
+
+  addReferenceOptions(
+    reference.command("page")
+      .description("read one stable Reference page")
+      .addArgument(new Argument("<objective>").choices(OBJECTIVES))
+      .argument("<page-id>"),
+  ).action(async (
+    objective: SilvermoonObjectiveId,
+    pageId: string,
+    options: CliOptions,
+  ) => {
+    const result = await readObjectiveReference(
+      objective,
+      pageId,
+      options.language,
+    );
+    io.log(options.json
+      ? JSON.stringify(result, null, 2)
+      : renderObjectiveReferencePage(result));
+    program.setOptionValue("resultCode", 0);
+  });
+
+  addReferenceOptions(
+    reference.command("search")
+      .description("search bundled Reference titles, descriptions, and content")
+      .addArgument(new Argument("<objective>").choices(OBJECTIVES))
+      .argument("<query>"),
+  ).action(async (
+    objective: SilvermoonObjectiveId,
+    query: string,
+    options: CliOptions,
+  ) => {
+    const result = await searchObjectiveReferences(
+      objective,
+      query,
+      options.language,
+    );
+    io.log(options.json
+      ? JSON.stringify(result, null, 2)
+      : renderObjectiveReferenceSearch(result));
     program.setOptionValue("resultCode", 0);
   });
 

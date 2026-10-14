@@ -180,6 +180,18 @@ try {
       windowsHide: true,
     });
   const installedEntryBefore = await readFile(installedEntry);
+  const referencePage = JSON.parse(installed(
+    ["reference", "page", "project", "levels/repository-unready", "--language", "zh-CN", "--json"],
+    bootstrap,
+  ));
+  assert.equal(referencePage.objective, "project");
+  assert.equal(referencePage.language, "zh-CN");
+  assert.equal(referencePage.page.id, "levels/repository-unready");
+  const referenceSearch = JSON.parse(installed(
+    ["reference", "search", "idea", "revision", "--language", "en-US", "--json"],
+    bootstrap,
+  ));
+  assert.ok(referenceSearch.results.length > 0);
   for (const args of [
     ["list-ideas", "--root", packageRoot, "--json"],
     ["whats-next", "cli-responsibility-refactor", "--root", packageRoot, "--json"],

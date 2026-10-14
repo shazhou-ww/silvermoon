@@ -194,6 +194,7 @@ if (packed.status !== 0) {
     "src/business/list-ideas.js",
     "src/business/migrate-v1-to-v2.js",
     "src/business/objective-guides.js",
+    "src/business/objective-reference.js",
     "src/business/replay-events.js",
     "src/business/schema-migration.js",
     "src/business/shared/README.md",

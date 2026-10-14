@@ -20,6 +20,20 @@ export {
 } from "./list-ideas.ts";
 
 export {
+  objectiveReferenceCommand,
+  readObjectiveReference,
+  renderObjectiveReferenceContent,
+  renderObjectiveReferencePage,
+  renderObjectiveReferenceSearch,
+  searchObjectiveReferences,
+} from "./objective-reference.ts";
+export type {
+  ObjectiveReferencePageResult,
+  ObjectiveReferenceSearchResult,
+  SilvermoonObjectiveId,
+} from "./objective-reference.ts";
+
+export {
   IMPLEMENTED_SCHEMA_MIGRATIONS,
   resolveProjectSchemaMigration,
   runProjectSchemaMigration,

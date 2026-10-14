@@ -4,15 +4,15 @@
 
 ### Implementation steps
 
-- [ ] **I-S01:** 定义 Reference CLI 契约
-- [ ] **I-S02:** 实现只读 page/search 用例
-- [ ] **I-S03:** 接入 CLI 与验证
+- [x] **I-S01:** 定义 Reference CLI 契约
+- [x] **I-S02:** 实现只读 page/search 用例
+- [x] **I-S03:** 接入 CLI 与验证
 
 ### Implementation acceptance criteria
 
-- [ ] **I-AC01:** Page 查询准确
-- [ ] **I-AC02:** Search 与链接可导航
-- [ ] **I-AC03:** 查询保持只读
+- [x] **I-AC01:** Page 查询准确
+- [x] **I-AC02:** Search 与链接可导航
+- [x] **I-AC03:** 查询保持只读
 
 ## Deployment
 

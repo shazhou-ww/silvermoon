@@ -45,6 +45,30 @@ test("rejects legacy command spellings without changing the repository", async (
   assert.equal(gitStatus(), before);
 });
 
+test("Reference page and search commands are repository-independent and read-only", async () => {
+  const before = gitStatus();
+  const pageLogs: string[] = [];
+  assert.equal(await runCli(
+    ["reference", "page", "device", "system/overview", "--language", "zh-CN", "--json"],
+    { error: () => {}, log: captureString(pageLogs) },
+  ), 0);
+  const page = JSON.parse(pageLogs[0] ?? "");
+  assert.equal(page.objective, "device");
+  assert.equal(page.language, "zh-CN");
+  assert.equal(page.page.id, "system/overview");
+
+  const searchLogs: string[] = [];
+  assert.equal(await runCli(
+    ["reference", "search", "idea", "revision", "--language", "zh-CN", "--json"],
+    { error: () => {}, log: captureString(searchLogs) },
+  ), 0);
+  const search = JSON.parse(searchLogs[0] ?? "");
+  assert.equal(search.objective, "idea");
+  assert.ok(search.results.length > 0);
+  assert.ok(search.results.every(({ id }: { id: string }) => id.includes("/")));
+  assert.equal(gitStatus(), before);
+});
+
 test("returns one when check cannot validate a commit", async () => {
   const repository = await createRepository({
     prefix: "silvermoon-cli-exit-",
