@@ -3,14 +3,14 @@
 ## 问题
 
 whats-next catalog 包含成对的 en-US/zh-CN 模板，需要逐项人工 review 文案语义、
-命令边界、返回形状和两种 locale 的一致性。目前只有五个模板 ID 已明确完成
-review，其余状态不能从代码修改或测试通过中推断。
+命令边界、返回形状和两种 locale 的一致性。review 进度属于实施状态，不能从
+代码修改或测试通过中推断，也不应改变构想 revision。
 
 ## 结果
 
-以 [review-status.md](./review-status.md) 作为完整 catalog 的 review 清单，逐项完成
+以 [review-status.md](../review-status.md) 作为完整 catalog 的 review 清单，逐项完成
 剩余模板 review，并只依据人工明确结论更新状态，最终得到无遗漏的已 review
-catalog。每一项按照 [review-method.md](./review-method.md) 的协作方法处理。
+catalog。每一项按照 [review-method.md](../review-method.md) 的协作方法处理。
 
 ## 边界
 
@@ -22,7 +22,5 @@ catalog。每一项按照 [review-method.md](./review-method.md) 的协作方法
 ## 验收标准
 
 - `review-status.md` 精确覆盖 catalog 中除 locale `index.ts` 外的全部模板 ID。
-- `content-language`、`detached-head`、`event-history-invalid`、`head-missing`、
-  `idea-metadata-unavailable` 保持 `reviewed`，其他模板在获得明确 review 前保持
-  `pending`。
+- 每个模板的 review 状态只在获得明确人工结论后更新。
 - 所有模板完成 review 后，清单无 `pending`，且相关修正通过模板与 report 验证。
