@@ -148,7 +148,10 @@ The check writes exactly one JSON result to stdout:
   "problems": [
     {
       "id": "project-invalid",
-      "parameters": { "description": "Configuration is invalid." }
+      "parameters": {
+        "configurationPath": "/workspace/.silvermoon/config.yaml",
+        "issueCodes": ["schema-version-unsupported"]
+      }
     }
   ]
 }
@@ -187,9 +190,10 @@ the failing check (or `null` at terminal), and the complete ordered Problem
 list. A prerequisite failure therefore retains the prerequisite as its owner
 instead of being relabeled as a local level.
 
-Problems carry stable IDs and structured JSON parameters; checks do not put
-localized report prose in parameters. Read a Problem's localized explanation
-with:
+Problems carry stable IDs and structured JSON facts such as paths, revisions,
+states and diagnostic codes. Checks do not put localized report prose such as
+descriptions, summaries, messages or remediation instructions in parameters.
+Read a Problem's localized explanation with:
 
 ```ts
 const page = await observation.position.owner.readPage(

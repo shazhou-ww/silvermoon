@@ -406,21 +406,17 @@ export async function whatsNextUseCase({
   function failed(id: string, parameters: JsonObject = {}): CheckResult {
     return { pass: false, problems: [{ id, parameters }] };
   }
-  function observedProblems(problems: readonly { type: string; summary: string }[], state?: string): JsonObject {
+  function observedProblemTypes(problems: readonly { type: string }[]): readonly string[] {
+    return problems.map(({ type }) => type);
+  }
+  function observedProblemFacts(
+    problems: readonly { type: string }[],
+    state?: string,
+  ): JsonObject {
     return {
       ...(state === undefined ? {} : { state }),
-      problems: problems.map(({ type, summary }) => ({ type, summary })),
+      problemTypes: observedProblemTypes(problems),
     };
-  }
-  function dynamicProblemSummary(parameters: JsonObject, fallback: string): string {
-    const problems = parameters.problems;
-    if (!Array.isArray(problems)) return fallback;
-    const summaries = problems.flatMap((problem) =>
-      typeof problem === "object" && problem !== null && !Array.isArray(problem)
-        && typeof problem.type === "string" && typeof problem.summary === "string"
-        ? [`${problem.type}: ${problem.summary}`]
-        : []);
-    return summaries.length === 0 ? fallback : summaries.join("\n");
   }
   function sampleDevice() {
     if (deviceSample === undefined) throw new ObjectiveOperationError("Device observation is unavailable.");
@@ -439,7 +435,7 @@ export async function whatsNextUseCase({
     };
     return problems.some(({ type }) => category(type) === kind)
       || (problems.length === 0 && kind === "config")
-      ? failed("project", observedProblems(problems, snapshot.observation.state))
+      ? failed("project", observedProblemFacts(problems, snapshot.observation.state))
       : passed;
   }
   function repositoryProblems(types: readonly string[]): CheckResult {
@@ -448,7 +444,7 @@ export async function whatsNextUseCase({
     const problems = repository.observation.problems;
     return problems.some(({ type }) => types.includes(type))
       ? failed("repository", {
-        ...observedProblems(problems, repository.observation.state),
+        ...observedProblemFacts(problems, repository.observation.state),
         root: repository.observation.root,
         head: repository.head ?? null,
         primary: repository.primary ?? null,
@@ -470,7 +466,7 @@ export async function whatsNextUseCase({
         problems: inspected.diagnostics.map((diagnostic) => diagnosticProblem(diagnostic, observed.outputLanguage)),
       }), { nextSteps: phaseGuidanceInstructions(inspected.diagnostics, base.root, observed.outputLanguage, recheckCommand) });
       return failed("guidance", {
-        problems: inspected.diagnostics.map(({ code, path }) => ({ type: code, summary: path })),
+        diagnostics: inspected.diagnostics.map(({ code, path }) => ({ code, path })),
       });
     }
     return passed;
@@ -558,7 +554,7 @@ export async function whatsNextUseCase({
             findings: local.diagnostics.map(({ remediation }) => ({ instruction: remediation })),
           }, observation.root, observed.outputLanguage, recheckCommand),
         });
-        return failed("idea-configuration", observedProblems(problems));
+        return failed("idea-configuration", observedProblemFacts(problems));
       }
       if (JSON.stringify(current.revisions) !== JSON.stringify(prior.revisions) || current.eventDigest !== prior.eventDigest) {
         finish(dialogueReadyObservation(readyRepository().observation, "repository-sync-required", {
@@ -583,8 +579,8 @@ export async function whatsNextUseCase({
       if (selected === null || snapshot?.layout?.diagnostics.length !== 0) {
         return failed("idea-configuration", {
           ideaId: selected?.id ?? null,
-          problems: (snapshot?.layout?.diagnostics ?? []).map(
-            ({ code, path }) => ({ type: code, summary: path }),
+          diagnostics: (snapshot?.layout?.diagnostics ?? []).map(
+            ({ code, path }) => ({ code, path }),
           ),
         });
       }
@@ -665,9 +661,9 @@ export async function whatsNextUseCase({
     }
     const objective = await probeObjective(created.instance);
     const terminal = objective.position.level.id === "terminal";
-    const problems = objective.position.problems.map(({ id, parameters }) => ({
+    const problems = objective.position.problems.map(({ id }) => ({
       type: id,
-      summary: dynamicProblemSummary(parameters, objective.gapSummary),
+      summary: objective.gapSummary,
     }));
     const observation: ObjectiveReportObservation = {
       state: terminal ? "objective-ready" : "objective-blocked",

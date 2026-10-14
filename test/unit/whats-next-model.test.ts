@@ -17,6 +17,17 @@ const id = "01M36QGPNTXEPP61DA4KP4AVZF";
 const primary = "a".repeat(40);
 const paths = ideaPaths(id);
 const config = { version: 2 as const, primaryRepository: "https://example.test/owner/repository.git", primaryBranch: "main" };
+function assertNoLocalizedProblemProse(value: unknown): void {
+  if (Array.isArray(value)) {
+    for (const item of value) assertNoLocalizedProblemProse(item);
+    return;
+  }
+  if (typeof value !== "object" || value === null) return;
+  for (const [key, item] of Object.entries(value)) {
+    assert.ok(!["description", "summary", "message", "remediation"].includes(key), key);
+    assertNoLocalizedProblemProse(item);
+  }
+}
 function idea(state: string): ObservedIdea {
   const revisions = { idealRevision: "b".repeat(40), implementationRevision: "c".repeat(40), deploymentRevision: "d".repeat(40) };
   return {
@@ -150,26 +161,34 @@ test("project and repository failures gate Idea checks and retain report diagnos
   assert.deepEqual(first.calls, ["snapshot", "project-config-valid"]);
   assert.equal(first.observations[0]?.position.level.id, "configuration-invalid");
   assert.equal(first.observations[0]?.position.failingCheck, "project-config-valid");
-  assert.deepEqual(first.observations[0]?.position.problems[0]?.parameters, {
+  const projectParameters = first.observations[0]?.position.problems[0]?.parameters;
+  assert.deepEqual(projectParameters, {
     state: "project-setup-required",
-    problems: [{ type: "schema-invalid", summary: "Unsupported schema." }],
+    problemTypes: ["schema-invalid"],
   });
+  assertNoLocalizedProblemProse(projectParameters);
+  assert.doesNotMatch(JSON.stringify(projectParameters), /Unsupported schema/);
+  assert.equal(blocked.observation.problems[0]?.summary, "Unsupported schema.");
   assert.equal(blocked.observation.state, "project-setup-required");
   const second = harness(ready(), true);
   const sync = await whatsNextUseCase(second.options, second.ports);
   assert.equal(second.observations[0]?.position.level.id, "repository-unready");
   assert.equal(second.observations[0]?.position.failingCheck, "repository-worktree-clean");
   assert.equal(second.observations[0]?.position.owner.guide.manifestUri, SILVERMOON_OBJECTIVE_URIS.project);
-  assert.deepEqual(second.observations[0]?.position.problems[0]?.parameters, {
+  const repositoryParameters = second.observations[0]?.position.problems[0]?.parameters;
+  assert.deepEqual(repositoryParameters, {
     state: "repository-sync-required",
-    problems: [{ type: "worktree-changes", summary: "Dirty candidate." }],
+    problemTypes: ["worktree-changes"],
     root: "D:\\fixture",
     head: null,
     primary: null,
     branch: null,
   });
+  assertNoLocalizedProblemProse(repositoryParameters);
+  assert.doesNotMatch(JSON.stringify(repositoryParameters), /Dirty candidate/);
   assert.ok(!second.calls.includes("idea-metadata-valid"));
   assert.equal(sync.observation.state, "repository-sync-required");
+  assert.equal(sync.observation.problems[0]?.summary, "Dirty candidate.");
 });
 
 test("no selector stays Project-only even for one Idea; invalid selectors do not silently fall back", async () => {
@@ -246,6 +265,13 @@ test("Project validates every phase, missing guidance is allowed and another inv
   assert.ok(!context.calls.includes("repository"));
   assert.equal(report.observation.state, "phase-guidance-invalid");
   assert.equal(report.observation.problems[0]?.type, "guidance-invalid");
+  const guidanceParameters = context.observations[0]?.position.problems[0]?.parameters;
+  assert.deepEqual(guidanceParameters, {
+    diagnostics: [{ code: "guidance.invalid", path: "guidance/deploying.md" }],
+  });
+  assertNoLocalizedProblemProse(guidanceParameters);
+  assert.doesNotMatch(JSON.stringify(guidanceParameters), /Invalid unselected phase|Repair phase guidance/);
+  assert.match(report.observation.problems[0]?.summary ?? "", /Invalid unselected phase\./);
 });
 
 test("v2 exact submission and acceptance occupy separate levels; stale submission returns to unsubmitted", async () => {

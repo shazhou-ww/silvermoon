@@ -22,7 +22,8 @@
 
 ### I-AC02: 动态事实结构化
 
-Project、repository 和 lifecycle 样例证明路径、revision、branch 等事实保留为参数。
+Project、repository 和 lifecycle 样例证明路径、revision、branch、state 与 problem
+code 等事实保留为参数，并断言 parameters 不携带本地化 report prose。
 
 ### I-AC03: Prerequisite 归属准确
 
