@@ -18,10 +18,10 @@
 
 ### Deployment steps
 
-- [ ] **D-S01:** 采集完整 Objective corpus
-- [ ] **D-S02:** 发布统一报告语义
+- [x] **D-S01:** 采集完整 Objective corpus
+- [x] **D-S02:** 发布统一报告语义
 
 ### Deployment acceptance criteria
 
-- [ ] **D-AC01:** 双语报告完成评审
-- [ ] **D-AC02:** Release-grade 检查通过
+- [x] **D-AC01:** 双语报告完成评审
+- [x] **D-AC02:** Release-grade 检查通过
