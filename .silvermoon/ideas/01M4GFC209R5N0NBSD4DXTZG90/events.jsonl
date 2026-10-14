@@ -8,3 +8,4 @@
 {"type":"submitIdeal","timestamp":"2026-10-14T12:59:25.937Z","payload":{"idealRevision":"02741d7fff9c8bf9662222483b1e522887e5e7da"}}
 {"type":"ping","timestamp":"2026-10-14T13:03:37.135Z","payload":{"message":"把链路设计收敛为一条可单调推进的线性主链：每个 checkpoint 采集后修复当前阻塞，再前进到下一个状态，不为每个 case 重置；只对互斥、不可逆或会污染后续状态的 case 开分支。覆盖清单以实际 distinct instruction 输出为准，并核对其与底层 checks 的映射，不预设每个 check 都产生独立文本。"}}
 {"type":"submitIdeal","timestamp":"2026-10-14T13:05:15.474Z","payload":{"idealRevision":"73baec57c2704b818103969643c2c3202d8af396"}}
+{"type":"submitIdeal","timestamp":"2026-10-14T13:11:51.332Z","payload":{"idealRevision":"797de35423c282d936828ce8ec48fbe4248d5230"}}
