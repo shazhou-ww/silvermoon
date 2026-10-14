@@ -5,13 +5,14 @@
 ### I-S01: 设计场景链路
 
 从三个 objective manifest 的有序 check 建立场景矩阵，以一条设备整备到 lifecycle
-推进的主链和少量支链复用连续状态。每条链路在多个 checkpoint 覆盖多个 check，
-仅为互斥、不可逆或会污染后续 checkpoint 的状态另开链路。
+推进的线性主链覆盖可逐步修复的 instruction case。只有 case 互斥、不可逆或会
+污染后续 checkpoint 时，才从最近可复用状态开支链并记录原因。
 
 ### I-S02: 构建并采集语料
 
-在 Docker 中用脚本初始化链路并依次推进 checkpoint，通过当前 checkout 链接的
-全局 `silvermoon` 执行双语 whats-next，并保存完整输出、场景身份和来源 revision。
+在 Docker 中只初始化主链一次；每个 checkpoint 先通过当前 checkout 链接的全局
+`silvermoon` 执行双语 whats-next 并保存完整输出，再修复该 case、推进到后续状态。
+支链从最近可复用 checkpoint 派生，避免重做设备整备。
 
 ### I-S03: 集中 review 并修正
 
@@ -22,8 +23,9 @@
 
 ### I-AC01: 场景覆盖完整
 
-自动化检查证明 Device、Project、Idea 的每个 check 都恰有对应 checkpoint，两种
-locale 和无 check 的补充输出也被覆盖，且没有可由已有链路推进却重复初始化的 case。
+自动化检查证明 Device、Project、Idea 的每个 instruction case 都有 checkpoint，两种
+locale 和无 check 的补充输出也被覆盖；每条支链均有不能在线性主链继续的原因，且
+没有可由主链推进覆盖却重复初始化的 case。
 
 ### I-AC02: 语料可复现
 

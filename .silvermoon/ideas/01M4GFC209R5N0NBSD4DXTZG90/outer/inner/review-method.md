@@ -1,21 +1,23 @@
 # Template review method
 
 review 以 Docker 场景集生成的完整输出语料为对象，而不是从模板源码推测最终文本。
-场景集包含少量可连续推进的链路。每条链路只做一次基础初始化，在状态 checkpoint
-之间复用设备与项目；只有互斥、不可逆或会污染后续 checkpoint 的状态才另开支链。
+场景集优先是一条线性主链：只做一次基础初始化，每个 checkpoint 采集输出后修复
+当前 case 并推进状态。只有互斥、不可逆或会污染后续 checkpoint 的状态才从最近可
+复用 checkpoint 开支链，并记录分支原因。
 
 ## Agent 采集
 
 在请求人工 comment 前，Agent 必须从全新环境执行场景集，并为每个输出保留：
 
-1. 链路 ID、checkpoint ID、前置 checkpoint 和本次状态变更；
+1. 链路 ID、checkpoint ID、前置 checkpoint、本次状态变更和继续主链或分支的理由；
 2. checkout revision、全局 Silvermoon 版本和项目 revision；
 3. 实际执行的完整命令与 locale；
 4. routing 覆盖标识及最终完整输出。
 
-覆盖检查必须从 Device、Project、Idea manifest 读取有序 check，并把每个 check
-恰好映射到一个 checkpoint。模板 ID 只用于解释输出实现；无 check 的 navigation
-和 terminal 输出另列补充场景。任何未覆盖项都不能用源码片段或手写 sample 补齐。
+覆盖检查必须从 Device、Project、Idea manifest 读取有序 check，并映射每个实际
+instruction case 到 checkpoint；一个 checkpoint 可以同时覆盖共享同一实际输出的
+检查。模板 ID 只用于解释输出实现；无 check 的 navigation 和 terminal 输出另列
+补充场景。任何未覆盖项都不能用源码片段或手写 sample 补齐。
 
 ## 人工 comment
 

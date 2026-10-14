@@ -7,15 +7,16 @@
 
 ## 结果
 
-准备可复现的 Docker 环境，从设备整备开始运行少量连续链路，在每条链路的多个
-状态 checkpoint 覆盖 Device、Project、Idea 三个 objective 的全部 check，并执行
-全局 `silvermoon whats-next` 形成完整 review 语料。维护者基于语料集中 review，
-并只依据明确结论更新实施状态。
+准备可复现的 Docker 环境，优先用一条从设备整备开始、逐步推进的线性主链覆盖
+Device、Project、Idea 三个 objective 的 instruction case；仅对互斥、不可逆或会
+污染后续状态的情况开必要支链。各 checkpoint 执行全局 `silvermoon whats-next`
+形成完整 review 语料，供维护者集中 review。
 
 ## 边界
 
 - 场景必须通过隔离环境中的真实 CLI 和项目状态产生，不直接调用模板或伪造输出。
-- 每条链路只初始化一次并连续覆盖多个 case；仅为互斥或不可逆状态拆分支链。
+- 主链只初始化一次，每个 case 在采集后修复并推进状态；仅为互斥、不可逆或会污染
+  后续状态的情况拆分支链。
 - objective check 是 instruction case 的 canonical 覆盖单位；模板映射和无 check 的
   navigation/terminal 输出作为补充覆盖。
 
