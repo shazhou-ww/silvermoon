@@ -12,11 +12,19 @@ silvermoon whats-next publish-documentation --json
 silvermoon whats-next publish-documentation --language zh-CN
 ```
 
-Without a selector, Silvermoon asks for a choice among multiple active ideas,
-and the option to discuss and create a new idea. This remains true with zero,
-one, or many active ideas: only a selector chooses work. Completed and abandoned
-ideas are excluded from default candidates. A selector is either a canonical
-uppercase ULID or an exact, unique, case-sensitive alias.
+Without a selector, Silvermoon reports the Device Objective outside a Git
+worktree and the Project Objective inside one. A terminal Objective has no
+required action. Idea inventory belongs exclusively to `list-ideas`; pass a
+canonical uppercase ULID or exact, unique, case-sensitive alias to navigate an
+Idea.
+
+Every check-backed `whats-next` report has two fixed parts. **Current position**
+contains the target and owning Objective, level, failing check, the complete
+ordered Problem list with structured parameters, and invocation-specific
+paths, revisions, branches, and commands. **Downward guidance** links the
+matching level, check, and Problem Reference pages through copyable
+`silvermoon reference page` commands. Terminal reports retain the same shell,
+have no failing check or Problems, and contain no required actions.
 
 The shared observation exposes the resolved content preference as
 `configuration.preferredLanguage` and the built-in rendering locale as

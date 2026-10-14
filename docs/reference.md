@@ -4,7 +4,8 @@ This page is the authoritative reference for Silvermoon storage, revisions,
 derived state, CLI reports, and validation.
 
 The [Objective Guide runtime](./objective-guidance.md) organizes Device,
-Project and Idea checks without adding another CLI report projection.
+Project and Idea checks and supplies the shared Objective position projected by
+`whats-next`.
 
 ## Fixed Storage Layout
 
@@ -369,8 +370,19 @@ projections:
     "outputLanguage": "en-US",
     "objective": {
       "target": "project",
+      "owner": "project",
       "level": "terminal",
-      "terminal": true
+      "failingCheck": null,
+      "terminal": true,
+      "problems": [],
+      "references": [
+        {
+          "kind": "level",
+          "id": "levels/terminal",
+          "title": "Objective attained",
+          "command": "silvermoon reference page project levels/terminal --language en-US"
+        }
+      ]
     }
   },
   "actions": [],
@@ -380,8 +392,19 @@ projections:
     "summary": "project Objective is terminal; no required next step remains.",
     "objective": {
       "target": "project",
+      "owner": "project",
       "level": "terminal",
-      "terminal": true
+      "failingCheck": null,
+      "terminal": true,
+      "problems": [],
+      "references": [
+        {
+          "kind": "level",
+          "id": "levels/terminal",
+          "title": "Objective attained",
+          "command": "silvermoon reference page project levels/terminal --language en-US"
+        }
+      ]
     },
     "problems": [],
     "nextSteps": []
@@ -620,11 +643,21 @@ Observations are discriminated by command intent and `state`:
   least one `problem`, but no idea inventory or remote synchronization facts.
 - Bare `whats-next` infers its Objective from path context: Device when the
   requested path is explicitly outside a Git worktree, and Project when it is
-  inside one. A successful terminal returns `objective-ready` with target,
-  level, and `terminal: true`; it has no choices or required next steps.
+  inside one. Active Idea inventory is exclusive to `list-ideas`; bare
+  `whats-next` never returns choices. A successful terminal returns
+  `objective-ready` with target/owner, level, no failing check or Problems,
+  its terminal level Reference, and `terminal: true`; it has no required next
+  steps.
   Worktree inspection failures are explicit setup problems rather than Device
   fallbacks. A selector requires a worktree and selects the Idea Objective;
   outside-worktree selectors return `target-context-invalid`.
+- Every check-backed blocked or ready `whats-next` response projects the same
+  Objective position: requested target, actual owner (including prerequisite
+  ownership), level, failing check, complete ordered Problems with structured
+  parameters, and matching level/check/Problem Reference commands. Markdown
+  renders these as the fixed **Current position** and **Downward guidance**
+  sections. Dynamic paths, revisions, branches, and retry commands remain
+  invocation facts; Reference pages remain stable explanatory knowledge.
 - Selected `whats-next` returns `idea-selected` with only `selectedIdea`
   (`id`, optional `alias`, lifecycle `state`), including terminal ideas. V2
   selections also include `control` (`owner`, nullable `lastTransfer`) and

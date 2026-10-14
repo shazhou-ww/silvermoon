@@ -10,10 +10,8 @@ import {
   lifecycleDeploying as enLifecycleDeploying,
   lifecycleImplemented as enLifecycleImplemented,
   lifecycleImplementing as enLifecycleImplementing,
-  lifecycleInactive as enLifecycleInactive,
   lifecyclePrepared as enLifecyclePrepared,
   lifecyclePreparing as enLifecyclePreparing,
-  navigationReady as enNavigationReady,
   phaseGuidanceInvalid as enPhaseGuidanceInvalid,
   preparationSeed as enPreparationSeed,
   primaryAhead as enPrimaryAhead,
@@ -44,10 +42,8 @@ import {
   lifecycleDeploying as zhLifecycleDeploying,
   lifecycleImplemented as zhLifecycleImplemented,
   lifecycleImplementing as zhLifecycleImplementing,
-  lifecycleInactive as zhLifecycleInactive,
   lifecyclePrepared as zhLifecyclePrepared,
   lifecyclePreparing as zhLifecyclePreparing,
-  navigationReady as zhNavigationReady,
   phaseGuidanceInvalid as zhPhaseGuidanceInvalid,
   preparationSeed as zhPreparationSeed,
   primaryAhead as zhPrimaryAhead,
@@ -76,11 +72,9 @@ import type {
   LifecycleDeployingParameters,
   LifecycleImplementedParameters,
   LifecycleImplementingParameters,
-  LifecycleInactiveParameters,
   LifecyclePreparedParameters,
   LifecyclePreparingParameters,
   MetadataUnavailableParameters,
-  NavigationParameters,
   PreparationSeedParameters,
   PrimaryAncestryFailedParameters,
   PrimaryFetchFailedParameters,
@@ -241,26 +235,6 @@ export function renderLifecycleDeployed(
   return isChinese(language)
     ? zhLifecycleDeployed(parameters)
     : enLifecycleDeployed(parameters);
-}
-
-/** @pure */
-export function renderLifecycleInactive(
-  language: string,
-  parameters: LifecycleInactiveParameters,
-) {
-  return isChinese(language)
-    ? zhLifecycleInactive(parameters)
-    : enLifecycleInactive(parameters);
-}
-
-/** @pure */
-export function renderNavigationReady(
-  language: string,
-  parameters: NavigationParameters,
-) {
-  return isChinese(language)
-    ? zhNavigationReady(parameters)
-    : enNavigationReady(parameters);
 }
 
 /** @pure */

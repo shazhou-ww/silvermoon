@@ -11,6 +11,36 @@ export interface Problem {
   summary: string;
 }
 
+export type ReportJsonValue =
+  | string
+  | number
+  | boolean
+  | null
+  | readonly ReportJsonValue[]
+  | { readonly [key: string]: ReportJsonValue };
+
+export interface ObjectiveProblem {
+  id: string;
+  parameters: { readonly [key: string]: ReportJsonValue };
+}
+
+export interface ObjectiveReference {
+  kind: "level" | "check" | "problem";
+  id: string;
+  title: string;
+  command: string;
+}
+
+export interface ObjectiveProjection {
+  target: "device" | "project" | "idea";
+  owner: "device" | "project" | "idea";
+  level: string;
+  failingCheck: string | null;
+  terminal: boolean;
+  problems: ObjectiveProblem[];
+  references: ObjectiveReference[];
+}
+
 export interface Diagnostic {
   code: string;
   level?: string;
@@ -207,6 +237,7 @@ interface ObservationBase {
   version?: ProjectVersion;
   configuration?: ProjectConfiguration;
   schemas?: ProjectSchemaReadiness;
+  objective?: ObjectiveProjection;
 }
 
 export interface ProjectSetupObservation extends ObservationBase {
@@ -286,11 +317,7 @@ export interface EventResultObservation extends ObservationBase {
 
 export interface ObjectiveObservation extends ObservationBase {
   state: "objective-ready" | "objective-blocked";
-  objective: {
-    target: "device" | "project";
-    level: string;
-    terminal: boolean;
-  };
+  objective: ObjectiveProjection;
 }
 
 export type Observation =
@@ -356,6 +383,7 @@ interface ResponseBase {
   device?: DeviceAdvisory;
   details?: ResponseDetails;
   schemas?: ProjectSchemaReadiness;
+  objective?: ObjectiveProjection;
 }
 
 export interface ValidationResponse extends ResponseBase {
@@ -413,7 +441,7 @@ export interface IdeaListResponse extends ResponseBase {
 
 export interface ObjectiveResponse extends ResponseBase {
   kind: "objective";
-  objective: ObjectiveObservation["objective"];
+  objective: ObjectiveProjection;
   nextSteps: InstructionStep[];
   problems: Problem[];
 }

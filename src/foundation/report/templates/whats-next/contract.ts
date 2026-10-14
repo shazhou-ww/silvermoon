@@ -20,8 +20,6 @@ export const WHATS_NEXT_TEMPLATE_IDS = Object.freeze([
   "lifecycle-implemented",
   "lifecycle-deploying",
   "lifecycle-deployed",
-  "lifecycle-inactive",
-  "navigation-ready",
   "idea-not-found",
   "worktree-conflicts",
   "head-missing",
@@ -112,15 +110,6 @@ export interface LifecycleDeployingParameters extends LifecycleCurrentParameters
 }
 
 export interface LifecycleDeployedParameters extends LifecycleSubmittedParameters {}
-
-export interface LifecycleInactiveParameters {
-  name: string;
-  state: string;
-}
-
-export interface NavigationParameters {
-  hasActiveIdea: boolean;
-}
 
 export interface IdeaNotFoundParameters {
   selector: string;
@@ -214,10 +203,6 @@ export interface WhatsNextTemplates {
   "lifecycle-deployed": (
     parameters: LifecycleDeployedParameters,
   ) => string;
-  "lifecycle-inactive": (
-    parameters: LifecycleInactiveParameters,
-  ) => string;
-  "navigation-ready": (parameters: NavigationParameters) => string;
   "idea-not-found": (parameters: IdeaNotFoundParameters) => string;
   "worktree-conflicts": (
     parameters: WorktreeConflictsParameters,

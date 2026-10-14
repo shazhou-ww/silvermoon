@@ -158,6 +158,9 @@ function dialogueResponse(
   const base = {
     language,
     details: observationDetails(observation),
+    ...(observation.objective === undefined
+      ? {}
+      : { objective: clone(observation.objective) }),
     ...(observation.device === undefined
       ? {}
       : { device: clone(observation.device) }),

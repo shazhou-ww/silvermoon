@@ -3,6 +3,82 @@
   "$id": "https://github.com/shazhou-ww/silvermoon/raw/refs/heads/main/schema/v1/command-report.schema.json",
   "title": "Silvermoon command report v1",
   "description": "The four public projections returned by every trustworthy Silvermoon command.",
+  "$defs": {
+    "objective": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "target",
+        "owner",
+        "level",
+        "failingCheck",
+        "terminal",
+        "problems",
+        "references"
+      ],
+      "properties": {
+        "target": {
+          "enum": ["device", "project", "idea"]
+        },
+        "owner": {
+          "enum": ["device", "project", "idea"]
+        },
+        "level": {
+          "type": "string",
+          "minLength": 1
+        },
+        "failingCheck": {
+          "type": ["string", "null"]
+        },
+        "terminal": {
+          "type": "boolean"
+        },
+        "problems": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "parameters"],
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "parameters": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "references": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["kind", "id", "title", "command"],
+            "properties": {
+              "kind": {
+                "enum": ["level", "check", "problem"]
+              },
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "title": {
+                "type": "string",
+                "minLength": 1
+              },
+              "command": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        }
+      }
+    }
+  },
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -47,6 +123,9 @@
         },
         "problems": {
           "type": "array"
+        },
+        "objective": {
+          "$ref": "#/$defs/objective"
         }
       }
     },
@@ -153,6 +232,9 @@
         "summary": {
           "type": "string",
           "minLength": 1
+        },
+        "objective": {
+          "$ref": "#/$defs/objective"
         },
         "nextSteps": {
           "type": "array",

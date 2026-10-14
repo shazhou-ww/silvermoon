@@ -8,7 +8,6 @@ import { createCommandRun } from "../../src/foundation/command-message/index.ts"
 import { ideaPaths } from "../../src/foundation/coordinates/index.ts";
 import { inspectPhaseGuidance } from "../../src/foundation/guidance/index.ts";
 import { observeDevice } from "../../src/business/shared/observe-device.ts";
-import { IdeaMetadataReadError, readIdeaInventoryItem } from "../../src/business/shared/read-idea-inventory-item.ts";
 import type { ReadyObservation, SnapshotObservation } from "../../src/business/shared/business-types.ts";
 import type { ObservedIdea } from "../../src/business/shared/idea-layout.ts";
 import type { IdeaSubmissionsProjection, PhaseSubmissionProjection } from "../../src/foundation/report/types.ts";
@@ -88,7 +87,7 @@ function harness(snapshot: SnapshotObservation = ready(), blockRepository = fals
         branch: { branch: "topic", remote: "origin", repository: config.primaryRepository, upstreamBranch: "main" },
       };
     },
-    readIdeaInventoryItem, observeDevice,
+    observeDevice,
     observeIdea: async () => {
       if (snapshot.layout === null) throw new Error("Project must precede local Idea sampling.");
       return { ...snapshot.layout, project: undefined };
@@ -170,6 +169,17 @@ test("project and repository failures gate Idea checks and retain report diagnos
   assert.doesNotMatch(JSON.stringify(projectParameters), /Unsupported schema/);
   assert.equal(blocked.observation.problems[0]?.summary, "Unsupported schema.");
   assert.equal(blocked.observation.state, "project-setup-required");
+  assert.equal(blocked.response.objective?.target, "idea");
+  assert.equal(blocked.response.objective?.owner, "project");
+  assert.equal(blocked.response.objective?.failingCheck, "project-config-valid");
+  assert.deepEqual(blocked.response.objective?.problems, [{
+    id: "project",
+    parameters: projectParameters!,
+  }]);
+  assert.deepEqual(
+    blocked.response.objective?.references.map(({ id }) => id),
+    ["levels/configuration-invalid", "checks/project-config-valid", "problems/project"],
+  );
   const second = harness(ready(), true);
   const sync = await whatsNextUseCase(second.options, second.ports);
   assert.equal(second.observations[0]?.position.level.id, "repository-unready");
@@ -206,7 +216,18 @@ test("no selector stays Project-only even for one Idea; invalid selectors do not
       if (report.response.kind === "objective") {
         assert.deepEqual(report.response.nextSteps, []);
         assert.deepEqual(report.response.objective, {
-          target: "project", level: "terminal", terminal: true,
+          target: "project",
+          owner: "project",
+          level: "terminal",
+          failingCheck: null,
+          terminal: true,
+          problems: [],
+          references: [{
+            kind: "level",
+            id: "levels/terminal",
+            title: "Objective attained",
+            command: "silvermoon reference page project levels/terminal --language en-US",
+          }],
         });
       }
     }
@@ -246,7 +267,18 @@ test("outside-worktree bare navigation targets Device and stops at terminal", as
   assert.equal(report.response.kind, "objective");
   if (report.response.kind !== "objective") assert.fail("Expected Device Objective response.");
   assert.deepEqual(report.response.objective, {
-    target: "device", level: "terminal", terminal: true,
+    target: "device",
+    owner: "device",
+    level: "terminal",
+    failingCheck: null,
+    terminal: true,
+    problems: [],
+    references: [{
+      kind: "level",
+      id: "levels/terminal",
+      title: "Objective attained",
+      command: "silvermoon reference page device levels/terminal --language en-US",
+    }],
   });
   assert.deepEqual(report.response.nextSteps, []);
   assert.ok(!context.calls.includes("snapshot"));
@@ -302,6 +334,12 @@ test("v1 lifecycle remains compatible; completed is terminal and abandoned stops
     const report = await whatsNextUseCase(context.options, context.ports);
     assert.equal(context.observations[0]?.position.level.id, level);
     assert.equal(report.observation.state, "idea-selected");
+    if (level === "terminal") {
+      assert.ok("nextSteps" in report.response);
+      if ("nextSteps" in report.response) assert.deepEqual(report.response.nextSteps, []);
+      assert.equal(report.response.objective?.terminal, true);
+      assert.equal(report.response.objective?.target, "idea");
+    }
     if (state === "abandoned") {
       assert.ok(!context.calls.includes("idea-ideal-submitted"));
       assert.ok(!context.calls.includes("idea-metadata-valid"));
@@ -334,22 +372,14 @@ test("navigation defects and typed instance configuration errors propagate", asy
   assert.deepEqual(context.observations, []);
 });
 
-test("metadata I/O is explicit, while metadata programmer defects propagate", async () => {
+test("unknown selectors do not read active Idea metadata", async () => {
   const snapshot = ready();
   snapshot.observation.ideas = { counts: { implementing: 1 }, activeIdeas: [{ id, state: "implementing" }] };
   const context = harness(snapshot);
   const options = { ...context.options, idea: "missing" };
-  const bug = new Error("metadata defect");
-  await assert.rejects(whatsNextUseCase(options, {
-    ...context.ports, readIdeaInventoryItem: async () => { throw bug; },
-  }), (caught) => caught === bug);
-  const report = await whatsNextUseCase(options, {
-    ...context.ports, readIdeaInventoryItem: async () => {
-      throw new IdeaMetadataReadError(id, paths.ideaDocumentPath, new Error("unavailable"));
-    },
-  });
-  assert.equal(report.observation.state, "project-setup-required");
-  assert.equal(report.observation.problems[0]?.type, "idea-metadata-unavailable");
+  const report = await whatsNextUseCase(options, context.ports);
+  assert.equal(report.observation.state, "idea-not-found");
+  assert.deepEqual(report.observation.candidates, []);
 });
 
 test("fresh Idea metadata faults and concurrent changes cannot produce stale lifecycle review", async () => {

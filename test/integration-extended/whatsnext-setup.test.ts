@@ -86,11 +86,6 @@ function firstAction(report: WhatsNextReport) {
   return action;
 }
 
-function choices(report: WhatsNextReport) {
-  assert.ok("choices" in report.response);
-  return report.response.choices;
-}
-
 function ideas(report: WhatsNextReport) {
   assert.ok("ideas" in report.observation);
   const value = report.observation.ideas;
@@ -262,7 +257,18 @@ test("[selector-none] naked navigation stops at the Project terminal", async () 
   assert.equal(report.response.kind, "objective");
   if (report.response.kind !== "objective") assert.fail("Expected Project Objective response.");
   assert.deepEqual(report.response.objective, {
-    target: "project", level: "terminal", terminal: true,
+    target: "project",
+    owner: "project",
+    level: "terminal",
+    failingCheck: null,
+    terminal: true,
+    problems: [],
+    references: [{
+      kind: "level",
+      id: "levels/terminal",
+      title: "Objective attained",
+      command: "silvermoon reference page project levels/terminal --language en-US",
+    }],
   });
   assert.deepEqual(report.response.nextSteps, []);
   assert.equal(Object.hasOwn(report.observation, "ideas"), false);
@@ -306,7 +312,7 @@ test("empty Project also stops at the Project terminal", async () => {
   assert.doesNotMatch(renderResponse(report.response), /active idea|create-idea/i);
 });
 
-test("navigation renders an alias-less idea without a level-one title", async () => {
+test("an unknown selector does not load the active idea inventory", async () => {
   const repository = await fixture({
     ideas: [{ id: FIRST_ID, status: {} }],
   });
@@ -321,17 +327,10 @@ test("navigation renders an alias-less idea without a level-one title", async ()
     root: repository.root,
     userHome: repository.base,
   });
-  assert.deepEqual(choices(report), [{
-    id: FIRST_ID,
-    state: "preparing",
-    createdAt: ideaCreatedAt(FIRST_ID),
-  }]);
-  assert.match(
-    renderResponse(report.response, {
-      now: new Date(Date.parse(ideaCreatedAt(FIRST_ID)) + 7 * 24 * 60 * 60_000),
-    }),
-    new RegExp(`\\| ${FIRST_ID} \\| preparing \\| 7d ago \\| - \\|`),
-  );
+  assert.equal(report.observation.state, "idea-not-found");
+  assert.deepEqual(report.observation.candidates, []);
+  assert.equal("choices" in report.response && report.response.choices.length, 0);
+  assert.doesNotMatch(renderResponse(report.response), new RegExp(FIRST_ID));
 });
 
 test("resolves the repository root when invoked from a nested directory", async () => {
@@ -385,12 +384,12 @@ test("explicit navigation preserves every lifecycle state", async () => {
   git(repository.root, "commit", "-m", "Set lifecycle states");
   git(repository.root, "push", "origin", "main");
 
-  const lifecycleCases: ReadonlyArray<readonly [string, string]> = [
+  const lifecycleCases: ReadonlyArray<readonly [string, string | null]> = [
     [FIRST_ID, "acceptIdeal"],
     [SECOND_ID, "acceptInner"],
     [DEPLOYING_ID, "acceptOuter"],
-    [COMPLETED_ID, "Review completed \\(completed\\)"],
-    [ABANDONED_ID, "Review abandoned \\(abandoned\\)"],
+    [COMPLETED_ID, null],
+    [ABANDONED_ID, null],
   ];
   for (const [id, phrase] of lifecycleCases) {
     const selected = await whatsNext({
@@ -402,7 +401,12 @@ test("explicit navigation preserves every lifecycle state", async () => {
     assert.equal(selected.observation.state, "idea-selected");
     assert.equal(selected.observation.selectedIdea.id, id);
     assert.equal(Object.hasOwn(selected.observation, "ideas"), false);
-    assert.match(responseText(selected), new RegExp(phrase));
+    if (phrase === null) {
+      assert.equal(responseText(selected), "");
+      assert.equal(selected.response.objective?.terminal, true);
+    } else {
+      assert.match(responseText(selected), new RegExp(phrase));
+    }
   }
 });
 
@@ -434,12 +438,12 @@ test("uses concrete phase files in localized lifecycle instructions", async () =
   git(repository.root, "commit", "-m", "Set localized lifecycle states");
   git(repository.root, "push", "origin", "main");
 
-  const localizedCases: ReadonlyArray<readonly [string, string]> = [
+  const localizedCases: ReadonlyArray<readonly [string, string | null]> = [
     [FIRST_ID, "记录 submitIdeal"],
     [SECOND_ID, "记录 submitInner"],
     [DEPLOYING_ID, "记录 submitOuter"],
-    [COMPLETED_ID, "复查 completed（completed）"],
-    [ABANDONED_ID, "复查 abandoned（abandoned）"],
+    [COMPLETED_ID, null],
+    [ABANDONED_ID, null],
   ];
   for (const [id, phrase] of localizedCases) {
     const selected = await whatsNext({
@@ -454,7 +458,12 @@ test("uses concrete phase files in localized lifecycle instructions", async () =
       configuration(selected).preferredLanguage,
       "fr-FR",
     );
-    assert.match(responseText(selected), new RegExp(phrase));
+    if (phrase === null) {
+      assert.equal(responseText(selected), "");
+      assert.equal(selected.response.objective?.terminal, true);
+    } else {
+      assert.match(responseText(selected), new RegExp(phrase));
+    }
     assert.doesNotMatch(responseText(selected), /道心|内景|现世/);
     if ([FIRST_ID, SECOND_ID, DEPLOYING_ID].includes(id)) {
       assert.match(
@@ -569,18 +578,12 @@ test("[selector-unknown] reports an unknown selector without guessing", async ()
 
   assert.deepEqual(report.observation.problems, []);
   assert.equal(report.observation.state, "idea-not-found");
-  assert.deepEqual(report.observation.candidates, [{
-    id: FIRST_ID,
-    state: "preparing",
-    createdAt: ideaCreatedAt(FIRST_ID),
-    alias: "fixture",
-    title: "Fixture",
-  }]);
+  assert.deepEqual(report.observation.candidates, []);
   assert.equal(report.observation.outputLanguage, "zh-CN");
   assert.equal(Object.hasOwn(report.observation, "selectedIdea"), false);
   assert.match(responseText(report), /未匹配/);
   assert.doesNotMatch(responseText(report), new RegExp(FIRST_ID));
-  assert.match(responseText(report), /create-idea/);
+  assert.doesNotMatch(responseText(report), /create-idea|active idea/i);
 });
 
 test("[selector-known] [alias-absent] selects an alias-less idea only by explicit ULID", async () => {
@@ -775,14 +778,14 @@ test("drives gate presentation from content language instead of output language"
   assert.match(responseText(selected), /fenced review template/);
 
   const rendered = renderResponse(selected.response);
-  assert.match(rendered, /### Review request template/);
+  assert.match(rendered, /#### Review request template/);
   assert.match(rendered, /```markdown\n## 构想验收/);
   assert.match(rendered, /- 构想: \{idea identity\}/);
   assert.match(
     rendered,
     /- 候选版本: `idealRevision=[0-9a-f]{12}` 位于 primary `[0-9a-f]{12}`/,
   );
-  assert.doesNotMatch(rendered, /```json|"contentLanguage"|"gateLabel"/);
+  assert.doesNotMatch(rendered, /"contentLanguage"|"gateLabel"/);
 });
 
 test("names Chinese review contracts by their canonical artifacts", async () => {

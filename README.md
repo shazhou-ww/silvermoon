@@ -39,7 +39,8 @@ In this project, run:
 `silvermoon whats-next --audience agent`
 
 Follow its highest-priority instruction and preserve existing work.
-After each observable change, run it again until it reports: `navigation-ready`
+After each observable change, run it again until the Objective is terminal or
+the report requires a human or external result.
 ```
 
 ### Talk to Silvermoon

@@ -4,15 +4,15 @@
 
 ### Implementation steps
 
-- [ ] **I-S01:** 建立统一报告投影
-- [ ] **I-S02:** 实现 Objective report shell
-- [ ] **I-S03:** 迁移 templates 与语料
+- [x] **I-S01:** 建立统一报告投影
+- [x] **I-S02:** 实现 Objective report shell
+- [x] **I-S03:** 迁移 templates 与语料
 
 ### Implementation acceptance criteria
 
-- [ ] **I-AC01:** 两部分信息完整
-- [ ] **I-AC02:** Terminal 没有伪下一步
-- [ ] **I-AC03:** 模板收敛无回退
+- [x] **I-AC01:** 两部分信息完整
+- [x] **I-AC02:** Terminal 没有伪下一步
+- [x] **I-AC03:** 模板收敛无回退
 
 ## Deployment
 

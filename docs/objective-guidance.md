@@ -204,6 +204,16 @@ const page = await observation.position.owner.readPage(
 Every probe samples again. Observations and probe workspaces are not persistent
 state or authorization.
 
+Silvermoon's `whats-next` adapter projects this position without flattening
+prerequisite ownership. Its fixed **Current position** section identifies the
+requested target, owning Objective, level, failing check, and every ordered
+Problem with complete parameters. **Downward guidance** points to the matching
+level, check, and Problem Reference pages with copyable
+`silvermoon reference page` commands. Reference content is stable explanatory
+knowledge; paths, revisions, branches, and recovery commands remain facts from
+the current invocation. Terminal positions keep the same shell and have no
+required actions.
+
 ## Loading
 
 `createObjectiveLoader()` uses file resources and executable checks by default.

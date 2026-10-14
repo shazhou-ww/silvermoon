@@ -710,12 +710,13 @@ decision, risk, or disagreement requires it.
   );
   assert.match(
     lifecycleText,
-    /^## Blocked\n\nThe repository must be synchronized before this command can continue\./,
+    /^## Objective\n\nThe repository must be synchronized before this command can continue\./,
   );
   assert.match(
     lifecycleText,
-    /\n\n### Issues to address\n\n\| Type \| Summary \|\n\| --- \| --- \|\n\| worktree-changes \|/,
+    /\n\n### Current position[\s\S]*Target Objective: `idea`[\s\S]*Owner Objective: `project`[\s\S]*1\. `repository`/,
   );
+  assert.match(lifecycleText, /\n\n### Downward guidance\n/);
   assert.doesNotMatch(lifecycleText, /### Ideas you can continue/);
   assert.doesNotMatch(lifecycleText, /## Actions and results/);
   const eventConsumer = join(temporaryRoot, "event-consumer");

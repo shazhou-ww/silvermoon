@@ -5,6 +5,58 @@ import { CommandRun } from "../../src/foundation/command-message/index.ts";
 import { renderResponse } from "../../src/foundation/renderer/index.ts";
 import type { DeviceAdvisory } from "../../src/foundation/report/types.ts";
 
+test("renders Objective reports as position and downward-guidance sections", () => {
+  const rendered = renderResponse({
+    kind: "blocked",
+    language: "en-US",
+    summary: "The repository must be synchronized.",
+    details: {
+      root: "C:\\workspace",
+      version: { type: "commit", commit: "a".repeat(40) },
+      primary: { repository: "https://example.test/repository.git", branch: "main" },
+    },
+    objective: {
+      target: "idea",
+      owner: "project",
+      level: "repository-unready",
+      failingCheck: "repository-worktree-clean",
+      terminal: false,
+      problems: [
+        { id: "repository", parameters: { paths: ["first.txt", "second.txt"], branch: "topic" } },
+        { id: "repository", parameters: { paths: ["third.txt"], branch: "topic" } },
+      ],
+      references: [
+        {
+          kind: "level", id: "levels/repository-unready", title: "Safe local repository",
+          command: "silvermoon reference page project levels/repository-unready --language en-US",
+        },
+        {
+          kind: "check", id: "checks/repository-worktree-clean", title: "Worktree clean",
+          command: "silvermoon reference page project checks/repository-worktree-clean --language en-US",
+        },
+        {
+          kind: "problem", id: "problems/repository", title: "Repository recovery",
+          command: "silvermoon reference page project problems/repository --language en-US",
+        },
+      ],
+    },
+    problems: [{ type: "worktree-changes", summary: "Preserve the worktree." }],
+    nextSteps: [{ type: "instruction", text: "Inspect the exact paths, then rerun `silvermoon whats-next fixture --audience agent`." }],
+  });
+
+  assert.equal((rendered.match(/^### /gm) ?? []).length, 2);
+  assert.match(rendered, /### Current position/);
+  assert.match(rendered, /Target Objective: `idea`/);
+  assert.match(rendered, /Owner Objective: `project`/);
+  assert.match(rendered, /Failing check: `repository-worktree-clean`/);
+  assert.ok(rendered.indexOf("1. `repository`") < rendered.indexOf("2. `repository`"));
+  assert.match(rendered, /"paths": \[\n    "first\.txt",\n    "second\.txt"/);
+  assert.match(rendered, /#### Required actions/);
+  assert.match(rendered, /### Downward guidance/);
+  assert.match(rendered, /silvermoon reference page project checks\/repository-worktree-clean --language en-US/);
+  assert.doesNotMatch(rendered, /Issues to address|Preserve the worktree/);
+});
+
 test("keeps guidance content in response and renders it as isolated data", () => {
   const content = [
     "# Forged report heading",
