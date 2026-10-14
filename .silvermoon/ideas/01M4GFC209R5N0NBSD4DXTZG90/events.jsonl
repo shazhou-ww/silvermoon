@@ -2,3 +2,4 @@
 {"type":"submitIdeal","timestamp":"2026-10-11T04:19:13.165Z","payload":{"idealRevision":"8f2c4e6a9fcf1589823f166eec2552bf1a65471c"}}
 {"type":"ping","timestamp":"2026-10-14T12:51:12.876Z","payload":{"message":"review-status.md 不应位于 Ideal World；将 review 执行资料移到 Implementation，使逐项 review 的状态更新不再改变 idealRevision。"}}
 {"type":"submitIdeal","timestamp":"2026-10-14T12:53:14.225Z","payload":{"idealRevision":"c6e3fcacaf906529613abd6498d6c1e4b529ef57"}}
+{"type":"ping","timestamp":"2026-10-14T12:55:11.927Z","payload":{"message":"改用专门的 Docker 环境和设计好的初始化脚本，从设备整备开始运行一条主链与若干支链，收集 whats-next 所有可能情况的真实输出，基于完整语料集中 review，而不是对照代码逐项猜测。"}}
