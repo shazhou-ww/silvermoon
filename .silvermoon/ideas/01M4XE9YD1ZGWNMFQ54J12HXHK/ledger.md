@@ -18,10 +18,10 @@
 
 ### Deployment steps
 
-- [ ] **D-S01:** 验证公开 Objective API
-- [ ] **D-S02:** 发布迁移说明
+- [x] **D-S01:** 验证公开 Objective API
+- [x] **D-S02:** 发布迁移说明
 
 ### Deployment acceptance criteria
 
-- [ ] **D-AC01:** Package contract 稳定
-- [ ] **D-AC02:** 消费方迁移可验证
+- [x] **D-AC01:** Package contract 稳定
+- [x] **D-AC02:** 消费方迁移可验证
