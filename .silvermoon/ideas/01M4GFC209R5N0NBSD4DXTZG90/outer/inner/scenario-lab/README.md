@@ -18,7 +18,8 @@ skill 整备后，再开始运行命令。脚本要求 Docker Desktop Linux engi
 将 checkout 复制到隔离的
 `/workspace`，建立本地 bare primary；Git 把项目配置中的 canonical HTTPS primary
 URL 定向到该 bare repository，不访问或写入真实远端。初始场景采集所选 idea 当前
-状态和不带 selector 的导航输出，各运行 `en-US`、`zh-CN`。
+状态、不带 selector 的导航、selector not found，以及设备与 repository 的首批失败
+状态，各运行 `en-US`、`zh-CN`。
 
 输出按时间写入 `corpus/<UTC timestamp>/`，包含完整 stdout、必要的 stderr 和记录
 source revision/dirty 状态、runtime version、locale 与 argv 的 `manifest.json`。

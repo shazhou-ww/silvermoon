@@ -1,5 +1,4 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { unlink } from "node:fs/promises";
+import { mkdir, readFile, rm, unlink, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { execFile, spawn } from "node:child_process";
 import { promisify } from "node:util";
@@ -47,7 +46,18 @@ function runCommand(command, args, env = process.env) {
 }
 
 const executeFile = promisify(execFile);
+async function restoreRepository() {
+  await rm(resolve(projectRoot, "scenario-untracked.txt"), { force: true });
+  await executeFile("git", ["switch", "scenario"], { cwd: projectRoot });
+  await executeFile(
+    "git",
+    ["branch", "--set-upstream-to=origin/main", "scenario"],
+    { cwd: projectRoot },
+  );
+}
+
 async function prepareState(state) {
+  await restoreRepository();
   const userConfigPath = `${process.env.HOME}/.config/silvermoon/config.yaml`;
   await writeFile(userConfigPath, "version: 1\npreferredLanguage: zh-CN\n", "utf8");
   await executeFile("pnpm", ["link:skill"], { cwd: "/checkout" });
@@ -61,6 +71,26 @@ async function prepareState(state) {
     return;
   }
   if (state === "global-runtime-path-masked") return;
+  if (state === "worktree-untracked") {
+    await writeFile(
+      resolve(projectRoot, "scenario-untracked.txt"),
+      "scenario-owned untracked change\n",
+      "utf8",
+    );
+    return;
+  }
+  if (state === "detached-head") {
+    await executeFile("git", ["switch", "--detach", "origin/main"], {
+      cwd: projectRoot,
+    });
+    return;
+  }
+  if (state === "upstream-missing") {
+    await executeFile("git", ["branch", "--unset-upstream"], {
+      cwd: projectRoot,
+    });
+    return;
+  }
   throw new TypeError(`Unsupported initial scenario state: ${state}`);
 }
 
