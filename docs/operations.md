@@ -77,7 +77,7 @@ Missing guidance preserves the previous report shape. Valid guidance
 content appears in `response.guidance`, while `observation.guidance` exposes
 only its path, phase, and content revision. Invalid project guidance
 returns a `phase-guidance-invalid` observation with remediation instead of
-lifecycle next steps. Bare navigation, unknown selectors, terminal ideas, and any
+lifecycle next steps. Bare Objective navigation, unknown selectors, terminal ideas, and any
 higher-priority setup, hygiene, fetch, or ancestry block do not return guidance
 content; project-wide validity checks are separate from content delivery.
 

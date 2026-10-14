@@ -69,6 +69,7 @@ function responseTitle(response: ReportResponse) {
     "idea-created": ["Idea created", "已创建 idea"],
     "idea-list": ["Ideas", "Ideas"],
     "next-steps": ["Next steps", "下一步"],
+    objective: ["Objective", "Objective"],
     "validation-result": ["Check", "检查"],
   };
   const [english, chinese] = titles[response.kind] ?? ["Result", "结果"];

@@ -206,6 +206,30 @@ function dialogueResponse(
   }
 
   if (intention.command === "whats-next") {
+    if (
+      observation.state === "objective-ready"
+      || observation.state === "objective-blocked"
+    ) {
+      const objective = clone(observation.objective);
+      return {
+        ...base,
+        kind: "objective",
+        summary: objective.terminal
+          ? localize(
+            language,
+            `${objective.target} Objective is terminal; no required next step remains.`,
+            `${objective.target} Objective 已到达 terminal；没有必做的下一步。`,
+          )
+          : localize(
+            language,
+            `${objective.target} Objective is at ${objective.level}.`,
+            `${objective.target} Objective 当前位于 ${objective.level}。`,
+          ),
+        objective,
+        problems: clone(observation.problems),
+        nextSteps,
+      };
+    }
     if (observation.state === "navigation-ready") {
       const choices = clone(observation.ideas.activeIdeas);
       return {

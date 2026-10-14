@@ -317,7 +317,7 @@ test("[behind] [ahead] [diverged] reports ancestry and safe remediation", async 
     root: behindRepository.root,
     userHome: behindRepository.base,
   });
-  assert.equal(aligned.observation.state, "navigation-ready");
+  assert.equal(aligned.observation.state, "objective-ready");
 
   const aheadRepository = await fixture({ prefix: "silvermoon-ahead-" });
   await writeFile(join(aheadRepository.root, "ahead.txt"), "ahead\n");

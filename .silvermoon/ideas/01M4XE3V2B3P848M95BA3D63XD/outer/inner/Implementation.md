@@ -19,12 +19,16 @@ terminal 后的隐式 selection。
 
 ### I-AC01: Objective 选择准确
 
-单元与真实 CLI 场景证明所有路径/selector 组合选择预期 Objective。
+`test/unit/whats-next-model.test.ts` 与
+`test/integration-extended/whatsnext-setup.test.ts` 证明所有路径/selector
+组合选择预期 Objective，并区分 outside-worktree 与 Git 检查失败。
 
 ### I-AC02: Terminal 无隐式任务
 
-断言 Device/Project terminal 没有 active idea 表或 required next step。
+上述语料断言 Device/Project terminal 没有 active idea 表、choice 或 required next
+step。
 
 ### I-AC03: 兼容显式导航
 
-测试证明 `list-ideas` 和 `whats-next <idea>` 仍提供各自明确的 inventory 与 Idea 流程。
+integration 与 release-grade 检查证明 `list-ideas` 和 `whats-next <idea>` 仍提供各自
+明确的 inventory 与 Idea 流程；`docs/reference.md` 记录新的目标矩阵与响应契约。

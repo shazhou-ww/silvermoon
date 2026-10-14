@@ -284,6 +284,15 @@ export interface EventResultObservation extends ObservationBase {
   receipt: EventReceipt;
 }
 
+export interface ObjectiveObservation extends ObservationBase {
+  state: "objective-ready" | "objective-blocked";
+  objective: {
+    target: "device" | "project";
+    level: string;
+    terminal: boolean;
+  };
+}
+
 export type Observation =
   | ProjectSetupObservation
   | CheckUnavailableObservation
@@ -294,7 +303,8 @@ export type Observation =
   | IdeaSelectedObservation
   | IdeaCreatedObservation
   | IdeasListedObservation
-  | EventResultObservation;
+  | EventResultObservation
+  | ObjectiveObservation;
 
 export interface CheckTarget {
   type: string;
@@ -401,6 +411,13 @@ export interface IdeaListResponse extends ResponseBase {
   items: IdeaInventoryItem[];
 }
 
+export interface ObjectiveResponse extends ResponseBase {
+  kind: "objective";
+  objective: ObjectiveObservation["objective"];
+  nextSteps: InstructionStep[];
+  problems: Problem[];
+}
+
 export type ReportResponse =
   | ValidationResponse
   | EventResponse
@@ -408,7 +425,8 @@ export type ReportResponse =
   | IdeaCreatedResponse
   | ChoiceRequiredResponse
   | NextStepsResponse
-  | IdeaListResponse;
+  | IdeaListResponse
+  | ObjectiveResponse;
 
 export interface DateFacts {
   milliseconds: number;

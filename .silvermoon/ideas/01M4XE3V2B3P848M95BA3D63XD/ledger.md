@@ -4,15 +4,15 @@
 
 ### Implementation steps
 
-- [ ] **I-S01:** 建立目标上下文发现
-- [ ] **I-S02:** 按意图路由 Objective
-- [ ] **I-S03:** 更新命令契约与场景
+- [x] **I-S01:** 建立目标上下文发现
+- [x] **I-S02:** 按意图路由 Objective
+- [x] **I-S03:** 更新命令契约与场景
 
 ### Implementation acceptance criteria
 
-- [ ] **I-AC01:** Objective 选择准确
-- [ ] **I-AC02:** Terminal 无隐式任务
-- [ ] **I-AC03:** 兼容显式导航
+- [x] **I-AC01:** Objective 选择准确
+- [x] **I-AC02:** Terminal 无隐式任务
+- [x] **I-AC03:** 兼容显式导航
 
 ## Deployment
 

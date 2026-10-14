@@ -353,14 +353,25 @@ projections:
     }
   },
   "observation": {
-    "outputLanguage": "en-US"
+    "state": "objective-ready",
+    "outputLanguage": "en-US",
+    "objective": {
+      "target": "project",
+      "level": "terminal",
+      "terminal": true
+    }
   },
   "actions": [],
   "response": {
-    "kind": "choice-required",
+    "kind": "objective",
     "language": "en-US",
-    "summary": "No active ideas are available.",
-    "choices": [],
+    "summary": "project Objective is terminal; no required next step remains.",
+    "objective": {
+      "target": "project",
+      "level": "terminal",
+      "terminal": true
+    },
+    "problems": [],
     "nextSteps": []
   }
 }
@@ -380,7 +391,7 @@ projections:
   was attempted. Probes and future work do not appear here.
 - `response` is a command-specific discriminated union produced only from the
   intention and final internal observation. Its variants are `blocked`,
-  `choice-required`, `idea-created`, `idea-list`, `next-steps`, and
+  `choice-required`, `idea-created`, `idea-list`, `next-steps`, `objective`,
   `validation-result`, and `event-result`. It contains the localized summary
   and any ordered `nextSteps`, choices, items, validation result, review
   context, or guidance needed by the caller.
@@ -392,7 +403,9 @@ or `source-checkout`; `device.skill` reports personal-link health; and
 `managed-by-host`, or `source-checkout` with cache or registry provenance. Its
 optional `channel` identifies the npm dist-tag selected from the installed
 version; `latestVersion` remains the observed target version on that channel.
-These fields never enter `problems` or change command success. Snapshot-only
+For Project and Idea targets these fields remain advisory and never enter
+`problems` or change command success. For a Device target, the corresponding
+Objective checks use the same facts to determine its current level. Snapshot-only
 `check` responses omit `device` so their result depends only on the selected
 project snapshot and explicit primary state.
 
@@ -593,11 +606,13 @@ Observations are discriminated by command intent and `state`:
 - `repository-preparation-required` is used by `create-idea` when its local
   safety checks fail. It includes `root`, `version`, `configuration`, and at
   least one `problem`, but no idea inventory or remote synchronization facts.
-- Bare `whats-next` returns `navigation-ready` with `ideas.counts` and
-  `ideas.activeIdeas` (possibly empty). Each active item includes `id`,
-  lifecycle `state`, UTC `createdAt`, and optional alias/title read from the
-  current idea document; missing titles render as `-`. It never selects a
-  candidate.
+- Bare `whats-next` infers its Objective from path context: Device when the
+  requested path is explicitly outside a Git worktree, and Project when it is
+  inside one. A successful terminal returns `objective-ready` with target,
+  level, and `terminal: true`; it has no choices or required next steps.
+  Worktree inspection failures are explicit setup problems rather than Device
+  fallbacks. A selector requires a worktree and selects the Idea Objective;
+  outside-worktree selectors return `target-context-invalid`.
 - Selected `whats-next` returns `idea-selected` with only `selectedIdea`
   (`id`, optional `alias`, lifecycle `state`), including terminal ideas. V2
   selections also include `control` (`owner`, nullable `lastTransfer`) and
@@ -661,9 +676,9 @@ and upstream identity, then fetch and ancestry. A local branch may have any
 name, but its upstream must identify the configured repository and primary
 branch. Change summaries have fixed item and UTF-8 byte budgets and provide
 full counts and omitted counts; instructions require inspection of the complete
-change set without prescribing a particular diff tool. Bare navigation
-never selects an idea: it always lists every active idea alongside the option
-to discuss and run `create-idea`.
+change set without prescribing a particular diff tool. Bare navigation never
+selects or lists ideas. Use `list-ideas` for inventory and pass an explicit
+ULID or alias to navigate an Idea Objective.
 
 `create-idea` requires a local branch whose upstream identifies the configured
 primary repository and branch, plus a clean worktree; the local branch name is

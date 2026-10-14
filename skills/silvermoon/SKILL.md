@@ -48,8 +48,10 @@ language.
   `silvermoon create-idea`.
 - Otherwise use `silvermoon whats-next [idea]`, passing a selector only when
   the user supplied or previously selected it.
-- Bare `whats-next` lists active ideas and offers creation, even when exactly
-  one idea is active. Never infer selection; require an explicit ULID or alias.
+- Bare `whats-next` targets Device outside a Git worktree and Project inside
+  one. A terminal Objective has no required next step. Use `list-ideas` for
+  inventory, and require an explicit ULID or alias before Idea navigation.
+  A selector outside a worktree is a target-context error.
 
 `list-ideas` validates the local project and complete idea layout, then queries
 the current worktree snapshot without checking conflicts, cleanliness, branch,

@@ -82,6 +82,7 @@ function harness(snapshot: SnapshotObservation = ready(), blockRepository = fals
       if (snapshot.layout === null) throw new Error("Project must precede local Idea sampling.");
       return { ...snapshot.layout, project: undefined };
     },
+    inspectWorktreeContext: () => ({ kind: "worktree", root: "D:\\fixture" }),
     worktreeSnapshot: () => ({ tree: "local-guidance-tree" }),
     createSilvermoonObjectiveLoader: (checks) => {
       const wrapped = { ...checks };
@@ -162,12 +163,61 @@ test("no selector stays Project-only even for one Idea; invalid selectors do not
     const context = harness();
     const { idea: _idea, ...options } = context.options;
     const report = await whatsNextUseCase({ ...options, ...(selector === undefined ? {} : { idea: selector }) }, context.ports);
-    assert.equal(report.observation.state, selector === undefined ? "navigation-ready" : "idea-not-found");
+    assert.equal(report.observation.state, selector === undefined ? "objective-ready" : "idea-not-found");
     assert.equal(context.observations[0]?.current.id, "terminal");
     assert.equal(context.observations[0]?.current.instance.guide.manifestUri, SILVERMOON_OBJECTIVE_URIS.project);
     assert.ok(!context.calls.includes("idea-metadata-valid"));
     assert.ok(context.calls.includes("project-primary-guidance-valid"));
+    if (selector === undefined) {
+      assert.equal(report.response.kind, "objective");
+      if (report.response.kind === "objective") {
+        assert.deepEqual(report.response.nextSteps, []);
+        assert.deepEqual(report.response.objective, {
+          target: "project", level: "terminal", terminal: true,
+        });
+      }
+    }
   }
+});
+
+test("outside-worktree bare navigation targets Device and stops at terminal", async () => {
+  const context = harness();
+  const { idea: _idea, ...options } = context.options;
+  const report = await whatsNextUseCase(options, {
+    ...context.ports,
+    inspectWorktreeContext: () => ({
+      kind: "outside-worktree", root: "D:\\outside",
+    }),
+    observeDevice: async () => ({
+      runtime: { source: "global", version: "0.5.0" },
+      readiness: {
+        runtime: { source: "global", version: "0.5.0" },
+        skill: {
+          status: "ready", expectedRoot: "D:\\runtime\\skills\\silvermoon",
+          paths: ["D:\\home\\.agents\\skills\\silvermoon"],
+        },
+        update: {
+          status: "current", currentVersion: "0.5.0", source: "cache",
+        },
+      },
+      globalConfig: { path: "D:\\home\\.silvermoon\\config.yaml", present: true, valid: true },
+      diagnostics: [],
+      user: {
+        configPath: "D:\\home\\.silvermoon\\config.yaml",
+        config: { preferredLanguage: "en-US" },
+        diagnostics: [],
+      },
+    } as unknown as Awaited<ReturnType<typeof observeDevice>>),
+  });
+  assert.equal(report.observation.state, "objective-ready");
+  assert.equal(report.response.kind, "objective");
+  if (report.response.kind !== "objective") assert.fail("Expected Device Objective response.");
+  assert.deepEqual(report.response.objective, {
+    target: "device", level: "terminal", terminal: true,
+  });
+  assert.deepEqual(report.response.nextSteps, []);
+  assert.ok(!context.calls.includes("snapshot"));
+  assert.equal(context.observations[0]?.current.instance.guide.manifestUri, SILVERMOON_OBJECTIVE_URIS.device);
 });
 
 test("Project validates every phase, missing guidance is allowed and another invalid phase blocks", async () => {
@@ -243,7 +293,7 @@ test("metadata I/O is explicit, while metadata programmer defects propagate", as
   const snapshot = ready();
   snapshot.observation.ideas = { counts: { implementing: 1 }, activeIdeas: [{ id, state: "implementing" }] };
   const context = harness(snapshot);
-  const { idea: _idea, ...options } = context.options;
+  const options = { ...context.options, idea: "missing" };
   const bug = new Error("metadata defect");
   await assert.rejects(whatsNextUseCase(options, {
     ...context.ports, readIdeaInventoryItem: async () => { throw bug; },

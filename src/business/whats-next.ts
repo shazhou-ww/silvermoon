@@ -7,7 +7,7 @@ import {
 import type { SilvermoonObjectiveCheck } from "./objective-guides.ts";
 import { ObjectiveOperationError } from "../objective-guide/index.ts";
 import type { CheckResult, ObjectiveLoader } from "../objective-guide/index.ts";
-import { worktreeSnapshot } from "../foundation/git/index.ts";
+import { inspectWorktreeContext, worktreeSnapshot } from "../foundation/git/index.ts";
 import { observeDevice, observeIdea } from "./shared/index.ts";
 import { createCommandRun } from "../foundation/command-message/index.ts";
 import { ACTIVE_STATES, diagnosticProblem, dialogueReadyObservation } from "../foundation/report/index.ts";
@@ -17,7 +17,7 @@ import {
   readIdeaInventoryItem,
   IdeaMetadataReadError,
 } from "./shared/index.ts";
-import { canonicalizeOutputLanguage, resolveContentTemplateLanguage } from "../foundation/language/index.ts";
+import { canonicalizeOutputLanguage, localize, resolveContentTemplateLanguage, resolveOutputLanguage } from "../foundation/language/index.ts";
 import { observeSnapshot, withObservationLanguage } from "./shared/index.ts";
 
 import { joinInstructions, lifecycleInstruction, lifecycleReview, navigationInstruction, phaseGuidanceInstructions, projectInstructions, renderIdeaNotFound, selectIdea } from "../foundation/report/index.ts";
@@ -29,6 +29,7 @@ import type {
   IdeaNotFoundObservation,
   IdeaSelectedObservation,
   NavigationReadyObservation,
+  ObjectiveObservation as ObjectiveReportObservation,
   ProjectReadyObservation,
   Observation,
   ResponseContext,
@@ -47,7 +48,7 @@ function pending(code: string, description: string): NavigationGateResult {
   return { passed: false, problems: [{ code, description }] };
 }
 
-const WHATSNEXT_PORTS = Object.freeze({ createCommandRun, observeSnapshot, assessRepositoryReadiness, readIdeaInventoryItem, createSilvermoonObjectiveLoader, probeObjective, observeDevice, observeIdea, worktreeSnapshot });
+const WHATSNEXT_PORTS = Object.freeze({ createCommandRun, observeSnapshot, assessRepositoryReadiness, readIdeaInventoryItem, createSilvermoonObjectiveLoader, probeObjective, observeDevice, observeIdea, inspectWorktreeContext, worktreeSnapshot });
 
 function navigationSource(
   observation: ProjectReadyObservation,
@@ -92,7 +93,7 @@ export async function whatsNextUseCase({
   root = process.cwd(),
   userHome,
 }: WhatsNextOptions = {}, ports: typeof WHATSNEXT_PORTS = WHATSNEXT_PORTS) {
-  const { createCommandRun, observeSnapshot, assessRepositoryReadiness, readIdeaInventoryItem, createSilvermoonObjectiveLoader, probeObjective, observeDevice, observeIdea, worktreeSnapshot } = ports;
+  const { createCommandRun, observeSnapshot, assessRepositoryReadiness, readIdeaInventoryItem, createSilvermoonObjectiveLoader, probeObjective, observeDevice, observeIdea, inspectWorktreeContext, worktreeSnapshot } = ports;
   const canonicalLanguage = language === undefined
     ? undefined
     : canonicalizeOutputLanguage(language);
@@ -105,6 +106,7 @@ export async function whatsNextUseCase({
     },
   };
   const runtime = createCommandRun(intention);
+  const context = inspectWorktreeContext(requestedRoot);
   const baseRecheckCommand = selector === undefined
     ? "silvermoon whats-next"
     : `silvermoon whats-next ${JSON.stringify(selector)}`;
@@ -120,7 +122,8 @@ export async function whatsNextUseCase({
   let deviceSample: Awaited<ReturnType<typeof observeDevice>> | undefined;
   let loader: ObjectiveLoader | undefined;
   let initialSample = true;
-  const subject = { root: requestedRoot, userHome: userHome ?? homedir() };
+  const targetRoot = context.kind === "worktree" ? context.root : requestedRoot;
+  const subject = { root: targetRoot, userHome: userHome ?? homedir() };
   function selectedSample() { return selected; }
 
   function readySnapshot(): ReadyObservation {
@@ -143,7 +146,7 @@ export async function whatsNextUseCase({
     const observed = await observeSnapshot({
       entryPath,
       outputLanguage: canonicalLanguage,
-      root: requestedRoot,
+      root: targetRoot,
       userHome,
       version: { type: "worktree" },
       deviceObserver: async (options) => {
@@ -540,6 +543,95 @@ export async function whatsNextUseCase({
     "idea-outer-submitted": lifecycleCheck("outer", false),
     "idea-outer-accepted": lifecycleCheck("outer", true),
   });
+  const fallbackOutputLanguage = resolveOutputLanguage({
+    ...(canonicalLanguage === undefined ? {} : { override: canonicalLanguage }),
+  }).tag;
+  if (context.kind === "inspection-failed") {
+    const observation: Observation = {
+      state: "project-setup-required",
+      root: context.root,
+      outputLanguage: fallbackOutputLanguage,
+      observedThrough: "root",
+      problems: [{
+        type: "git-worktree-inspection-failed",
+        summary: context.message,
+      }],
+    };
+    return runtime.complete(observation, {
+      nextSteps: localize(
+        fallbackOutputLanguage,
+        `Repair Git worktree inspection for ${context.root}, then rerun ${recheckCommand}.`,
+        `修复 ${context.root} 的 Git worktree 检查，然后重新运行 ${recheckCommand}。`,
+      ),
+    });
+  }
+  if (context.kind === "outside-worktree") {
+    if (selector !== undefined) {
+      const observation: Observation = {
+        state: "project-setup-required",
+        root: context.root,
+        outputLanguage: fallbackOutputLanguage,
+        observedThrough: "root",
+        problems: [{
+          type: "target-context-invalid",
+          summary: localize(
+            fallbackOutputLanguage,
+            `Idea selector ${JSON.stringify(selector)} requires a Git worktree context.`,
+            `Idea selector ${JSON.stringify(selector)} 需要 Git worktree 上下文。`,
+          ),
+        }],
+      };
+      return runtime.complete(observation, {
+        nextSteps: localize(
+          fallbackOutputLanguage,
+          "Run the same command from the intended Git worktree.",
+          "请从目标 Git worktree 中运行相同命令。",
+        ),
+      });
+    }
+    deviceSample = await observeDevice({
+      ...(entryPath === undefined ? {} : { entryPath }),
+      ...(userHome === undefined ? {} : { userHome }),
+    });
+    const outputLanguage = resolveOutputLanguage({
+      ...(deviceSample.user.config?.preferredLanguage === undefined
+        ? {}
+        : { content: deviceSample.user.config.preferredLanguage }),
+      ...(canonicalLanguage === undefined ? {} : { override: canonicalLanguage }),
+    }).tag;
+    const device = await loader.load(SILVERMOON_OBJECTIVE_URIS.device);
+    const created = device.createInstance({
+      subject: { userHome: subject.userHome },
+      language: resolveContentTemplateLanguage(
+        deviceSample.user.config?.preferredLanguage ?? "en-US",
+      ).tag,
+    });
+    if (!created.ok) {
+      throw new ObjectiveOperationError(`Device instance creation failed: ${created.error.type}.`);
+    }
+    const objective = await probeObjective(created.instance);
+    const terminal = objective.current.id === "terminal";
+    const problems = objective.problems.map(({ id, parameters }) => ({
+      type: id,
+      summary: typeof parameters.description === "string"
+        ? parameters.description
+        : objective.gapSummary,
+    }));
+    const observation: ObjectiveReportObservation = {
+      state: terminal ? "objective-ready" : "objective-blocked",
+      root: context.root,
+      outputLanguage,
+      problems,
+      ...(deviceSample.readiness === undefined ? {} : { device: deviceSample.readiness }),
+      objective: { target: "device", level: objective.current.id, terminal },
+    };
+    return runtime.complete(observation, {
+      nextSteps: terminal ? [] : [
+        problems[0]?.summary ?? objective.gapSummary,
+        recheckCommand,
+      ],
+    });
+  }
   // Snapshot establishes routing and the content template language. Checks consume
   // this sample; no selector is represented as an Idea level.
   await project();
@@ -555,8 +647,26 @@ export async function whatsNextUseCase({
   if (!created.ok) throw new ObjectiveOperationError(`Navigation instance creation failed: ${created.error.type}.`);
   const objective = await probeObjective(created.instance);
   if (scoped === null && objective.current.id === "terminal") {
-    await operations.selection();
-    if (routed?.state === "abandoned") await operations.guidance();
+    if (selector === undefined) {
+      const observed = readySnapshot();
+      const ready = readyRepository().observation;
+      const terminalObservation: ObjectiveReportObservation = {
+        state: "objective-ready",
+        root: ready.root,
+        version: ready.version,
+        configuration: ready.configuration,
+        ...(ready.device === undefined ? {} : { device: ready.device }),
+        ...(ready.schemas === undefined ? {} : { schemas: ready.schemas }),
+        outputLanguage: ready.outputLanguage,
+        problems: ready.problems,
+        objective: { target: "project", level: "terminal", terminal: true },
+      };
+      finish(terminalObservation, { nextSteps: [] });
+      snapshot = observed;
+    } else {
+      await operations.selection();
+      if (routed?.state === "abandoned") await operations.guidance();
+    }
   }
   if (outcome === undefined) throw new TypeError("Navigation checks omitted the report.");
   return runtime.complete(outcome.observation, outcome.responseContext);

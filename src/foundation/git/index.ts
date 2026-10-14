@@ -10,6 +10,7 @@ export {
   indexSnapshot,
   inspectCurrentBranch,
   inspectRepositoryState,
+  inspectWorktreeContext,
   inspectTree,
   inspectTreeEntry,
   inspectTreeLineage,
@@ -30,3 +31,4 @@ export {
   withTemporaryWorktree,
   worktreeSnapshot,
 } from "./git.ts";
+export type { WorktreeContext } from "./git.ts";
