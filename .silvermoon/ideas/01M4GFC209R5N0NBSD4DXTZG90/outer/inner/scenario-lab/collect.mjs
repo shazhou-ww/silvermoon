@@ -159,7 +159,7 @@ await writeFile(
   resolve(outputDirectory, "manifest.json"),
   `${JSON.stringify({
     sourceRevision: process.env.SCENARIO_SOURCE_REVISION ?? "unknown",
-    sourceDirty: process.env.SCENARIO_SOURCE_DIRTY ?? "unknown",
+    sourceDirty: process.env.SCENARIO_SOURCE_DIRTY === "true",
     silvermoonVersion: versionResult.stdout.trim(),
     projectRoot,
     startedAt,
@@ -168,5 +168,7 @@ await writeFile(
   }, null, 2)}\n`,
   "utf8",
 );
+const { buildReviewPage } = await import("/scenario-lab/build-review-page.mjs");
+await buildReviewPage({ labRoot, outputDirectory });
 
 process.stdout.write(`Collected ${results.length} reports in ${outputDirectory}\n`);

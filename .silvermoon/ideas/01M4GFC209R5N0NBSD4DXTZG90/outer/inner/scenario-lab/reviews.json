@@ -1,0 +1,76 @@
+{
+  "reviews": [
+    {
+      "scenario": "device-config-invalid",
+      "verdict": "issues",
+      "redundancy": "no",
+      "missing": "no",
+      "missingPrompt": "yes",
+      "comment": "结构简洁，但 zh-CN 的问题概要和修复动作仍包含英文诊断文本。应确认动态 user-config 诊断是否也属于本地化边界，至少应提示用户可直接使用的中文修复动作。"
+    },
+    {
+      "scenario": "device-skill-not-discoverable",
+      "verdict": "issues",
+      "redundancy": "yes",
+      "missing": "no",
+      "missingPrompt": "no",
+      "comment": "缺失 skill 的设备提示完整，但后面重复输出整套 lifecycle 状态与通用下一步，评审时应判断 advisory 与主体报告是否需要更明显分隔或更紧凑呈现。"
+    },
+    {
+      "scenario": "device-runtime-not-discoverable",
+      "verdict": "issues",
+      "redundancy": "yes",
+      "missing": "no",
+      "missingPrompt": "no",
+      "comment": "同一设备问题先出现在 advisory 表，又以 Device setup required 段重复说明，随后仍附完整 lifecycle 指令。信息正确但重复度较高，应评估是否保留一个主要恢复入口。"
+    },
+    {
+      "scenario": "repository-worktree-untracked",
+      "verdict": "ok",
+      "redundancy": "no",
+      "missing": "no",
+      "missingPrompt": "no",
+      "comment": "问题摘要、样本路径、保留未知工作的约束和重试命令完整，未发现明显重复或缺失。"
+    },
+    {
+      "scenario": "repository-detached-head",
+      "verdict": "ok",
+      "redundancy": "no",
+      "missing": "no",
+      "missingPrompt": "no",
+      "comment": "准确给出 detached HEAD、commit、目标 repository/branch 和非破坏性恢复方向，内容紧凑。"
+    },
+    {
+      "scenario": "repository-upstream-missing",
+      "verdict": "ok",
+      "redundancy": "no",
+      "missing": "no",
+      "missingPrompt": "no",
+      "comment": "明确展示当前 upstream 缺失、预期 primary、配置步骤和验证命令，信息闭环。"
+    },
+    {
+      "scenario": "idea-selector-not-found",
+      "verdict": "ok",
+      "redundancy": "no",
+      "missing": "no",
+      "missingPrompt": "no",
+      "comment": "未找到 selector、可选 active ideas 和继续/创建两条路径均完整；需要后续在大量 active ideas 的 fixture 中继续检查篇幅。"
+    },
+    {
+      "scenario": "selected-idea-current-state",
+      "verdict": "ok",
+      "redundancy": "no",
+      "missing": "no",
+      "missingPrompt": "no",
+      "comment": "accepted Ideal、implementing 状态、submission 表、当前工作范围和 submitInner 前置条件完整，适合作为 lifecycle 基线。"
+    },
+    {
+      "scenario": "navigation-without-selector",
+      "verdict": "issues",
+      "redundancy": "no",
+      "missing": "yes",
+      "missingPrompt": "yes",
+      "comment": "导航表和显式选择要求正确，但当前 synthetic fixture 只验证了现有 active ideas 集合。还需要大量 active ideas、无 active idea 和 metadata 读取失败场景，才能判断分页/截断或恢复提示是否缺失。"
+    }
+  ]
+}
