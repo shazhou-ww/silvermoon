@@ -1,7 +1,6 @@
 {
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
-    "baseUrl": ".",
     "paths": {
       "silvermoon": ["./src/index.ts"],
       "silvermoon/agents/copilot": ["./src/business/agent-copilot.ts"],

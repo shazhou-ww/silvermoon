@@ -1,2 +1,3 @@
+* text=auto eol=lf
 bin/silvermoon.js text eol=lf
 **/events.jsonl -text -filter

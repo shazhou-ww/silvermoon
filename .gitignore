@@ -4,3 +4,7 @@ dist/
 bin/silvermoon.js
 *.tgz
 *.trace.jsonl
+
+.DS_Store
+.idea/
+.vscode/
