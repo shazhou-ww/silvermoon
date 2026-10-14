@@ -1,0 +1,33 @@
+{
+  "scenarios": [
+    {
+      "id": "device-config-invalid",
+      "state": "invalid-user-config",
+      "idea": "whats-next-template-review",
+      "languages": ["en-US", "zh-CN"]
+    },
+    {
+      "id": "device-skill-not-discoverable",
+      "state": "skill-link-missing",
+      "idea": "whats-next-template-review",
+      "languages": ["en-US", "zh-CN"]
+    },
+    {
+      "id": "device-runtime-not-discoverable",
+      "state": "global-runtime-path-masked",
+      "idea": "whats-next-template-review",
+      "languages": ["en-US", "zh-CN"]
+    },
+    {
+      "id": "selected-idea-current-state",
+      "state": "baseline",
+      "idea": "whats-next-template-review",
+      "languages": ["en-US", "zh-CN"]
+    },
+    {
+      "id": "navigation-without-selector",
+      "state": "baseline",
+      "languages": ["en-US", "zh-CN"]
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+services:
+  corpus:
+    build:
+      context: ../../../../../../
+      dockerfile: .silvermoon/ideas/01M4GFC209R5N0NBSD4DXTZG90/outer/inner/scenario-lab/Dockerfile
+      args:
+        SOURCE_REVISION: ${SCENARIO_SOURCE_REVISION:-unknown}
+        SOURCE_DIRTY: ${SCENARIO_SOURCE_DIRTY:-unknown}
+    volumes:
+      - ./:/scenario-lab

@@ -1,0 +1,7 @@
+.git
+**/.git
+**/node_modules
+**/dist
+**/coverage
+**/.cache
+.silvermoon/ideas/**/scenario-lab/corpus
