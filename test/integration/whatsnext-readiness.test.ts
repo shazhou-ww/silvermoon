@@ -83,13 +83,17 @@ test("[dirty] reports local changes before any remote access and preserves selec
   assert.equal(report.observation.state, "repository-sync-required");
   const problem = firstProblem(report);
   assert.equal(problem.type, "worktree-changes");
-  assert.match(problem.summary, /untracked=1/);
+  assert.match(
+    problem.summary,
+    /contains 1 untracked change\. Observed paths include untracked `local\.txt`\./,
+  );
   assert.equal(report.actions.length, 0);
   assert.equal(
     commands.some(([name]) => name === "fetch" || name === "ls-remote"),
     false,
   );
-  assert.match(responseText(report), /^Inspect all staged, unstaged, and untracked paths and their changes/);
+  assert.match(responseText(report), /^The goal is a clean worktree/);
+  assert.match(responseText(report), /Inspect all staged, unstaged, and untracked paths/);
   assert.doesNotMatch(responseText(report), /git -C|diff --cached|status --short/);
   assert.doesNotMatch(responseText(report), /^\d+\. /m);
   assert.match(responseText(report), new RegExp(FIRST_ID));
@@ -105,8 +109,9 @@ test("localized worktree guidance covers all changes without prescribing diff co
   });
 
   assert.equal(report.observation.state, "repository-sync-required");
-  assert.match(responseText(report), /^检查全部 staged、unstaged 和 untracked 路径及其修改内容/);
-  assert.match(responseText(report), /不要只依据上述样例/);
+  assert.match(responseText(report), /^目标是得到 clean worktree/);
+  assert.match(responseText(report), /检查全部 staged、unstaged 和 untracked 路径/);
+  assert.match(responseText(report), /不只看上述样例/);
   assert.doesNotMatch(responseText(report), /git -C|diff --cached|status --short/);
 });
 
@@ -134,8 +139,8 @@ test("reports every observable local readiness problem before remote access", as
     commands.some(([name]) => name === "fetch" || name === "ls-remote"),
     false,
   );
-  assert.match(responseText(report), /^1\. Inspect all staged, unstaged, and untracked paths and their changes/);
-  assert.match(responseText(report), /\n2\. Configure a named remote /);
+  assert.match(responseText(report), /^1\. The goal is a clean worktree/);
+  assert.match(responseText(report), /\n2\. The goal is for branch `main` to track/);
   assert.match(responseText(report), /upstream/);
   assert.match(responseText(report), /silvermoon whats-next/);
 });
@@ -154,15 +159,17 @@ test("[structured-changes] bounds large change summaries and requires full inspe
     userHome: repository.base,
   });
   const problem = firstProblem(report);
-  const sample = /samples=\[(.*)\]; omitted=(\d+)$/.exec(problem.summary);
+  const samples = problem.summary.match(/untracked `untracked-\d+\.txt`/g) ?? [];
 
-  assert.ok(sample);
-  const [, paths, omitted] = sample;
-  assert.ok(paths && omitted);
-  assert.ok(paths.split(", ").length <= CHANGE_SAMPLE_ITEM_LIMIT);
-  assert.equal(Number(omitted), 50 - CHANGE_SAMPLE_ITEM_LIMIT);
-  assert.match(responseText(report), /Inspect all staged, unstaged, and untracked paths and their changes/);
-  assert.match(responseText(report), /not just the samples above/);
+  assert.match(problem.summary, /contains 50 untracked changes\./);
+  assert.ok(samples.length <= CHANGE_SAMPLE_ITEM_LIMIT);
+  assert.equal(samples.length, CHANGE_SAMPLE_ITEM_LIMIT);
+  assert.match(
+    problem.summary,
+    new RegExp(`${50 - CHANGE_SAMPLE_ITEM_LIMIT} additional paths are not shown\\.`),
+  );
+  assert.match(responseText(report), /Inspect all staged, unstaged, and untracked paths/);
+  assert.match(responseText(report), /not only the samples above/);
   assert.doesNotMatch(responseText(report), /git -C|diff --cached|status --short/);
 });
 
@@ -199,7 +206,8 @@ test("[conflict] prioritizes conflicts while still reporting all known changes",
   );
   assert.match(firstProblem(report).summary, /conflict\.txt/);
   assert.match(responseText(report), /^1\. Inspect every conflicted path and its contents/);
-  assert.match(responseText(report), /\n2\. Inspect all staged, unstaged, and untracked paths and their changes/);
+  assert.match(responseText(report), /\n2\. The goal is a clean worktree/);
+  assert.match(responseText(report), /Inspect all staged, unstaged, and untracked paths/);
   assert.doesNotMatch(responseText(report), /git -C|diff --name-only|status --short/);
   assert.equal(report.actions.length, 0);
 });

@@ -702,7 +702,10 @@ decision, risk, or disagreement requires it.
   );
   assert.equal(lifecycle.observation.state, "repository-sync-required");
   assert.equal(lifecycle.observation.problems[0].type, "worktree-changes");
-  assert.match(lifecycle.observation.problems[0].summary, /未跟踪=5/);
+  assert.match(
+    lifecycle.observation.problems[0].summary,
+    /工作区包含 5 个未跟踪修改/,
+  );
   assert.deepEqual(lifecycle.actions, []);
   const lifecycleText = installed(
     ["whats-next", "installed-smoke"],
@@ -714,11 +717,14 @@ decision, risk, or disagreement requires it.
   );
   assert.match(
     lifecycleText,
-    /\n\n### Current status[\s\S]*### Problems[\s\S]*1\. .+[\s\S]*Observed state:/,
+    /\n\n### Current status[\s\S]*### Problems[\s\S]*The worktree contains [\s\S]*untracked/,
   );
   assert.match(lifecycleText, /\n\n### Next action\n/);
   assert.match(lifecycleText, /\n\n### References\n/);
-  assert.doesNotMatch(lifecycleText, /Target Objective|Owner Objective|Failing check|ID:|```json/);
+  assert.doesNotMatch(
+    lifecycleText,
+    /Target Objective|Owner Objective|Failing check|Observed state:|problemTypes|ID:|```json/,
+  );
   assert.doesNotMatch(lifecycleText, /> ## Problem guidance/);
   assert.match(lifecycleText, /further details: `silvermoon reference page project problems\/repository --language en-US`/);
   assert.doesNotMatch(lifecycleText, /Project Objective overview/);

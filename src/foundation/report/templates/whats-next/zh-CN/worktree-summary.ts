@@ -32,7 +32,7 @@ const worktreeSummary = ({
     return `${labels[kind] ?? "已修改"}的 \`${path}\``;
   }).join("、");
   return [
-    `工作区包含${countText}。`,
+    `工作区包含 ${countText}。`,
     ...(sampleText === "" ? [] : [`已观测路径包括${sampleText}。`]),
     ...(omitted === 0 ? [] : [`另有 ${omitted} 个路径未显示。`]),
   ].join("");
