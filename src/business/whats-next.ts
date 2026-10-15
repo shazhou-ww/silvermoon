@@ -513,7 +513,14 @@ export async function whatsNextUseCase({
     "project-layout-valid": async () => projectProblems("layout"),
     "project-adopted": async () => projectProblems("adoption"),
     "project-schema-ready": async () => projectProblems("schema"),
-    "project-guidance-valid": async () => allGuidance(worktreeSnapshot(readySnapshot().observation.root).tree),
+    "project-guidance-valid": async () => {
+      if (snapshot === undefined) throw new ObjectiveOperationError("Project sample is unavailable.");
+      if (!snapshot.projectReady) {
+        return failed("project", { ...observedProblemFacts(snapshot.observation.problems, snapshot.observation.state),
+          prerequisite: "project-ready" });
+      }
+      return allGuidance(worktreeSnapshot(snapshot.observation.root).tree);
+    },
     "repository-worktree-clean": async () => {
       await operations.repository();
       return repositoryProblems(["worktree-conflicts", "worktree-changes", "worktree-inspection-failed"]);
@@ -524,6 +531,11 @@ export async function whatsNextUseCase({
     "repository-primary-aligned": async () => repositoryProblems(["primary-ahead", "primary-behind", "primary-diverged", "primary-ancestry-inspection-failed", "primary-history-incomplete"]),
     "repository-event-history-valid": async () => repositoryProblems(["idea.events.history-invalid"]),
     "project-primary-guidance-valid": async () => {
+      if (repository === undefined) throw new ObjectiveOperationError("Repository sample is unavailable.");
+      if (!repository.ready) {
+        return failed("repository", { ...observedProblemFacts(repository.observation.problems, repository.observation.state),
+          prerequisite: "repository-ready" });
+      }
       const ready = readyRepository();
       if (ready.primary === undefined) throw new ObjectiveOperationError("Primary snapshot is unavailable.");
       return allGuidance(ready.primary);

@@ -1,8 +1,8 @@
 export { createObjectiveLoader } from "./loader.ts";
-export { canonicalManifestUri, fileObjectiveResources } from "./resources.ts";
-export { fileObjectiveCheckRunner } from "./runner.ts";
-export { SUBJECT_PROJECTION_LIMITS } from "./projection.ts";
-export { ObjectiveConfigurationError, ObjectiveOperationError } from "./validation.ts";
+export {
+  canonicalManifestUri, fileObjectiveResources, fileObjectiveCheckRunner,
+  SUBJECT_PROJECTION_LIMITS, ObjectiveConfigurationError, ObjectiveOperationError,
+} from "@potential-guide/objective-guide";
 export type {
   ObjectiveManifestUri, CheckId, ProblemId, ReferencePageId, ObjectiveLevelId, LanguageTag,
   JsonValue, JsonObject, ObjectiveSubject, ObjectiveDomainSchema, ObservedProblem,

@@ -1,7 +1,8 @@
 # Objective Guide Runtime
 
-Silvermoon exports a URI-keyed Objective Guide core from its package root.
-The [module](../src/objective-guide/README.md) observes one ordered objective;
+Silvermoon exports a URI-keyed Objective Guide compatibility facade from its
+package root, backed by `@potential-guide/objective-guide` at `0.1.0` (Node
+`>=22.13.0`). The [module](../src/objective-guide/README.md) observes one ordered objective;
 it does not execute repairs, autonomous loops or portfolio scheduling.
 
 ## Guide package
@@ -184,7 +185,14 @@ configuration errors reject `load`; check execution failures reject `probe`.
 
 `describeLevels()` returns the prerequisite prefix, local explicit levels and
 one synthesized terminal without exposing numeric indexes. `probe()` runs
-checks in declaration order and stops at the first failing check.
+checks serially in declaration order. It completes all checks in the current
+level, aggregates their Problems in declaration order, and stops before the
+next level if any check failed. Silvermoon's compatibility facade retains the
+first failing check as `position.failingCheck`, recorded from runner results
+within each probe rather than inferred from Problem IDs. Same-level checks
+that cannot evaluate guidance because prerequisite observations failed return
+an explicit prerequisite Problem; they do not turn missing readiness into
+success or throw a navigation defect.
 `observation.position` identifies the owning Objective instance, its level,
 the failing check (or `null` at terminal), and the complete ordered Problem
 list. A prerequisite failure therefore retains the prerequisite as its owner

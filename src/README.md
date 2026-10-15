@@ -2,7 +2,8 @@
 
 ## 当前 Objective Guide module
 
-[objective-guide](./objective-guide/README.md) 提供 URI-keyed Loader、语言中立 Guide
+[objective-guide](./objective-guide/README.md) 是发布包 `@potential-guide/objective-guide`
+`0.1.0` 的薄兼容层，提供 URI-keyed Loader、语言中立 Guide
 和绑定 subject/language 的 instance；[whats-next](./business/whats-next.ts) 使用
 设备、项目、Idea 三个作用域的 Guide，领域报告与精确生命周期事实仍由现有能力
 提供。详情见[运行时说明](../docs/objective-guidance.md)。

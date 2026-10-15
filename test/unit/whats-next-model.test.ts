@@ -157,7 +157,9 @@ test("project and repository failures gate Idea checks and retain report diagnos
   };
   const first = harness(unavailable);
   const blocked = await whatsNextUseCase(first.options, first.ports);
-  assert.deepEqual(first.calls, ["snapshot", "project-config-valid"]);
+  assert.deepEqual(first.calls, [
+    "snapshot", "project-config-valid", "project-user-config-valid", "project-layout-valid",
+  ]);
   assert.equal(first.observations[0]?.position.level.id, "configuration-invalid");
   assert.equal(first.observations[0]?.position.failingCheck, "project-config-valid");
   const projectParameters = first.observations[0]?.position.problems[0]?.parameters;
@@ -199,6 +201,60 @@ test("project and repository failures gate Idea checks and retain report diagnos
   assert.ok(!second.calls.includes("idea-metadata-valid"));
   assert.equal(sync.observation.state, "repository-sync-required");
   assert.equal(sync.observation.problems[0]?.summary, "Dirty candidate.");
+  assert.equal(sync.response.objective?.problems.length, 1);
+  assert.ok(!second.calls.includes("project-primary-guidance-valid"));
+});
+
+test("failed primary peers report unavailable guidance without requiring readyRepository", async () => {
+  const context = harness();
+  const report = await whatsNextUseCase(context.options, {
+    ...context.ports,
+    assessRepositoryReadiness: async ({ observed }) => ({
+      ready: false,
+      observation: { ...observed.observation, state: "repository-sync-required",
+        problems: [{ type: "primary-behind", summary: "Primary has advanced." }] },
+      instructions: "Integrate primary.",
+    }),
+  });
+  assert.equal(report.observation.state, "repository-sync-required");
+  assert.equal(report.observation.problems[0]?.summary, "Primary has advanced.");
+  assert.equal(report.response.objective?.level, "primary-unconfirmed");
+  assert.equal(report.response.objective?.failingCheck, "repository-primary-aligned");
+  assert.equal(report.response.objective?.problems.length, 2);
+  assert.deepEqual(report.response.objective?.problems[1]?.parameters, {
+    state: "repository-sync-required",
+    problemTypes: ["primary-behind"],
+    prerequisite: "repository-ready",
+  });
+  assert.ok(context.calls.includes("project-primary-guidance-valid"));
+  assert.ok(!context.calls.includes("idea-metadata-valid"));
+});
+
+test("failed adoption peers report unavailable guidance without sampling an unready Project", async () => {
+  const unavailable: SnapshotObservation = {
+    config: null, contentLanguage: "en-US", findings: [{ instruction: "Adopt project." }], layout: null,
+    outputLanguage: "en-US", projectReady: false,
+    observation: { state: "project-setup-required", root: "D:\\fixture", outputLanguage: "en-US",
+      observedThrough: "configuration", problems: [{ type: "project-not-adopted", summary: "Project not adopted." }] },
+  };
+  const context = harness(unavailable);
+  const report = await whatsNextUseCase({
+    ...context.options,
+    guidanceInspector: async () => { assert.fail("Unready project must not inspect guidance."); },
+  }, {
+    ...context.ports,
+    worktreeSnapshot: () => { assert.fail("Unready project must not sample a guidance tree."); },
+  });
+  assert.equal(report.observation.state, "project-setup-required");
+  assert.equal(report.observation.problems[0]?.summary, "Project not adopted.");
+  assert.equal(report.response.objective?.level, "project-unprepared");
+  assert.equal(report.response.objective?.failingCheck, "project-adopted");
+  assert.deepEqual(report.response.objective?.problems.map(({ parameters }) => parameters), [
+    { state: "project-setup-required", problemTypes: ["project-not-adopted"] },
+    { state: "project-setup-required", problemTypes: ["project-not-adopted"], prerequisite: "project-ready" },
+  ]);
+  assert.deepEqual(context.calls.slice(-3), ["project-adopted", "project-schema-ready", "project-guidance-valid"]);
+  assert.ok(!context.calls.includes("repository"));
 });
 
 test("no selector stays Project-only even for one Idea; invalid selectors do not silently fall back", async () => {

@@ -9,7 +9,6 @@ import type {
   CheckRequest, CheckResult, ObjectiveGuideInstance, ObjectiveGuideManifest,
   ObjectivePageResource, ObjectiveResourceResolver,
 } from "../../src/objective-guide/index.ts";
-import { compileSubjectProjection } from "../../src/objective-guide/projection.ts";
 
 const rootUri = "https://objectives.test/root/manifest.yaml";
 const childUri = "https://objectives.test/child/manifest.yaml";
@@ -245,13 +244,93 @@ test("invalid minimum levels, malformed References and unknown Problems fail exp
   await assert.rejects(unknown.probe(), ObjectiveOperationError);
 });
 
-test("projection profile rejects dynamic capabilities and bounds execution/output", () => {
+test("public prerequisite projection rejects dynamic capabilities and bounds expressions", async () => {
+  const projection = async (subject: string) => {
+    const context = fixture({
+      [rootUri]: manifest({ prerequisite: { manifestUri: childUri, subject } }),
+      [childUri]: manifest(),
+    });
+    const guide = await context.loader.load(rootUri);
+    assert.ok(guide.prerequisite);
+    return guide.prerequisite;
+  };
   for (const expression of ['$now()', '$random()', '$eval(root)', '$map(root, function($x){$x})', '($x := root; $x)']) {
-    assert.throws(() => compileSubjectProjection(expression), ObjectiveConfigurationError);
+    await assert.rejects(projection(expression), ObjectiveConfigurationError);
   }
-  assert.throws(() => compileSubjectProjection(" ".repeat(SUBJECT_PROJECTION_LIMITS.expressionBytes + 1)), /expression limit/);
-  assert.deepEqual(compileSubjectProjection('{"root": root, "n": count + 1}')({ root: "project", count: 2 }),
+  await assert.rejects(projection(JSON.stringify("x".repeat(SUBJECT_PROJECTION_LIMITS.expressionBytes))), /expression limit/);
+  assert.deepEqual((await projection('{"root": root, "n": count + 1}')).mapSubject({ root: "project", count: 2 }),
     { root: "project", n: 3 });
+});
+
+test("same-level checks stay serial, aggregate failures in order and stop before later levels", async () => {
+  let active = 0;
+  let maximum = 0;
+  const calls: string[] = [];
+  const run = (id: string): Handler => async () => {
+    active++;
+    maximum = Math.max(maximum, active);
+    calls.push(id);
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    active--;
+    return { pass: false, problems: [{ id: "problem", parameters: { check: id } }] };
+  };
+  const current = await instance(fixture({
+    [rootUri]: manifest({ levels: [
+      { id: "unready", advancement: { checks: ["first", "second"] } },
+      { id: "later", advancement: { checks: ["later"] } },
+    ] }),
+  }, { first: run("first"), second: run("second"), later: run("later") }));
+  const observation = await current.probe();
+  assert.equal(maximum, 1);
+  assert.deepEqual(calls, ["first", "second"]);
+  assert.equal(observation.position.failingCheck, "first");
+  assert.deepEqual(observation.position.problems.map(({ parameters }) => parameters.check), ["first", "second"]);
+});
+
+test("overlapping probes of one instance isolate first-failure provenance and clean their workspaces", async () => {
+  const directories = new Map<string, number>();
+  let release!: () => void;
+  const bothStarted = new Promise<void>((resolve) => { release = resolve; });
+  const current = await instance(fixture({
+    [rootUri]: manifest({ levels: [{ id: "unready", advancement: { checks: ["first", "second"] } }] }),
+  }, {
+    first: async ({ probe }) => {
+      const probeId = directories.size;
+      directories.set(probe.tempDirectory, probeId);
+      if (directories.size === 2) release();
+      await bothStarted;
+      return probeId === 0 ? { pass: false, problems: [{ id: "problem", parameters: { probeId } }] }
+        : { pass: true };
+    },
+    second: async ({ probe }) => directories.get(probe.tempDirectory) === 1
+      ? { pass: false, problems: [{ id: "problem", parameters: { probeId: 1 } }] }
+      : { pass: true },
+  }));
+  const samples = await Promise.all([current.probe(), current.probe()]);
+  assert.deepEqual(samples.map(({ position }) => position.failingCheck), ["first", "second"]);
+  assert.deepEqual(samples.map(({ position }) => position.problems[0]?.parameters.probeId), [0, 1]);
+  assert.equal(directories.size, 2);
+  for (const directory of directories.keys()) await assert.rejects(stat(directory), { code: "ENOENT" });
+});
+
+test("runner defects stop queued peers and clean the probe workspace", async () => {
+  const defect = new Error("runner defect");
+  let directory: string | undefined;
+  const calls: string[] = [];
+  const current = await instance(fixture({
+    [rootUri]: manifest({ levels: [{ id: "unready", advancement: { checks: ["first", "second"] } }] }),
+  }, {
+    first: async ({ probe }) => {
+      calls.push("first");
+      directory = probe.tempDirectory;
+      throw defect;
+    },
+    second: async () => { calls.push("second"); return { pass: true }; },
+  }));
+  await assert.rejects(current.probe(), (error) => error === defect);
+  assert.deepEqual(calls, ["first"]);
+  assert.ok(directory);
+  await assert.rejects(stat(directory), { code: "ENOENT" });
 });
 
 test("resource and runner errors propagate instead of becoming low levels or 404", async () => {

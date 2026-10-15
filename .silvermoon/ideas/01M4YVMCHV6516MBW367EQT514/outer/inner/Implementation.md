@@ -6,6 +6,8 @@
 
 对照 `0.1.0` 的公开 API，为现有报告投影、Reference guidance 和串行 checks 定义经过测试的适配方式；遇到无法保持当前数据契约的差异时先停止并说明。
 
+具体边界、实现选择与验证证据见[迁移实施说明](./migration-implementation.md)。
+
 ### I-S02: 替换本地核心
 
 迁移 loader、内置 Objective adapter、测试、导出、文档和打包清单至 `@potential-guide/objective-guide`；确认无引用后删除重复实现与仅供其使用的依赖。

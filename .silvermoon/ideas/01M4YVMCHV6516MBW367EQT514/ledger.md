@@ -4,15 +4,15 @@
 
 ### Implementation steps
 
-- [ ] **I-S01:** 设计兼容适配
-- [ ] **I-S02:** 替换本地核心
-- [ ] **I-S03:** 完成回归验证
+- [x] **I-S01:** 设计兼容适配
+- [x] **I-S02:** 替换本地核心
+- [x] **I-S03:** 完成回归验证
 
 ### Implementation acceptance criteria
 
-- [ ] **I-AC01:** 使用已发布核心包
-- [ ] **I-AC02:** 保持 Silvermoon 合同
-- [ ] **I-AC03:** 验证全部通过
+- [x] **I-AC01:** 使用已发布核心包
+- [x] **I-AC02:** 保持 Silvermoon 合同
+- [x] **I-AC03:** 验证全部通过
 
 ## Deployment
 

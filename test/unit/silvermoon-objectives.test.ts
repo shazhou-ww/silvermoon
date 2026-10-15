@@ -20,7 +20,7 @@ function checks(failing?: string) {
   return { bindings, calls };
 }
 
-test("every scope advancement stops at its declared first failing check", async () => {
+test("every scope aggregates its failed level serially and retains first failure provenance", async () => {
   for (const scope of ["device", "project", "idea"] as const) {
     for (const [level, ids] of SILVERMOON_OBJECTIVE_LEVELS[scope]) {
       for (const id of ids) {
@@ -37,7 +37,7 @@ test("every scope advancement stops at its declared first failing check", async 
         const sample = await created.instance.probe();
         assert.equal(sample.position.level.id, level, id);
         assert.equal(sample.position.failingCheck, id);
-        assert.equal(context.calls.at(-1), id);
+        assert.deepEqual(context.calls.slice(-ids.length), ids);
         assert.equal(sample.position.owner.guide, guide);
         assert.equal((await sample.position.owner.readPage("missing")).id, "system/404");
       }

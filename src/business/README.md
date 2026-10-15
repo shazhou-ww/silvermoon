@@ -14,7 +14,9 @@ observations or foundation indexes. They do not parse process arguments, choose
 terminal output, or call another command implementation.
 
 `objective-guides.ts` binds serializable Device, Project and Idea definitions
-to the Objective Guide core. `whats-next.ts` retains report projection and
+to the published Objective Guide core through the compatibility facade.
+Checks run serially and aggregate same-level failures; guidance checks report
+unavailable prerequisites explicitly. `whats-next.ts` retains report projection and
 command routing; no selector creates only a Project instance. Device readiness
 is advisory, and project-wide guidance validation does not expose its content.
 
