@@ -229,6 +229,7 @@ test("selected Idea stops at its Device prerequisite with one current direction"
     problemReference?.command,
     "silvermoon reference problem:device-runtime --language en-US",
   );
+  assert.equal(report.response.nextSteps.length, 1);
   assert.equal(report.response.nextSteps[0]?.text, problemReference?.instruction);
   assert.match(
     report.response.nextSteps[0]?.text ?? "",
@@ -274,6 +275,182 @@ test("a non-source runtime failure uses the global install command", async () =>
   assert.equal(report.response.nextSteps[0]?.text, problemReference?.instruction);
   assert.match(instructions, /npm install --global silvermoon/);
   assert.match(instructions, /pnpm setup:dev/);
+});
+
+test("an unverifiable canonical skill requires runtime repair before registration", async () => {
+  const device = deviceFixture();
+  device.readiness!.skill = {
+    status: "canonical-unverifiable",
+    expectedRoot: "D:\\runtime\\skills\\silvermoon",
+    paths: [],
+    remediation: "Repair the active runtime.",
+    summary: "Cannot verify the canonical skill.",
+  };
+  const context = harness(
+    { ...ready(), outputLanguageOverride: "en-US" as const },
+    false,
+    device,
+  );
+  const report = await whatsNextUseCase(
+    { ...context.options, language: "en-US" },
+    context.ports,
+  );
+  assert.equal(report.response.kind, "objective");
+  if (report.response.kind !== "objective") assert.fail("Expected Objective response.");
+  assert.equal(
+    report.response.objective.problems[0]?.id,
+    "device-canonical-skill",
+  );
+  assert.match(
+    report.response.nextSteps[0]?.text ?? "",
+    /^The goal is for the active Silvermoon CLI package to be usable.*Inspect the active `silvermoon` executable.*npm install --global silvermoon@latest/,
+  );
+  assert.doesNotMatch(report.response.nextSteps[0]?.text ?? "", /npx skills add/);
+});
+
+test("personal skill repair binds the observed canonical path into the Reference action", async () => {
+  const device = deviceFixture();
+  device.readiness!.skill = {
+    status: "missing",
+    expectedRoot: "D:\\runtime\\skills\\silvermoon",
+    expectedRevision: `sha256:${"a".repeat(64)}`,
+    paths: [],
+    remediation: "Install the canonical skill.",
+  };
+  const context = harness(
+    { ...ready(), outputLanguageOverride: "en-US" as const },
+    false,
+    device,
+  );
+  const report = await whatsNextUseCase(
+    { ...context.options, language: "en-US" },
+    context.ports,
+  );
+  assert.equal(report.response.kind, "objective");
+  if (report.response.kind !== "objective") assert.fail("Expected Objective response.");
+  assert.match(
+    report.response.nextSteps[0]?.text ?? "",
+    /^The goal is for a personal discovery path.*npx skills add "D:\\runtime\\skills\\silvermoon" --global --all/,
+  );
+  assert.doesNotMatch(
+    report.response.nextSteps[0]?.text ?? "",
+    /<canonical-skill-path>/,
+  );
+});
+
+test("device configuration versions choose historical, future, invalid, and format Problems", async () => {
+  const configurationPath = "D:\\home\\.config\\silvermoon\\config.yaml";
+  function invalidDevice({
+    code,
+    status,
+    value,
+    update = {
+      status: "current",
+      currentVersion: "0.5.0",
+      latestVersion: "0.5.0",
+      channel: "latest",
+      checkedAt: "2026-10-15T00:00:00.000Z",
+      source: "registry",
+    },
+  }: {
+    code: string;
+    status: "historical" | "future" | "current";
+    value: number;
+    update?: {
+      status: "available" | "current";
+      currentVersion: string;
+      latestVersion: string;
+      channel: string;
+      checkedAt: string;
+      source: "registry";
+    };
+  }) {
+    const device = deviceFixture();
+    device.globalConfig.valid = false;
+    device.diagnostics = [{
+      code,
+      level: "error",
+      path: `${configurationPath}#version`,
+      message: `Configuration fixture: ${code}`,
+      remediation: "Repair the fixture.",
+    }];
+    device.user = {
+      config: null,
+      configPath: configurationPath,
+      diagnostics: device.diagnostics,
+      version: { status, value, supported: 1 },
+    };
+    device.readiness!.update = update;
+    return device;
+  }
+
+  const cases = [
+    {
+      device: invalidDevice({
+        code: "user-config.historical-version",
+        status: "historical",
+        value: 0,
+      }),
+      problem: "device-configuration-historical-version",
+    },
+    {
+      device: invalidDevice({
+        code: "user-config.future-version",
+        status: "future",
+        value: 2,
+        update: {
+          status: "available",
+          currentVersion: "0.5.0",
+          latestVersion: "0.6.0",
+          channel: "latest",
+          checkedAt: "2026-10-15T00:00:00.000Z",
+          source: "registry",
+        },
+      }),
+      problem: "device-configuration-future-version",
+    },
+    {
+      device: invalidDevice({
+        code: "user-config.future-version",
+        status: "future",
+        value: 2,
+      }),
+      problem: "device-configuration-invalid-version",
+    },
+    {
+      device: invalidDevice({
+        code: "user-config.unknown-key",
+        status: "current",
+        value: 1,
+      }),
+      problem: "device-configuration-format",
+    },
+  ] as const;
+  for (const fixture of cases) {
+    const context = harness(
+      { ...ready(), outputLanguageOverride: "en-US" as const },
+      false,
+      fixture.device,
+    );
+    const report = await whatsNextUseCase(
+      { ...context.options, language: "en-US" },
+      context.ports,
+    );
+    assert.equal(report.response.kind, "objective");
+    if (report.response.kind !== "objective") assert.fail("Expected Objective response.");
+    assert.equal(report.response.objective.problems[0]?.id, fixture.problem);
+    assert.equal(report.response.nextSteps.length, 1);
+    assert.match(
+      report.response.nextSteps[0]?.text ?? "",
+      /^The goal is /,
+    );
+    if (fixture.problem === "device-configuration-invalid-version") {
+      assert.match(
+        report.response.nextSteps[0]?.text ?? "",
+        /^The goal is for the reported personal configuration to declare a currently supported version/,
+      );
+    }
+  }
 });
 
 test("concurrent command instances do not share snapshot or lifecycle state", async () => {

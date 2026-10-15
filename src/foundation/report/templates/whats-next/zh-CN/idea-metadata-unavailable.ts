@@ -7,16 +7,15 @@ import type { MetadataUnavailableParameters } from "../contract.ts";
 
 /** @pure */
 const ideaMetadataUnavailable = ({
-  command,
   documentPath,
   message,
 }: MetadataUnavailableParameters) =>
   ({
     summary: `无法读取 idea metadata：${message}`,
     nextSteps: documentPath === undefined
-      ? `修复报告的 idea document 后，重新运行 \`${command}\`。`
+      ? "目标是得到满足 idea metadata contract 的可读取 canonical Idea.md。"
       : [
-        `把 ${documentPath} 恢复为当前 idea 的 canonical Idea.md。`,
+        `目标是让 ${documentPath} 成为当前 idea 可读取的 canonical Idea.md。`,
         `使用以下 canonical template：`,
         "```markdown",
         "# <标题>",
@@ -29,7 +28,6 @@ const ideaMetadataUnavailable = ({
         "",
         "## 验收标准",
         "```",
-        `然后重新运行 \`${command}\`。`,
       ].join("\n"),
   });
 

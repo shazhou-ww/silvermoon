@@ -294,7 +294,7 @@ try {
   );
   assert.deepEqual(
     bootstrapReport.observation.problems.map(({ type }: { type: string }) => type),
-    ["config-missing"],
+    ["project-metadata-missing"],
   );
   assert.equal(bootstrapReport.observation.observedThrough, "version");
   assert.doesNotMatch(
@@ -316,7 +316,7 @@ try {
   ));
   assert.deepEqual(
     nonNodeReport.observation.problems.map(({ type }: { type: string }) => type),
-    ["config-missing"],
+    ["project-metadata-missing"],
   );
   await assert.rejects(readFile(join(nonNode, "package.json")), {
     code: "ENOENT",

@@ -14,3 +14,7 @@ export {
   resolveRuntimeUpdateChannel,
 } from "./rules.ts";
 export { linkPersonalSkill } from "./personal-skill-link.ts";
+export {
+  directoriesMatch,
+  directoryContentRevision,
+} from "./skill-content-revision.ts";

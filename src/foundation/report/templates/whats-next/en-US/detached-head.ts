@@ -21,8 +21,6 @@ const detachedHead = ({
     nextSteps: [
       `The goal is to attach the current work to a local branch whose upstream is`,
       `\`${expectedRepository}#${expectedBranch}\` without losing any work.`,
-      `Possible approaches include switching to the intended existing branch or`,
-      `creating a branch at the current HEAD and then setting that upstream.`,
     ].join(" "),
   });
 

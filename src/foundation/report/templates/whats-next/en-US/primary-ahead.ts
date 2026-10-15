@@ -13,17 +13,13 @@ const primaryAhead = ({
   head,
   primary,
   primaryBranch,
-  recheckCommand,
   remote,
 }: PrimaryRelationParameters): SummaryAndNextSteps =>
   ({
     summary:
       `Local HEAD is ${head}; observed primary is ${primary}; relationship is ahead.`,
-    nextSteps: [
-      `Validate local commit ${head}, confirm the remote tip is still ${primary},`,
-      `then push normally to ${remote}/${primaryBranch} without force.`,
-      `Re-run ${recheckCommand} after the push.`,
-    ].join(" "),
+    nextSteps:
+      `The goal is for validated local HEAD ${head} to be reachable from ${remote}/${primaryBranch} through ordinary non-force synchronization while preserving concurrent primary history.`,
   });
 
 export default primaryAhead;

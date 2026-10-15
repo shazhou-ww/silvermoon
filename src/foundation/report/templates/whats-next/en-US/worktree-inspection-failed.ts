@@ -6,12 +6,9 @@
 import type { RecheckParameters } from "../contract.ts";
 
 /** @pure */
-const worktreeInspectionFailed = ({
-  recheckCommand,
-}: RecheckParameters) =>
-  [
-    `Repair the local Git state, verify that all changes can be inspected,`,
-    `then run ${recheckCommand} again.`,
-  ].join(" ");
+const worktreeInspectionFailed = (
+  _parameters: RecheckParameters,
+) =>
+  `The goal is a local Git state in which every worktree change can be inspected safely.`;
 
 export default worktreeInspectionFailed;

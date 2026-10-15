@@ -71,20 +71,17 @@ function objectiveStatus(
       `本次观测确认${owner}已完成。`,
     );
   }
-  const blocked = objective.problems.length === 1
-    ? localize(language, "The problem below is", "下方问题")
-    : localize(language, "The problems below are", "下方问题");
   if (objective.target === objective.owner) {
     return localize(
       language,
-      `This request targets ${target}. ${blocked} preventing it from continuing.`,
-      `本次请求的目标是${target}。${blocked}阻止继续推进。`,
+      `This request targets ${target}.`,
+      `本次请求的目标是${target}。`,
     );
   }
   return localize(
     language,
-    `This request targets ${target}, but ${owner} must be completed first. ${blocked} preventing ${owner} from continuing.`,
-    `本次请求的目标是${target}，但必须先完成${owner}。${blocked}阻止${owner}继续。`,
+    `This request targets ${target}, but ${owner} must be completed first.`,
+    `本次请求的目标是${target}，但必须先完成${owner}。`,
   );
 }
 
@@ -146,10 +143,49 @@ function problemFacts(
     }
   }
 
-  if (problem.id === "device-configuration") {
+  if (problem.id.startsWith("device-configuration")) {
     const path = problem.parameters.configurationPath;
     const codes = stringValues(problem.parameters.diagnosticCodes);
     if (typeof path === "string") {
+      const observedVersion = problem.parameters.observedVersion;
+      const supportedVersion = problem.parameters.supportedVersion;
+      if (problem.id === "device-configuration-historical-version") {
+        return proseFacts([
+          localize(
+            language,
+            `The device configuration at ${codeSpan(path)} uses historical version ${codeSpan(String(observedVersion))}; this runtime supports version ${codeSpan(String(supportedVersion))}.`,
+            `位于 ${codeSpan(path)} 的设备配置使用历史版本 ${codeSpan(String(observedVersion))}；当前 runtime 支持版本 ${codeSpan(String(supportedVersion))}。`,
+          ),
+        ]);
+      }
+      if (problem.id === "device-configuration-future-version") {
+        const runtimeVersion = problem.parameters.runtimeVersion;
+        const latestVersion = problem.parameters.latestVersion;
+        return proseFacts([
+          localize(
+            language,
+            `The device configuration at ${codeSpan(path)} uses version ${codeSpan(String(observedVersion))}, which binary ${codeSpan(String(runtimeVersion))} does not support; it supports version ${codeSpan(String(supportedVersion))}. The npm registry reports newer Silvermoon CLI version ${codeSpan(String(latestVersion))}.`,
+            `位于 ${codeSpan(path)} 的设备配置使用版本 ${codeSpan(String(observedVersion))}，binary ${codeSpan(String(runtimeVersion))} 不支持该版本；它支持版本 ${codeSpan(String(supportedVersion))}。npm registry 报告有更新的 Silvermoon CLI 版本 ${codeSpan(String(latestVersion))}。`,
+          ),
+        ]);
+      }
+      if (problem.id === "device-configuration-invalid-version") {
+        const runtimeVersion = problem.parameters.runtimeVersion;
+        const updateStatus = problem.parameters.updateStatus;
+        return proseFacts([
+          updateStatus === "current"
+            ? localize(
+              language,
+              `The device configuration at ${codeSpan(path)} declares unsupported version ${codeSpan(String(observedVersion))}. The npm registry confirms binary version ${codeSpan(String(runtimeVersion))} is current, so this configuration version is wrong rather than awaiting a CLI update; the supported version is ${codeSpan(String(supportedVersion))}.`,
+              `位于 ${codeSpan(path)} 的设备配置声明了不受支持的版本 ${codeSpan(String(observedVersion))}。npm registry 确认 binary 版本 ${codeSpan(String(runtimeVersion))} 已是最新，因此这是配置版本号错误，而不是等待 CLI 更新；当前支持版本为 ${codeSpan(String(supportedVersion))}。`,
+            )
+            : localize(
+              language,
+              `The device configuration at ${codeSpan(path)} does not declare a valid supported version; the current version is ${codeSpan(String(supportedVersion))}.`,
+              `位于 ${codeSpan(path)} 的设备配置没有声明合法的受支持版本；当前版本为 ${codeSpan(String(supportedVersion))}。`,
+            ),
+        ]);
+      }
       const detail = codes.includes("user-config.unsupported-version")
         ? localize(
           language,
@@ -167,39 +203,111 @@ function problemFacts(
           "does not satisfy the current user-configuration contract",
           "不满足当前个人配置 contract",
         );
+      const diagnosticMessages = Array.isArray(problem.parameters.diagnostics)
+        ? problem.parameters.diagnostics.flatMap((value) => {
+          const record = recordValue(value);
+          if (record === undefined) return [];
+          const code = record.code;
+          const diagnosticPath = record.path;
+          const field = typeof diagnosticPath === "string"
+            ? diagnosticPath.replace(/^.*#/, "")
+            : "";
+          if (code === "user-config.invalid-yaml") {
+            return [localize(language, "the file is not valid strict YAML", "文件不是合法的 strict YAML")];
+          }
+          if (code === "user-config.invalid-type") {
+            return [localize(language, "the top level must be a YAML mapping", "顶层必须是 YAML mapping")];
+          }
+          if (code === "user-config.unknown-key") {
+            return [localize(
+              language,
+              `unsupported field ${codeSpan(field)}`,
+              `包含不允许的字段 ${codeSpan(field)}`,
+            )];
+          }
+          if (code === "user-config.missing-version") {
+            return [localize(language, "the required `version` field is missing", "缺少必需的 `version` 字段")];
+          }
+          if (code === "user-config.invalid-preferred-language") {
+            return [localize(
+              language,
+              "`preferredLanguage` is not a canonical BCP 47 language tag",
+              "`preferredLanguage` 不是 canonical BCP 47 language tag",
+            )];
+          }
+          if (code === "user-config.noncanonical") {
+            return [localize(
+              language,
+              "field order or line endings are not canonical",
+              "字段顺序或换行格式不是 canonical 格式",
+            )];
+          }
+          if (code === "user-config.invalid-file") {
+            return [localize(language, "the path is not a readable regular file", "该路径不是可读取的普通文件")];
+          }
+          return typeof record.message === "string" ? [record.message] : [];
+        })
+        : [];
       return proseFacts([
         localize(
           language,
-          `The device configuration at ${codeSpan(path)} ${detail}.`,
-          `位于 ${codeSpan(path)} 的设备配置${detail}。`,
+          `The device configuration at ${codeSpan(path)} ${detail}${
+            diagnosticMessages.length === 0 ? "" : `: ${diagnosticMessages.join("; ")}`
+          }.`,
+          `位于 ${codeSpan(path)} 的设备配置${detail}${
+            diagnosticMessages.length === 0 ? "" : `：${diagnosticMessages.join("；")}`
+          }。`,
         ),
       ]);
     }
   }
 
-  if (problem.id === "device-skill") {
+  if (
+    problem.id === "device-skill"
+    || problem.id === "device-canonical-skill"
+  ) {
     const status = problem.parameters.status;
     const expectedRoot = problem.parameters.expectedRoot;
-    const paths = stringValues(problem.parameters.paths);
+    const expectedRevision = problem.parameters.expectedRevision;
+    const observed = Array.isArray(problem.parameters.observed)
+      ? problem.parameters.observed.flatMap((value) => {
+        if (value === null || typeof value !== "object" || Array.isArray(value)) return [];
+        const path = value.path;
+        const revision = value.revision;
+        return typeof path === "string"
+          ? [{ path, revision: typeof revision === "string" ? revision : null }]
+          : [];
+      })
+      : [];
     if (typeof expectedRoot === "string") {
-      if (status === "missing" || paths.length === 0) {
+      if (status === "canonical-unverifiable") {
         return proseFacts([
           localize(
             language,
-            `Silvermoon's canonical skill is ${codeSpan(expectedRoot)}, but no personal discovery path currently resolves to it.`,
-            `Silvermoon 的 canonical skill 位于 ${codeSpan(expectedRoot)}，但当前没有个人级 discovery 路径解析到它。`,
+            `The active runtime's canonical Silvermoon skill at ${codeSpan(expectedRoot)} could not be verified.`,
+            `无法验证 active runtime 位于 ${codeSpan(expectedRoot)} 的 canonical Silvermoon skill。`,
           ),
         ]);
       }
+      if (status === "missing") {
+        return proseFacts([
+          localize(
+            language,
+            `No personal Silvermoon skill was found. The active runtime's canonical skill at ${codeSpan(expectedRoot)} has content revision ${codeSpan(String(expectedRevision))}.`,
+            `未发现个人级 Silvermoon skill。active runtime 位于 ${codeSpan(expectedRoot)} 的 canonical skill 内容 revision 为 ${codeSpan(String(expectedRevision))}。`,
+          ),
+        ]);
+      }
+      const observations = observed.map(({ path, revision }) =>
+        revision === null
+          ? localize(language, `${codeSpan(path)} could not be read or has invalid structure`, `${codeSpan(path)} 无法读取或结构无效`)
+          : localize(language, `${codeSpan(path)} has revision ${codeSpan(revision)}`, `${codeSpan(path)} 的 revision 为 ${codeSpan(revision)}`)
+      ).join(localize(language, "; ", "；"));
       return proseFacts([
         localize(
           language,
-          `The personal skill registrations at ${
-            paths.map(codeSpan).join(", ")
-          } do not resolve to Silvermoon's canonical skill ${codeSpan(expectedRoot)}.`,
-          `个人级 skill registrations ${
-            paths.map(codeSpan).join("、")
-          } 未解析到 Silvermoon 的 canonical skill ${codeSpan(expectedRoot)}。`,
+          `A personal Silvermoon skill was found, but its content revision does not match the active runtime's expected revision ${codeSpan(String(expectedRevision))}${observations === "" ? "" : `: ${observations}`}.`,
+          `已发现个人级 Silvermoon skill，但其内容 revision 与 active runtime 期望的 ${codeSpan(String(expectedRevision))} 不一致${observations === "" ? "" : `：${observations}`}。`,
         ),
       ]);
     }
@@ -240,11 +348,39 @@ function problemFacts(
           "项目 metadata 中存在不满足受支持 schema 的值。",
         )];
       }
-      if (type.includes("not-adopted") || type.includes("config-missing")) {
+      if (type === "project-metadata-missing") {
         return [localize(
           language,
-          "The repository has not yet been adopted as a Silvermoon project with a valid project configuration.",
-          "该 repository 尚未通过有效项目配置 adopt 为 Silvermoon 项目。",
+          "The Silvermoon project metadata directory `.silvermoon` is missing.",
+          "Silvermoon 项目 metadata 目录 `.silvermoon` 缺失。",
+        )];
+      }
+      if (type === "project-metadata-invalid") {
+        return [localize(
+          language,
+          "The `.silvermoon` project metadata path is not a directory.",
+          "项目 metadata 路径 `.silvermoon` 不是目录。",
+        )];
+      }
+      if (type === "config-invalid-yaml") {
+        return [localize(
+          language,
+          "The project configuration `.silvermoon/config.yaml` is not valid strict YAML.",
+          "项目配置 `.silvermoon/config.yaml` 不是合法的 strict YAML。",
+        )];
+      }
+      if (type.includes("config-missing")) {
+        return [localize(
+          language,
+          "The project configuration `.silvermoon/config.yaml` is missing.",
+          "项目配置 `.silvermoon/config.yaml` 缺失。",
+        )];
+      }
+      if (type.includes("not-adopted")) {
+        return [localize(
+          language,
+          "The repository does not contain the complete Silvermoon project metadata required for adoption.",
+          "该 repository 缺少完成 Silvermoon project adoption 所需的完整 metadata。",
         )];
       }
       if (type.startsWith("user-")) {
@@ -704,7 +840,9 @@ function renderDeviceAdvisory(
     !["ready", "managed-by-host"].includes(device.skill.status)
     || device.skill.remediation !== undefined
     || device.skill.summary !== undefined
-    || (device.skill.invalidPaths?.length ?? 0) > 0;
+    || (device.skill.observed?.some(({ revision }) =>
+      revision !== device.skill.expectedRevision
+    ) ?? false);
   const updateNeedsAttention =
     !["current", "not-required", "managed-by-host"].includes(device.update.status)
     || (
@@ -738,9 +876,18 @@ function renderDeviceAdvisory(
       )}`,
     ];
   }
-  const skillDetails = device.skill.summary
-    ?? (device.skill.invalidPaths?.length
-      ? device.skill.invalidPaths.join(", ")
+  const skillDetails = device.skill.status === "incorrect"
+    ? [
+        `expected=${device.skill.expectedRevision ?? "unverifiable"}`,
+        ...(device.skill.observed ?? []).map(({ path, revision }) =>
+          `${path}=${revision ?? "unreadable"}`
+        ),
+      ].join("; ")
+    : device.skill.summary
+    ?? (device.skill.observed?.length
+      ? device.skill.observed.map(({ path, revision }) =>
+        `${path}=${revision ?? "unreadable"}`
+      ).join(", ")
       : device.skill.paths.length > 0
         ? device.skill.paths.join(", ")
         : device.skill.expectedRoot);
@@ -857,16 +1004,12 @@ function renderObjectiveResponse(response: ReportResponse, language: string) {
     objectiveStatus(objective, language),
   ];
   const root = response.details?.root;
-  const version = renderVersion(response.details?.version);
   const primary = response.details?.primary;
-  if (root !== undefined || version !== null || primary !== undefined) {
+  if (root !== undefined || primary !== undefined) {
     const context = [
       ...(root === undefined
         ? []
         : [`${localize(language, "root", "根目录")} ${codeSpan(root)}`]),
-      ...(version === null
-        ? []
-        : [`${localize(language, "revision", "revision")} ${codeSpan(version)}`]),
       ...(primary === undefined
         ? []
         : [`primary ${codeSpan(`${primary.repository}#${primary.branch}`)}`]),
@@ -905,14 +1048,38 @@ function renderObjectiveResponse(response: ReportResponse, language: string) {
       `### ${localize(language, "Problems", "问题")}`,
       "",
     );
-    for (const [index, problem] of objective.problems.entries()) {
+    const renderedProblems = objective.problems.map((problem) => {
       const reference = objective.references.find(
         ({ id, kind }) => kind === "problem" && id === `problems/${problem.id}`,
       );
-      lines.push(
-        `${index + 1}. ${reference?.description ?? reference?.title ?? codeSpan(problem.id)}`,
-        ...problemFacts(problem, language),
+      const facts = problemFacts(problem, language).map((line) =>
+        line.replace(/^   /, "")
       );
+      const usesDirectFacts = problem.id === "device-skill"
+        || problem.id === "device-canonical-skill"
+        || problem.id === "project"
+        || problem.id === "repository"
+        || problem.id.startsWith("device-configuration-");
+      const description = usesDirectFacts && facts.length > 0
+        ? undefined
+        : reference?.description ?? reference?.title ?? codeSpan(problem.id);
+      return [...(description === undefined ? [] : [description]), ...facts];
+    });
+    const uniqueProblems: string[][] = [];
+    for (const content of renderedProblems) {
+      if (!uniqueProblems.some((candidate) =>
+        candidate.join("\n") === content.join("\n")
+      )) {
+        uniqueProblems.push(content);
+      }
+    }
+    for (const [index, content] of uniqueProblems.entries()) {
+      if (uniqueProblems.length === 1) {
+        lines.push(...content);
+      } else {
+        const [first = "", ...rest] = content;
+        lines.push(`${index + 1}. ${first}`, ...rest.map((line) => `   ${line}`));
+      }
     }
   }
   const hasNextAction = (response.kind === "next-steps" && response.review !== undefined)
@@ -948,7 +1115,12 @@ function renderObjectiveResponse(response: ReportResponse, language: string) {
     `### ${localize(language, "References", "参考资料")}`,
     "",
   );
-  for (const reference of objective.references) {
+  for (const [index, reference] of objective.references.entries()) {
+    if (objective.references.findIndex(({ kind, id }) =>
+      kind === reference.kind && id === reference.id
+    ) !== index) {
+      continue;
+    }
     const kind = {
       level: localize(language, "Level", "层级"),
       check: "Check",

@@ -76,16 +76,16 @@ export interface DeviceAdvisory {
     status:
       | "ready"
       | "missing"
-      | "mismatched"
-      | "invalid"
+      | "incorrect"
+      | "canonical-unverifiable"
       | "managed-by-host"
       | "source-checkout";
     expectedRoot: string;
+    expectedRevision?: string;
     paths: string[];
-    invalidPaths?: string[];
-    invalidTargets?: Array<{
+    observed?: Array<{
       path: string;
-      target: string | null;
+      revision: string | null;
     }>;
     remediation?: string;
     summary?: string;

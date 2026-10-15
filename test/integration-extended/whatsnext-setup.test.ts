@@ -738,11 +738,7 @@ test("uses a canonical output override without changing content language or pers
 
   assert.equal(blocked.observation.outputLanguage, "en-US");
   assert.match(responseText(blocked), /^The goal is a clean worktree/);
-  assert.match(responseText(blocked), /Inspect all staged, unstaged, and untracked paths/);
-  assert.match(
-    responseText(blocked),
-    /silvermoon whats-next "localized" --language en-US --audience agent/,
-  );
+  assert.doesNotMatch(responseText(blocked), /Inspect all staged|silvermoon whats-next/);
   const blockedMarkdown = renderResponse(blocked.response);
   assert.match(blockedMarkdown, /### References/);
   assert.doesNotMatch(blockedMarkdown, /> ## Problem guidance/);

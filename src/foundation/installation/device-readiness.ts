@@ -18,6 +18,7 @@ import {
   parseSemanticVersion,
   resolveRuntimeUpdateChannel,
 } from "./rules.ts";
+import { directoryContentRevision } from "./skill-content-revision.ts";
 
 const packageRoot = fileURLToPath(new URL(
   import.meta.url.endsWith(".ts") ? "../../.." : "../../../..",
@@ -325,85 +326,92 @@ export async function inspectPersonalSkill({
     };
   }
   let expectedRoot = resolve(skillRoot);
+  let expectedRevision: string;
   try {
     expectedRoot = await filesystem.realpath(skillRoot);
     await filesystem.readFile(resolve(expectedRoot, "SKILL.md"), "utf8");
+    expectedRevision = await directoryContentRevision(expectedRoot);
   } catch (error) {
     return {
-      status: "invalid" as const,
+      status: "canonical-unverifiable" as const,
       expectedRoot,
       paths: [],
-      remediation: `Repair the Silvermoon installation so ${expectedRoot} contains a readable SKILL.md.`,
-      summary: `Cannot read the installed canonical Silvermoon skill: ${errorMessage(error)}`,
+      remediation: `Repair the active Silvermoon runtime so its canonical skill at ${expectedRoot} can be verified.`,
+      summary: `Cannot verify the active runtime's canonical Silvermoon skill: ${errorMessage(error)}`,
     };
   }
   const paths = [];
-  const invalidPaths = [];
-  const invalidTargets: Array<{ path: string; target: string | null }> = [];
+  const observed: Array<{ path: string; revision: string | null }> = [];
   for (const relativePath of PERSONAL_SKILL_PATHS) {
     const path = resolve(home, relativePath);
     try {
       const metadata = await filesystem.lstat(path);
       if (!metadata.isDirectory() && !metadata.isSymbolicLink()) {
-        invalidPaths.push(path);
-        invalidTargets.push({ path, target: null });
+        observed.push({ path, revision: null });
         continue;
       }
-      let target: string | null;
+      let target: string;
       try {
         target = await filesystem.realpath(path);
       } catch (error) {
         if (errorCode(error) === "ENOENT") {
-          invalidPaths.push(path);
-          invalidTargets.push({ path, target: null });
+          observed.push({ path, revision: null });
           continue;
         }
         throw error;
       }
-      if (target !== expectedRoot) {
-        invalidPaths.push(path);
-        invalidTargets.push({ path, target });
-      }
-      else {
+      let revision: string | null = null;
+      try {
         await filesystem.readFile(resolve(target, "SKILL.md"), "utf8");
+        revision = await directoryContentRevision(target);
+      } catch {
+        observed.push({ path, revision: null });
+        continue;
+      }
+      observed.push({ path, revision });
+      if (revision === expectedRevision) {
         paths.push(path);
       }
     } catch (error) {
       if (errorCode(error) !== "ENOENT") {
         return {
-          status: "invalid" as const,
+          status: "incorrect" as const,
           expectedRoot,
+          expectedRevision,
           paths,
+          observed: [...observed, { path, revision: null }],
+          remediation: `Run npx skills add "${expectedRoot}" --global --all to install the active runtime's canonical skill, then rerun the Silvermoon command.`,
           summary: `Cannot inspect personal Silvermoon skill ${path}: ${errorMessage(error)}`,
         };
       }
     }
   }
-  if (invalidPaths.length > 0) {
+  if (observed.length > paths.length) {
     return {
-      status: "mismatched" as const,
+      status: "incorrect" as const,
       expectedRoot,
+      expectedRevision,
       paths,
-      invalidPaths,
-      invalidTargets,
-      remediation: `Run silvermoon-link-skill to relink the reported personal skill registration to the active global runtime's canonical skill at ${expectedRoot}, then rerun the Silvermoon command.`,
-      summary: invalidTargets.map(({ path, target }) =>
-        `${path} resolves to ${target ?? "an unreadable target"}; expected ${expectedRoot}.`
-      ).join(" "),
+      observed,
+      remediation: `Run npx skills add "${expectedRoot}" --global --all to install the active runtime's canonical skill so its content revision matches ${expectedRevision}, then rerun the Silvermoon command.`,
+      summary: "A discovered personal Silvermoon skill does not match the active runtime's canonical skill content revision.",
     };
   }
   if (paths.length === 0) {
     return {
       status: "missing" as const,
       expectedRoot,
+      expectedRevision,
       paths,
-      remediation: `Run silvermoon-link-skill to link the active global runtime's canonical skill at ${expectedRoot} into the personal discovery path, then rerun the Silvermoon command.`,
+      remediation: `Run npx skills add "${expectedRoot}" --global --all to install the active runtime's canonical skill, then rerun the Silvermoon command.`,
     };
   }
   return {
     status: "ready" as const,
     expectedRoot,
+    expectedRevision,
     paths,
+    observed,
   };
 }
 

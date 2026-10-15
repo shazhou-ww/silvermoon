@@ -9,11 +9,7 @@ import type { PrimaryAncestryFailedParameters } from "../contract.ts";
 const primaryAncestryInspectionFailed = ({
   head,
   primary,
-  recheckCommand,
 }: PrimaryAncestryFailedParameters) =>
-  [
-    `Repair or deepen local Git history until ${head} and ${primary} can be compared,`,
-    `then run ${recheckCommand} again.`,
-  ].join(" ");
+  `The goal is locally available Git history that permits a reliable ancestry comparison between ${head} and ${primary}.`;
 
 export default primaryAncestryInspectionFailed;

@@ -21,7 +21,6 @@ const detachedHead = ({
     nextSteps: [
       `目标是在不丢失当前工作的前提下，把工作附着到 upstream 为 `,
       `\`${expectedRepository}#${expectedBranch}\` 的本地分支。`,
-      `可选方法包括切换到预期的既有分支，或在当前 HEAD 创建分支后再设置该 upstream。`,
     ].join(""),
   });
 

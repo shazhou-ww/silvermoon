@@ -52,10 +52,10 @@ test("reports only Git and Silvermoon configuration readiness", async () => {
   assert.equal(report.config, null);
   assert.deepEqual(
     report.problems.map(({ type }) => type),
-    ["git-repository-missing", "config-missing"],
+    ["git-repository-missing", "project-metadata-missing"],
   );
   assert.match(report.instructions[0] ?? "", /git .* init/);
-  assert.match(report.instructions[1] ?? "", /\.silvermoon\/config\.yaml/);
+  assert.match(report.instructions[1] ?? "", /\.silvermoon/);
 });
 
 test("accepts projects without package metadata or a repository skill", async () => {

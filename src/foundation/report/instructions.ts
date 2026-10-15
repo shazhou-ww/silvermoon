@@ -8,10 +8,7 @@ import {
   renderLifecycleImplementing,
   renderLifecyclePrepared,
   renderLifecyclePreparing,
-  renderPhaseGuidanceInvalid,
   renderPreparationSeed,
-  renderProjectRecheck,
-  renderRepositoryRecheck,
   renderReviewPresentation,
   renderReviewPresentationInstruction,
   renderWorktreeChangesStep,
@@ -97,40 +94,32 @@ export function formatInstructionSteps(steps: string[]) {
 /** @pure */
 export function projectInstructions(
   observed: { findings: { instruction: string }[] },
-  root: string,
+  _root: string,
   language: string,
-  recheckCommand = "silvermoon whats-next",
+  _recheckCommand = "silvermoon whats-next",
 ) {
   return joinInstructions([
     localize(
       language,
-      "The goal is a valid, complete project snapshot that preserves unrelated content. The diagnostics below suggest possible repairs; apply only those that match the observed problem.",
-      "目标是在保留无关内容的同时得到有效且完整的项目 snapshot。下方诊断给出可能的修复方法；只采用与观测问题相符的步骤。",
+      "The goal is a valid, complete project snapshot that preserves unrelated content. Apply only repairs that match the observed diagnostics.",
+      "目标是在保留无关内容的同时得到有效且完整的项目 snapshot。只采用与观测诊断相符的修复。",
     ),
     ...formatInstructionSteps(observed.findings.map(({ instruction }) => instruction)),
-    renderProjectRecheck(language, {
-      recheckCommand: command(root, recheckCommand),
-    }),
   ]);
 }
 
 /** @pure */
 export function phaseGuidanceInstructions(
   diagnostics: Array<Diagnostic & { remediation: string }>,
-  root: string,
+  _root: string,
   language: string,
-  recheckCommand: string,
+  _recheckCommand: string,
 ) {
-  return joinInstructions([
-    ...formatInstructionSteps(
-      diagnostics.map((diagnostic) =>
-        diagnosticInstruction(diagnostic, language)
-      ),
+  return joinInstructions(formatInstructionSteps(
+    diagnostics.map((diagnostic) =>
+      diagnosticInstruction(diagnostic, language)
     ),
-    renderPhaseGuidanceInvalid(language, {
-      recheckCommand: command(root, recheckCommand),
-    }),
-  ]);
+  ));
 }
 
 /** @pure */
@@ -189,17 +178,12 @@ export function worktreeInstructionSteps(changes: WorktreeChanges, language: str
 
 /** @pure */
 export function localRepositoryInstructions(
-  root: string,
+  _root: string,
   steps: string[],
-  language: string,
-  recheckCommand: string,
+  _language: string,
+  _recheckCommand: string,
 ) {
-  return joinInstructions([
-    ...formatInstructionSteps(steps),
-    renderRepositoryRecheck(language, {
-      recheckCommand: command(root, recheckCommand),
-    }),
-  ]);
+  return joinInstructions(formatInstructionSteps(steps));
 }
 
 /** @pure */

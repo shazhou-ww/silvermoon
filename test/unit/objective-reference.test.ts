@@ -56,6 +56,62 @@ test("parses namespace lookups and rejects unsafe or malformed input", () => {
   }
 });
 
+test("exposes typed static guidance metadata from Reference frontmatter", async () => {
+  const english = await readObjectiveReference(
+    "project",
+    "problems/repository",
+    "en-US",
+  );
+  assert.match(
+    english.page.description ?? "",
+    /repository does not yet satisfy the Git state required to advance repository or Idea work safely/,
+  );
+  assert.match(
+    english.page.instruction ?? "",
+    /goal is a clean repository attached to a local branch.+preserving unknown work/,
+  );
+  assert.match(english.page.content, /## Problem guidance/);
+
+  const chinese = await readObjectiveReference(
+    "project",
+    "problems/repository",
+    "zh-CN",
+  );
+  assert.match(
+    chinese.page.description ?? "",
+    /repository 尚未满足安全推进 repository 或 Idea 工作所需的 Git 状态/,
+  );
+  assert.match(
+    chinese.page.instruction ?? "",
+    /目标是在保留未知工作的前提下.+upstream 与配置 primary 一致/,
+  );
+  assert.match(chinese.page.content, /## 问题说明/);
+});
+
+test("preserves 404 semantics and rejects invalid IDs and unsupported locales", async () => {
+  assert.equal(
+    (await readObjectiveReference("project", "levels/not-present", "en-US")).page.id,
+    "system/404",
+  );
+  await assert.rejects(
+    readObjectiveReference("device", "", "en-US"),
+    /Page ID must be nonempty/,
+  );
+  await assert.rejects(
+    readObjectiveReference("idea", "system/overview", "fr-FR"),
+    /Unsupported Reference locale/,
+  );
+});
+
+test("search returns stable IDs that page can reopen", async () => {
+  const search = await searchObjectiveReferences("idea", "revision", "en-US");
+  assert.ok(search.results.length > 0);
+  for (const summary of search.results) {
+    assert.match(summary.id, /^(system|levels|checks|problems|pages)\//);
+    assert.equal((await readObjectiveReference("idea", summary.id, "en-US")).page.id, summary.id);
+  }
+});
+
 test("explicit namespace recursively resolves the actual owner", async () => {
   const result = await resolveObjectiveReference(
     "check:repository-upstream-matches",

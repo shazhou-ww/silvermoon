@@ -1,16 +1,17 @@
 ---
-title: "Personal Silvermoon skill is not discoverable"
-description: "No usable personal skill registration currently resolves to the canonical Silvermoon skill from the active runtime."
-instruction: "The goal is to make one personal skill discovery path resolve to the canonical skill reported above. Possible approaches include using `silvermoon-link-skill` for an installed runtime or `pnpm link:skill` from a source checkout. Inspect a mismatched existing path before replacing it, then rerun through `silvermoon` to verify discovery."
+title: "Personal Silvermoon skill content is not current"
+description: "The personal Silvermoon skill is not installed or its content version is incorrect."
+instruction: "The goal is for a personal discovery path to contain the Silvermoon skill shipped with the active runtime and for its content revision to match the canonical skill. Use the path reported above to run `npx skills add \"<canonical-skill-path>\" --global --all`, then rerun through `silvermoon`."
 ---
 
 ## Problem guidance
 
-Silvermoon could not find a usable personal registration for the active
-runtime's canonical skill. The Problem fact identifies the canonical skill and
-any observed personal paths.
+The Problem fact directly states whether no personal skill was found or a
+discovered skill's deterministic content revision differs from the active
+runtime's canonical skill. It identifies the canonical skill path, expected
+revision, observed revision when readable, and discovery path.
 
-The desired outcome is one personal discovery link that resolves to that
-canonical skill. `silvermoon-link-skill` and `pnpm link:skill` are possible
-methods for installed and source-checkout runtimes respectively; mismatched
-paths should be inspected before replacement.
+The desired outcome is to use `npx skills` to install the skill shipped with
+the current runtime from the reported canonical skill path so its content
+revision matches. Paths and symlink targets are installation details, not the
+correctness definition.

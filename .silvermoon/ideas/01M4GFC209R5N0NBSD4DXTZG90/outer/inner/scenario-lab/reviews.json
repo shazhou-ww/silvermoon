@@ -2,11 +2,11 @@
   "reviews": [
     {
       "scenario": "device-runtime-not-discoverable",
-      "verdict": "pending",
-      "redundancy": "unknown",
-      "missing": "unknown",
-      "missingPrompt": "unknown",
-      "comment": "标题按请求 target 显示“Idea 推进 / Idea progress”，现状说明 Device prerequisite。单一 runtime Problem 用自然句给出实际入口、source checkout、版本和 checkout 路径；下一步先说明 PATH 目标，再把 pnpm setup:dev 与全局安装列为按 facts 选择的方法，并给出明确复查方式。等待人工 review。"
+      "verdict": "ok",
+      "redundancy": "no",
+      "missing": "no",
+      "missingPrompt": "no",
+      "comment": "维护者确认 whats-next 的 Objective guide 只应 probe 当下现实，不应呈现其他 snapshot 选择；观测上下文因此只保留根目录与 primary。Objective 下一步仅保留 Problem Reference instruction，不追加独立复查 action。单一 Problem 直接显示正文，不使用无意义的列表编号。维护者确认第一页通过。"
     },
     {
       "scenario": "device-skill-not-discoverable",
@@ -14,15 +14,79 @@
       "redundancy": "unknown",
       "missing": "unknown",
       "missingPrompt": "unknown",
-      "comment": "Problem 以自然句说明 canonical skill 路径和当前 personal discovery 缺口；下一步先说明目标，再按 runtime 来源提供 silvermoon-link-skill、pnpm link:skill 等候选方法，并要求复查。等待人工 review。"
+      "comment": "维护者确认本场景应直接陈述本次现实“未发现个人级 Silvermoon skill”。下一步先声明目标：personal discovery skill 的内容 revision 与 active runtime canonical skill 一致；再给出基于实际路径的 npx skills add。"
     },
     {
-      "scenario": "project-user-config-invalid",
+      "scenario": "device-skill-content-mismatched",
       "verdict": "pending",
       "redundancy": "unknown",
       "missing": "unknown",
       "missingPrompt": "unknown",
-      "comment": "个人配置由 Device prerequisite 截获；Problem 说明配置路径、当前版本 contract 不受支持以及要求 version: 1。下一步以有效配置为目标，建议只修受影响字段并保留无关偏好。等待人工 review。"
+      "comment": "维护者确认本场景直接陈述“内容 revision 不一致”。下一步先声明目标：personal discovery skill 与 active runtime canonical skill revision 一致；再给出基于实际路径的 npx skills add。"
+    },
+    {
+      "scenario": "device-canonical-skill-unverifiable",
+      "verdict": "pending",
+      "redundancy": "unknown",
+      "missing": "unknown",
+      "missingPrompt": "unknown",
+      "comment": "下一步先声明目标：active CLI package 可用，随包 canonical skill 可读取并能计算 expected revision；再由 Agent 排查 executable、package root、磁盘和权限，必要时重装 silvermoon@latest。"
+    },
+    {
+      "scenario": "device-config-historical-version",
+      "verdict": "pending",
+      "redundancy": "unknown",
+      "missing": "unknown",
+      "missingPrompt": "unknown",
+      "comment": "下一步先声明目标：配置使用当前支持版本并符合该版本 contract；再提示保留有效偏好并按 Reference 升级。"
+    },
+    {
+      "scenario": "device-config-invalid-version",
+      "verdict": "pending",
+      "redundancy": "unknown",
+      "missing": "unknown",
+      "missingPrompt": "unknown",
+      "comment": "维护者确认 registry 已证明当前 CLI 最新时，更高配置版本属于独立的“版本号错误” Problem。下一步先声明目标：个人配置必须声明当前支持的版本并符合该版本 contract；再指向 personal config Reference page 和修复方法。等待统一重采集。"
+    },
+    {
+      "scenario": "device-config-future-version",
+      "verdict": "pending",
+      "redundancy": "unknown",
+      "missing": "unknown",
+      "missingPrompt": "unknown",
+      "comment": "只有 registry 证明存在更新的 CLI 时才归入“版本过新”。下一步先声明目标：active CLI 支持配置声明版本；再提示升级 binary。"
+    },
+    {
+      "scenario": "device-config-invalid-format",
+      "verdict": "pending",
+      "redundancy": "unknown",
+      "missing": "unknown",
+      "missingPrompt": "unknown",
+      "comment": "version 正确但内容错误时直接报告实际 diagnostic。下一步先声明目标：内容符合已声明版本 schema 与 canonical YAML；再指向独立 Reference page 给出修复。"
+    },
+    {
+      "scenario": "project-silvermoon-folder-missing",
+      "verdict": "pending",
+      "redundancy": "unknown",
+      "missing": "unknown",
+      "missingPrompt": "unknown",
+      "comment": "维护者发现 Project coverage 缺少 .silvermoon metadata 根目录不存在的场景。新增真实删除目录的场景，等待重采集确认实际 Problem 与动作。"
+    },
+    {
+      "scenario": "project-config-missing",
+      "verdict": "pending",
+      "redundancy": "unknown",
+      "missing": "unknown",
+      "missingPrompt": "unknown",
+      "comment": "新增 .silvermoon 目录存在但 project config 缺失的独立场景，验证 Project facts 能区分未采用与单个配置缺失。"
+    },
+    {
+      "scenario": "project-config-invalid",
+      "verdict": "pending",
+      "redundancy": "unknown",
+      "missing": "unknown",
+      "missingPrompt": "unknown",
+      "comment": "新增 project config 路径存在但 YAML/contract 无效的场景；下一步只保留目标状态与 Silvermoon contract，不嵌入通用修复教程或动态 recheck command。"
     },
     {
       "scenario": "repository-worktree-untracked",
@@ -30,7 +94,7 @@
       "redundancy": "unknown",
       "missing": "unknown",
       "missingPrompt": "unknown",
-      "comment": "Problem 自闭环说明 worktree 中实际观测到的未跟踪 scenario-untracked.txt。下一步以 clean worktree 和保留未知工作为目标，列出提交、隔离或经明确授权后放弃等可能去向，并要求检查全部修改。等待人工 review。"
+      "comment": "维护者指出现状后紧接“问题”段落，因此删除“下方问题阻止继续”这一版面位置提示。Problem 仍自闭环说明实际未跟踪文件；下一步以 clean worktree 和保留未知工作为目标。等待后续统一重采集。"
     },
     {
       "scenario": "repository-detached-head",

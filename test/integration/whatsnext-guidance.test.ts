@@ -133,7 +133,8 @@ test("records fetch failure as a failure outcome with a trustworthy envelope", a
   assert.equal(problem.type, "primary-fetch-failed");
   assert.equal(action.type, "fetch-primary");
   assert.equal(action.status, "failure");
-  assert.match(responseText(report), /network|网络/);
+  assert.match(responseText(report), /goal is for configured primary .* to be fetchable/);
+  assert.doesNotMatch(responseText(report), /silvermoon whats-next/);
 });
 
 test("rejects an unsupported programmatic output language before repository inspection", async () => {

@@ -1,14 +1,14 @@
 ---
-title: "个人级 Silvermoon skill 不可发现"
-description: "当前没有可用的个人级 skill registration 解析到 active runtime 的 canonical Silvermoon skill。"
-instruction: "目标是让一个个人级 skill discovery 路径解析到上方报告的 canonical skill。可选方法包括：已安装 runtime 可使用 `silvermoon-link-skill`，source checkout 可使用 `pnpm link:skill`。替换不匹配的既有路径前先检查其内容，随后通过 `silvermoon` 重试以验证 discovery。"
+title: "个人级 Silvermoon skill 内容不是当前版本"
+description: "个人级 Silvermoon skill 未安装或内容版本不正确。"
+instruction: "目标是让个人级 discovery 路径安装 active runtime 随包提供的 Silvermoon skill，并使其内容 revision 与 canonical skill 一致。使用上方报告的路径运行 `npx skills add \"<canonical-skill-path>\" --global --all`，然后通过 `silvermoon` 重试。"
 ---
 
 ## 问题说明
 
-Silvermoon 没有找到指向 active runtime canonical skill 的可用个人级 registration。
-Problem fact 会给出 canonical skill 和已观测到的个人级路径。
+Problem fact 会直接说明本次是未发现个人级 skill，还是已发现 skill 但其确定性内容
+revision 与 active runtime 的 canonical skill 不同，并给出 canonical skill 路径、
+expected revision、可读取时的 observed revision 和 discovery 路径。
 
-期望结果是至少有一个个人级 discovery 链接解析到该 canonical skill。已安装
-runtime 可考虑 `silvermoon-link-skill`，source checkout 可考虑
-`pnpm link:skill`；替换不匹配的路径前应先检查其内容。
+期望结果是用 `npx skills` 从报告的 canonical skill 路径安装当前 runtime 随包提供的
+skill，并使内容 revision 一致。路径和 symlink target 是安装手段，不是正确性的定义。

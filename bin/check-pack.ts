@@ -275,6 +275,7 @@ if (packed.status !== 0) {
     "src/foundation/installation/installation.js",
     "src/foundation/installation/personal-skill-link.js",
     "src/foundation/installation/rules.js",
+    "src/foundation/installation/skill-content-revision.js",
     "src/foundation/language/README.md",
     "src/foundation/language/index.js",
     "src/foundation/language/language.js",

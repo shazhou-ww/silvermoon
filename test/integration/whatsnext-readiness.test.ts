@@ -93,10 +93,9 @@ test("[dirty] reports local changes before any remote access and preserves selec
     false,
   );
   assert.match(responseText(report), /^The goal is a clean worktree/);
-  assert.match(responseText(report), /Inspect all staged, unstaged, and untracked paths/);
-  assert.doesNotMatch(responseText(report), /git -C|diff --cached|status --short/);
+  assert.doesNotMatch(responseText(report), /Inspect all staged|git -C|diff --cached|status --short|silvermoon whats-next/);
   assert.doesNotMatch(responseText(report), /^\d+\. /m);
-  assert.match(responseText(report), new RegExp(FIRST_ID));
+  assert.doesNotMatch(responseText(report), new RegExp(FIRST_ID));
 });
 
 test("localized worktree guidance covers all changes without prescribing diff commands", async () => {
@@ -110,9 +109,7 @@ test("localized worktree guidance covers all changes without prescribing diff co
 
   assert.equal(report.observation.state, "repository-sync-required");
   assert.match(responseText(report), /^目标是得到 clean worktree/);
-  assert.match(responseText(report), /检查全部 staged、unstaged 和 untracked 路径/);
-  assert.match(responseText(report), /不只看上述样例/);
-  assert.doesNotMatch(responseText(report), /git -C|diff --cached|status --short/);
+  assert.doesNotMatch(responseText(report), /检查全部 staged|上述样例|git -C|diff --cached|status --short|silvermoon whats-next/);
 });
 
 test("reports every observable local readiness problem before remote access", async () => {
@@ -141,8 +138,7 @@ test("reports every observable local readiness problem before remote access", as
   );
   assert.match(responseText(report), /^1\. The goal is a clean worktree/);
   assert.match(responseText(report), /\n2\. The goal is for branch `main` to track/);
-  assert.match(responseText(report), /upstream/);
-  assert.match(responseText(report), /silvermoon whats-next/);
+  assert.doesNotMatch(responseText(report), /Possible steps|silvermoon whats-next/);
 });
 
 test("[structured-changes] bounds large change summaries and requires full inspection", async () => {
@@ -168,9 +164,7 @@ test("[structured-changes] bounds large change summaries and requires full inspe
     problem.summary,
     new RegExp(`${50 - CHANGE_SAMPLE_ITEM_LIMIT} additional paths are not shown\\.`),
   );
-  assert.match(responseText(report), /Inspect all staged, unstaged, and untracked paths/);
-  assert.match(responseText(report), /not only the samples above/);
-  assert.doesNotMatch(responseText(report), /git -C|diff --cached|status --short/);
+  assert.doesNotMatch(responseText(report), /Inspect all staged|samples above|git -C|diff --cached|status --short|silvermoon whats-next/);
 });
 
 test("[conflict] prioritizes conflicts while still reporting all known changes", async () => {
@@ -205,10 +199,9 @@ test("[conflict] prioritizes conflicts while still reporting all known changes",
     ["worktree-conflicts", "worktree-changes"],
   );
   assert.match(firstProblem(report).summary, /conflict\.txt/);
-  assert.match(responseText(report), /^1\. Inspect every conflicted path and its contents/);
+  assert.match(responseText(report), /^1\. The goal is a worktree with no conflicted paths/);
   assert.match(responseText(report), /\n2\. The goal is a clean worktree/);
-  assert.match(responseText(report), /Inspect all staged, unstaged, and untracked paths/);
-  assert.doesNotMatch(responseText(report), /git -C|diff --name-only|status --short/);
+  assert.doesNotMatch(responseText(report), /Inspect every|Inspect all staged|git -C|diff --name-only|status --short|silvermoon whats-next/);
   assert.equal(report.actions.length, 0);
 });
 
@@ -258,7 +251,8 @@ test("[branch-mismatch] accepts any local branch with the configured primary ups
     firstProblem(mismatch).type,
     "primary-upstream-mismatch",
   );
-  assert.match(responseText(mismatch), /'@\{upstream\}'/);
+  assert.match(responseText(mismatch), /The goal is for branch `feature` to track/);
+  assert.doesNotMatch(responseText(mismatch), /'@\{upstream\}'|Possible steps|silvermoon whats-next/);
   assert.equal(
     commands.some(([name]) => name === "fetch" || name === "ls-remote"),
     false,
@@ -313,7 +307,7 @@ test("[behind] [ahead] [diverged] reports ancestry and safe remediation", async 
   });
   const behindProblem = firstProblem(behind);
   assert.equal(behindProblem.type, "primary-behind");
-  assert.match(responseText(behind), /Fast-forward/);
+  assert.match(responseText(behind), /The goal is for branch main to reach observed primary/);
   const primary = /observed primary is ([0-9a-f]+)/.exec(
     behindProblem.summary,
   );
@@ -338,8 +332,8 @@ test("[behind] [ahead] [diverged] reports ancestry and safe remediation", async 
     userHome: aheadRepository.base,
   });
   assert.equal(firstProblem(ahead).type, "primary-ahead");
-  assert.match(responseText(ahead), /without force/);
-  assert.match(responseText(ahead), /expected|still/);
+  assert.match(responseText(ahead), /ordinary non-force synchronization/);
+  assert.match(responseText(ahead), /preserving concurrent primary history/);
 
   const divergedRepository = await fixture({ prefix: "silvermoon-diverged-" });
   await pushPeerChange(divergedRepository, "remote");
@@ -351,5 +345,6 @@ test("[behind] [ahead] [diverged] reports ancestry and safe remediation", async 
     userHome: divergedRepository.base,
   });
   assert.equal(firstProblem(diverged).type, "primary-diverged");
-  assert.match(responseText(diverged), /both histories/);
+  assert.match(responseText(diverged), /integrated, validated history/);
+  assert.doesNotMatch(responseText(diverged), /silvermoon whats-next/);
 });

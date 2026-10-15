@@ -6,6 +6,6 @@
 
 /** @pure */
 const worktreeConflictStep = () =>
-  `检查全部冲突路径及其内容，再在不丢弃任一方内容的前提下解决冲突。`;
+  `目标是在保留双方内容的前提下，让 worktree 不再包含冲突路径。`;
 
 export default worktreeConflictStep;

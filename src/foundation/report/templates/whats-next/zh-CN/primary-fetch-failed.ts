@@ -9,8 +9,7 @@ import type { PrimaryFetchFailedParameters } from "../contract.ts";
 const primaryFetchFailed = ({
   primaryBranch,
   primaryRepository,
-  recheckCommand,
 }: PrimaryFetchFailedParameters) =>
-  `检查网络、授权、${primaryRepository} 和分支 ${primaryBranch}；产生可观察修复后，再运行 ${recheckCommand}。`;
+  `目标是让配置 primary ${primaryRepository}#${primaryBranch} 可被 fetch，以完成权威观测。`;
 
 export default primaryFetchFailed;

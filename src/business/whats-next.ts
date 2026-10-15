@@ -70,6 +70,13 @@ async function objectiveProjection(
 ): Promise<ObjectiveProjection> {
   const { position } = observation;
   const owner = objectiveId(position.owner);
+  const seenProblems = new Set<string>();
+  const problems = position.problems.filter(({ id, parameters }) => {
+    const key = `${id}:${JSON.stringify(parameters)}`;
+    if (seenProblems.has(key)) return false;
+    seenProblems.add(key);
+    return true;
+  });
   const pageIds = [
     ...(position.level.id === "terminal" || owner !== "device"
       ? [{ kind: "level" as const, id: `levels/${position.level.id}` }]
@@ -77,7 +84,7 @@ async function objectiveProjection(
     ...(position.failingCheck === null
       ? []
       : [{ kind: "check" as const, id: `checks/${position.failingCheck}` }]),
-    ...position.problems.map(({ id }) => ({
+    ...problems.map(({ id }) => ({
       kind: "problem" as const,
       id: `problems/${id}`,
     })),
@@ -111,7 +118,7 @@ async function objectiveProjection(
     level: position.level.id,
     failingCheck: position.failingCheck,
     terminal: position.level.id === "terminal",
-    problems: position.problems.map(({ id, parameters }) => ({
+    problems: problems.map(({ id, parameters }) => ({
       id,
       parameters,
     })),
@@ -128,15 +135,19 @@ function firstObjectiveInstruction(
   const reference = objective.references.find(
     ({ id, kind }) => kind === "problem" && id === `problems/${problem.id}`,
   );
-  return reference?.instruction ?? reference?.description ?? fallback;
-}
-
-function objectiveRecheckInstruction(language: string, command: string) {
-  return localize(
-    language,
-    `Use \`${command}\` to verify the resulting Objective state.`,
-    `完成调整后，用 \`${command}\` 验证 Objective 状态。`,
-  );
+  const instruction = reference?.instruction;
+  const canonicalSkillPath = problem.parameters.expectedRoot;
+  if (
+    instruction !== undefined
+    && typeof canonicalSkillPath === "string"
+    && instruction.includes("<canonical-skill-path>")
+  ) {
+    return instruction.replaceAll(
+      "<canonical-skill-path>",
+      canonicalSkillPath.replaceAll('"', '\\"'),
+    );
+  }
+  return instruction ?? reference?.description ?? fallback;
 }
 
 function projectReadyInstruction(language: string) {
@@ -585,12 +596,59 @@ export async function whatsNextUseCase({
   loader = createSilvermoonObjectiveLoader({
     "device-config-valid": async () => {
       const device = sampleDevice();
-      return device.globalConfig.valid ? passed : failed("device-configuration", {
+      if (device.globalConfig.valid) return passed;
+      const diagnosticCodes = device.diagnostics.flatMap(({ code }) =>
+        code === undefined ? [] : [code]
+      );
+      const userVersion = "version" in device.user
+        ? device.user.version
+        : undefined;
+      const parameters = {
         configurationPath: device.globalConfig.path,
-        diagnosticCodes: device.diagnostics.flatMap(({ code }) =>
-          code === undefined ? [] : [code]
-        ),
-      });
+        diagnosticCodes,
+        diagnostics: device.diagnostics.map(({ code, path, message }) => ({
+          ...(code === undefined ? {} : { code }),
+          path,
+          message,
+        })),
+        observedVersion: userVersion?.value ?? null,
+        supportedVersion: userVersion?.supported ?? 1,
+      };
+      if (userVersion?.status === "historical") {
+        return failed("device-configuration-historical-version", parameters);
+      }
+      if (userVersion?.status === "future") {
+        const update = device.readiness?.update;
+        const futureParameters = {
+          ...parameters,
+          runtimeVersion: device.readiness?.runtime.version ?? null,
+          updateStatus: update?.status ?? "unavailable",
+          latestVersion: update !== undefined && "latestVersion" in update
+            ? update.latestVersion ?? null
+            : null,
+          updateSummary: update !== undefined && "summary" in update
+            ? update.summary ?? null
+            : null,
+        };
+        if (update?.status === "available") {
+          return failed("device-configuration-future-version", futureParameters);
+        }
+        if (update?.status === "current") {
+          return failed("device-configuration-invalid-version", futureParameters);
+        }
+        return failed("device-update", {
+          status: update?.status ?? "unavailable",
+          currentVersion: update?.currentVersion ?? null,
+          latestVersion: null,
+          channel: update !== undefined && "channel" in update
+            ? update.channel ?? null
+            : null,
+        });
+      }
+      if (userVersion?.status === "invalid") {
+        return failed("device-configuration-invalid-version", parameters);
+      }
+      return failed("device-configuration-format", parameters);
     },
     "device-runtime-linked": async () => {
       const device = sampleDevice();
@@ -608,11 +666,18 @@ export async function whatsNextUseCase({
       const skill = sampleDevice().readiness?.skill;
       return ["ready", "managed-by-host"].includes(skill?.status ?? "")
         ? passed
-        : failed("device-skill", {
+        : failed(
+          skill?.status === "canonical-unverifiable"
+            ? "device-canonical-skill"
+            : "device-skill",
+          {
           status: skill?.status ?? null,
           expectedRoot: skill?.expectedRoot ?? null,
+          expectedRevision: skill?.expectedRevision ?? null,
           paths: skill?.paths ?? [],
-        });
+          observed: skill?.observed ?? [],
+          },
+        );
     },
     "device-update-current": async () => {
       const update = sampleDevice().readiness?.update;
@@ -858,7 +923,6 @@ export async function whatsNextUseCase({
           projectedObjective,
           problems[0]?.summary ?? objective.gapSummary,
         ),
-        objectiveRecheckInstruction(objective.position.owner.language, recheckCommand),
       ],
     });
   }
@@ -890,7 +954,6 @@ export async function whatsNextUseCase({
             projectedObjective,
             problems[0]?.summary ?? objective.gapSummary,
           ),
-          objectiveRecheckInstruction(objective.position.owner.language, recheckCommand),
         ],
       },
     );

@@ -16,7 +16,6 @@ const primaryUpstreamMismatch = ({
   remote,
   repository,
   upstreamBranch,
-  verifyCommand,
 }: PrimaryUpstreamMismatchParameters): SummaryAndNextSteps => {
   const actual = remote === null
     ? "无"
@@ -24,12 +23,8 @@ const primaryUpstreamMismatch = ({
   return {
     summary:
       `分支 ${branch} 的 upstream 是 ${actual}；预期为 ${expectedRepository}#${expectedBranch}。`,
-    nextSteps: [
+    nextSteps:
       `目标是让分支 \`${branch}\` 跟踪 \`${expectedRepository}#${expectedBranch}\`。`,
-      `可选步骤包括复用或新增指向该 repository 的 named remote，`,
-      `再把分支 upstream 设为该 remote 的 \`${expectedBranch}\` 分支。`,
-      `继续工作前可用 ${verifyCommand} 确认最终 upstream。`,
-    ].join(""),
   };
 };
 

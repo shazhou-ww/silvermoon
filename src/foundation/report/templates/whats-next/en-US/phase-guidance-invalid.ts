@@ -6,9 +6,9 @@
 import type { RecheckParameters } from "../contract.ts";
 
 /** @pure */
-const phaseGuidanceInvalid = ({
-  recheckCommand,
-}: RecheckParameters) =>
-  `After repairing the current phase guidance, run ${recheckCommand} again.`;
+const phaseGuidanceInvalid = (
+  _parameters: RecheckParameters,
+) =>
+  "The goal is valid current-phase guidance that preserves the repository's policy intent.";
 
 export default phaseGuidanceInvalid;
