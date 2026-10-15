@@ -18,10 +18,10 @@
 
 ### Deployment steps
 
-- [ ] **D-S01:** 验证递进 lookup 命令
-- [ ] **D-S02:** 完成发布级仓库验证
+- [x] **D-S01:** 验证递进 lookup 命令
+- [x] **D-S02:** 完成发布级仓库验证
 
 ### Deployment acceptance criteria
 
-- [ ] **D-AC01:** 真实命令递归可用
-- [ ] **D-AC02:** 发布门禁通过
+- [x] **D-AC01:** 真实命令递归可用
+- [x] **D-AC02:** 发布门禁通过

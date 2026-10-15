@@ -19,3 +19,5 @@
 ### D-AC02: 发布门禁通过
 
 完整仓库验证无失败，且承载候选的提交可从刷新后的 `origin/main` 到达；以命令结果和 Git 提交证明。
+
+验证结论见 [Deployment evidence](./DeploymentEvidence.md)。
