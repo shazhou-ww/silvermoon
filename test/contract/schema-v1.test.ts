@@ -120,17 +120,21 @@ test("publishes command report, domain message, and trace event schemas", async 
     level: "repository-unready",
     failingCheck: "repository-worktree-clean",
     terminal: false,
-    problems: [{ id: "repository", parameters: { branch: "topic" } }],
+    problems: [{
+      id: "repository-worktree",
+      parameters: { branch: "topic" },
+    }],
     references: [{
       kind: "problem",
-      id: "problems/repository",
+      id: "problems/repository-worktree",
       owner: "project",
-      lookup: "problem:repository",
+      lookup: "problem:repository-worktree",
       title: "Repository recovery",
       description: "Resolve repository and probe again.",
       instruction: "Preserve unknown work.",
       content: "Use the current Problem parameters.",
-      command: "silvermoon reference problem:repository --language en-US",
+      command:
+        "silvermoon reference problem:repository-worktree --language en-US",
     }],
   };
   const objectiveReport = {

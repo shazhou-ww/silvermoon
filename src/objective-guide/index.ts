@@ -10,8 +10,10 @@ export type {
   ObjectiveSubjectValidationIssue, ObjectiveValidationIssues, ObjectivePrerequisiteSubjectFailure,
   ObjectiveGuideInstanceCreationError, ObjectiveGuideInstanceCreationResult,
   ObjectiveGuideInstanceOptions, ObjectivePrerequisite, ObjectiveGuide,
-  ObjectiveGuideInstance, ObjectiveLevelAdvancementManifest, ObjectiveLevelManifest,
+  ObjectiveGuideInstance, ObjectiveLevelAdvancementManifest, ObjectiveCheckManifest,
+  ObjectiveLevelManifest,
   ObjectiveLevelsManifest, ObjectivePrerequisiteManifest, ObjectiveGuideManifest,
-  CheckRequest, CheckResult, ObjectiveCheckRunner, ObjectiveLoader, ObjectivePageResource,
+  CheckRequest, CheckResult, ObjectiveCheckRunner, ObjectiveLoader,
+  ObjectivePageResource,
   ObjectiveResourceResolver, ObjectiveLoaderOptions,
 } from "./types.ts";

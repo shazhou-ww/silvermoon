@@ -125,7 +125,12 @@ try {
     import { createObjectiveLoader } from "silvermoon";
     const manifest = {
       schemaVersion: 1, domainSchema: { type: "object" },
-      levels: [{ id: "unready", advancement: { checks: ["ready"] } }],
+      levels: [{
+        id: "unready",
+        advancement: {
+          checks: [{ id: "ready", problems: ["problem"] }],
+        },
+      }],
       defaultLanguage: "en-US",
       languages: ["en-US"],
     };
@@ -750,7 +755,7 @@ decision, risk, or disagreement requires it.
   );
   assert.match(
     lifecycleText,
-    /\n\n### Current status[\s\S]*### Problems[\s\S]*The worktree contains [\s\S]*untracked/,
+    /\n\n### Current status[\s\S]*### Problems[\s\S]*The worktree has conflicts, changes, or an inspection failure/,
   );
   assert.match(lifecycleText, /\n\n### Next action\n/);
   assert.match(lifecycleText, /\n\n### References\n/);
@@ -759,7 +764,10 @@ decision, risk, or disagreement requires it.
     /Target Objective|Owner Objective|Failing check|Observed state:|problemTypes|ID:|```json/,
   );
   assert.doesNotMatch(lifecycleText, /> ## Problem guidance/);
-  assert.match(lifecycleText, /further details: `silvermoon reference problem:repository --language en-US`/);
+  assert.match(
+    lifecycleText,
+    /further details: `silvermoon reference problem:repository-worktree --language en-US`/,
+  );
   assert.doesNotMatch(lifecycleText, /Project Objective overview/);
   assert.doesNotMatch(lifecycleText, /### Ideas you can continue/);
   assert.doesNotMatch(lifecycleText, /## Actions and results/);

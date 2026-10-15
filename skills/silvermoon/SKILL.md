@@ -137,7 +137,7 @@ and raw parameters remain in the structured report rather than the default
 Markdown. Read **Next action** as the instructions for the current observation
 and execute only the highest-priority safe instruction. **References** lists
 compact explicit namespace commands such as
-`silvermoon reference problem:repository` for useful level, check, and Problem
+`silvermoon reference problem:repository-worktree` for useful level, check, and Problem
 pages; the runtime resolves their Objective owner. Open one only when its
 stable explanatory knowledge is needed.
 A terminal Objective renders **Outcome** and **References** only. Do not treat

@@ -25,8 +25,8 @@ export function createObjectiveLoader(options: ObjectiveLoaderOptions = {}): Obj
       ...(validate === undefined ? {} : {
         validate: (uri: string, id: string) => validate.call(runner, uri, id),
       }),
-      async run(uri, id, request) {
-        const result = await runner.run(uri, id, request);
+      async run(uri, id, request, signal) {
+        const result = await runner.run(uri, id, request, signal);
         if (typeof result === "object" && result !== null
           && "pass" in result && result.pass === false) {
           const current = failures.getStore();
@@ -95,9 +95,9 @@ export function createObjectiveLoader(options: ObjectiveLoaderOptions = {}): Obj
         }
         return descriptions;
       },
-      async probe() {
+      async probe(signal) {
         return failures.run(new Map(), async () => {
-          const observation = await source.probe();
+          const observation = await source.probe(signal);
           const owner = wrapInstance(observation.current.instance);
           const level = owner.describeLevels().find((entry) =>
             entry.instance === owner && entry.id === observation.current.id);

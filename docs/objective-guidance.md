@@ -1,7 +1,7 @@
 # Objective Guide Runtime
 
 Silvermoon exports a URI-keyed Objective Guide compatibility facade from its
-package root, backed by `@potential-guide/objective-guide` at `0.1.0` (Node
+package root, backed by `@potential-guide/objective-guide` at `0.2.0-rc.1` (Node
 `>=22.13.0`). The [module](../src/objective-guide/README.md) observes one ordered objective;
 it does not execute repairs, autonomous loops or portfolio scheduling.
 
@@ -50,12 +50,17 @@ domainSchema:
 levels:
   - id: unready
     advancement:
-      checks: [project-valid]
+      checks:
+        - id: project-valid
+          problems:
+            - project-invalid
 defaultLanguage: en-US
 languages: [en-US, zh-CN]
 ```
 
-Manifest, Reference and check IDs use lowercase kebab case. A prerequisite
+Manifest, Reference and check IDs use lowercase kebab case. Each level owns its
+declared checks, and each check owns the Problem IDs it may return. Check and
+Problem IDs have exactly one parent in a Guide. A prerequisite
 projects the current subject with the bounded JSONata profile. It normally
 requires prerequisite `terminal`; `minimumLevelId` can instead unlock the
 current Guide once the immediate prerequisite reaches that local level:
@@ -89,10 +94,12 @@ Namespaces are:
 - `problems/<problem-id>`;
 - flat general knowledge under `pages/<page-id>`.
 
-Every node must contain exactly the Manifest language set. There is no locale
-fallback and no Manifest override for the References root, overview, terminal
-or 404 identities. Frontmatter carries localized properties, while the path
-carries identity:
+Every declared level, check, and Problem must contain exactly the Manifest
+language set. Undeclared pages in those namespaces are rejected, and a check
+that returns a Problem outside its declared set fails explicitly. There is no
+locale fallback and no Manifest override for the References root, overview,
+terminal or 404 identities. Frontmatter carries localized properties, while
+the path carries identity:
 
 ```markdown
 ---

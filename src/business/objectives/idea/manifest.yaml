@@ -23,32 +23,52 @@ levels:
   - id: configuration-invalid
     advancement:
       checks:
-        - idea-metadata-valid
-        - idea-contracts-valid
+        - id: idea-metadata-valid
+          problems:
+            - idea-selection-changed
+            - idea-metadata
+            - idea-revision-changed
+            - idea-guidance
+            - idea-inactive
+        - id: idea-contracts-valid
+          problems:
+            - idea-contracts
   - id: ideal-unsubmitted
     advancement:
       checks:
-        - idea-ideal-submitted
+        - id: idea-ideal-submitted
+          problems:
+            - ideal-unsubmitted
   - id: ideal-unaccepted
     advancement:
       checks:
-        - idea-ideal-accepted
+        - id: idea-ideal-accepted
+          problems:
+            - ideal-unaccepted
   - id: implementation-unsubmitted
     advancement:
       checks:
-        - idea-inner-submitted
+        - id: idea-inner-submitted
+          problems:
+            - implementation-unsubmitted
   - id: implementation-unaccepted
     advancement:
       checks:
-        - idea-inner-accepted
+        - id: idea-inner-accepted
+          problems:
+            - implementation-unaccepted
   - id: deployment-unsubmitted
     advancement:
       checks:
-        - idea-outer-submitted
+        - id: idea-outer-submitted
+          problems:
+            - deployment-unsubmitted
   - id: deployment-unaccepted
     advancement:
       checks:
-        - idea-outer-accepted
+        - id: idea-outer-accepted
+          problems:
+            - deployment-unaccepted
 defaultLanguage: en-US
 languages:
   - en-US

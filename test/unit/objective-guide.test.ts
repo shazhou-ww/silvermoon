@@ -14,6 +14,10 @@ const rootUri = "https://objectives.test/root/manifest.yaml";
 const childUri = "https://objectives.test/child/manifest.yaml";
 type Handler = (request: CheckRequest) => Promise<CheckResult>;
 
+function check(id: string, problems: readonly string[] = ["problem"]) {
+  return { id, problems };
+}
+
 function manifest(overrides: Partial<ObjectiveGuideManifest> = {}): ObjectiveGuideManifest {
   return {
     schemaVersion: 1,
@@ -21,7 +25,7 @@ function manifest(overrides: Partial<ObjectiveGuideManifest> = {}): ObjectiveGui
       type: "object", required: ["root"],
       properties: { root: { type: "string" } }, additionalProperties: false,
     },
-    levels: [{ id: "unready", advancement: { checks: ["ready"] } }],
+    levels: [{ id: "unready", advancement: { checks: [check("ready")] } }],
     defaultLanguage: "en-US",
     languages: ["en-US", "zh-CN"],
     ...overrides,
@@ -54,13 +58,17 @@ function fixture(
           description: `Waiting ${language}`,
           outcome: `Cost and benefit ${language}`,
         });
-        for (const id of level.advancement.checks) add(`checks/${id}`, language, {
-          title: id, description: `Check ${id} ${language}`,
+        for (const declared of level.advancement.checks) add(`checks/${declared.id}`, language, {
+          title: declared.id, description: `Check ${declared.id} ${language}`,
         });
       }
-      add("problems/problem", language, {
-        title: `Problem ${language}`, description: `Fix it ${language}`,
-      }, "[[system/404]]");
+      const problemIds = new Set(config.levels.flatMap(({ advancement }) =>
+        advancement.checks.flatMap(({ problems }) => problems)));
+      for (const problemId of problemIds) {
+        add(`problems/${problemId}`, language, {
+          title: `Problem ${language}`, description: `Fix it ${language}`,
+        }, "[[system/404]]");
+      }
     }
     pages.set(source, resources);
   }
@@ -131,8 +139,8 @@ test("position identifies the owner, failing check and complete ordered Problems
   const directories: string[] = [];
   let passing = false;
   const config = manifest({ levels: [
-    { id: "one", advancement: { checks: ["first"] } },
-    { id: "two", advancement: { checks: ["second"] } },
+    { id: "one", advancement: { checks: [check("first")] } },
+    { id: "two", advancement: { checks: [check("second", ["second-problem"])] } },
   ] });
   const context = fixture({ [rootUri]: config }, {
     first: async (request) => {
@@ -182,8 +190,11 @@ test("prerequisite defaults to terminal and can unlock at a declared minimum lev
   let passFirst = false;
   const calls: string[] = [];
   const child = manifest({ levels: [
-    { id: "configured", advancement: { checks: ["first"] } },
-    { id: "synchronized", advancement: { checks: ["second"] } },
+    { id: "configured", advancement: { checks: [check("first")] } },
+    {
+      id: "synchronized",
+      advancement: { checks: [check("second", ["second-problem"])] },
+    },
   ] });
   const root = manifest({ prerequisite: {
     manifestUri: childUri, subject: '{"root": root}', minimumLevelId: "synchronized",
@@ -195,7 +206,13 @@ test("prerequisite defaults to terminal and can unlock at a declared minimum lev
         pass: false, problems: [{ id: "problem", parameters: {} }],
       };
     },
-    second: async () => { calls.push("second"); return { pass: false, problems: [{ id: "problem", parameters: {} }] }; },
+    second: async () => {
+      calls.push("second");
+      return {
+        pass: false,
+        problems: [{ id: "second-problem", parameters: {} }],
+      };
+    },
     ready: async () => { calls.push("root"); return { pass: true }; },
   });
   const current = await instance(context);
@@ -215,7 +232,10 @@ test("prerequisite defaults to terminal and can unlock at a declared minimum lev
     [childUri]: child,
   }, {
     first: async () => ({ pass: true }),
-    second: async () => ({ pass: false, problems: [{ id: "problem", parameters: {} }] }),
+    second: async () => ({
+      pass: false,
+      problems: [{ id: "second-problem", parameters: {} }],
+    }),
   });
   const terminalPrerequisite = await instance(terminalContext);
   const blocked = await terminalPrerequisite.probe();
@@ -272,12 +292,26 @@ test("same-level checks stay serial, aggregate failures in order and stop before
     calls.push(id);
     await new Promise((resolve) => setTimeout(resolve, 5));
     active--;
-    return { pass: false, problems: [{ id: "problem", parameters: { check: id } }] };
+    return {
+      pass: false,
+      problems: [{ id: `${id}-problem`, parameters: { check: id } }],
+    };
   };
   const current = await instance(fixture({
     [rootUri]: manifest({ levels: [
-      { id: "unready", advancement: { checks: ["first", "second"] } },
-      { id: "later", advancement: { checks: ["later"] } },
+      {
+        id: "unready",
+        advancement: {
+          checks: [
+            check("first", ["first-problem"]),
+            check("second", ["second-problem"]),
+          ],
+        },
+      },
+      {
+        id: "later",
+        advancement: { checks: [check("later", ["later-problem"])] },
+      },
     ] }),
   }, { first: run("first"), second: run("second"), later: run("later") }));
   const observation = await current.probe();
@@ -292,18 +326,33 @@ test("overlapping probes of one instance isolate first-failure provenance and cl
   let release!: () => void;
   const bothStarted = new Promise<void>((resolve) => { release = resolve; });
   const current = await instance(fixture({
-    [rootUri]: manifest({ levels: [{ id: "unready", advancement: { checks: ["first", "second"] } }] }),
+    [rootUri]: manifest({ levels: [{
+      id: "unready",
+      advancement: {
+        checks: [
+          check("first", ["first-problem"]),
+          check("second", ["second-problem"]),
+        ],
+      },
+    }] }),
   }, {
     first: async ({ probe }) => {
       const probeId = directories.size;
       directories.set(probe.tempDirectory, probeId);
       if (directories.size === 2) release();
       await bothStarted;
-      return probeId === 0 ? { pass: false, problems: [{ id: "problem", parameters: { probeId } }] }
+      return probeId === 0
+        ? {
+          pass: false,
+          problems: [{ id: "first-problem", parameters: { probeId } }],
+        }
         : { pass: true };
     },
     second: async ({ probe }) => directories.get(probe.tempDirectory) === 1
-      ? { pass: false, problems: [{ id: "problem", parameters: { probeId: 1 } }] }
+      ? {
+        pass: false,
+        problems: [{ id: "second-problem", parameters: { probeId: 1 } }],
+      }
       : { pass: true },
   }));
   const samples = await Promise.all([current.probe(), current.probe()]);
@@ -318,7 +367,12 @@ test("runner defects stop queued peers and clean the probe workspace", async () 
   let directory: string | undefined;
   const calls: string[] = [];
   const current = await instance(fixture({
-    [rootUri]: manifest({ levels: [{ id: "unready", advancement: { checks: ["first", "second"] } }] }),
+    [rootUri]: manifest({ levels: [{
+      id: "unready",
+      advancement: {
+        checks: [check("first", []), check("second", [])],
+      },
+    }] }),
   }, {
     first: async ({ probe }) => {
       calls.push("first");

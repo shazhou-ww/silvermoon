@@ -12,6 +12,7 @@ import {
   resolveObjectiveReference,
   searchObjectiveReferences,
 } from "../../src/business/objective-reference.ts";
+import { SILVERMOON_CHECK_PROBLEMS } from "../../src/business/objective-guides.ts";
 
 test("legacy readers still address every bundled Objective in both locales", async () => {
   const cases = [
@@ -30,9 +31,9 @@ test("legacy readers still address every bundled Objective in both locales", asy
 });
 
 test("parses namespace lookups and rejects unsafe or malformed input", () => {
-  assert.deepEqual(parseObjectiveReferenceLookup("problem:repository"), {
+  assert.deepEqual(parseObjectiveReferenceLookup("problem:repository-worktree"), {
     namespace: "problem",
-    query: "repository",
+    query: "repository-worktree",
   });
   assert.deepEqual(parseObjectiveReferenceLookup("repository state"), {
     namespace: null,
@@ -66,6 +67,16 @@ test("explicit namespace recursively resolves the actual owner", async () => {
   assert.equal(result.namespace, "check");
   assert.equal(result.language, "zh-CN");
   assert.equal(result.page.id, "checks/repository-upstream-matches");
+});
+
+test("every declared Problem has one unambiguous explicit lookup", async () => {
+  const problemIds = Object.values(SILVERMOON_CHECK_PROBLEMS).flat();
+  assert.equal(new Set(problemIds).size, problemIds.length);
+  for (const problemId of problemIds) {
+    const result = await resolveObjectiveReference(`problem:${problemId}`);
+    assert.ok("page" in result, problemId);
+    assert.equal(result.referenceId, `problems/${problemId}`);
+  }
 });
 
 test("explicit namespace reports ambiguity instead of selecting by traversal order", async () => {

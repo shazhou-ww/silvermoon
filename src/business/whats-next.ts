@@ -486,12 +486,22 @@ export async function whatsNextUseCase({
       if (type.startsWith("idea-") || type.startsWith("layout-")) return "layout";
       return "config";
     };
+    const problemId = {
+      config: "project-configuration",
+      user: "project-user-configuration",
+      layout: "project-layout",
+      adoption: "project-adoption",
+      schema: "project-schema",
+    }[kind];
     return problems.some(({ type }) => category(type) === kind)
       || (problems.length === 0 && kind === "config")
-      ? failed("project", observedProblemFacts(problems, snapshot.observation.state))
+      ? failed(problemId, observedProblemFacts(problems, snapshot.observation.state))
       : passed;
   }
-  function repositoryProblems(types: readonly string[]): CheckResult {
+  function repositoryProblems(
+    problemId: string,
+    types: readonly string[],
+  ): CheckResult {
     if (repository === undefined) throw new ObjectiveOperationError("Repository sample is unavailable.");
     if (snapshot?.config === null || snapshot?.config === undefined) {
       throw new ObjectiveOperationError("Project configuration is unavailable.");
@@ -499,7 +509,7 @@ export async function whatsNextUseCase({
     if (repository.ready) return passed;
     const problems = repository.observation.problems;
     return problems.some(({ type }) => types.includes(type))
-      ? failed("repository", {
+      ? failed(problemId, {
         ...observedProblemFacts(problems, repository.observation.state),
         root: repository.observation.root,
         head: repository.head ?? null,
@@ -525,7 +535,10 @@ export async function whatsNextUseCase({
       })
       : passed;
   }
-  async function allGuidance(tree: string): Promise<CheckResult> {
+  async function allGuidance(
+    tree: string,
+    problemId: string,
+  ): Promise<CheckResult> {
     const observed = readySnapshot();
     const inspected = await guidanceInspector({ gitRoot: observed.observation.root, snapshotTree: tree });
     if (inspected.state === "invalid") {
@@ -533,13 +546,17 @@ export async function whatsNextUseCase({
       finish(dialogueReadyObservation(base, "phase-guidance-invalid", {
         problems: inspected.diagnostics.map((diagnostic) => diagnosticProblem(diagnostic, observed.outputLanguage)),
       }), { nextSteps: phaseGuidanceInstructions(inspected.diagnostics, base.root, observed.outputLanguage, recheckCommand) });
-      return failed("guidance", {
+      return failed(problemId, {
         diagnostics: inspected.diagnostics.map(({ code, path }) => ({ code, path })),
       });
     }
     return passed;
   }
-  const lifecycleCheck = (phase: "ideal" | "inner" | "outer", acceptance: boolean): SilvermoonObjectiveCheck => async () => {
+  const lifecycleCheck = (
+    phase: "ideal" | "inner" | "outer",
+    acceptance: boolean,
+    problemId: string,
+  ): SilvermoonObjectiveCheck => async () => {
     if (selected === null) throw new ObjectiveOperationError("Selected Idea sample is unavailable.");
     const submission = selected.submissions?.[phase];
     const accepted = phase === "ideal"
@@ -557,7 +574,7 @@ export async function whatsNextUseCase({
           || submission.state === "waived")
           && submission.revision.value === selected.revisions[submission.revision.field]
           && (submission.submittedRevision === submission.revision.value || submission.acceptedRevision === submission.revision.value);
-    return valid ? passed : failed(phase, {
+    return valid ? passed : failed(problemId, {
       lifecycleState: selected.state,
       phase,
       requirement: acceptance ? "accepted" : "submitted",
@@ -624,29 +641,55 @@ export async function whatsNextUseCase({
     "project-guidance-valid": async () => {
       if (snapshot === undefined) throw new ObjectiveOperationError("Project sample is unavailable.");
       if (!snapshot.projectReady) {
-        return failed("project", { ...observedProblemFacts(snapshot.observation.problems, snapshot.observation.state),
+        return failed("project-guidance", { ...observedProblemFacts(snapshot.observation.problems, snapshot.observation.state),
           prerequisite: "project-ready" });
       }
-      return allGuidance(worktreeSnapshot(snapshot.observation.root).tree);
+      return allGuidance(
+        worktreeSnapshot(snapshot.observation.root).tree,
+        "project-guidance",
+      );
     },
     "repository-worktree-clean": async () => {
       await operations.repository();
-      return repositoryProblems(["worktree-conflicts", "worktree-changes", "worktree-inspection-failed"]);
+      return repositoryProblems(
+        "repository-worktree",
+        ["worktree-conflicts", "worktree-changes", "worktree-inspection-failed"],
+      );
     },
-    "repository-head-present": async () => repositoryProblems(["head-missing"]),
-    "repository-upstream-matches": async () => repositoryProblems(["detached-head", "primary-upstream-mismatch"]),
-    "repository-primary-fetched": async () => repositoryProblems(["primary-fetch-failed"]),
-    "repository-primary-aligned": async () => repositoryProblems(["primary-ahead", "primary-behind", "primary-diverged", "primary-ancestry-inspection-failed", "primary-history-incomplete"]),
-    "repository-event-history-valid": async () => repositoryProblems(["idea.events.history-invalid"]),
+    "repository-head-present": async () =>
+      repositoryProblems("repository-head", ["head-missing"]),
+    "repository-upstream-matches": async () =>
+      repositoryProblems(
+        "repository-upstream",
+        ["detached-head", "primary-upstream-mismatch"],
+      ),
+    "repository-primary-fetched": async () =>
+      repositoryProblems("repository-primary-fetch", ["primary-fetch-failed"]),
+    "repository-primary-aligned": async () =>
+      repositoryProblems(
+        "repository-primary-alignment",
+        [
+          "primary-ahead",
+          "primary-behind",
+          "primary-diverged",
+          "primary-ancestry-inspection-failed",
+          "primary-history-incomplete",
+        ],
+      ),
+    "repository-event-history-valid": async () =>
+      repositoryProblems(
+        "repository-event-history",
+        ["idea.events.history-invalid"],
+      ),
     "project-primary-guidance-valid": async () => {
       if (repository === undefined) throw new ObjectiveOperationError("Repository sample is unavailable.");
       if (!repository.ready) {
-        return failed("repository", { ...observedProblemFacts(repository.observation.problems, repository.observation.state),
+        return failed("project-primary-guidance", { ...observedProblemFacts(repository.observation.problems, repository.observation.state),
           prerequisite: "repository-ready" });
       }
       const ready = readyRepository();
       if (ready.primary === undefined) throw new ObjectiveOperationError("Primary snapshot is unavailable.");
-      return allGuidance(ready.primary);
+      return allGuidance(ready.primary, "project-primary-guidance");
     },
     "idea-metadata-valid": async (bound) => {
       const observed = readySnapshot();
@@ -656,7 +699,10 @@ export async function whatsNextUseCase({
         finish(dialogueReadyObservation(readyRepository().observation, "repository-sync-required", {
           problems: [{ type: "worktree-changes", summary: "Idea selector changed during observation; reobserve before continuing." }],
         }), { nextSteps: recheckCommand });
-        return failed("idea-configuration", { expectedIdeaId: bound.ideaId ?? null, observedIdeaId: prior.id });
+        return failed("idea-selection-changed", {
+          expectedIdeaId: bound.ideaId ?? null,
+          observedIdeaId: prior.id,
+        });
       }
       const local = await observeIdea({ config: observed.config, root: observed.observation.root });
       const current = local.ideas.find(({ id }) => id === prior.id);
@@ -670,13 +716,13 @@ export async function whatsNextUseCase({
             findings: local.diagnostics.map(({ remediation }) => ({ instruction: remediation })),
           }, observation.root, observed.outputLanguage, recheckCommand),
         });
-        return failed("idea-configuration", observedProblemFacts(problems));
+        return failed("idea-metadata", observedProblemFacts(problems));
       }
       if (JSON.stringify(current.revisions) !== JSON.stringify(prior.revisions) || current.eventDigest !== prior.eventDigest) {
         finish(dialogueReadyObservation(readyRepository().observation, "repository-sync-required", {
           problems: [{ type: "worktree-changes", summary: "Idea changed during observation; reobserve before navigating its new revision." }],
         }), { nextSteps: recheckCommand });
-        return failed("repository", {
+        return failed("idea-revision-changed", {
           reason: "idea-changed",
           ideaId: prior.id,
           primary: readyRepository().primary ?? null,
@@ -686,14 +732,16 @@ export async function whatsNextUseCase({
       const selection = await operations.selection();
       if (!selection.passed) throw new ObjectiveOperationError("Idea instance routing has no selected object.");
       const guidance = await operations.guidance();
-      if (!guidance.passed) return failed("guidance", { reason: "phase-guidance-changed" });
+      if (!guidance.passed) {
+        return failed("idea-guidance", { reason: "phase-guidance-changed" });
+      }
       return selected?.state === "abandoned"
         ? failed("idea-inactive", { ideaId: selected.id, lifecycleState: selected.state })
         : passed;
     },
     "idea-contracts-valid": async () => {
       if (selected === null || snapshot?.layout?.diagnostics.length !== 0) {
-        return failed("idea-configuration", {
+        return failed("idea-contracts", {
           ideaId: selected?.id ?? null,
           diagnostics: (snapshot?.layout?.diagnostics ?? []).map(
             ({ code, path }) => ({ code, path }),
@@ -702,12 +750,32 @@ export async function whatsNextUseCase({
       }
       return passed;
     },
-    "idea-ideal-submitted": lifecycleCheck("ideal", false),
-    "idea-ideal-accepted": lifecycleCheck("ideal", true),
-    "idea-inner-submitted": lifecycleCheck("inner", false),
-    "idea-inner-accepted": lifecycleCheck("inner", true),
-    "idea-outer-submitted": lifecycleCheck("outer", false),
-    "idea-outer-accepted": lifecycleCheck("outer", true),
+    "idea-ideal-submitted": lifecycleCheck(
+      "ideal",
+      false,
+      "ideal-unsubmitted",
+    ),
+    "idea-ideal-accepted": lifecycleCheck("ideal", true, "ideal-unaccepted"),
+    "idea-inner-submitted": lifecycleCheck(
+      "inner",
+      false,
+      "implementation-unsubmitted",
+    ),
+    "idea-inner-accepted": lifecycleCheck(
+      "inner",
+      true,
+      "implementation-unaccepted",
+    ),
+    "idea-outer-submitted": lifecycleCheck(
+      "outer",
+      false,
+      "deployment-unsubmitted",
+    ),
+    "idea-outer-accepted": lifecycleCheck(
+      "outer",
+      true,
+      "deployment-unaccepted",
+    ),
   });
   const fallbackOutputLanguage = resolveOutputLanguage({
     ...(canonicalLanguage === undefined ? {} : { override: canonicalLanguage }),

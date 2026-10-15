@@ -59,7 +59,7 @@ test("renders Objective reports as current status, problems, next action, and co
       terminal: false,
       problems: [
         {
-          id: "repository",
+          id: "repository-worktree",
           parameters: {
             problemTypes: ["worktree-changes"],
             changes: {
@@ -71,7 +71,7 @@ test("renders Objective reports as current status, problems, next action, and co
           },
         },
         {
-          id: "repository",
+          id: "repository-worktree",
           parameters: {
             problemTypes: ["worktree-changes"],
             changes: {
@@ -100,12 +100,13 @@ test("renders Objective reports as current status, problems, next action, and co
           command: "silvermoon reference check:repository-worktree-clean --language en-US",
         },
         {
-          kind: "problem", id: "problems/repository", owner: "project",
-          lookup: "problem:repository", title: "Repository recovery",
+          kind: "problem", id: "problems/repository-worktree", owner: "project",
+          lookup: "problem:repository-worktree", title: "Repository recovery",
           description: "Resolve the repository problem.",
           instruction: "Preserve unknown work before recovery.",
           content: "Use current parameters; do not substitute static examples.",
-          command: "silvermoon reference problem:repository --language en-US",
+          command:
+            "silvermoon reference problem:repository-worktree --language en-US",
         },
       ],
     },
@@ -252,7 +253,7 @@ test("renders structured Objective facts as self-contained prose", () => {
   );
   assert.doesNotMatch(configuration, /configurationPath|diagnosticCodes|```json/);
 
-  const detached = renderObjectiveProblem("repository", {
+  const detached = renderObjectiveProblem("repository-upstream", {
     problemTypes: ["detached-head"],
     head: "a".repeat(40),
     branch: {
@@ -268,7 +269,7 @@ test("renders structured Objective facts as self-contained prose", () => {
   );
   assert.doesNotMatch(detached, /problemTypes|"name": null|```json/);
 
-  const upstream = renderObjectiveProblem("repository", {
+  const upstream = renderObjectiveProblem("repository-upstream", {
     problemTypes: ["primary-upstream-mismatch"],
     expectedRepository: "https://github.com/example/project.git",
     expectedBranch: "main",
@@ -298,19 +299,20 @@ test("does not render the Device side channel beside an Objective", () => {
       failingCheck: "idea-inner-submitted",
       terminal: false,
       problems: [{
-        id: "inner",
+        id: "implementation-unsubmitted",
         parameters: { lifecycleState: "implementing" },
       }],
       references: [{
         kind: "problem",
-        id: "problems/inner",
+        id: "problems/implementation-unsubmitted",
         owner: "idea",
-        lookup: "problem:inner",
+        lookup: "problem:implementation-unsubmitted",
         title: "inner",
         description: "Continue the current implementation.",
         instruction: "Continue the current implementation.",
         content: "Detailed implementation guidance.",
-        command: "silvermoon reference problem:inner --language en-US",
+        command:
+          "silvermoon reference problem:implementation-unsubmitted --language en-US",
       }],
     },
     problems: [{

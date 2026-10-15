@@ -36,7 +36,40 @@ export const SILVERMOON_OBJECTIVE_LEVELS = Object.freeze({
     ["deployment-unaccepted", ["idea-outer-accepted"], "Accept exact Outer revision", "接受准确 Outer revision"],
   ],
 } as const);
-export type SilvermoonCheckId = (typeof SILVERMOON_OBJECTIVE_LEVELS)[keyof typeof SILVERMOON_OBJECTIVE_LEVELS][number][1][number];
+export const SILVERMOON_CHECK_PROBLEMS = Object.freeze({
+  "device-config-valid": ["device-configuration"],
+  "device-runtime-linked": ["device-runtime"],
+  "device-skill-discoverable": ["device-skill"],
+  "device-update-current": ["device-update"],
+  "project-config-valid": ["project-configuration"],
+  "project-user-config-valid": ["project-user-configuration"],
+  "project-layout-valid": ["project-layout"],
+  "project-adopted": ["project-adoption"],
+  "project-schema-ready": ["project-schema"],
+  "project-guidance-valid": ["project-guidance"],
+  "repository-worktree-clean": ["repository-worktree"],
+  "repository-head-present": ["repository-head"],
+  "repository-upstream-matches": ["repository-upstream"],
+  "repository-primary-fetched": ["repository-primary-fetch"],
+  "repository-primary-aligned": ["repository-primary-alignment"],
+  "repository-event-history-valid": ["repository-event-history"],
+  "project-primary-guidance-valid": ["project-primary-guidance"],
+  "idea-metadata-valid": [
+    "idea-selection-changed",
+    "idea-metadata",
+    "idea-revision-changed",
+    "idea-guidance",
+    "idea-inactive",
+  ],
+  "idea-contracts-valid": ["idea-contracts"],
+  "idea-ideal-submitted": ["ideal-unsubmitted"],
+  "idea-ideal-accepted": ["ideal-unaccepted"],
+  "idea-inner-submitted": ["implementation-unsubmitted"],
+  "idea-inner-accepted": ["implementation-unaccepted"],
+  "idea-outer-submitted": ["deployment-unsubmitted"],
+  "idea-outer-accepted": ["deployment-unaccepted"],
+} as const);
+export type SilvermoonCheckId = keyof typeof SILVERMOON_CHECK_PROBLEMS;
 export type SilvermoonObjectiveCheck = (subject: ObjectiveSubject) => Promise<CheckResult>;
 export type SilvermoonObjectiveChecks = Readonly<Record<SilvermoonCheckId, SilvermoonObjectiveCheck>>;
 export interface SilvermoonObjectiveLoaderOptions {
@@ -57,7 +90,7 @@ export function createSilvermoonObjectiveLoader(
       async validate(manifestUri, checkId) {
         if (executeEntries) await fileObjectiveCheckRunner.validate!(manifestUri, checkId);
       },
-      async run(manifestUri, checkId, request) {
+      async run(manifestUri, checkId, request, signal) {
         const check = checks[checkId as SilvermoonCheckId];
         if (check === undefined) throw new ObjectiveOperationError(`Missing bundled check: ${checkId}.`);
         const result = await check(request.subject);
@@ -68,7 +101,12 @@ export function createSilvermoonObjectiveLoader(
         const pending = `${target}.pending`;
         await writeFile(pending, JSON.stringify(result), "utf8");
         await rename(pending, target);
-        return await fileObjectiveCheckRunner.run(manifestUri, checkId, request);
+        return await fileObjectiveCheckRunner.run(
+          manifestUri,
+          checkId,
+          request,
+          signal,
+        );
       },
     },
   });

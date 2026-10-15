@@ -748,7 +748,7 @@ test("uses a canonical output override without changing content language or pers
   assert.doesNotMatch(blockedMarkdown, /> ## Problem guidance/);
   assert.match(
     blockedMarkdown,
-    /further details.*silvermoon reference problem:repository --language en-US/,
+    /further details.*silvermoon reference problem:repository-worktree --language en-US/,
   );
   assert.doesNotMatch(blockedMarkdown, /Project Objective overview/);
 });
@@ -818,11 +818,11 @@ test("drives gate presentation from content language instead of output language"
   assert.match(rendered, /### References/);
   assert.match(
     rendered,
-    /silvermoon reference problem:ideal --language en-US/,
+    /silvermoon reference problem:ideal-unaccepted --language en-US/,
   );
   assert.match(
     rendered,
-    /### Problems[\s\S]*current Idea definition revision[\s\S]*required `accepted` state/,
+    /### Problems[\s\S]*exact submitted Idea definition revision still requires its acceptance decision/,
   );
   assert.doesNotMatch(rendered, /处理 ideal 并重新观测/);
   assert.doesNotMatch(rendered, /> ## 问题说明/);

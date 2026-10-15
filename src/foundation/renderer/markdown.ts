@@ -224,7 +224,13 @@ function problemFacts(
     }
   }
 
-  if (problem.id === "project") {
+  if ([
+    "project-configuration",
+    "project-user-configuration",
+    "project-layout",
+    "project-adoption",
+    "project-schema",
+  ].includes(problem.id)) {
     const types = stringValues(problem.parameters.problemTypes);
     const facts = types.flatMap((type) => {
       if (type === "schema-invalid") {
@@ -271,7 +277,11 @@ function problemFacts(
     return proseFacts([...new Set(facts)]);
   }
 
-  if (problem.id === "repository") {
+  if (
+    problem.id.startsWith("repository-")
+    || (problem.id === "project-primary-guidance"
+      && Array.isArray(problem.parameters.problemTypes))
+  ) {
     const types = stringValues(problem.parameters.problemTypes);
     const expectedRepository = problem.parameters.expectedRepository;
     const expectedBranch = problem.parameters.expectedBranch;
@@ -372,12 +382,19 @@ function problemFacts(
     }
   }
 
-  if (problem.id === "ideal" || problem.id === "inner" || problem.id === "outer") {
+  if (
+    problem.id === "ideal-unsubmitted"
+    || problem.id === "ideal-unaccepted"
+    || problem.id === "implementation-unsubmitted"
+    || problem.id === "implementation-unaccepted"
+    || problem.id === "deployment-unsubmitted"
+    || problem.id === "deployment-unaccepted"
+  ) {
     const revision = problem.parameters.revision;
     const requirement = problem.parameters.requirement;
-    const phase = problem.id === "ideal"
+    const phase = problem.id.startsWith("ideal-")
       ? localize(language, "Idea definition", "Idea 定义")
-      : problem.id === "inner"
+      : problem.id.startsWith("implementation-")
       ? localize(language, "implementation", "实现")
       : localize(language, "deployment", "部署");
     if (typeof revision === "string" && typeof requirement === "string") {
@@ -391,7 +408,10 @@ function problemFacts(
     }
   }
 
-  if (problem.id === "guidance") {
+  if (
+    problem.id === "project-guidance"
+    || problem.id === "project-primary-guidance"
+  ) {
     const diagnostics = problem.parameters.diagnostics;
     const paths = Array.isArray(diagnostics)
       ? diagnostics.flatMap((entry) =>

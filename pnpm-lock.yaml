@@ -18,8 +18,8 @@ importers:
         specifier: https://github.com/shazhou-ww/opentui/releases/download/opentui-0.4.0-koffi-2.16.3-1/opentui-react-0.4.0-koffi.2.16.3.1.tgz
         version: https://github.com/shazhou-ww/opentui/releases/download/opentui-0.4.0-koffi-2.16.3-1/opentui-react-0.4.0-koffi.2.16.3.1.tgz(@opentui/core@https://github.com/shazhou-ww/opentui/releases/download/opentui-0.4.0-koffi-2.16.3-1/opentui-core-0.4.0-koffi.2.16.3.1.tgz(typescript@6.0.3)(web-tree-sitter@0.25.10))(react-devtools-core@7.0.1)(react@19.3.0)(ws@8.22.0)
       '@potential-guide/objective-guide':
-        specifier: 0.1.0
-        version: 0.1.0
+        specifier: 0.2.0-rc.1
+        version: 0.2.0-rc.1
       commander:
         specifier: ^15.0.0
         version: 15.0.0
@@ -286,8 +286,8 @@ packages:
       react-devtools-core: ^7.0.1
       ws: ^8.18.0
 
-  '@potential-guide/objective-guide@0.1.0':
-    resolution: {integrity: sha512-qr6fZDutGcdCbGQ7GDMg+N4VyZTv0WzygdArd7L1zsO+z3lPNWzFNbPet+OGtSuNjUVXH3SrXjlvcCcPl4JA0A==}
+  '@potential-guide/objective-guide@0.2.0-rc.1':
+    resolution: {integrity: sha512-BIpBgH7Z+MI//WV0ozaG3i9wQN5xoK2HnVXJIeXjemmprMHhjagX8CZ3Y53AlSu5M0YIRDv35t814UeQmj836Q==}
     engines: {node: '>=22.13.0'}
 
   '@sindresorhus/merge-streams@4.0.0':
@@ -579,8 +579,8 @@ packages:
   json-schema-traverse@1.0.0:
     resolution: {integrity: sha512-NM8/P9n3XjXhIZn1lLhkFaACTOURQXjWhV4BA/RnOv8xvgqtqpAX9IO4mRQxSx1Rlo4tqzeqb0sOlruaOy3dug==}
 
-  jsonata@2.2.2:
-    resolution: {integrity: sha512-XDFH2PuaAXv0AXJEWwElXbqADmKFGKMLMkFb+qOz0EhjQW2EIJ6pgtordLU+4u3IVERyBfqy6bi6kZKEncvRqA==}
+  jsonata@2.1.0:
+    resolution: {integrity: sha512-OCzaRMK8HobtX8fp37uIVmL8CY1IGc/a6gLsDqz3quExFR09/U78HUzWYr7T31UEB6+Eu0/8dkVD5fFDOl9a8w==}
     engines: {node: '>= 8'}
 
   jsonc-parser@3.3.1:
@@ -1230,10 +1230,10 @@ snapshots:
       react-reconciler: 0.33.0(react@19.3.0)
       ws: 8.22.0
 
-  '@potential-guide/objective-guide@0.1.0':
+  '@potential-guide/objective-guide@0.2.0-rc.1':
     dependencies:
       ajv: 8.20.0
-      jsonata: 2.2.2
+      jsonata: 2.1.0
       yaml: 2.9.1
 
   '@sindresorhus/merge-streams@4.0.0': {}
@@ -1572,7 +1572,7 @@ snapshots:
 
   json-schema-traverse@1.0.0: {}
 
-  jsonata@2.2.2: {}
+  jsonata@2.1.0: {}
 
   jsonc-parser@3.3.1: {}
 

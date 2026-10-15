@@ -322,12 +322,16 @@ test("project and repository failures gate Idea checks and retain report diagnos
   assert.equal(blocked.response.objective?.owner, "project");
   assert.equal(blocked.response.objective?.failingCheck, "project-config-valid");
   assert.deepEqual(blocked.response.objective?.problems, [{
-    id: "project",
+    id: "project-configuration",
     parameters: projectParameters!,
   }]);
   assert.deepEqual(
     blocked.response.objective?.references.map(({ id }) => id),
-    ["levels/configuration-invalid", "checks/project-config-valid", "problems/project"],
+    [
+      "levels/configuration-invalid",
+      "checks/project-config-valid",
+      "problems/project-configuration",
+    ],
   );
   const second = harness(ready(), true);
   const sync = await whatsNextUseCase(second.options, second.ports);

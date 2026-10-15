@@ -92,12 +92,16 @@ export interface ObjectiveGuideInstance {
   readonly description: string;
   readonly prerequisite: ObjectiveGuideInstance | null;
   describeLevels(): readonly ObjectiveLevelDescription[];
-  probe(): Promise<ObjectiveObservation>;
+  probe(signal?: AbortSignal): Promise<ObjectiveObservation>;
   readPage(pageId: ReferencePageId): Promise<ReferencePage>;
   searchPages(query: string): Promise<readonly ReferencePageSummary[]>;
 }
 export interface ObjectiveLevelAdvancementManifest {
-  checks: readonly CheckId[];
+  checks: readonly ObjectiveCheckManifest[];
+}
+export interface ObjectiveCheckManifest {
+  id: CheckId;
+  problems: readonly ProblemId[];
 }
 export interface ObjectiveLevelManifest {
   id: ObjectiveLevelId;
@@ -133,7 +137,12 @@ export type CheckResult =
   };
 export interface ObjectiveCheckRunner {
   validate?(manifestUri: ObjectiveManifestUri, checkId: CheckId): Promise<void>;
-  run(manifestUri: ObjectiveManifestUri, checkId: CheckId, request: CheckRequest): Promise<unknown>;
+  run(
+    manifestUri: ObjectiveManifestUri,
+    checkId: CheckId,
+    request: CheckRequest,
+    signal?: AbortSignal,
+  ): Promise<unknown>;
 }
 export interface ObjectiveLoader {
   load(manifestUri: ObjectiveManifestUri): Promise<ObjectiveGuide>;

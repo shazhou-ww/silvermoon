@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
-  createSilvermoonObjectiveLoader, SILVERMOON_OBJECTIVE_LEVELS, SILVERMOON_OBJECTIVE_URIS,
+  createSilvermoonObjectiveLoader, SILVERMOON_CHECK_PROBLEMS,
+  SILVERMOON_OBJECTIVE_LEVELS, SILVERMOON_OBJECTIVE_URIS,
 } from "../../src/business/objective-guides.ts";
 import type {
   SilvermoonObjectiveCheck, SilvermoonObjectiveChecks,
@@ -14,7 +15,13 @@ function checks(failing?: string) {
     .map((id): [string, SilvermoonObjectiveCheck] => [id, async () => {
       calls.push(id);
       return id === failing
-        ? { pass: false, problems: [{ id: "project", parameters: { failingCheck: id } }] }
+        ? {
+          pass: false,
+          problems: [{
+            id: SILVERMOON_CHECK_PROBLEMS[id][0],
+            parameters: { failingCheck: id },
+          }],
+        }
         : { pass: true };
     }])) as SilvermoonObjectiveChecks;
   return { bindings, calls };

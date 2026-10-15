@@ -23,10 +23,17 @@ test("keeps runtime dependencies inside their supported engine and peer ranges",
   assert.equal(manifest.dependencies.commander, "^15.0.0");
   assert.equal(manifest.engines.node, ">=22.13.0");
   const objectivePackage = "@potential-guide/objective-guide";
-  assert.equal(manifest.dependencies[objectivePackage], "0.1.0");
-  assert.deepEqual(importer[objectivePackage], { specifier: "0.1.0", version: "0.1.0" });
+  const objectiveVersion = "0.2.0-rc.1";
+  assert.equal(manifest.dependencies[objectivePackage], objectiveVersion);
+  assert.deepEqual(importer[objectivePackage], {
+    specifier: objectiveVersion,
+    version: objectiveVersion,
+  });
   assert.equal(
-    semver.subset(manifest.engines.node, lock.packages[`${objectivePackage}@0.1.0`].engines.node),
+    semver.subset(
+      manifest.engines.node,
+      lock.packages[`${objectivePackage}@${objectiveVersion}`].engines.node,
+    ),
     true,
   );
   assert.ok(!("jsonata" in manifest.dependencies));
