@@ -8,6 +8,8 @@ Device `whats-next` 的 Agent 输出会在 `References` 中分别给出 level、
 
 Agent 只需从最外层 objective 发起 Reference lookup，由其递归委派内层 objective 查找目标页面；`page` 与 `level`、`problem` 等类型标识并入后续 lookup 路径，不再作为独立首层参数。默认 References 不因层级存在就单独列出 Device level 页面，同时保留有用下钻和结构化 Reference 契约。
 
+命令的 before/after、参数结构与递归解析规则见 [Reference 命令结构设计](./Reference-command-shape.md)。
+
 ## 边界
 
 - 保留 check/problem 按需下钻、明确无歧义的页面寻址和结构化 Reference 参数。
