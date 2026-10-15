@@ -70,12 +70,65 @@ function ready(selected = idea("implementing")): ReadyObservation {
     },
   };
 }
-function harness(snapshot: SnapshotObservation = ready(), blockRepository = false) {
+function deviceFixture(source: "global" | "source-checkout" = "global") {
+  return {
+    runtime: {
+      source,
+      version: "0.5.0",
+      entry: "D:\\checkout\\dist\\bin\\silvermoon.js",
+      packageRoot: "D:\\checkout",
+    },
+    readiness: {
+      runtime: { source, version: "0.5.0" },
+      skill: source === "global"
+        ? {
+          status: "ready",
+          expectedRoot: "D:\\runtime\\skills\\silvermoon",
+          paths: ["D:\\home\\.agents\\skills\\silvermoon"],
+        }
+        : {
+          status: "source-checkout",
+          expectedRoot: "D:\\checkout\\skills\\silvermoon",
+          paths: [],
+        },
+      update: source === "global"
+        ? { status: "current", currentVersion: "0.5.0", source: "cache" }
+        : { status: "source-checkout", currentVersion: "0.5.0", source: "runtime" },
+    },
+    globalConfig: {
+      path: "D:\\home\\.config\\silvermoon\\config.yaml",
+      present: true,
+      valid: true,
+    },
+    diagnostics: [],
+    user: {
+      configPath: "D:\\home\\.config\\silvermoon\\config.yaml",
+      config: { preferredLanguage: "en-US" },
+      diagnostics: [],
+    },
+  } as unknown as Awaited<ReturnType<typeof observeDevice>>;
+}
+function harness(
+  snapshot: SnapshotObservation = ready(),
+  blockRepository = false,
+  device = deviceFixture(),
+) {
   const calls: string[] = [];
   const observations: ObjectiveObservation[] = [];
   const ports: NonNullable<Parameters<typeof whatsNextUseCase>[1]> = {
     createCommandRun: (intent) => createCommandRun(intent, { eventSink: () => {} }),
-    observeSnapshot: async () => { calls.push("snapshot"); return snapshot; },
+    observeSnapshot: async ({ deviceObserver }) => {
+      calls.push("snapshot");
+      if (deviceObserver === undefined) {
+        throw new TypeError("Device observer is required by the test harness.");
+      }
+      await deviceObserver({
+        forceRuntimeRefresh: false,
+        includeReadiness: true,
+        userHome: "D:\\home",
+      });
+      return snapshot;
+    },
     assessRepositoryReadiness: async ({ observed }) => {
       calls.push("repository");
       return blockRepository ? {
@@ -87,7 +140,7 @@ function harness(snapshot: SnapshotObservation = ready(), blockRepository = fals
         branch: { branch: "topic", remote: "origin", repository: config.primaryRepository, upstreamBranch: "main" },
       };
     },
-    observeDevice,
+    observeDevice: async () => device,
     observeIdea: async () => {
       if (snapshot.layout === null) throw new Error("Project must precede local Idea sampling.");
       return { ...snapshot.layout, project: undefined };
@@ -136,6 +189,83 @@ test("Guide-driven navigation preserves four projections and direct instance own
   assert.deepEqual(report.actions, []);
 });
 
+test("selected Idea stops at its Device prerequisite with one current direction", async () => {
+  const context = harness(
+    { ...ready(), outputLanguageOverride: "en-US" as const },
+    false,
+    deviceFixture("source-checkout"),
+  );
+  const report = await whatsNextUseCase(
+    { ...context.options, language: "en-US" },
+    context.ports,
+  );
+
+  assert.equal(report.observation.state, "objective-blocked");
+  assert.equal(report.response.kind, "objective");
+  if (report.response.kind !== "objective") assert.fail("Expected Objective response.");
+  assert.equal(report.response.objective.target, "idea");
+  assert.equal(report.response.objective.owner, "device");
+  assert.equal(report.response.objective.level, "runtime-unready");
+  assert.equal(report.response.objective.failingCheck, "device-runtime-linked");
+  assert.deepEqual(report.response.objective.problems, [{
+    id: "device-runtime",
+    parameters: {
+      runtimePath: "D:\\checkout\\dist\\bin\\silvermoon.js",
+      source: "source-checkout",
+      version: "0.5.0",
+      checkoutPath: "D:\\checkout",
+    },
+  }]);
+  const problemReference = report.response.objective.references.find(
+    ({ id }) => id === "problems/device-runtime",
+  );
+  assert.equal(report.response.nextSteps[0]?.text, problemReference?.instruction);
+  assert.match(
+    report.response.nextSteps[0]?.text ?? "",
+    /The goal is to make the intended device runtime reliably reachable/,
+  );
+  assert.match(report.response.nextSteps[0]?.text ?? "", /pnpm setup:dev.+source checkout/);
+  assert.match(report.response.nextSteps[0]?.text ?? "", /npm install --global silvermoon/);
+  assert.doesNotMatch(
+    report.response.nextSteps.map(({ text }) => text).join("\n"),
+    /submitInner|Implementation\.md|安装|如有需要/,
+  );
+  assert.ok(report.response.objective.references.every(
+    ({ command }) => command.endsWith("--language en-US"),
+  ));
+  assert.ok(!context.calls.includes("repository"));
+  assert.ok(!context.calls.includes("idea-metadata-valid"));
+});
+
+test("a non-source runtime failure uses the global install command", async () => {
+  const device = deviceFixture("global");
+  if (device.runtime === null) assert.fail("Expected a runtime fixture.");
+  device.runtime.version = null;
+  const context = harness(
+    { ...ready(), outputLanguageOverride: "en-US" as const },
+    false,
+    device,
+  );
+  const report = await whatsNextUseCase(
+    { ...context.options, language: "en-US" },
+    context.ports,
+  );
+
+  assert.equal(report.response.kind, "objective");
+  if (report.response.kind !== "objective") assert.fail("Expected Objective response.");
+  assert.equal(
+    report.response.objective.problems[0]?.id,
+    "device-runtime",
+  );
+  const problemReference = report.response.objective.references.find(
+    ({ id }) => id === "problems/device-runtime",
+  );
+  const instructions = report.response.nextSteps.map(({ text }) => text).join("\n");
+  assert.equal(report.response.nextSteps[0]?.text, problemReference?.instruction);
+  assert.match(instructions, /npm install --global silvermoon/);
+  assert.match(instructions, /pnpm setup:dev/);
+});
+
 test("concurrent command instances do not share snapshot or lifecycle state", async () => {
   const first = harness(ready(idea("preparing")));
   const second = harness(ready(idea("deploying")));
@@ -158,7 +288,14 @@ test("project and repository failures gate Idea checks and retain report diagnos
   const first = harness(unavailable);
   const blocked = await whatsNextUseCase(first.options, first.ports);
   assert.deepEqual(first.calls, [
-    "snapshot", "project-config-valid", "project-user-config-valid", "project-layout-valid",
+    "snapshot",
+    "device-config-valid",
+    "device-runtime-linked",
+    "device-skill-discoverable",
+    "device-update-current",
+    "project-config-valid",
+    "project-user-config-valid",
+    "project-layout-valid",
   ]);
   assert.equal(first.observations[0]?.position.level.id, "configuration-invalid");
   assert.equal(first.observations[0]?.position.failingCheck, "project-config-valid");
@@ -194,6 +331,8 @@ test("project and repository failures gate Idea checks and retain report diagnos
     root: "D:\\fixture",
     head: null,
     primary: null,
+    expectedRepository: "https://example.test/owner/repository.git",
+    expectedBranch: "main",
     branch: null,
   });
   assertNoLocalizedProblemProse(repositoryParameters);
@@ -270,7 +409,11 @@ test("no selector stays Project-only even for one Idea; invalid selectors do not
     if (selector === undefined) {
       assert.equal(report.response.kind, "objective");
       if (report.response.kind === "objective") {
-        assert.deepEqual(report.response.nextSteps, []);
+        assert.equal(report.response.nextSteps.length, 1);
+        assert.match(
+          report.response.nextSteps[0]?.text ?? "",
+          /next goal is to choose the Idea.+silvermoon list-ideas.+silvermoon whats-next/,
+        );
         assert.deepEqual(report.response.objective, {
           target: "project",
           owner: "project",
@@ -480,7 +623,10 @@ test("unknown selectors do not read active Idea metadata", async () => {
   const options = { ...context.options, idea: "missing" };
   const report = await whatsNextUseCase(options, context.ports);
   assert.equal(report.observation.state, "idea-not-found");
-  assert.deepEqual(report.observation.candidates, []);
+  assert.deepEqual(
+    report.observation.candidates.map(({ id, state }) => ({ id, state })),
+    [{ id, state: "implementing" }],
+  );
 });
 
 test("fresh Idea metadata faults and concurrent changes cannot produce stale lifecycle review", async () => {

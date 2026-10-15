@@ -9,3 +9,5 @@ services:
         SCENARIO_NPM_REGISTRY: ${SCENARIO_NPM_REGISTRY:-https://registry.npmjs.org/}
     volumes:
       - ./:/scenario-lab
+    environment:
+      SCENARIO_IDS: ${SCENARIO_IDS:-}

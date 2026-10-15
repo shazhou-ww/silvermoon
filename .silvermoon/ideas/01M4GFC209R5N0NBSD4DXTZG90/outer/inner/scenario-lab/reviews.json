@@ -2,75 +2,75 @@
   "reviews": [
     {
       "scenario": "device-runtime-not-discoverable",
-      "verdict": "issues",
-      "redundancy": "yes",
-      "missing": "no",
-      "missingPrompt": "no",
-      "comment": "同一 source-checkout 问题先出现在三行 advisory 中，又由 Device setup required 段完整复述；恢复动作正确，但主要入口重复。"
+      "verdict": "pending",
+      "redundancy": "unknown",
+      "missing": "unknown",
+      "missingPrompt": "unknown",
+      "comment": "标题按请求 target 显示“Idea 推进 / Idea progress”，现状说明 Device prerequisite。单一 runtime Problem 用自然句给出实际入口、source checkout、版本和 checkout 路径；下一步先说明 PATH 目标，再把 pnpm setup:dev 与全局安装列为按 facts 选择的方法，并给出明确复查方式。等待人工 review。"
     },
     {
       "scenario": "device-skill-not-discoverable",
-      "verdict": "ok",
-      "redundancy": "no",
-      "missing": "no",
-      "missingPrompt": "no",
-      "comment": "Personal skill missing 的 advisory 给出准确 target 与 silvermoon-link-skill 恢复入口，同时明确不阻断主体 Idea 判断；未发现该问题本身的重复或缺失。"
+      "verdict": "pending",
+      "redundancy": "unknown",
+      "missing": "unknown",
+      "missingPrompt": "unknown",
+      "comment": "Problem 以自然句说明 canonical skill 路径和当前 personal discovery 缺口；下一步先说明目标，再按 runtime 来源提供 silvermoon-link-skill、pnpm link:skill 等候选方法，并要求复查。等待人工 review。"
     },
     {
       "scenario": "project-user-config-invalid",
-      "verdict": "issues",
-      "redundancy": "no",
-      "missing": "no",
-      "missingPrompt": "no",
-      "comment": "check、problemTypes、修复值与重试命令完整；但 zh-CN 必做动作仍嵌入英文诊断 “Use version: 1”，latest-runtime 详情也保留英文 fetch failed，动态诊断的 locale 边界不一致。"
+      "verdict": "pending",
+      "redundancy": "unknown",
+      "missing": "unknown",
+      "missingPrompt": "unknown",
+      "comment": "个人配置由 Device prerequisite 截获；Problem 说明配置路径、当前版本 contract 不受支持以及要求 version: 1。下一步以有效配置为目标，建议只修受影响字段并保留无关偏好。等待人工 review。"
     },
     {
       "scenario": "repository-worktree-untracked",
-      "verdict": "ok",
-      "redundancy": "no",
-      "missing": "no",
-      "missingPrompt": "no",
-      "comment": "问题摘要、样本路径、保留未知工作的约束和重试命令完整，未发现明显重复或缺失。"
+      "verdict": "pending",
+      "redundancy": "unknown",
+      "missing": "unknown",
+      "missingPrompt": "unknown",
+      "comment": "Problem 自闭环说明 worktree 中实际观测到的未跟踪 scenario-untracked.txt。下一步以 clean worktree 和保留未知工作为目标，列出提交、隔离或经明确授权后放弃等可能去向，并要求检查全部修改。等待人工 review。"
     },
     {
       "scenario": "repository-detached-head",
-      "verdict": "ok",
-      "redundancy": "no",
-      "missing": "no",
-      "missingPrompt": "no",
-      "comment": "准确给出 detached HEAD、commit、目标 repository/branch 和非破坏性恢复方向，内容紧凑。"
+      "verdict": "pending",
+      "redundancy": "unknown",
+      "missing": "unknown",
+      "missingPrompt": "unknown",
+      "comment": "Problem 用自然句说明 HEAD revision 处于 detached 状态及预期 primary，不再显示 null branch JSON。下一步以不丢失工作地附着到正确本地分支为目标，提供切换既有分支或从当前 HEAD 建分支的候选方法。等待人工 review。"
     },
     {
       "scenario": "repository-upstream-missing",
-      "verdict": "ok",
-      "redundancy": "no",
-      "missing": "no",
-      "missingPrompt": "no",
-      "comment": "明确展示当前 upstream 缺失、预期 primary、配置步骤和验证命令，信息闭环。"
+      "verdict": "pending",
+      "redundancy": "unknown",
+      "missing": "unknown",
+      "missingPrompt": "unknown",
+      "comment": "Problem 直接说明 scenario 分支尚未配置 upstream 以及应跟踪的 primary，不再显示 branch JSON。下一步以建立正确跟踪关系为目标，提供复用或新增 named remote、设置 upstream 和验证结果的建议。等待人工 review。"
     },
     {
       "scenario": "navigation-without-selector",
-      "verdict": "issues",
-      "redundancy": "no",
-      "missing": "yes",
-      "missingPrompt": "yes",
-      "comment": "bare whats-next 现在直接报告 Project terminal；既不列出 active ideas，也不提示运行 list-ideas 或传入 selector，调用者无法从本段文案知道如何进入 Idea Objective。"
+      "verdict": "pending",
+      "redundancy": "unknown",
+      "missing": "unknown",
+      "missingPrompt": "unknown",
+      "comment": "bare whats-next 仍准确报告 Project terminal，同时把下一目标说明为选择要推进的 Idea，并提供 list-ideas、传入 selector 或创建新 Idea 三种路径。等待人工 review。"
     },
     {
       "scenario": "idea-selector-not-found",
-      "verdict": "issues",
-      "redundancy": "no",
-      "missing": "yes",
-      "missingPrompt": "yes",
-      "comment": "selector 未匹配的事实清楚，但输出错误声称“当前没有 active idea”，与同一 fixture 中可选中的 whats-next-template-review 冲突；也没有列出候选或提示 list-ideas。"
+      "verdict": "pending",
+      "redundancy": "unknown",
+      "missing": "unknown",
+      "missingPrompt": "unknown",
+      "comment": "selector 未匹配时现在列出真实 active Idea 候选；下一步以解析到唯一既有 Idea 为目标，建议用准确 selector 重试，或仅在确属新工作时创建 Idea。等待人工 review。"
     },
     {
       "scenario": "selected-idea-current-state",
-      "verdict": "ok",
-      "redundancy": "no",
-      "missing": "no",
-      "missingPrompt": "no",
-      "comment": "accepted Ideal、implementing/downstream、submission 表、Inner World 范围和 submitInner 的同步前置条件完整，适合作为 lifecycle 当前状态基线。"
+      "verdict": "pending",
+      "redundancy": "unknown",
+      "missing": "unknown",
+      "missingPrompt": "unknown",
+      "comment": "Problem 自闭环说明当前 implementation revision 尚未 submitted；下一步先说明完成准确 revision 的实现证据并同步到 primary 的目标，再列出工作范围和一种 submitInner 路径，且保留 gate 与 append-only 边界。等待人工 review。"
     }
   ]
 }

@@ -34,10 +34,20 @@ source revision/dirty 状态、runtime version、locale 与 argv 的 `manifest.j
 同一目录的 `review.html` 将每个 scenario 分页展示，英文与中文原文并排，并提供
 标题、表格、列表、引用和代码等 Markdown 组件渲染，以及 OK/有问题、冗余、缺失
 和缺少提示的评审字段。每个 tab 还展示 Objective/check 与分支位置，以及前一状态、
-到达动作、当前状态和后续动作，明确各段文案在状态链中的关系。修改保存在浏览器
-localStorage，可导出或导入与 source revision 绑定的 JSON。
+到达动作、当前状态和后续动作，明确各段文案在状态链中的关系。Agent 初审字段和
+意见为只读；维护者阅读后直接在聊天中反馈，页面不保存或导入人工修改。
 `corpus/` 被本目录 `.gitignore` 排除；其中报告只用于本地 review，不作为 idea
 contract 或提交内容。
+
+只重新采集明确反馈影响的场景时，传入一个或多个稳定 scenario ID：
+
+```powershell
+.\.silvermoon\ideas\01M4GFC209R5N0NBSD4DXTZG90\outer\inner\scenario-lab\run.ps1 `
+  -Scenario device-runtime-not-discoverable
+```
+
+聚焦采集仍从空 Docker 设备初始化 runtime 和 synthetic project，但生成的 manifest、
+双语报告与 `review.html` 只包含所选场景。未传 `-Scenario` 时继续采集完整场景集。
 
 ## 状态转移扩展
 

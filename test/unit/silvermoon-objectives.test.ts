@@ -45,19 +45,37 @@ test("every scope aggregates its failed level serially and retains first failure
   }
 });
 
-test("Device is independent, Project has no prerequisite and Idea directly references cached Project", async () => {
-  const context = checks("device-update-current");
-  const loader = createSilvermoonObjectiveLoader(context.bindings, { executeEntries: false });
+test("Project requires Device readiness through skill and Idea retains the single prerequisite chain", async () => {
+  const blockedContext = checks("device-runtime-linked");
+  const loader = createSilvermoonObjectiveLoader(blockedContext.bindings, { executeEntries: false });
   assert.equal(new URL(SILVERMOON_OBJECTIVE_URIS.device).protocol, "file:");
   assert.match(new URL(SILVERMOON_OBJECTIVE_URIS.project).pathname, /\/objectives\/project\/manifest\.yaml$/);
   const project = await loader.load(SILVERMOON_OBJECTIVE_URIS.project);
   const idea = await loader.load(SILVERMOON_OBJECTIVE_URIS.idea);
-  assert.equal(project.prerequisite, null);
+  assert.equal(project.prerequisite?.guide.manifestUri, SILVERMOON_OBJECTIVE_URIS.device);
+  assert.equal(project.prerequisite?.minimumLevelId, "update-unconfirmed");
   assert.equal(idea.prerequisite?.guide, project);
   const created = idea.createInstance({ subject: { root: "project", userHome: "home", ideaId: "01M36QGPNTXEPP61DA4KP4AVZF" } });
   if (!created.ok) assert.fail("Expected instance.");
-  assert.equal((await created.instance.probe()).position.level.id, "terminal");
-  assert.ok(context.calls.every((id) => !id.startsWith("device-")));
+  const blocked = await created.instance.probe();
+  assert.equal(blocked.position.owner.guide.manifestUri, SILVERMOON_OBJECTIVE_URIS.device);
+  assert.equal(blocked.position.level.id, "runtime-unready");
+  assert.equal(blocked.position.failingCheck, "device-runtime-linked");
+  assert.ok(!blockedContext.calls.some((id) => id.startsWith("project-") || id.startsWith("idea-")));
+
+  const updateContext = checks("device-update-current");
+  const updateLoader = createSilvermoonObjectiveLoader(updateContext.bindings, { executeEntries: false });
+  const updateIdea = await updateLoader.load(SILVERMOON_OBJECTIVE_URIS.idea);
+  const updateCreated = updateIdea.createInstance({
+    subject: { root: "project", userHome: "home", ideaId: "01M36QGPNTXEPP61DA4KP4AVZF" },
+  });
+  if (!updateCreated.ok) assert.fail("Expected update-tolerant instance.");
+  const ready = await updateCreated.instance.probe();
+  assert.equal(ready.position.owner.guide.manifestUri, SILVERMOON_OBJECTIVE_URIS.idea);
+  assert.equal(ready.position.level.id, "terminal");
+  assert.ok(updateContext.calls.includes("device-update-current"));
+  assert.ok(updateContext.calls.includes("project-config-valid"));
+  assert.ok(updateContext.calls.includes("idea-metadata-valid"));
   assert.equal(created.instance.describeLevels()[0]?.id, "configuration-invalid");
   assert.equal(created.instance.describeLevels().filter(({ id }) => id === "terminal").length, 1);
 });

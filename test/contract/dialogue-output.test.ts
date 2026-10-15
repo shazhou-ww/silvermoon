@@ -3,9 +3,43 @@ import { test } from "node:test";
 
 import { CommandRun } from "../../src/foundation/command-message/index.ts";
 import { renderResponse } from "../../src/foundation/renderer/index.ts";
-import type { DeviceAdvisory } from "../../src/foundation/report/types.ts";
+import type {
+  DeviceAdvisory,
+  ReportJsonValue,
+} from "../../src/foundation/report/types.ts";
 
-test("renders Objective reports as position and downward-guidance sections", () => {
+function renderObjectiveProblem(
+  id: string,
+  parameters: Readonly<Record<string, ReportJsonValue>>,
+  language: "en-US" | "zh-CN" = "en-US",
+): string {
+  const response: Parameters<typeof renderResponse>[0] = {
+    kind: "objective",
+    language,
+    summary: "A prerequisite is blocked.",
+    objective: {
+      target: "idea",
+      owner: id.startsWith("device-") ? "device" : "project",
+      level: "unready",
+      failingCheck: "fixture-check",
+      terminal: false,
+      problems: [{ id, parameters }],
+      references: [{
+        kind: "problem",
+        id: `problems/${id}`,
+        title: "Fixture problem",
+        description: "The prerequisite is not ready.",
+        command: `silvermoon reference page fixture problems/${id} --language ${language}`,
+        content: "Fixture details.",
+      }],
+    },
+    problems: [{ type: id, summary: "Fixture problem." }],
+    nextSteps: [{ type: "instruction", text: "Reach the required state, then recheck it." }],
+  };
+  return renderResponse(response);
+}
+
+test("renders Objective reports as current status, problems, next action, and compact references", () => {
   const rendered = renderResponse({
     kind: "blocked",
     language: "en-US",
@@ -22,8 +56,30 @@ test("renders Objective reports as position and downward-guidance sections", () 
       failingCheck: "repository-worktree-clean",
       terminal: false,
       problems: [
-        { id: "repository", parameters: { paths: ["first.txt", "second.txt"], branch: "topic" } },
-        { id: "repository", parameters: { paths: ["third.txt"], branch: "topic" } },
+        {
+          id: "repository",
+          parameters: {
+            problemTypes: ["worktree-changes"],
+            changes: {
+              conflicted: [],
+              staged: ["first.txt"],
+              unstaged: ["second.txt"],
+              untracked: [],
+            },
+          },
+        },
+        {
+          id: "repository",
+          parameters: {
+            problemTypes: ["worktree-changes"],
+            changes: {
+              conflicted: [],
+              staged: [],
+              unstaged: [],
+              untracked: ["third.txt"],
+            },
+          },
+        },
       ],
       references: [
         {
@@ -52,7 +108,7 @@ test("renders Objective reports as position and downward-guidance sections", () 
     nextSteps: [{ type: "instruction", text: "Inspect the exact paths, then rerun `silvermoon whats-next fixture --audience agent`." }],
   });
 
-  test("terminal Objective keeps static guidance without required actions", () => {
+  test("terminal Objective renders only outcome and compact references", () => {
     const rendered = renderResponse({
       kind: "objective",
       language: "zh-CN",
@@ -77,30 +133,202 @@ test("renders Objective reports as position and downward-guidance sections", () 
       nextSteps: [],
     });
 
-    assert.match(rendered, /### 向下指引/);
-    assert.match(rendered, /> 本次 probe 的全部 checks 已通过。/);
-    assert.match(rendered, /> ## 含义/);
-    assert.doesNotMatch(rendered, /必做动作/);
+    assert.match(rendered, /### 参考资料/);
+    assert.match(rendered, /### 结果/);
+    assert.match(rendered, /^## 项目整备/m);
+    assert.match(rendered, /silvermoon reference page project levels\/terminal --language zh-CN/);
+    assert.doesNotMatch(rendered, /本次 probe 的全部 checks 已通过/);
+    assert.doesNotMatch(rendered, /这是采样结论/);
+    assert.doesNotMatch(rendered, /### 问题|### 下一步动作/);
   });
 
-  assert.equal((rendered.match(/^### /gm) ?? []).length, 2);
-  assert.match(rendered, /### Current position/);
-  assert.match(rendered, /Target Objective: `idea`/);
-  assert.match(rendered, /Owner Objective: `project`/);
-  assert.match(rendered, /Failing check: `repository-worktree-clean`/);
-  assert.ok(rendered.indexOf("1. `repository`") < rendered.indexOf("2. `repository`"));
-  assert.match(rendered, /"paths": \[\n    "first\.txt",\n    "second\.txt"/);
-  assert.match(rendered, /#### Required actions/);
-  assert.match(rendered, /### Downward guidance/);
-  assert.match(rendered, /#### Level: Safe local repository \(`levels\/repository-unready`\)/);
-  assert.match(rendered, /> \*\*Outcome:\*\*\n> Passing checks advances to the next level\./);
-  assert.match(rendered, /> \*\*Instruction:\*\*\n> Preserve unknown work before recovery\./);
-  assert.match(rendered, /> ## Check guidance/);
-  assert.match(rendered, /silvermoon reference page project pages\/repository-synchronization --language en-US/);
-  assert.match(rendered, /Further details:/);
+  assert.equal((rendered.match(/^### /gm) ?? []).length, 4);
+  assert.match(rendered, /^## Idea progress/m);
+  assert.match(rendered, /### Current status/);
+  assert.match(
+    rendered,
+    /This request targets Idea progress, but Project readiness must be completed first\./,
+  );
+  assert.match(rendered, /Observation context: root `C:\\workspace`/);
+  assert.match(rendered, /### Problems/);
+  assert.match(rendered, /Resolve the repository problem/);
+  assert.ok(rendered.indexOf("`first.txt`") < rendered.indexOf("`third.txt`"));
+  assert.match(rendered, /staged `first\.txt`, unstaged `second\.txt`/);
+  assert.doesNotMatch(rendered, /Target Objective|Owner Objective|Failing check|ID:|```json/);
+  assert.doesNotMatch(rendered, /problemTypes|Observed state/);
+  assert.match(rendered, /### Next action/);
+  assert.match(rendered, /### References/);
+  assert.match(rendered, /- Level: Safe local repository \(`levels\/repository-unready`\)/);
+  assert.match(rendered, /further details:/);
   assert.match(rendered, /silvermoon reference page project checks\/repository-worktree-clean --language en-US/);
-  assert.doesNotMatch(rendered, /^## Check guidance/m);
+  assert.doesNotMatch(rendered, /Passing checks advances to the next level/);
+  assert.doesNotMatch(rendered, /Preserve unknown work before recovery/);
+  assert.doesNotMatch(rendered, /## Check guidance/);
+  assert.doesNotMatch(rendered, /pages\/repository-synchronization/);
   assert.doesNotMatch(rendered, /Issues to address|Preserve the worktree/);
+});
+
+test("renders a source checkout as one current runtime fact", () => {
+  const rendered = renderResponse({
+    kind: "objective",
+    language: "zh-CN",
+    summary: "Device prerequisite is blocked.",
+    objective: {
+      target: "idea",
+      owner: "device",
+      level: "runtime-unready",
+      failingCheck: "device-runtime-linked",
+      terminal: false,
+      problems: [{
+        id: "device-runtime",
+        parameters: {
+          runtimePath: "D:\\Code\\silvermoon\\dist\\bin\\silvermoon.js",
+          source: "source-checkout",
+          version: "0.5.0",
+          checkoutPath: "D:\\Code\\silvermoon",
+        },
+      }],
+      references: [{
+        kind: "problem",
+        id: "problems/device-runtime",
+        title: "`PATH` 中的设备级 runtime 不可用",
+        description:
+          "当前 Silvermoon runtime 未通过 `PATH` 中可发现的设备级 `silvermoon` 可执行文件运行。",
+        command:
+          "silvermoon reference page device problems/device-runtime --language zh-CN",
+        content: "Details.",
+      }],
+    },
+    problems: [{
+      type: "device-runtime",
+      summary: "Device runtime is blocked.",
+    }],
+    nextSteps: [{
+      type: "instruction",
+      text:
+        "如果当前 runtime 标记为 source checkout，在上方显示的 Source checkout 路径运行 `pnpm setup:dev`；其他情况运行 `npm install --global silvermoon`。",
+    }],
+  });
+
+  assert.match(rendered, /^## Idea 推进/m);
+  assert.match(
+    rendered,
+    /当前 runtime 是 `D:\\Code\\silvermoon\\dist\\bin\\silvermoon\.js`（source checkout），版本 `0\.5\.0`；对应的 source checkout 根目录是 `D:\\Code\\silvermoon`。/,
+  );
+  assert.doesNotMatch(
+    rendered,
+    /观测到的运行时来源|观测到的运行时版本|runtimePath|checkoutPath|source:/,
+  );
+});
+
+test("renders structured Objective facts as self-contained prose", () => {
+  const skill = renderObjectiveProblem("device-skill", {
+    status: "missing",
+    expectedRoot: "D:\\Code\\silvermoon\\skills\\silvermoon",
+    paths: [],
+  });
+  assert.match(
+    skill,
+    /Silvermoon's canonical skill is `D:\\Code\\silvermoon\\skills\\silvermoon`, but no personal discovery path currently resolves to it\./,
+  );
+  assert.doesNotMatch(skill, /expectedRoot|paths:|```json/);
+
+  const configuration = renderObjectiveProblem("device-configuration", {
+    configurationPath: "C:\\Users\\agent\\.silvermoon\\config.yaml",
+    diagnosticCodes: ["user-config.unsupported-version"],
+  });
+  assert.match(
+    configuration,
+    /uses an unsupported version; this runtime expects `version: 1`/,
+  );
+  assert.doesNotMatch(configuration, /configurationPath|diagnosticCodes|```json/);
+
+  const detached = renderObjectiveProblem("repository", {
+    problemTypes: ["detached-head"],
+    head: "a".repeat(40),
+    branch: {
+      name: null,
+      remote: null,
+      repository: null,
+      upstreamBranch: null,
+    },
+  });
+  assert.match(
+    detached,
+    /HEAD `aaaaaaaaaaaa` is detached, so the current work is not attached to a local branch\./,
+  );
+  assert.doesNotMatch(detached, /problemTypes|"name": null|```json/);
+
+  const upstream = renderObjectiveProblem("repository", {
+    problemTypes: ["primary-upstream-mismatch"],
+    expectedRepository: "https://github.com/example/project.git",
+    expectedBranch: "main",
+    branch: {
+      name: "scenario",
+      remote: null,
+      repository: null,
+      upstreamBranch: null,
+    },
+  }, "zh-CN");
+  assert.match(
+    upstream,
+    /本地分支 `scenario` 尚未配置 upstream，但应跟踪 `https:\/\/github\.com\/example\/project\.git#main`。/,
+  );
+  assert.doesNotMatch(upstream, /problemTypes|upstreamBranch|```json/);
+});
+
+test("does not render the Device side channel beside an Objective", () => {
+  const rendered = renderResponse({
+    kind: "objective",
+    language: "en-US",
+    summary: "device Objective is at runtime-unready.",
+    objective: {
+      target: "idea",
+      owner: "idea",
+      level: "implementation-unsubmitted",
+      failingCheck: "idea-inner-submitted",
+      terminal: false,
+      problems: [{
+        id: "inner",
+        parameters: { lifecycleState: "implementing" },
+      }],
+      references: [{
+        kind: "problem",
+        id: "problems/inner",
+        title: "inner",
+        description: "Continue the current implementation.",
+        instruction: "Continue the current implementation.",
+        content: "Detailed implementation guidance.",
+        command: "silvermoon reference page idea problems/inner --language en-US",
+      }],
+    },
+    problems: [{
+      type: "inner",
+      summary: "Continue the current implementation.",
+    }],
+    nextSteps: [
+      { type: "instruction", text: "Continue the current implementation." },
+      { type: "instruction", text: "Rerun silvermoon whats-next --audience agent." },
+    ],
+    device: {
+      runtime: { source: "source-checkout", version: "0.5.0" },
+      skill: {
+        status: "source-checkout",
+        expectedRoot: "D:\\Code\\silvermoon\\skills\\silvermoon",
+        paths: [],
+      },
+      update: {
+        status: "source-checkout",
+        currentVersion: "0.5.0",
+        source: "runtime",
+      },
+    },
+  });
+
+  assert.match(rendered, /Continue the current implementation/);
+  assert.doesNotMatch(rendered, /Device advisory|Device setup required/);
+  assert.doesNotMatch(rendered, /Personal skill|Latest runtime/);
+  assert.doesNotMatch(rendered, /Detailed device recovery|Detailed implementation guidance/);
 });
 
 test("keeps guidance content in response and renders it as isolated data", () => {
@@ -460,7 +688,7 @@ test("omits healthy non-actionable device readiness", () => {
   assert.match(warning, /cache could not be written/);
 });
 
-test("requires source checkout commands to use the global device link", () => {
+test("renders source checkout repair as one compact PATH action", () => {
   const response: Parameters<typeof renderResponse>[0] = {
     kind: "choice-required",
     language: "en-US",
@@ -486,24 +714,30 @@ test("requires source checkout commands to use the global device link", () => {
   };
 
   const english = renderResponse(response);
-  assert.match(english, /Device setup required/);
   assert.match(
     english,
-    /Link this checkout globally, register its canonical skill by link/,
+    /This command did not run through a device-level `silvermoon` executable discoverable on `PATH`/,
   );
   assert.match(
     english,
-    /the Silvermoon source repository is not an exception/,
+    /Run `pnpm setup:dev` from this Silvermoon source checkout/,
+  );
+  assert.doesNotMatch(
+    english,
+    /Personal skill|Latest runtime|Device setup required/,
   );
 
   const chinese = renderResponse({ ...response, language: "zh-CN" });
-  assert.match(chinese, /需要完成设备设置/);
   assert.match(
     chinese,
-    /把当前 checkout 链接为全局 runtime/,
+    /当前命令未通过 `PATH` 中可发现的设备级 `silvermoon` 可执行文件运行/,
   );
   assert.match(
     chinese,
-    /Silvermoon 源码仓库也不例外/,
+    /在当前 Silvermoon source checkout 中运行 `pnpm setup:dev`/,
+  );
+  assert.doesNotMatch(
+    chinese,
+    /个人级 skill|最新 runtime|需要完成设备设置/,
   );
 });

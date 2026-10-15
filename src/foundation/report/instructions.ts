@@ -1,5 +1,5 @@
 import { diagnosticInstruction } from "./dialogue.ts";
-import { resolveContentTemplateLanguage } from "../language/index.ts";
+import { localize, resolveContentTemplateLanguage } from "../language/index.ts";
 import {
   renderContentLanguage,
   renderLifecycleDeployed,
@@ -102,6 +102,11 @@ export function projectInstructions(
   recheckCommand = "silvermoon whats-next",
 ) {
   return joinInstructions([
+    localize(
+      language,
+      "The goal is a valid, complete project snapshot that preserves unrelated content. The diagnostics below suggest possible repairs; apply only those that match the observed problem.",
+      "目标是在保留无关内容的同时得到有效且完整的项目 snapshot。下方诊断给出可能的修复方法；只采用与观测问题相符的步骤。",
+    ),
     ...formatInstructionSteps(observed.findings.map(({ instruction }) => instruction)),
     renderProjectRecheck(language, {
       recheckCommand: command(root, recheckCommand),
@@ -388,7 +393,7 @@ export function lifecycleInstruction(
         documentPath: idea.worlds.implementationRevision.documentPath,
         eventDigest: idea.eventDigest ?? null,
         ideaId: idea.id,
-        idealPath: idea.worlds.idealRevision.path,
+        idealDocumentPath: idea.worlds.idealRevision.documentPath,
         ledgerPath: idea.ledgerPath,
         name,
         primaryCommit,

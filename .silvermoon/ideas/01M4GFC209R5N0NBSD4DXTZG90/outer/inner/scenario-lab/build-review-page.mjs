@@ -106,7 +106,7 @@ export async function buildReviewPage({ labRoot, outputDirectory }) {
     header { position: sticky; top: 0; z-index: 2; padding: 12px 20px; background: #0f172a; border-bottom: 1px solid #334155; }
     header h1 { margin: 0 0 8px; font-size: 20px; }
     .toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-    button, select, textarea { font: inherit; }
+    button, select { font: inherit; }
     button, select { padding: 7px 10px; border-radius: 6px; border: 1px solid #64748b; background: #1e293b; color: #e5e7eb; }
     button:disabled { opacity: .4; }
     main { padding: 18px; }
@@ -142,8 +142,10 @@ export async function buildReviewPage({ labRoot, outputDirectory }) {
     .markdown a { color: #7dd3fc; }
     .review { margin-top: 14px; }
     .review-grid { display: grid; grid-template-columns: repeat(4, minmax(150px, 1fr)); gap: 10px; }
-    label { display: grid; gap: 5px; font-weight: 600; }
-    textarea { box-sizing: border-box; width: 100%; min-height: 110px; margin-top: 10px; padding: 10px; border-radius: 6px; border: 1px solid #64748b; background: #0f172a; color: #e5e7eb; }
+    .review-grid div { display: grid; gap: 5px; padding: 10px; border-radius: 6px; background: #0f172a; }
+    .review-grid span { color: #cbd5e1; }
+    .review-comment { margin-top: 10px; padding: 10px; border-radius: 6px; background: #0f172a; }
+    .review-comment p { margin-bottom: 0; white-space: pre-wrap; }
     .hint { color: #94a3b8; font-size: 13px; }
     @media (max-width: 900px) {
       .materials, .review-grid, .flow-grid { grid-template-columns: 1fr; }
@@ -160,9 +162,6 @@ export async function buildReviewPage({ labRoot, outputDirectory }) {
       <select id="page"></select>
       <button id="next">下一页</button>
       <span id="position"></span>
-      <button id="export">导出评审 JSON</button>
-      <button id="import">导入评审 JSON</button>
-      <input id="import-file" type="file" accept="application/json" hidden>
     </div>
   </header>
   <main>
@@ -179,23 +178,18 @@ export async function buildReviewPage({ labRoot, outputDirectory }) {
       <article class="material"><h2>简体中文 (zh-CN)</h2><div class="markdown" id="zh"></div></article>
     </section>
     <section class="review">
-      <h2>逐页评审意见</h2>
-      <p class="hint">初始值是 Agent 初审，不代表人工已经完成 review。修改会自动保存在本浏览器。</p>
+      <h2>Agent 初审</h2>
+      <p class="hint">以下内容只读，不代表人工已经完成 review；维护者反馈直接在聊天中提出。</p>
       <div class="review-grid">
-        <label>结论<select id="verdict">
-          <option value="pending">待评审</option><option value="ok">OK</option><option value="issues">有问题</option>
-        </select></label>
-        <label>冗余重复<select id="redundancy">
-          <option value="unknown">待判断</option><option value="no">无</option><option value="yes">有</option>
-        </select></label>
-        <label>内容缺失<select id="missing">
-          <option value="unknown">待判断</option><option value="no">无</option><option value="yes">有</option>
-        </select></label>
-        <label>缺少应有提示<select id="missingPrompt">
-          <option value="unknown">待判断</option><option value="no">无</option><option value="yes">有</option>
-        </select></label>
+        <div><strong>结论</strong><span id="verdict"></span></div>
+        <div><strong>冗余重复</strong><span id="redundancy"></span></div>
+        <div><strong>内容缺失</strong><span id="missing"></span></div>
+        <div><strong>缺少应有提示</strong><span id="missingPrompt"></span></div>
       </div>
-      <textarea id="comment" aria-label="评审意见"></textarea>
+      <div class="review-comment">
+        <strong>初审意见</strong>
+        <p id="comment"></p>
+      </div>
     </section>
   </main>
   <script>
@@ -205,10 +199,7 @@ export async function buildReviewPage({ labRoot, outputDirectory }) {
       generatedAt: manifest.finishedAt,
       pages,
     })};
-    const storageKey = "silvermoon-whats-next-review:" + payload.sourceRevision;
-    let reviews = JSON.parse(localStorage.getItem(storageKey) || "{}");
     let index = 0;
-    const fields = ["verdict", "redundancy", "missing", "missingPrompt", "comment"];
     const byId = (id) => document.getElementById(id);
     const escapeHtml = (value) => String(value)
       .replaceAll("&", "&amp;")
@@ -223,17 +214,15 @@ export async function buildReviewPage({ labRoot, outputDirectory }) {
         + page.flow.check + " — " + page.scenario;
       pageSelect.append(option);
     });
-    function reviewFor(page) {
-      return { ...page.initialReview, ...(reviews[page.scenario] || {}) };
-    }
-    function save() {
-      const page = payload.pages[index];
-      reviews[page.scenario] = Object.fromEntries(fields.map((field) => [field, byId(field).value]));
-      localStorage.setItem(storageKey, JSON.stringify(reviews));
-    }
+    const reviewLabels = {
+      verdict: { pending: "待评审", ok: "OK", issues: "有问题" },
+      redundancy: { unknown: "待判断", no: "无", yes: "有" },
+      missing: { unknown: "待判断", no: "无", yes: "有" },
+      missingPrompt: { unknown: "待判断", no: "无", yes: "有" },
+    };
     function render() {
       const page = payload.pages[index];
-      const review = reviewFor(page);
+      const review = page.initialReview;
       pageSelect.value = String(index);
       byId("position").textContent = (index + 1) + " / " + payload.pages.length;
       byId("previous").disabled = index === 0;
@@ -259,38 +248,14 @@ export async function buildReviewPage({ labRoot, outputDirectory }) {
       ).join("");
       byId("en").innerHTML = page.renderedReports["en-US"];
       byId("zh").innerHTML = page.renderedReports["zh-CN"];
-      fields.forEach((field) => byId(field).value = review[field] ?? "");
+      Object.entries(reviewLabels).forEach(([field, labels]) => {
+        byId(field).textContent = labels[review[field]] ?? review[field] ?? "";
+      });
+      byId("comment").textContent = review.comment || "（无）";
     }
-    fields.forEach((field) => byId(field).addEventListener("input", save));
-    byId("previous").addEventListener("click", () => { save(); index--; render(); });
-    byId("next").addEventListener("click", () => { save(); index++; render(); });
-    pageSelect.addEventListener("change", () => { save(); index = Number(pageSelect.value); render(); });
-    byId("export").addEventListener("click", () => {
-      save();
-      const blob = new Blob([JSON.stringify({
-        sourceRevision: payload.sourceRevision,
-        exportedAt: new Date().toISOString(),
-        reviews: payload.pages.map((page) => ({ scenario: page.scenario, ...reviewFor(page) })),
-      }, null, 2) + "\\n"], { type: "application/json" });
-      const link = document.createElement("a");
-      link.href = URL.createObjectURL(blob);
-      link.download = "whats-next-reviews-" + payload.sourceRevision.slice(0, 12) + ".json";
-      link.click();
-      URL.revokeObjectURL(link.href);
-    });
-    byId("import").addEventListener("click", () => byId("import-file").click());
-    byId("import-file").addEventListener("change", async (event) => {
-      const file = event.target.files[0];
-      if (!file) return;
-      const imported = JSON.parse(await file.text());
-      if (imported.sourceRevision !== payload.sourceRevision || !Array.isArray(imported.reviews)) {
-        alert("评审文件的 source revision 或格式不匹配。");
-        return;
-      }
-      reviews = Object.fromEntries(imported.reviews.map((review) => [review.scenario, review]));
-      localStorage.setItem(storageKey, JSON.stringify(reviews));
-      render();
-    });
+    byId("previous").addEventListener("click", () => { index--; render(); });
+    byId("next").addEventListener("click", () => { index++; render(); });
+    pageSelect.addEventListener("change", () => { index = Number(pageSelect.value); render(); });
     render();
   </script>
 </body>

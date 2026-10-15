@@ -1,16 +1,17 @@
 ---
-title: "repository"
-description: "Resolve repository and probe again."
-instruction: "Preserve unknown work and use the current Problem parameters before applying recovery."
+title: "Repository is not ready for safe work"
+description: "The repository does not yet satisfy the Git state required to advance repository or Idea work safely; the observed condition below identifies the blocker."
+instruction: "The goal is to reach a clean, attached local branch whose upstream matches the configured primary without losing unknown work. Use the observed condition to choose among preserving or classifying changes, switching or creating a branch, and configuring its remote/upstream. Verify the resulting repository state before continuing."
 ---
 
 ## Problem guidance
 
-**repository** means the related Objective condition did not hold in this probe.
-Inspect the returned parameters and current repository facts, preserve unknown work,
-perform the applicable recovery, and probe again.
+The repository is not yet in a Git state from which Silvermoon can safely
+advance repository or Idea work. The Problem fact supplies the specific
+observed blocker, including affected paths or branch identity when relevant.
 
-This page is the stable knowledge entry. Dynamic paths, revisions, diagnostics,
-and recovery targets come from the current check result.
+Preserve unknown work first. The desired state is a clean, attached local
+branch tracking the configured primary; the appropriate method depends on the
+reported blocker.
 
 For the stable scope boundary, read [[system/overview|the Project Objective overview]].

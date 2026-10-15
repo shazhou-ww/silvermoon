@@ -7,9 +7,11 @@
 /** @pure */
 const worktreeChangesStep = () =>
   [
-    `Inspect all staged, unstaged, and untracked paths and their changes,`,
-    `not just the samples above.`,
-    `Preserve unknown work, then commit, isolate, or explicitly discard each change.`,
+    `The goal is a clean worktree in which every existing change has an`,
+    `intentional disposition and unknown work is preserved.`,
+    `Inspect all staged, unstaged, and untracked paths, not only the samples above;`,
+    `possible outcomes for each change include committing it, isolating it for later,`,
+    `or discarding it only with explicit authorization.`,
   ].join(" ");
 
 export default worktreeChangesStep;

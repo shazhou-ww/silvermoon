@@ -99,7 +99,7 @@ export interface LifecyclePreparingParameters extends LifecycleCurrentParameters
 export interface LifecyclePreparedParameters extends LifecycleSubmittedParameters {}
 
 export interface LifecycleImplementingParameters extends LifecycleCurrentParameters {
-  idealPath: string;
+  idealDocumentPath: string;
   worldPath: string;
 }
 

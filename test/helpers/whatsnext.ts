@@ -4,7 +4,9 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { afterEach as nodeAfterEach } from "node:test";
+import { fileURLToPath } from "node:url";
 
+import { whatsNext as runWhatsNext } from "../../src/business/whats-next.ts";
 import {
   createRepository,
   git,
@@ -16,6 +18,20 @@ type RepositoryFixture = Awaited<ReturnType<typeof createRepository>>;
 type ResponseReport = {
   response: { nextSteps?: Array<{ text: string }> };
 };
+
+export const TEST_HOST_RUNTIME_ENTRY = fileURLToPath(new URL(
+  "../../node_modules/silvermoon/dist/bin/silvermoon.js",
+  import.meta.url,
+));
+
+export function whatsNext(
+  options: Parameters<typeof runWhatsNext>[0] = {},
+) {
+  return runWhatsNext({
+    ...options,
+    entryPath: options.entryPath ?? TEST_HOST_RUNTIME_ENTRY,
+  });
+}
 
 export function createWhatsNextTestHelpers(afterEach: typeof nodeAfterEach) {
   const temporaryDirectories: string[] = [];

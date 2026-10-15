@@ -1,20 +1,21 @@
 # Whats-next check 与 problem 状态图
 
-本图按三个 bundled objective manifest 的 level/check 顺序定义主链。一个 check 通过
-时只有一个出口，前进到下一个 check；失败时按完整 Problem 集和报告阶段分支。采集
-失败语料后修复状态并回到该 check，再沿唯一通过边继续。不可逆状态从最近可复用
-checkpoint 派生场景。
+本图按三个 bundled objective manifest 的 prerequisite 与 level/check 顺序定义单一
+主链。阻塞 check 通过时只有一个出口，前进到下一个 check；失败时由该 prerequisite
+保留当前 owner，并按完整 Problem 集和报告阶段分支。采集失败语料后修复状态并回到
+该 check，再沿唯一通过边继续。不可逆状态从最近可复用 checkpoint 派生场景。
 
 ## 主链
 
 ```text
-Device (advisory):
+Device (Project prerequisite through update-unconfirmed):
 device-config-valid
   -> device-runtime-linked
   -> device-skill-discoverable
-  -> device-update-current
+  -> update-unconfirmed
+       -> device-update-current (observed, non-blocking for Project/Idea)
 
-Project (Idea prerequisite):
+Project (after Device reaches update-unconfirmed; Idea prerequisite):
 project-config-valid
   -> project-user-config-valid
   -> project-layout-valid
@@ -40,9 +41,13 @@ idea-metadata-valid
   -> idea-outer-accepted
 ```
 
-Device 是 advisory，不阻断 Project/Idea；Project 是 Idea objective 的 prerequisite。
-未提供 selector 或 selector 不存在时，执行 navigation 补充场景，不进入 Idea 主链。
-每个 manifest level 内严格按表中 check 顺序执行，首个失败即停止该次 probe。
+Project 要求 Device 先到达 `update-unconfirmed`，因此 device configuration、runtime
+或 skill 失败时，Device 是整条 Objective 链的唯一当前 owner，Project/Idea 不再同时
+给出行动。`device-update-current` 仍会被观测；其失败不阻断 Project/Idea，但显式
+Device target 仍需通过它才能到达 terminal。Project 是 Idea Objective 的
+prerequisite。未提供 selector 或 selector 不存在时，执行 navigation 补充场景，不
+进入 Idea 主链。每个 manifest level 内严格按表中 check 顺序执行，首个阻塞失败即
+停止该次 probe。
 
 ## 失败边与报告阶段
 

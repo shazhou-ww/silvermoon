@@ -213,18 +213,20 @@ Every probe samples again. Observations and probe workspaces are not persistent
 state or authorization.
 
 Silvermoon's `whats-next` adapter projects this position without flattening
-prerequisite ownership. Its fixed **Current position** section identifies the
-requested target, owning Objective, level, failing check, and every ordered
-Problem with complete parameters. **Downward guidance** points to the matching
-level, check, and Problem Reference pages, embeds their localized
-description/content plus optional level outcome or Problem instruction, and
-provides copyable `silvermoon reference page` commands for further detail.
-Internal Reference links become those commands before display. The report
-treats this content as inert Markdown data: it does not execute or interpolate
-it, and it never substitutes it for dynamic Problem parameters. Paths,
-revisions, branches, and recovery commands remain facts from the current
-invocation. Terminal positions keep the same shell and have no required
-actions while still displaying terminal Reference guidance.
+prerequisite ownership. The Markdown title names the requested target
+Objective, and **Current status** states how it relates to the current owner.
+**Problems** lists every ordered Problem with a short localized description
+and labeled dynamic facts. Raw target/owner, level/check, Problem IDs, and
+parameter objects remain in the structured response instead of appearing as
+unexplained Markdown fields. **Next action** materializes the current
+instruction and recheck command once. **References** then exposes compact,
+copyable `silvermoon reference page` commands for the matching level, check,
+and Problem pages instead of embedding their full localized content. The
+structured response still retains each Reference projection for programmatic
+consumers. Reference knowledge never substitutes for dynamic Problem
+parameters. Paths, revisions, branches, and recovery commands remain facts
+from the current invocation. Terminal positions render only **Outcome** and
+**References**.
 
 ## Loading
 

@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, rename, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 import {
   ProjectRuntime,
@@ -16,6 +16,32 @@ import { createRepository, FIRST_ID, git, PRIMARY_REPOSITORY } from "../helpers/
 
 const ROUTE = { projectUrl: "https://github.com/example/project.git", ideaId: "01M3SK3CGZF47A36D2GWN8BFPC" };
 const sourceRoot = fileURLToPath(new URL("../..", import.meta.url));
+
+async function createHostRuntimeEntry(base: string) {
+  const directory = join(
+    base,
+    "host",
+    "node_modules",
+    "silvermoon",
+    "dist",
+    "bin",
+  );
+  const entry = join(directory, "silvermoon.js");
+  const sourceEntry = pathToFileURL(join(sourceRoot, "bin", "silvermoon.ts")).href;
+  await mkdir(directory, { recursive: true });
+  await writeFile(
+    entry,
+    [
+      'import { fileURLToPath } from "node:url";',
+      `import { runCli } from ${JSON.stringify(sourceEntry)};`,
+      "process.exitCode = await runCli(process.argv.slice(2), console, {",
+      "  entryPath: fileURLToPath(import.meta.url),",
+      "});",
+      "",
+    ].join("\n"),
+  );
+  return entry;
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -183,7 +209,10 @@ test("real project CLI preserves exact interaction state across child processes"
   const registry = new LocalProjectRegistry({ root: join(base, "registry") });
   await registry.register(PRIMARY_REPOSITORY, root);
   const route = { projectUrl: PRIMARY_REPOSITORY, ideaId: FIRST_ID };
-  const runtime = new ProjectRuntime({ registry });
+  const runtime = new ProjectRuntime({
+    entryPath: await createHostRuntimeEntry(base),
+    registry,
+  });
   const selected = await runtime.next(route);
   assert.equal(selected.exitCode, 0);
   assert.equal(selected.report.observation.state, "idea-selected");
@@ -225,7 +254,10 @@ test("the project CLI requests v1 migration without inventing event support", as
   const registry = new LocalProjectRegistry({ root: join(base, "registry") });
   await registry.register(PRIMARY_REPOSITORY, root);
   const route = { projectUrl: PRIMARY_REPOSITORY, ideaId: FIRST_ID };
-  const runtime = new ProjectRuntime({ registry });
+  const runtime = new ProjectRuntime({
+    entryPath: await createHostRuntimeEntry(base),
+    registry,
+  });
   const selected = await runtime.next(route);
   assert.equal(selected.exitCode, 0);
   assert.equal(selected.report.observation.state, "project-setup-required");

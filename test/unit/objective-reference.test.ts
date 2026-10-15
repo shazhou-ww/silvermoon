@@ -32,10 +32,13 @@ test("exposes typed static guidance metadata from Reference frontmatter", async 
     "problems/repository",
     "en-US",
   );
-  assert.equal(english.page.description, "Resolve repository and probe again.");
-  assert.equal(
-    english.page.instruction,
-    "Preserve unknown work and use the current Problem parameters before applying recovery.",
+  assert.match(
+    english.page.description ?? "",
+    /repository does not yet satisfy the Git state required to advance repository or Idea work safely/,
+  );
+  assert.match(
+    english.page.instruction ?? "",
+    /goal is to reach a clean, attached local branch.+without losing unknown work/,
   );
   assert.match(english.page.content, /## Problem guidance/);
 
@@ -44,10 +47,13 @@ test("exposes typed static guidance metadata from Reference frontmatter", async 
     "problems/repository",
     "zh-CN",
   );
-  assert.equal(chinese.page.description, "处理 repository 并重新观测。");
-  assert.equal(
-    chinese.page.instruction,
-    "先保留未知工作，并依据当前 Problem parameters 选择恢复动作。",
+  assert.match(
+    chinese.page.description ?? "",
+    /repository 尚未满足安全推进 repository 或 Idea 工作所需的 Git 状态/,
+  );
+  assert.match(
+    chinese.page.instruction ?? "",
+    /目标是在不丢失未知工作的前提下.+upstream 与配置 primary 一致/,
   );
   assert.match(chinese.page.content, /## 问题说明/);
 });

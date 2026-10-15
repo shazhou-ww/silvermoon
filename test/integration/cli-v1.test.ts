@@ -10,6 +10,7 @@ import { Ajv2020 } from "ajv/dist/2020.js";
 import { runCli } from "../../bin/silvermoon.ts";
 import { ideaPaths } from "../../src/foundation/coordinates/index.ts";
 import { createRepository, FIRST_ID, git } from "../helpers/repository.ts";
+import { TEST_HOST_RUNTIME_ENTRY } from "../helpers/whatsnext.ts";
 
 const repositoryRoot = fileURLToPath(new URL("../..", import.meta.url));
 
@@ -132,6 +133,7 @@ test("writes schema-valid domain and telemetry events without changing the repor
         error: () => {},
         log: captureString(baselineLogs),
       },
+      { entryPath: TEST_HOST_RUNTIME_ENTRY },
     );
     assert.equal(baselineResult, 0);
 
@@ -153,6 +155,7 @@ test("writes schema-valid domain and telemetry events without changing the repor
         error: (value) => errors.push(value),
         log: captureString(logs),
       },
+      { entryPath: TEST_HOST_RUNTIME_ENTRY },
     );
 
     assert.equal(result, 0);
