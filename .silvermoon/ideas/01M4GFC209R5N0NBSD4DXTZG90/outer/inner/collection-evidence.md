@@ -195,3 +195,26 @@ source checkout 给出可复制的
 `npm install --global silvermoon` 安装命令。浏览器验证 `review.html` 只有一个
 scenario tab，双语 target 标题、runtime 路径事实、setup 命令和只读初审状态均已
 加载。该场景保持 `pending`，等待人工复审；本次重跑未记录 `submitInner`。
+
+## 2026-10-15 Reference 驱动的 runtime 动作聚焦重跑
+
+- Source revision: `eb35a5f42ae6415168e64f38926e99a56a0f0110`
+- Source dirty: `false`
+- Runtime: 当前隔离 checkout 构建并通过 `pnpm setup:dev` 链接的全局
+  `silvermoon 0.5.0`
+- Environment: `node:24-trixie-slim`，隔离 HOME、synthetic local primary 和工作副本
+- Command:
+  `scenario-lab/run.ps1 -Scenario device-runtime-not-discoverable`
+- Dependency bootstrap: frozen lockfile；
+  `SCENARIO_NPM_REGISTRY=https://mirrors.tencent.com/npm/`
+- Result: 1 个场景、2 份 `en-US`/`zh-CN` 报告，全部 exit code 0
+- Corpus: idea-local ignored
+  `scenario-lab/corpus/2026-10-15T06-47-31.454Z/`
+
+`device-runtime` 保持一个 Problem。其 Reference page 的 `description` 说明 PATH
+问题，`instruction` 同时给出两条判断规则：facts 标记 source checkout 时在显示的
+checkout 路径运行 `pnpm setup:dev`，其他情况运行
+`npm install --global silvermoon`。业务 adapter 不再覆盖该 instruction，只统一追加
+重试命令；具体分支由 Agent 根据同一 Problem 的 runtime 路径、来源和版本 facts
+选择。双语输出与同一 Reference page 一致，场景继续保持 `pending`，等待人工复审；
+本次重跑未记录 `submitInner`。
