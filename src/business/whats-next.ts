@@ -116,27 +116,9 @@ async function objectiveProjection(
 function firstObjectiveInstruction(
   objective: ObjectiveProjection,
   fallback: string,
-  language: string,
 ) {
   const problem = objective.problems[0];
   if (problem === undefined) return fallback;
-  if (problem.id === "device-runtime") {
-    const source = problem.parameters.source;
-    const checkoutPath = problem.parameters.checkoutPath;
-    if (source === "source-checkout" && typeof checkoutPath === "string") {
-      const command = `pnpm --dir "${checkoutPath.replaceAll('"', '\\"')}" setup:dev`;
-      return localize(
-        language,
-        `Link this source checkout as the device runtime with \`${command}\`, then ensure the global npm bin directory is on \`PATH\`.`,
-        `运行 \`${command}\`，将这个 source checkout 链接为设备级 runtime，然后确保 npm global bin 目录已加入 \`PATH\`。`,
-      );
-    }
-    return localize(
-      language,
-      "Install the device runtime with `npm install --global silvermoon`, then ensure the global npm bin directory is on `PATH`.",
-      "运行 `npm install --global silvermoon` 安装设备级 runtime，然后确保 npm global bin 目录已加入 `PATH`。",
-    );
-  }
   const reference = objective.references.find(
     ({ id, kind }) => kind === "problem" && id === `problems/${problem.id}`,
   );
@@ -733,7 +715,6 @@ export async function whatsNextUseCase({
         firstObjectiveInstruction(
           projectedObjective,
           problems[0]?.summary ?? objective.gapSummary,
-          outputLanguage,
         ),
         recheckCommand,
       ],
@@ -766,7 +747,6 @@ export async function whatsNextUseCase({
           firstObjectiveInstruction(
             projectedObjective,
             problems[0]?.summary ?? objective.gapSummary,
-            guideLanguage,
           ),
           recheckCommand,
         ],

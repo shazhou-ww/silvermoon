@@ -6,7 +6,7 @@
       "redundancy": "unknown",
       "missing": "unknown",
       "missingPrompt": "unknown",
-      "comment": "标题按用户请求的 target 显示“Idea 推进 / Idea progress”，现状再说明 Device prerequisite。问题把实际 runtime 入口路径、source checkout 和版本合并为一个事实；下一步给出该 checkout 的 pnpm --dir ... setup:dev 命令，并要求确认 npm global bin 在 PATH 中。等待人工复审。"
+      "comment": "标题按用户请求的 target 显示“Idea 推进 / Idea progress”，现状再说明 Device prerequisite。device-runtime 保持单一 Problem，facts 给出实际 runtime 入口、source checkout、版本和 checkout 路径；下一步动作直接来自同一 Reference instruction，同时说明 source checkout 使用 pnpm setup:dev、其他情况使用 npm install --global silvermoon，由 Agent 根据 facts 选择。等待人工复审。"
     },
     {
       "scenario": "device-skill-not-discoverable",

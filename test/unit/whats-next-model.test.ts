@@ -216,9 +216,13 @@ test("selected Idea stops at its Device prerequisite with one current direction"
       checkoutPath: "D:\\checkout",
     },
   }]);
+  const problemReference = report.response.objective.references.find(
+    ({ id }) => id === "problems/device-runtime",
+  );
+  assert.equal(report.response.nextSteps[0]?.text, problemReference?.instruction);
   assert.match(
-    report.response.nextSteps.map(({ text }) => text).join("\n"),
-    /pnpm --dir "D:\\checkout" setup:dev.+PATH/,
+    report.response.nextSteps[0]?.text ?? "",
+    /source checkout.+pnpm setup:dev.+otherwise.+npm install --global silvermoon.+PATH/,
   );
   assert.doesNotMatch(
     report.response.nextSteps.map(({ text }) => text).join("\n"),
@@ -247,9 +251,17 @@ test("a non-source runtime failure uses the global install command", async () =>
 
   assert.equal(report.response.kind, "objective");
   if (report.response.kind !== "objective") assert.fail("Expected Objective response.");
+  assert.equal(
+    report.response.objective.problems[0]?.id,
+    "device-runtime",
+  );
+  const problemReference = report.response.objective.references.find(
+    ({ id }) => id === "problems/device-runtime",
+  );
   const instructions = report.response.nextSteps.map(({ text }) => text).join("\n");
+  assert.equal(report.response.nextSteps[0]?.text, problemReference?.instruction);
   assert.match(instructions, /npm install --global silvermoon/);
-  assert.doesNotMatch(instructions, /pnpm .*setup:dev/);
+  assert.match(instructions, /pnpm setup:dev/);
 });
 
 test("concurrent command instances do not share snapshot or lifecycle state", async () => {

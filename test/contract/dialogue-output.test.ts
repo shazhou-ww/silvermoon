@@ -134,16 +134,22 @@ test("renders a source checkout as one current runtime fact", () => {
       references: [{
         kind: "problem",
         id: "problems/device-runtime",
-        title: "device-runtime",
-        description: "当前 Silvermoon runtime 无法通过 PATH 中的设备级 silvermoon 可执行文件运行。",
-        command: "silvermoon reference page device problems/device-runtime --language zh-CN",
+        title: "`PATH` 中的设备级 runtime 不可用",
+        description:
+          "当前 Silvermoon runtime 未通过 `PATH` 中可发现的设备级 `silvermoon` 可执行文件运行。",
+        command:
+          "silvermoon reference page device problems/device-runtime --language zh-CN",
         content: "Details.",
       }],
     },
-    problems: [{ type: "device-runtime", summary: "Device runtime is blocked." }],
+    problems: [{
+      type: "device-runtime",
+      summary: "Device runtime is blocked.",
+    }],
     nextSteps: [{
       type: "instruction",
-      text: "运行 `pnpm --dir \"D:\\Code\\silvermoon\" setup:dev`。",
+      text:
+        "如果当前 runtime 标记为 source checkout，在上方显示的 Source checkout 路径运行 `pnpm setup:dev`；其他情况运行 `npm install --global silvermoon`。",
     }],
   });
 
@@ -152,6 +158,7 @@ test("renders a source checkout as one current runtime fact", () => {
     rendered,
     /当前 runtime: `D:\\Code\\silvermoon\\dist\\bin\\silvermoon\.js`（source checkout），版本 `0\.5\.0`/,
   );
+  assert.match(rendered, /Source checkout 路径: `D:\\Code\\silvermoon`/);
   assert.doesNotMatch(
     rendered,
     /观测到的运行时来源|观测到的运行时版本|checkoutPath/,

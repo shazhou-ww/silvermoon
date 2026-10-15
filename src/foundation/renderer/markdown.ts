@@ -165,11 +165,22 @@ function problemFacts(
           `，版本 ${codeSpan(version)}`,
         )
         : "";
-      return [
+      const facts = [
         `   - ${localize(language, "Current runtime", "当前 runtime")}: ${
           codeSpan(runtimePath)
         }${sourceSuffix}${versionSuffix}`,
       ];
+      const checkoutPath = problem.parameters.checkoutPath;
+      if (
+        source === "source-checkout" && typeof checkoutPath === "string"
+      ) {
+        facts.push(
+          `   - ${localize(language, "Source checkout", "Source checkout 路径")}: ${
+            codeSpan(checkoutPath)
+          }`,
+        );
+      }
+      return facts;
     }
   }
   return Object.entries(problem.parameters).map(([key, value]) =>
