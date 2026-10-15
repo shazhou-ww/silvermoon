@@ -755,12 +755,14 @@ The query validates Git presence, configuration, and the complete idea layout
 before filtering. It reads staged, unstaged, and
 untracked idea changes from the current worktree snapshot but never checks
 worktree hygiene, branch, upstream, or primary ancestry, and never fetches or
-accesses the project remote. Its independent device advisory may query the
-installed runtime's npm channel only when the successful device cache is at
-least 24 hours old. Stable versions follow `latest`; named prereleases follow
-their named dist-tag, including `canary`. Text
-and TUI output omit that advisory when every observed device state is healthy
-and non-actionable; structured reports retain the device facts.
+accesses the project remote. It does not query npm during ordinary device
+readiness. If schema inspection finds a version newer than the running runtime
+can read, Silvermoon queries the installed version's npm channel through the
+active npm configuration. Stable versions follow `latest`; named prereleases
+follow their named dist-tag, including `canary`, and successful results remain
+cacheable for less than 24 hours. Text and TUI output omit the device advisory
+when every observed state is healthy and non-actionable; structured reports
+retain the device facts.
 `list-ideas --language <en|en-US|zh|zh-CN>` overrides only Silvermoon-owned
 output for that invocation; without it, the project's resolved output
 language is used.

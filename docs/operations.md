@@ -47,15 +47,17 @@ work. Runtime and personal skill health belong to device readiness, never the
 project snapshot. `whats-next` never edits, checks out, merges, commits,
 stashes, deletes, resets, fast-forwards, or pushes.
 
-Dialogue reports observe runtime source/version, personal skill health, and
-latest-runtime status independently from project readiness. Structured reports
-retain those facts; text and TUI output render the non-blocking device advisory
-only when a device state needs attention. Global installations reuse a
-successful result from the installed version's npm channel for less than 24
-hours; stable versions follow `latest`, canaries follow `canary`, and direct
-source invocations and embedding hosts do not perform that registry query. A direct source
-invocation is reported as device setup debt: link the checkout globally and
-rerun through `silvermoon`.
+Dialogue reports observe runtime source/version and personal skill health
+independently from project readiness. Routine observations mark runtime
+freshness as not required and do not invoke npm. When project inspection finds
+a schema newer than the running runtime can read, a global installation queries
+its installed npm channel and reuses a successful result for less than 24
+hours; stable versions follow `latest` and canaries follow `canary`. The query
+runs through npm, honoring active registry, proxy, certificate, and
+authentication settings from `.npmrc` and `NPM_CONFIG_*`. Direct source
+invocations and embedding hosts do not perform that registry query. A direct
+source invocation is reported as device setup debt: link the checkout globally
+and rerun through `silvermoon`.
 Registry or skill failures remain device diagnostics and do not replace
 project problems or lifecycle instructions.
 
@@ -75,11 +77,12 @@ schema edges. Plan the next project edge with
 `silvermoon migrate --root <project>` and apply only the exact reviewed digest.
 Ordinary navigation never migrates automatically.
 
-When project preparation encounters a future schema, it bypasses the 24-hour
-runtime freshness cache once for that observation. The report distinguishes a
-new runtime being available, the confirmed latest runtime still lacking the
-capability, and an unavailable registry. Snapshot-only `check` remains
-deterministic and performs no registry access.
+When project preparation encounters a future schema, it performs the otherwise
+skipped runtime check and bypasses the 24-hour freshness cache once for that
+observation. The report distinguishes a new runtime being available, the
+confirmed latest runtime still lacking the capability, and an unavailable
+configured registry. Snapshot-only `check` remains deterministic and performs
+no registry access.
 
 When a selector resolves to an actionable phase and synchronization is ready,
 Silvermoon returns only `.silvermoon/guidance/<phase>.md` from the confirmed Git
@@ -108,12 +111,12 @@ silvermoon list-ideas --sort oldest --limit 25 --json
 ```
 
 The command reads one valid local worktree snapshot. It checks the project
-configuration and complete idea layout, but deliberately
-does not check conflicts, cleanliness, current branch, upstream, primary
-ancestry, or primary network availability. The project query never fetches;
-the independent device advisory may refresh the installed npm channel when its cache is
-expired. Filters cannot hide an invalid idea; setup or layout failures return
-a `blocked` four-projection report and exit `1`.
+configuration and complete idea layout, but deliberately does not check
+conflicts, cleanliness, current branch, upstream, primary ancestry, or primary
+network availability. The project query never fetches and does not access npm
+unless schema inspection finds a version newer than the runtime can read.
+Filters cannot hide an invalid idea; setup or layout failures return a
+`blocked` four-projection report and exit `1`.
 
 The default state set is `preparing`, `implementing`, and `deploying`.
 Repeated `--state` values form a deduplicated union, `active` expands to those

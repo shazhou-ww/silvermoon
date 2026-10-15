@@ -502,7 +502,7 @@ export async function whatsNextUseCase({
     },
     "device-skill-discoverable": async () => ["ready", "managed-by-host"].includes(sampleDevice().readiness?.skill.status ?? "")
       ? passed : failed("device-skill", { status: sampleDevice().readiness?.skill.status ?? null }),
-    "device-update-current": async () => ["current", "managed-by-host"].includes(sampleDevice().readiness?.update.status ?? "")
+    "device-update-current": async () => ["current", "not-required", "managed-by-host"].includes(sampleDevice().readiness?.update.status ?? "")
       ? passed : failed("device-update", { status: sampleDevice().readiness?.update.status ?? null }),
     "project-config-valid": async () => {
       if (initialSample) initialSample = false;

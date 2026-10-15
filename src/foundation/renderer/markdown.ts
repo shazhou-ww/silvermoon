@@ -291,7 +291,7 @@ function renderDeviceAdvisory(
     || device.skill.summary !== undefined
     || (device.skill.invalidPaths?.length ?? 0) > 0;
   const updateNeedsAttention =
-    !["current", "managed-by-host"].includes(device.update.status)
+    !["current", "not-required", "managed-by-host"].includes(device.update.status)
     || (
       device.update.status === "current"
       && device.update.summary !== undefined
