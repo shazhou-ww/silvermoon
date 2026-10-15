@@ -538,6 +538,37 @@ test("v2 exact submission and acceptance occupy separate levels; stale submissio
   }
 });
 
+test("waived inner passage is projected distinctly and advances to deployment", async () => {
+  const selected = idea("deploying");
+  selected.gateModes = {
+    ideal: "explicit",
+    inner: "waived",
+    outer: "explicit",
+  };
+  selected.submissions = submissions(selected, "outer", "unsubmitted");
+  const { acceptedRevision: _acceptedRevision, ...inner } =
+    selected.submissions.inner;
+  selected.submissions.inner = {
+    ...inner,
+    state: "waived",
+    submittedRevision: selected.implementationRevision,
+    waivedRevision: selected.implementationRevision,
+  };
+  const context = harness(ready(selected));
+  const report = await whatsNextUseCase(context.options, context.ports);
+  assert.equal(context.observations.at(-1)?.position.level.id, "deployment-unsubmitted");
+  assert.equal(report.observation.state, "idea-selected");
+  if (report.observation.state !== "idea-selected") {
+    assert.fail("Expected selected idea observation.");
+  }
+  assert.equal(report.observation.selectedIdea.gateModes?.inner, "waived");
+  assert.equal(report.observation.selectedIdea.submissions?.inner.state, "waived");
+  assert.equal(
+    report.observation.selectedIdea.submissions?.inner.waivedRevision,
+    selected.implementationRevision,
+  );
+});
+
 test("v1 lifecycle remains compatible; completed is terminal and abandoned stops without becoming completed", async () => {
   for (const [state, level] of [
     ["preparing", "ideal-unsubmitted"], ["implementing", "implementation-unsubmitted"],

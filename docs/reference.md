@@ -164,8 +164,9 @@ numbers derived from one-based file order, and a 1 MiB limit per record includin
 LF. New records omit sequence and include a CLI-generated UTC RFC 3339 millisecond
 timestamp. Historical sequence fields and missing timestamps remain readable;
 present timestamps must be nondecreasing. Its strict
-twelve-event union updates accepted and submitted revision facts, interaction
-messages, and unified control; no observations, creation/import markers, or
+thirteen-event union updates gate policy, accepted and submitted revision
+facts, interaction messages, and unified control; no observations,
+creation/import markers, or
 audit envelope are stored. The nested-world revisions and five lifecycle
 states are unchanged.
 
@@ -219,17 +220,24 @@ and use the same `silvermoon migrate` command, which resolves back to the
 unpublished implementation. No navigation command automatically migrates a v1
 project.
 
-V2's ten business types are `setAlias`, `setLanguage`, `submitIdeal`,
+V2's eleven business types are `setAlias`, `setLanguage`, `setGateMode`, `submitIdeal`,
 `submitInner`, `submitOuter`, `acceptIdeal`, `acceptInner`, `acceptOuter`,
 `abandon`, and `resume`. The two interaction types, `ping` and `pong`, carry
 only a nonempty `message` string. Replay retains ordered messages and projects
 `control.owner` with its last transfer across messages, submissions,
-acceptances, and terminal events. Each phase's submitted revision is separate
-from its accepted revision. After `abandon`, only `resume` is legal.
+acceptances, gate passage, and terminal events. Each phase's submitted revision
+is separate from its accepted or waived revision. After `abandon`, only
+`resume` is legal.
 Interaction appends need the local byte precondition but no primary fetch;
 submissions need the exact current world on primary but no human confirmation;
 acceptances additionally require explicit confirmation and the same revision
-already submitted. The CLI cannot authenticate upstream or downstream senders.
+already submitted. Every level defaults to `explicit`; `setGateMode` requires
+explicit upstream confirmation in a nonterminal phase. The current runtime
+accepts `waived` only for `inner`. An exact inner submission under that mode,
+or a late waiver of that submitted revision, advances without `acceptInner`
+while retaining distinct waived evidence. Restoring `explicit` does not revoke
+an already passed revision, and changed world content makes old passage
+evidence stale. The CLI cannot authenticate upstream or downstream senders.
 
 ## Experimental JavaScript Package API
 

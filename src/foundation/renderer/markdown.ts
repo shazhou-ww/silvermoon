@@ -539,6 +539,14 @@ function renderIdeaCoordination(idea: IdeaReference, language: string) {
       `- ${localize(language, "Last transfer", "最近交接")}: ${codeSpan(transfer)}`,
     );
   }
+  if (idea.gateModes !== undefined) {
+    lines.push(
+      `- ${localize(language, "Gate modes", "门禁模式")}: `
+      + `ideal=${codeSpan(idea.gateModes.ideal)}, `
+      + `inner=${codeSpan(idea.gateModes.inner)}, `
+      + `outer=${codeSpan(idea.gateModes.outer)}`,
+    );
+  }
   if (idea.submissions !== undefined) {
     const submissions = [
       idea.submissions.ideal,

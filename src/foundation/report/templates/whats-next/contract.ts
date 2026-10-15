@@ -80,7 +80,7 @@ interface LifecycleCurrentParameters {
   ledgerPath: string;
   name: string;
   primaryCommit: string;
-  submissionState: "unsubmitted" | "accepted" | "stale" | null;
+  submissionState: "unsubmitted" | "accepted" | "waived" | "stale" | null;
   submitAction: string;
 }
 

@@ -119,6 +119,13 @@ export interface IdeaReference {
   control?: IdeaControlProjection;
   submissions?: IdeaSubmissionsProjection;
   eventDigest?: string;
+  gateModes?: GateModesProjection;
+}
+
+export interface GateModesProjection {
+  ideal: "explicit";
+  inner: "explicit" | "waived";
+  outer: "explicit";
 }
 
 export interface IdeaControlProjection {
@@ -129,7 +136,7 @@ export interface IdeaControlProjection {
       | "ping" | "pong"
       | "submitIdeal" | "submitInner" | "submitOuter"
       | "acceptIdeal" | "acceptInner" | "acceptOuter"
-      | "abandon" | "resume";
+      | "setGateMode" | "abandon" | "resume";
   } | null;
 }
 
@@ -137,13 +144,14 @@ export interface PhaseSubmissionProjection {
   phase: "ideal" | "inner" | "outer";
   submit: "submitIdeal" | "submitInner" | "submitOuter";
   decision: "acceptIdeal" | "acceptInner" | "acceptOuter";
-  state: "unsubmitted" | "submitted" | "accepted" | "stale";
+  state: "unsubmitted" | "submitted" | "accepted" | "waived" | "stale";
   revision: {
     field: "idealRevision" | "implementationRevision" | "deploymentRevision";
     value: string;
   };
   submittedRevision?: string;
   acceptedRevision?: string;
+  waivedRevision?: string;
 }
 
 export interface IdeaSubmissionsProjection {
