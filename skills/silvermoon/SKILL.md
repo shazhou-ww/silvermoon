@@ -84,12 +84,15 @@ and layout only. They do not read `package.json`, `node_modules`, or repository
 skill paths.
 
 Treat `response.device` as a non-blocking execution-environment advisory, not a
-project finding. Surface an available global-runtime update and repair missing,
-broken, or stale personal skill links at the device or Agent host. Successful
-observations of the installed version's npm channel may be reused for less
-than 24 hours; stable versions follow `latest`, canaries follow `canary`, and registry
-failure never makes a valid project snapshot fail. Snapshot-only `check`
-commands intentionally omit device readiness.
+project finding. Repair missing, broken, or stale personal skill links at the
+device or Agent host. Routine observations do not query npm and report that a
+runtime update check was not required. When a future project schema requires a
+freshness check, surface an available global-runtime update; successful channel
+observations may be reused for less than 24 hours. Stable versions follow
+`latest`, canaries follow `canary`, and the query honors the active npm
+registry configuration. Registry failure never makes an otherwise valid
+project snapshot fail. Snapshot-only `check` commands intentionally omit device
+readiness.
 
 Read `observation.schemas` as two independent axes. `validity` says whether
 the running runtime can validate the file; `readiness` says whether the file
@@ -98,7 +101,7 @@ snapshot `check` and remain readable through `list-ideas`, while
 `whats-next` and write preparation require its declared migration first.
 Never edit or guess a future schema. Project preparation forces one
 latest-runtime refresh and reports whether an update exists, the confirmed
-latest still lacks support, or registry freshness is unavailable.
+latest still lacks support, or configured-registry freshness is unavailable.
 
 When preparation reports `migration-required`, use the exact migration path
 declared in `observation.schemas`; do not edit only a version field. With an

@@ -93,6 +93,7 @@ export interface DeviceAdvisory {
       | "available"
       | "current"
       | "unavailable"
+      | "not-required"
       | "managed-by-host"
       | "source-checkout";
     currentVersion: string | null;

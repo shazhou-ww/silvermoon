@@ -21,6 +21,7 @@ import {
   inspectRuntimeUpdate,
   resolveRuntimeUpdateChannel,
 } from "../../src/foundation/installation/index.ts";
+import { npmRegistryLatest } from "../../src/foundation/installation/device-readiness.ts";
 import { observeDevice } from "../../src/business/shared/observe-device.ts";
 
 test("compares stable and prerelease semantic versions", () => {
@@ -36,6 +37,86 @@ test("compares stable and prerelease semantic versions", () => {
     "canary",
   );
   assert.equal(resolveRuntimeUpdateChannel("0.5.0-1"), null);
+});
+
+test("queries through npm so active registry configuration is respected", async () => {
+  const env = {
+    NPM_CONFIG_REGISTRY: "https://registry.corp.example/",
+    NPM_CONFIG_PROXY: "http://proxy.corp.example/",
+  };
+  const cwd = "C:\\work\\project";
+  const version = await npmRegistryLatest("latest", {
+    cwd,
+    env,
+    execPath: "C:\\Program Files\\nodejs\\node.exe",
+    execute: async (command, args, options) => {
+      assert.equal(command, "npm");
+      assert.deepEqual(args, [
+        "view",
+        "silvermoon@latest",
+        "version",
+        "--json",
+      ]);
+      assert.equal(options.cwd, cwd);
+      assert.equal(options.env, env);
+      assert.equal(options.timeout, 5000);
+      return { stdout: "\"0.5.1\"\n", stderr: "" };
+    },
+    platform: "linux",
+  });
+  assert.equal(version, "0.5.1");
+});
+
+test("only checks the runtime channel when a future schema requests a refresh", async () => {
+  const home = await mkdtemp(join(tmpdir(), "silvermoon-runtime-on-demand-"));
+  const globalBin = join(home, "global");
+  let entryPath: string;
+  try {
+    if (process.platform === "win32") {
+      entryPath = join(
+        globalBin,
+        "node_modules",
+        "silvermoon",
+        "dist",
+        "bin",
+        "silvermoon.js",
+      );
+      await mkdir(dirname(entryPath), { recursive: true });
+      await writeFile(entryPath, "");
+      await writeFile(
+        join(globalBin, "silvermoon.cmd"),
+        '@"%dp0%\\node_modules\\silvermoon\\dist\\bin\\silvermoon.js" %*\n',
+      );
+    } else {
+      entryPath = join(globalBin, "silvermoon");
+      await mkdir(globalBin, { recursive: true });
+      await writeFile(entryPath, "");
+    }
+    let requests = 0;
+    const requestLatest = async () => {
+      requests += 1;
+      return "0.5.1";
+    };
+    const options = {
+      entryPath,
+      env: { ...process.env, PATH: globalBin },
+      requestLatest,
+      userHome: home,
+    };
+
+    const ordinary = await observeDevice(options);
+    assert.equal(ordinary.readiness?.update.status, "not-required");
+    assert.equal(requests, 0);
+
+    const futureSchema = await observeDevice({
+      ...options,
+      forceRuntimeRefresh: true,
+    });
+    assert.equal(futureSchema.readiness?.update.status, "available");
+    assert.equal(requests, 1);
+  } finally {
+    await rm(home, { recursive: true, force: true });
+  }
 });
 
 test("follows the installed prerelease channel without reusing another channel cache", async () => {

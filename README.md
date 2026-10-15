@@ -82,11 +82,13 @@ silvermoon reference search idea submission --language en-US
 ```
 
 > **Note:** Install and update one global Silvermoon runtime for the device or
-> Agent host. Dialogue commands retain cached latest-runtime and personal-skill
-> health in structured reports, but text and TUI output show a device advisory
-> only when it needs attention. Target repositories do not pin Silvermoon or
-> store its skill. Since `0.4.0`, project compatibility is determined by the
-> runtime-owned per-file schema capability and migration graph.
+> Agent host. Dialogue commands retain personal-skill health in structured
+> reports, but text and TUI output show a device advisory only when it needs
+> attention. Silvermoon queries the installed npm channel only after finding a
+> project schema newer than the running runtime supports. Target repositories
+> do not pin Silvermoon or store its skill. Since `0.4.0`, project compatibility
+> is determined by the runtime-owned per-file schema capability and migration
+> graph.
 
 Stable installations use `silvermoon@latest`. Development devices can opt into
 daily `silvermoon@canary` builds without changing the stable `latest` channel.

@@ -66,8 +66,9 @@ silvermoon list-ideas
 ```
 
 > **备注**：每台设备或 Agent host 只安装并更新一个全局 Silvermoon runtime。
-> 对话命令会在结构化报告中保留带缓存的最新 runtime 状态和个人级 skill
-> 健康度，但 Text 和 TUI 仅在需要处理时显示设备提示。目标项目不固定
+> 对话命令会在结构化报告中保留个人级 skill 健康度，但 Text 和 TUI 仅在
+> 需要处理时显示设备提示。只有发现项目 schema 高于当前 runtime 的读取
+> 能力时，Silvermoon 才查询已安装版本对应的 npm channel。目标项目不固定
 > Silvermoon 版本，也不保存它的 skill。从 `0.4.0` 起，项目兼容性由 runtime
 > 持有的逐文件 schema capability 与 migration graph 决定。
 

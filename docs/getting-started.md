@@ -44,14 +44,19 @@ skill paths.
 
 Dialogue commands report device readiness separately from project readiness.
 For a global installation, Silvermoon verifies that every present personal
-registration resolves to the running package's canonical skill and checks the
-npm channel encoded by the installed version (`latest` for stable versions,
-`canary` for canary versions). A successful channel result is reused from
-`~/.cache/silvermoon/runtime-latest.json` for less than 24 hours. An unavailable
-registry or an invalid skill link is an explicit, non-blocking device advisory;
-it never changes a project snapshot result. Healthy, non-actionable device
-facts remain available in structured reports but are omitted from text and TUI
-output. Snapshot-only `check` commands do not perform either device check.
+registration resolves to the running package's canonical skill. Routine
+commands do not query npm for runtime freshness. Only after project inspection
+finds a schema version newer than the running runtime can read does Silvermoon
+query the installed version's channel (`latest` for stable versions, `canary`
+for canary versions). The query runs through npm and therefore honors active
+registry, proxy, certificate, and authentication settings from project and user
+`.npmrc` files and `NPM_CONFIG_*` environment variables. A successful result is
+reused from `~/.cache/silvermoon/runtime-latest.json` for less than 24 hours.
+An unavailable registry or an invalid skill link is an explicit, non-blocking
+device advisory; it never changes an otherwise valid project snapshot result.
+Healthy, non-actionable device facts remain available in structured reports
+but are omitted from text and TUI output. Snapshot-only `check` commands do not
+perform either device check.
 
 Silvermoon's own source repository uses the same device boundary without a
 self-dependency. Contributors run `pnpm setup:dev` to build the checkout, link

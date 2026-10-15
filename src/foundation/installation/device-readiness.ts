@@ -1,3 +1,5 @@
+import { execFile } from "node:child_process";
+import type { ExecFileOptionsWithStringEncoding } from "node:child_process";
 import {
   lstat,
   mkdir,
@@ -8,7 +10,9 @@ import {
 import { homedir } from "node:os";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { promisify } from "node:util";
 
+import { npmCommand } from "../process/index.ts";
 import {
   compareSemanticVersions,
   parseSemanticVersion,
@@ -26,6 +30,7 @@ const PERSONAL_SKILL_PATHS = [
   ".agents/skills/silvermoon",
   ".copilot/skills/silvermoon",
 ] as const;
+const executeFile = promisify(execFile);
 
 interface ReadinessFileSystem {
   lstat: typeof lstat;
@@ -41,6 +46,12 @@ interface LatestCache {
   checkedAt: string;
   latestVersion: string;
 }
+
+type NpmExecutor = (
+  command: string,
+  args: string[],
+  options: ExecFileOptionsWithStringEncoding,
+) => Promise<{ stdout: string; stderr: string }>;
 
 function errorCode(error: unknown) {
   return error instanceof Error && "code" in error
@@ -76,36 +87,73 @@ async function readCache(
   }
 }
 
-async function registryLatest(channel: string) {
-  const response = await fetch(
-    `https://registry.npmjs.org/silvermoon/${encodeURIComponent(channel)}`,
-    {
-      headers: { accept: "application/json" },
-      signal: AbortSignal.timeout(5000),
-    },
+async function executeNpm(
+  command: string,
+  args: string[],
+  options: ExecFileOptionsWithStringEncoding,
+) {
+  return executeFile(command, args, options);
+}
+
+export async function npmRegistryLatest(channel: string, {
+  cwd = process.cwd(),
+  env = process.env,
+  execPath = process.execPath,
+  execute = executeNpm,
+  platform = process.platform,
+}: {
+  cwd?: string;
+  env?: NodeJS.ProcessEnv;
+  execPath?: string;
+  execute?: NpmExecutor;
+  platform?: NodeJS.Platform;
+} = {}) {
+  const invocation = npmCommand(
+    ["view", `silvermoon@${channel}`, "version", "--json"],
+    { env, execPath, platform },
   );
-  if (!response.ok) {
-    throw new Error(`npm registry returned HTTP ${response.status}`);
+  let stdout: string;
+  try {
+    ({ stdout } = await execute(invocation.command, invocation.args, {
+      cwd,
+      encoding: "utf8",
+      env,
+      maxBuffer: 64 * 1024,
+      timeout: 5000,
+      windowsHide: true,
+    }));
+  } catch (error) {
+    throw new Error(
+      `npm view failed for silvermoon@${channel}: ${errorMessage(error)}`,
+      { cause: error },
+    );
   }
-  const body: unknown = await response.json();
-  const version = body && typeof body === "object" && "version" in body
-    ? body.version
-    : null;
+  let version: unknown;
+  try {
+    version = JSON.parse(stdout);
+  } catch (error) {
+    throw new Error(
+      `npm returned an invalid ${channel} version response.`,
+      { cause: error },
+    );
+  }
   if (typeof version !== "string" || parseSemanticVersion(version) === null) {
-    throw new Error(`npm registry returned an invalid ${channel} version`);
+    throw new Error(`npm returned an invalid ${channel} version.`);
   }
   return version;
 }
 
 export async function inspectRuntimeUpdate({
   currentVersion,
+  env = process.env,
   filesystem = { lstat, mkdir, readFile, realpath, writeFile },
   force = false,
   home = homedir(),
   now = Date.now(),
-  requestLatest = registryLatest,
+  requestLatest,
 }: {
   currentVersion: string | null;
+  env?: NodeJS.ProcessEnv;
   filesystem?: ReadinessFileSystem;
   force?: boolean;
   home?: string;
@@ -147,7 +195,10 @@ export async function inspectRuntimeUpdate({
     latestCheckedAt = cached.checkedAt;
   } else {
     try {
-      latestVersion = await requestLatest(channel);
+      latestVersion = await (
+        requestLatest ?? ((requestedChannel) =>
+          npmRegistryLatest(requestedChannel, { env }))
+      )(channel);
     } catch (error) {
       return {
         status: "unavailable" as const,

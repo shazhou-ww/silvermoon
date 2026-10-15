@@ -433,6 +433,19 @@ test("omits healthy non-actionable device readiness", () => {
   assert.doesNotMatch(rendered, /Device advisory|Personal skill|Latest runtime/);
   assert.doesNotMatch(rendered, /C:\\Users\\agent|current=0\.4\.0/);
 
+  const notRequired = renderResponse({
+    ...response,
+    device: {
+      ...device,
+      update: {
+        status: "not-required",
+        currentVersion: "0.4.0",
+        source: "runtime",
+      },
+    },
+  });
+  assert.doesNotMatch(notRequired, /Device advisory|Latest runtime/);
+
   const warning = renderResponse({
     ...response,
     device: {
