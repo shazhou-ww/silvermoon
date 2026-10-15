@@ -145,9 +145,9 @@ Next action / 下一步动作不含 `if needed` / “如有需要”。`en-US` �
 
 ## 2026-10-15 九场景统一复审 corpus
 
-- Source revision: `e1c909b25452fff8cb5643b1ebc2f686d2037646`
-- Source dirty: `true`，包含当前未提交的单一 Objective、target 标题、runtime 路径
-  事实、locale 修复与只读评审页候选
+- Source revision: `e5c954bbc4d080ae200dbac247a5874f6463fea5`
+- Source dirty: `false`，clean commit 包含单一 Objective、target 标题、runtime 路径
+  事实、locale 修复与只读评审页
 - Runtime: 当前隔离 checkout 构建并通过 `pnpm setup:dev` 链接的全局
   `silvermoon 0.5.0`
 - Environment: `node:24-trixie-slim`，隔离 HOME、synthetic local primary 和工作副本
@@ -156,10 +156,10 @@ Next action / 下一步动作不含 `if needed` / “如有需要”。`en-US` �
   `SCENARIO_NPM_REGISTRY=https://mirrors.tencent.com/npm/`
 - Result: 9 个场景、18 份 `en-US`/`zh-CN` 报告，全部 exit code 0
 - Corpus: idea-local ignored
-  `scenario-lab/corpus/2026-10-15T05-29-14.707Z/`
+  `scenario-lab/corpus/2026-10-15T06-07-00.295Z/`
 
 本次统一重跑已先同步 primary 的 potential-guide core 迁移，再让 9 个 tab 使用同一
-source revision 与同一未提交候选。flow 元数据已按当前 prerequisite ownership 更新：
+source revision 与同一 clean commit。flow 元数据已按当前 prerequisite ownership 更新：
 选中 Idea 的 Device、Project、Idea 场景分别显示
 `target idea → owner device|project|idea`。Agent 初审也已根据新输出刷新；除第一个
 runtime 场景继续保持 `pending` 外，其余场景保留或更新各自的当前初审结论，不代表
