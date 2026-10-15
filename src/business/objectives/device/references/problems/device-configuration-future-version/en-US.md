@@ -13,4 +13,4 @@ confirms the current release is latest, the configuration version itself is
 wrong.
 
 For the current configuration contract, run
-`silvermoon reference page device pages/user-configuration --language en-US`.
+`silvermoon reference page:user-configuration --language en-US`.

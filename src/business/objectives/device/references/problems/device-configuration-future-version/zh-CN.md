@@ -11,4 +11,4 @@ Problem fact 给出配置版本、当前 binary 版本、受支持版本，以�
 binary 过时；registry 确认当前版本已最新，则配置版本号本身错误。
 
 当前配置 contract：
-`silvermoon reference page device pages/user-configuration --language zh-CN`。
+`silvermoon reference page:user-configuration --language zh-CN`。

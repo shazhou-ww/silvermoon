@@ -77,6 +77,23 @@ async function objectiveProjection(
     seenProblems.add(key);
     return true;
   });
+  const projectMetadataPage = problems.some(({ id, parameters }) =>
+    id.startsWith("project-configuration-")
+    || (
+      ["project-adoption", "project-configuration"].includes(id)
+      && Array.isArray(parameters.problemTypes)
+      && parameters.problemTypes.some((type) =>
+        typeof type === "string"
+        && [
+          "project-metadata-missing",
+          "config-missing",
+          "config-invalid-yaml",
+        ].includes(type)
+      )
+    )
+  )
+    ? [{ kind: "page" as const, id: "pages/project-metadata" }]
+    : [];
   const pageIds = [
     ...(position.level.id === "terminal" || owner !== "device"
       ? [{ kind: "level" as const, id: `levels/${position.level.id}` }]
@@ -88,6 +105,7 @@ async function objectiveProjection(
       kind: "problem" as const,
       id: `problems/${id}`,
     })),
+    ...projectMetadataPage,
   ];
   const references = await Promise.all(pageIds.map(async ({ kind, id }) => {
     const page = await position.owner.readPage(id);
@@ -486,14 +504,24 @@ export async function whatsNextUseCase({
     if (deviceSample === undefined) throw new ObjectiveOperationError("Device observation is unavailable.");
     return deviceSample;
   }
-  function projectProblems(kind: "config" | "user" | "layout" | "adoption" | "schema"): CheckResult {
+  function projectProblems(
+    kind: "config" | "user" | "layout" | "adoption" | "schema" | "guidance",
+  ): CheckResult {
     if (snapshot === undefined) throw new ObjectiveOperationError("Project sample is unavailable.");
     if (snapshot.projectReady) return passed;
     const problems = snapshot.observation.problems;
     const category = (type: string) => {
       if (type.startsWith("user-")) return "user";
+      if (type.includes("guidance")) return "guidance";
       if (type.includes("migration") || type.includes("runtime-upgrade") || type.includes("runtime-refresh")) return "schema";
-      if (type.includes("git-") || type.includes("not-adopted") || type.includes("config-missing")) return "adoption";
+      if (
+        type.includes("git-")
+        || type.includes("not-adopted")
+        || type.includes("config-missing")
+        || type.includes("project-metadata")
+      ) {
+        return "adoption";
+      }
       if (type.startsWith("idea-") || type.startsWith("layout-")) return "layout";
       return "config";
     };
@@ -503,11 +531,86 @@ export async function whatsNextUseCase({
       layout: "project-layout",
       adoption: "project-adoption",
       schema: "project-schema",
+      guidance: "project-guidance",
     }[kind];
     return problems.some(({ type }) => category(type) === kind)
       || (problems.length === 0 && kind === "config")
       ? failed(problemId, observedProblemFacts(problems, snapshot.observation.state))
       : passed;
+  }
+  function projectConfigSchema() {
+    return snapshot?.schemas?.files.find(({ family }) =>
+      family === "project-config"
+    );
+  }
+  function projectConfigResult(): CheckResult {
+    if (snapshot === undefined) {
+      throw new ObjectiveOperationError("Project sample is unavailable.");
+    }
+    if (snapshot.projectReady) return passed;
+    const schema = projectConfigSchema();
+    if (schema?.readiness === "runtime-upgrade-required") {
+      const update = deviceSample?.readiness?.update;
+      const parameters = {
+        path: schema.path,
+        observedVersion: schema.schemaVersion,
+        targetVersion: schema.targetVersion,
+        runtimeVersion: update?.currentVersion ?? null,
+        latestVersion: update !== undefined && "latestVersion" in update
+          ? update.latestVersion ?? null
+          : null,
+        channel: update !== undefined && "channel" in update
+          ? update.channel ?? null
+          : null,
+      };
+      if (update?.status === "available") {
+        return failed("project-configuration-future-version", parameters);
+      }
+      if (update?.status === "current") {
+        return failed("project-configuration-invalid-version", parameters);
+      }
+      return failed("project-configuration-runtime-unconfirmed", {
+        status: update?.status ?? "unavailable",
+        path: schema.path,
+        observedVersion: schema.schemaVersion,
+        targetVersion: schema.targetVersion,
+        currentVersion: update?.currentVersion ?? null,
+        latestVersion: parameters.latestVersion,
+        channel: parameters.channel,
+      });
+    }
+    const types = observedProblemTypes(snapshot.observation.problems);
+    const configProblems = types.filter((type) =>
+      type.startsWith("config-") || type === "schema-invalid"
+    );
+    if (configProblems.length === 0) return passed;
+    return failed(
+      configProblems.includes("config-unsupported-version")
+        ? "project-configuration-invalid-version"
+        : "project-configuration-format",
+      {
+        problemTypes: configProblems,
+        path: schema?.path ?? ".silvermoon/config.yaml",
+        observedVersion: schema?.schemaVersion ?? null,
+        targetVersion: schema?.targetVersion ?? null,
+      },
+    );
+  }
+  function projectSchemaResult(): CheckResult {
+    if (snapshot === undefined) {
+      throw new ObjectiveOperationError("Project sample is unavailable.");
+    }
+    if (snapshot.projectReady) return passed;
+    const schema = projectConfigSchema();
+    if (schema?.readiness === "migration-required") {
+      return failed("project-configuration-historical-version", {
+        path: schema.path,
+        observedVersion: schema.schemaVersion,
+        targetVersion: schema.targetVersion,
+        migrationPath: schema.migrationPath?.map(({ id }) => id) ?? [],
+      });
+    }
+    return projectProblems("schema");
   }
   function repositoryProblems(
     problemId: string,
@@ -697,17 +800,16 @@ export async function whatsNextUseCase({
     "project-config-valid": async () => {
       if (initialSample) initialSample = false;
       else await project();
-      return projectProblems("config");
+      return projectConfigResult();
     },
     "project-user-config-valid": async () => projectProblems("user"),
     "project-layout-valid": async () => projectProblems("layout"),
     "project-adopted": async () => projectProblems("adoption"),
-    "project-schema-ready": async () => projectProblems("schema"),
+    "project-schema-ready": async () => projectSchemaResult(),
     "project-guidance-valid": async () => {
       if (snapshot === undefined) throw new ObjectiveOperationError("Project sample is unavailable.");
       if (!snapshot.projectReady) {
-        return failed("project-guidance", { ...observedProblemFacts(snapshot.observation.problems, snapshot.observation.state),
-          prerequisite: "project-ready" });
+        return projectProblems("guidance");
       }
       return allGuidance(
         worktreeSnapshot(snapshot.observation.root).tree,
@@ -984,11 +1086,36 @@ export async function whatsNextUseCase({
   }
   if (outcome === undefined) throw new TypeError("Navigation checks omitted the report.");
   const isExplicitMiss = outcome.observation.state === "idea-not-found";
+  const useProjectMetadataReference = projectedObjective.problems.some(
+    ({ id, parameters }) =>
+      id.startsWith("project-configuration-")
+      || (
+        id === "project"
+        && Array.isArray(parameters.problemTypes)
+        && parameters.problemTypes.some((type) =>
+          typeof type === "string"
+          && (
+            type.includes("project-metadata")
+            || type.includes("config-missing")
+          )
+        )
+      ),
+  );
+  const responseContext = useProjectMetadataReference
+    ? {
+        nextSteps: [
+          firstObjectiveInstruction(
+            projectedObjective,
+            objective.gapSummary,
+          ),
+        ],
+      }
+    : outcome.responseContext;
   return runtime.complete(
     isExplicitMiss
       ? outcome.observation
       : { ...outcome.observation, objective: projectedObjective } as Observation,
-    outcome.responseContext,
+    responseContext,
   );
 }
 

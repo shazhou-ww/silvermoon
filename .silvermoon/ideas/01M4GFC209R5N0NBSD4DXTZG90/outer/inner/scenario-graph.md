@@ -61,11 +61,11 @@ level；报告中的 repository/project problem details 也应原样保存。
 | 2 | `device-runtime-linked` | Device `runtime-unready` | `device-runtime` |
 | 3 | `device-skill-discoverable` | Device `skill-unready` | `device-skill`；personal skill missing、内容 revision 不一致，以及 canonical skill 无法验证 |
 | 4 | `device-update-current` | Device `update-unconfirmed` | `device-update`；当前 whats-next 路由中 freshness failure 会先由 Project schema preparation 报告，尚无独立可达场景 |
-| 5 | `project-config-valid` | Project `configuration-invalid` | `project`；`.silvermoon/` 缺失、project config 缺失或 config contract 无效 |
+| 5 | `project-config-valid` | Project `configuration-invalid` | `.silvermoon/` 缺失、project config 缺失，或 `project-configuration-format` / `project-configuration-invalid-version` |
 | 6 | `project-user-config-valid` | Project `configuration-invalid` | `project`；各 distinct `user-*` snapshot problem 集 |
 | 7 | `project-layout-valid` | Project `configuration-invalid` | `project`；各 distinct `idea-*` / `layout-*` snapshot problem 集 |
 | 8 | `project-adopted` | Project `project-unprepared` | `project`；`git-*`、`not-adopted`、`config-missing` |
-| 9 | `project-schema-ready` | Project `project-unprepared` | `project`；migration、runtime-upgrade、runtime-refresh 类 problem 集 |
+| 9 | `project-schema-ready` | Project `project-unprepared` | `project-configuration-historical-version`、`project-configuration-future-version`、`project-configuration-invalid-version`，以及其他 metadata schema problem 集 |
 | 10 | `project-guidance-valid` | Project `project-unprepared` | `guidance`；每种 distinct guidance diagnostic 集，报告 `phase-guidance-invalid` |
 | 11 | `repository-worktree-clean` | Project `repository-unready` | `repository`；`worktree-conflicts`、`worktree-changes`、`worktree-inspection-failed` 及不同组合 |
 | 12 | `repository-head-present` | Project `repository-unready` | `repository`；`head-missing` |

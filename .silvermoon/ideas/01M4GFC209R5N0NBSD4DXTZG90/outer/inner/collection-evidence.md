@@ -293,12 +293,12 @@ Problem 的两个现实分支。候选渲染不再先重复静态的“未发现
 
 ## 2026-10-15 Device 分支完整重跑
 
-- Source revision: `879b0c1945c79f86892c012c47e04126c4279b6e`
+- Source revision: `9968cd17ede838195726928899848840b3e8333d`
 - Source dirty: `true`，记录持续评审中的候选修正
 - Command: `scenario-lab/run.ps1`
-- Result: 17 个场景、34 份 `en-US`/`zh-CN` 报告，全部 exit code 0
+- Result: 20 个场景、40 份 `en-US`/`zh-CN` 报告，全部 exit code 0
 - Corpus: idea-local ignored
-  `scenario-lab/corpus/2026-10-15T11-30-11.431Z/`
+  `scenario-lab/corpus/2026-10-15T14-51-22.215Z/`
 
 Device 配置场景现在分别覆盖历史版本、registry 已证明可升级的未来版本、错误版本号
 和当前版本格式错误。未来版本会查询 active npm registry：有新版 CLI 时提示升级，
@@ -330,6 +330,22 @@ Project coverage 新增三条真实场景：`.silvermoon/` metadata 目录缺失
 `.silvermoon/config.yaml` 缺失，以及 config YAML 无效。Project config 尚未建立时
 不再评估依赖其版本的 Idea schemas，避免把一个 config 根因级联成几十条错误 schema
 诊断；重复的等价 Problem 与 Reference 在 Markdown 投影中合并。
+
+主线完成 Objective Reference lookup 简化后，当前维护文案中的 personal config
+Reference 命令全部迁移为 owner-free lookup：
+`silvermoon reference page:user-configuration --language <tag>`。运行时生成的
+level、check、problem 和 internal link 命令由主线统一投影为同一
+`reference <namespace>:<query>` 语法；历史 idea 设计记录保留其原始语境。
+
+Project metadata 缺失 remediation 现在完整本地化，不再在中文动作中夹带英文。
+新增唯一 `page:project-metadata` Reference，说明 `.silvermoon/` 最小目录树、
+project config 示例、guidance 与 ideas 的固定职责，以及保留未知内容、使用
+`silvermoon create-idea` 和 `check --worktree` 的安全创建顺序。
+
+Project config 版本 readiness 复用既有 schema-capability facts，并投影为四个独立
+Problems：历史版本、registry 已证明可升级的未来版本、版本号错误，以及已知版本但
+内容不符合 schema。每个报告只展示 project-config schema row，不把同一版本假设
+级联到 Idea files；四类 Problem 都直接列出 `page:project-metadata` Reference。
 
 Personal skill missing 与内容 revision 不一致直接陈述各自现实，并从 active runtime
 解析出的 canonical skill 路径生成可复制的

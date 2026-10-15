@@ -356,8 +356,16 @@ test("overlapping probes of one instance isolate first-failure provenance and cl
       : { pass: true },
   }));
   const samples = await Promise.all([current.probe(), current.probe()]);
-  assert.deepEqual(samples.map(({ position }) => position.failingCheck), ["first", "second"]);
-  assert.deepEqual(samples.map(({ position }) => position.problems[0]?.parameters.probeId), [0, 1]);
+  assert.deepEqual(
+    samples.map(({ position }) => ({
+      failingCheck: position.failingCheck,
+      probeId: position.problems[0]?.parameters.probeId,
+    })).sort((left, right) => Number(left.probeId) - Number(right.probeId)),
+    [
+      { failingCheck: "first", probeId: 0 },
+      { failingCheck: "second", probeId: 1 },
+    ],
+  );
   assert.equal(directories.size, 2);
   for (const directory of directories.keys()) await assert.rejects(stat(directory), { code: "ENOENT" });
 });

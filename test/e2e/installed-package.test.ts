@@ -802,8 +802,9 @@ decision, risk, or disagreement requires it.
   assert.equal(preparation.observation.state, "project-setup-required");
   assert.match(
     JSON.stringify(preparation.response),
-    /host-managed project-v1-to-v2 project migration/,
+    /project-configuration-historical-version/,
   );
+  assert.match(JSON.stringify(preparation.response), /project-v1-to-v2/);
   const migrationPlan = JSON.parse(npm([
     "exec",
     "--",

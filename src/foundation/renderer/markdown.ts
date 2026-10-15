@@ -410,7 +410,67 @@ function problemFacts(
       }
       return [];
     });
-    return proseFacts([...new Set(facts)]);
+    return proseFacts(facts);
+  }
+
+  if (problem.id.startsWith("project-configuration-")) {
+    const path = problem.parameters.path;
+    const observedVersion = problem.parameters.observedVersion;
+    const targetVersion = problem.parameters.targetVersion;
+    if (typeof path === "string") {
+      if (problem.id === "project-configuration-historical-version") {
+        const migrationPath = Array.isArray(problem.parameters.migrationPath)
+          ? problem.parameters.migrationPath.filter(
+            (value): value is string => typeof value === "string",
+          ).join(" -> ")
+          : "";
+        return proseFacts([
+          localize(
+            language,
+            `Project configuration ${codeSpan(path)} uses historical schema version ${codeSpan(String(observedVersion))}; the current target is ${codeSpan(String(targetVersion))}${
+              migrationPath === "" ? "" : `, with migration path ${codeSpan(migrationPath)}`
+            }.`,
+            `项目配置 ${codeSpan(path)} 使用历史 schema 版本 ${codeSpan(String(observedVersion))}；当前目标版本为 ${codeSpan(String(targetVersion))}${
+              migrationPath === "" ? "" : `，migration path 为 ${codeSpan(migrationPath)}`
+            }。`,
+          ),
+        ]);
+      }
+      if (problem.id === "project-configuration-future-version") {
+        return proseFacts([
+          localize(
+            language,
+            `Project configuration ${codeSpan(path)} declares schema version ${codeSpan(String(observedVersion))}, which the active CLI cannot read; the npm registry reports newer CLI version ${codeSpan(String(problem.parameters.latestVersion))}.`,
+            `项目配置 ${codeSpan(path)} 声明 schema 版本 ${codeSpan(String(observedVersion))}，active CLI 无法读取；npm registry 报告有更新的 CLI 版本 ${codeSpan(String(problem.parameters.latestVersion))}。`,
+          ),
+        ]);
+      }
+      if (problem.id === "project-configuration-invalid-version") {
+        return proseFacts([
+          localize(
+            language,
+            `Project configuration ${codeSpan(path)} declares unsupported schema version ${codeSpan(String(observedVersion))}. The npm registry confirms the active CLI is current, so the version is wrong rather than awaiting an update; the current target is ${codeSpan(String(targetVersion))}.`,
+            `项目配置 ${codeSpan(path)} 声明了不受支持的 schema 版本 ${codeSpan(String(observedVersion))}。npm registry 确认 active CLI 已是最新，因此这是版本号错误，而不是等待更新；当前目标版本为 ${codeSpan(String(targetVersion))}。`,
+          ),
+        ]);
+      }
+      if (problem.id === "project-configuration-runtime-unconfirmed") {
+        return proseFacts([
+          localize(
+            language,
+            `Project configuration ${codeSpan(path)} declares schema version ${codeSpan(String(observedVersion))}, but npm registry freshness is unavailable, so this runtime cannot classify the version safely.`,
+            `项目配置 ${codeSpan(path)} 声明 schema 版本 ${codeSpan(String(observedVersion))}，但 npm registry freshness 不可用，因此当前 runtime 无法安全分类该版本。`,
+          ),
+        ]);
+      }
+      return proseFacts([
+        localize(
+          language,
+          `Project configuration ${codeSpan(path)} does not satisfy the schema for its declared version.`,
+          `项目配置 ${codeSpan(path)} 不符合其已声明版本的 schema。`,
+        ),
+      ]);
+    }
   }
 
   if (
@@ -1022,7 +1082,17 @@ function renderObjectiveResponse(response: ReportResponse, language: string) {
     );
   }
   if (response.schemas !== undefined) {
-    const readiness = renderSchemaReadiness(response.schemas, language);
+    const schemaReadiness = objective.problems.some(({ id }) =>
+        id.startsWith("project-configuration-")
+      )
+      ? {
+          ...response.schemas,
+          files: response.schemas.files.filter(({ family }) =>
+            family === "project-config"
+          ),
+        }
+      : response.schemas;
+    const readiness = renderSchemaReadiness(schemaReadiness, language);
     if (readiness.length > 0) {
       lines.push("", ...readiness.map((line) => line.replace(/^### /, "#### ")));
     }
@@ -1059,7 +1129,8 @@ function renderObjectiveResponse(response: ReportResponse, language: string) {
         || problem.id === "device-canonical-skill"
         || problem.id === "project"
         || problem.id === "repository"
-        || problem.id.startsWith("device-configuration-");
+        || problem.id.startsWith("device-configuration-")
+        || problem.id.startsWith("project-configuration-");
       const description = usesDirectFacts && facts.length > 0
         ? undefined
         : reference?.description ?? reference?.title ?? codeSpan(problem.id);
@@ -1125,6 +1196,7 @@ function renderObjectiveResponse(response: ReportResponse, language: string) {
       level: localize(language, "Level", "层级"),
       check: "Check",
       problem: "Problem",
+      page: localize(language, "Page", "页面"),
     }[reference.kind];
     lines.push(
       `- ${kind}: ${reference.title} (${codeSpan(reference.id)}) — ${

@@ -453,6 +453,99 @@ test("device configuration versions choose historical, future, invalid, and form
   }
 });
 
+test("project configuration readiness reuses schema capability classifications", async () => {
+  const cases = [
+    {
+      readiness: "migration-required" as const,
+      validity: "valid" as const,
+      observedVersion: 1,
+      problemType: "schema-migration-required",
+      expected: "project-configuration-historical-version",
+      update: {
+        status: "current",
+        currentVersion: "0.5.0",
+        latestVersion: "0.5.0",
+        channel: "latest",
+        checkedAt: "2026-10-15T00:00:00.000Z",
+        source: "cache",
+      },
+    },
+    {
+      readiness: "runtime-upgrade-required" as const,
+      validity: "unsupported" as const,
+      observedVersion: 3,
+      problemType: "schema-runtime-update-available",
+      expected: "project-configuration-future-version",
+      update: {
+        status: "available",
+        currentVersion: "0.5.0",
+        latestVersion: "0.6.0",
+        channel: "latest",
+        checkedAt: "2026-10-15T00:00:00.000Z",
+        source: "registry",
+      },
+    },
+    {
+      readiness: "runtime-upgrade-required" as const,
+      validity: "unsupported" as const,
+      observedVersion: 3,
+      problemType: "schema-runtime-latest-unsupported",
+      expected: "project-configuration-invalid-version",
+      update: {
+        status: "current",
+        currentVersion: "0.5.0",
+        latestVersion: "0.5.0",
+        channel: "latest",
+        checkedAt: "2026-10-15T00:00:00.000Z",
+        source: "registry",
+      },
+    },
+  ] as const;
+
+  for (const fixture of cases) {
+    const base = ready();
+    const schemas = {
+      manifestVersion: 1 as const,
+      releaseBoundary: "0.5.0",
+      files: [{
+        path: ".silvermoon/config.yaml",
+        family: "project-config",
+        schemaVersion: fixture.observedVersion,
+        targetVersion: 2,
+        validity: fixture.validity,
+        readiness: fixture.readiness,
+      }],
+    };
+    const snapshot: SnapshotObservation = {
+      ...base,
+      projectReady: false,
+      schemas,
+      observation: {
+        ...base.observation,
+        state: "project-setup-required",
+        observedThrough: "configuration",
+        problems: [{
+          type: fixture.problemType,
+          summary: "Project config schema fixture.",
+        }],
+        schemas,
+      },
+    };
+    const device = deviceFixture();
+    device.readiness!.update = fixture.update;
+    const context = harness(snapshot, false, device);
+    const report = await whatsNextUseCase(
+      { ...context.options, language: "en-US" },
+      context.ports,
+    );
+    assert.ok(report.response.objective);
+    assert.equal(report.response.objective.problems[0]?.id, fixture.expected);
+    assert.ok(report.response.objective.references.some(
+      ({ lookup }) => lookup === "page:project-metadata",
+    ));
+  }
+});
+
 test("concurrent command instances do not share snapshot or lifecycle state", async () => {
   const first = harness(ready(idea("preparing")));
   const second = harness(ready(idea("deploying")));
@@ -488,8 +581,10 @@ test("project and repository failures gate Idea checks and retain report diagnos
   assert.equal(first.observations[0]?.position.failingCheck, "project-config-valid");
   const projectParameters = first.observations[0]?.position.problems[0]?.parameters;
   assert.deepEqual(projectParameters, {
-    state: "project-setup-required",
     problemTypes: ["schema-invalid"],
+    path: ".silvermoon/config.yaml",
+    observedVersion: null,
+    targetVersion: null,
   });
   assertNoLocalizedProblemProse(projectParameters);
   assert.doesNotMatch(JSON.stringify(projectParameters), /Unsupported schema/);
@@ -499,7 +594,7 @@ test("project and repository failures gate Idea checks and retain report diagnos
   assert.equal(blocked.response.objective?.owner, "project");
   assert.equal(blocked.response.objective?.failingCheck, "project-config-valid");
   assert.deepEqual(blocked.response.objective?.problems, [{
-    id: "project-configuration",
+    id: "project-configuration-format",
     parameters: projectParameters!,
   }]);
   assert.deepEqual(
@@ -507,7 +602,8 @@ test("project and repository failures gate Idea checks and retain report diagnos
     [
       "levels/configuration-invalid",
       "checks/project-config-valid",
-      "problems/project-configuration",
+      "problems/project-configuration-format",
+      "pages/project-metadata",
     ],
   );
   const second = harness(ready(), true);
@@ -581,7 +677,6 @@ test("failed adoption peers report unavailable guidance without sampling an unre
   assert.equal(report.response.objective?.failingCheck, "project-adopted");
   assert.deepEqual(report.response.objective?.problems.map(({ parameters }) => parameters), [
     { state: "project-setup-required", problemTypes: ["project-not-adopted"] },
-    { state: "project-setup-required", problemTypes: ["project-not-adopted"], prerequisite: "project-ready" },
   ]);
   assert.deepEqual(context.calls.slice(-3), ["project-adopted", "project-schema-ready", "project-guidance-valid"]);
   assert.ok(!context.calls.includes("repository"));

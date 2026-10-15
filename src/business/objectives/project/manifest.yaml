@@ -23,6 +23,10 @@ levels:
         - id: project-config-valid
           problems:
             - project-configuration
+            - project-configuration-future-version
+            - project-configuration-invalid-version
+            - project-configuration-runtime-unconfirmed
+            - project-configuration-format
         - id: project-user-config-valid
           problems:
             - project-user-configuration
@@ -38,6 +42,7 @@ levels:
         - id: project-schema-ready
           problems:
             - project-schema
+            - project-configuration-historical-version
         - id: project-guidance-valid
           problems:
             - project-guidance

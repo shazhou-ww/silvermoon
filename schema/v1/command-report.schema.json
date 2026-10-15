@@ -59,7 +59,7 @@
             "required": ["kind", "id", "owner", "lookup", "title", "content", "command"],
             "properties": {
               "kind": {
-                "enum": ["level", "check", "problem"]
+                "enum": ["level", "check", "problem", "page"]
               },
               "id": {
                 "type": "string",
@@ -70,7 +70,7 @@
               },
               "lookup": {
                 "type": "string",
-                "pattern": "^(level|check|problem):[^:]+$"
+                "pattern": "^(level|check|problem|page):[^:]+$"
               },
               "title": {
                 "type": "string",

@@ -59,11 +59,10 @@ test("historical schemas remain check-valid but block lifecycle preparation", as
   assert.match(markdown, /Project schema preparation/);
   assert.match(markdown, /\.silvermoon\/config\.yaml/);
   assert.match(markdown, /migration-required/);
-  assert.equal(
-    preparation.response.nextSteps?.filter(({ text }) =>
-      text.includes("project-v1-to-v2") && text.includes("migration")
-    ).length,
-    1,
+  assert.equal(preparation.response.nextSteps?.length, 1);
+  assert.match(
+    preparation.response.nextSteps?.[0]?.text ?? "",
+    /^The goal is for the project configuration to use the current target version/,
   );
 });
 

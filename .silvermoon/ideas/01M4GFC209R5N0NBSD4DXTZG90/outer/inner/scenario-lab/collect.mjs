@@ -158,7 +158,56 @@ async function prepareState(state) {
     });
     return;
   }
-  if (state === "project-config-invalid") {
+  if (state === "project-config-historical-version") {
+    await rm(resolve(projectRoot, ".silvermoon", "ideas"), {
+      force: true,
+      recursive: true,
+    });
+    await mkdir(resolve(projectRoot, ".silvermoon", "ideas"));
+    await writeFile(
+      resolve(projectRoot, ".silvermoon", "config.yaml"),
+      [
+        "version: 1",
+        "primaryRepository: https://github.com/shazhou-ww/silvermoon.git",
+        "primaryBranch: main",
+        "preferredLanguage: zh-CN",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+    return;
+  }
+  if (
+    state === "project-config-future-version"
+    || state === "project-config-invalid-version"
+  ) {
+    await rm(resolve(projectRoot, ".silvermoon", "ideas"), {
+      force: true,
+      recursive: true,
+    });
+    await mkdir(resolve(projectRoot, ".silvermoon", "ideas"));
+    await writeFile(
+      resolve(projectRoot, ".silvermoon", "config.yaml"),
+      [
+        "version: 3",
+        "primaryRepository: https://github.com/shazhou-ww/silvermoon.git",
+        "primaryBranch: main",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+    await mkdir(fakeBin, { recursive: true });
+    await writeFile(
+      fakeNpm,
+      state === "project-config-future-version"
+        ? "#!/bin/sh\nprintf '\"999.0.0\"\\n'\n"
+        : "#!/bin/sh\nprintf '\"0.5.0\"\\n'\n",
+      "utf8",
+    );
+    await chmod(fakeNpm, 0o755);
+    return;
+  }
+  if (state === "project-config-invalid-format") {
     await writeFile(
       resolve(projectRoot, ".silvermoon", "config.yaml"),
       "version: 2\nprimaryRepository: [invalid\n",
@@ -220,7 +269,9 @@ for (const scenario of scenarios) {
 
     const hideGlobalRuntime = scenario.state === "global-runtime-path-masked";
     const overrideNpm = scenario.state === "future-user-config-current-cli"
-      || scenario.state === "future-user-config-update-available";
+      || scenario.state === "future-user-config-update-available"
+      || scenario.state === "project-config-future-version"
+      || scenario.state === "project-config-invalid-version";
     const command = hideGlobalRuntime ? globalSilvermoon : "silvermoon";
     const env = hideGlobalRuntime
       ? {

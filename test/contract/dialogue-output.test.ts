@@ -235,11 +235,12 @@ test("renders structured Objective facts as self-contained prose", () => {
   const skill = renderObjectiveProblem("device-skill", {
     status: "missing",
     expectedRoot: "D:\\Code\\silvermoon\\skills\\silvermoon",
+    expectedRevision: `sha256:${"a".repeat(64)}`,
     paths: [],
   });
   assert.match(
     skill,
-    /Silvermoon's canonical skill is `D:\\Code\\silvermoon\\skills\\silvermoon`, but no personal discovery path currently resolves to it\./,
+    /No personal Silvermoon skill was found.*content revision `sha256:aaaaaaaa/,
   );
   assert.doesNotMatch(skill, /expectedRoot|paths:|```json/);
 
@@ -610,20 +611,18 @@ test("renders mismatched skill targets with an executable repair command", () =>
         version: "0.4.0",
       },
       skill: {
-        status: "mismatched",
+        status: "incorrect",
         expectedRoot: "D:\\Code\\silvermoon\\skills\\silvermoon",
+        expectedRevision: `sha256:${"a".repeat(64)}`,
         paths: [],
-        invalidPaths: [
-          "C:\\Users\\agent\\.agents\\skills\\silvermoon",
-        ],
-        invalidTargets: [{
+        observed: [{
           path: "C:\\Users\\agent\\.agents\\skills\\silvermoon",
-          target: "D:\\Code\\stale\\skills\\silvermoon",
+          revision: `sha256:${"b".repeat(64)}`,
         }],
         summary:
-          "C:\\Users\\agent\\.agents\\skills\\silvermoon resolves to D:\\Code\\stale\\skills\\silvermoon; expected D:\\Code\\silvermoon\\skills\\silvermoon.",
+          "A discovered personal Silvermoon skill does not match the active runtime's canonical skill content revision.",
         remediation:
-          "Run silvermoon-link-skill to relink the reported personal skill registration to the active global runtime's canonical skill at D:\\Code\\silvermoon\\skills\\silvermoon, then rerun the Silvermoon command.",
+          "Run npx skills add \"D:\\Code\\silvermoon\\skills\\silvermoon\" --global --all to install the active runtime's canonical skill.",
       },
       update: {
         status: "current",
@@ -634,10 +633,9 @@ test("renders mismatched skill targets with an executable repair command", () =>
     },
   });
 
-  assert.match(rendered, /C:\\\\Users\\\\agent\\\\\.agents\\\\skills\\\\silvermoon resolves to/);
-  assert.match(rendered, /D:\\\\Code\\\\stale\\\\skills\\\\silvermoon/);
-  assert.match(rendered, /expected D:\\\\Code\\\\silvermoon\\\\skills\\\\silvermoon/);
-  assert.match(rendered, /silvermoon-link-skill/);
+  assert.match(rendered, /expected=sha256:aaaa/);
+  assert.match(rendered, /sha256:bbbb/);
+  assert.match(rendered, /npx skills add/);
 });
 
 test("omits healthy non-actionable device readiness", () => {

@@ -15,6 +15,10 @@ levels:
         - id: device-config-valid
           problems:
             - device-configuration
+            - device-configuration-historical-version
+            - device-configuration-future-version
+            - device-configuration-invalid-version
+            - device-configuration-format
   - id: runtime-unready
     advancement:
       checks:
@@ -27,6 +31,7 @@ levels:
         - id: device-skill-discoverable
           problems:
             - device-skill
+            - device-canonical-skill
   - id: update-unconfirmed
     advancement:
       checks:

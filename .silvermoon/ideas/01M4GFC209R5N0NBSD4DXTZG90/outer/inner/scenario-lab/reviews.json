@@ -70,7 +70,7 @@
       "redundancy": "unknown",
       "missing": "unknown",
       "missingPrompt": "unknown",
-      "comment": "维护者发现 Project coverage 缺少 .silvermoon metadata 根目录不存在的场景。新增真实删除目录的场景，等待重采集确认实际 Problem 与动作。"
+      "comment": "维护者发现中文 remediation 夹带英文，且缺少项目 metadata 结构 Reference。候选提供双语修复动作，并新增唯一 page:project-metadata，说明 .silvermoon 最小目录树、config、guidance、ideas 职责与创建顺序。"
     },
     {
       "scenario": "project-config-missing",
@@ -81,12 +81,36 @@
       "comment": "新增 .silvermoon 目录存在但 project config 缺失的独立场景，验证 Project facts 能区分未采用与单个配置缺失。"
     },
     {
-      "scenario": "project-config-invalid",
+      "scenario": "project-config-historical-version",
       "verdict": "pending",
       "redundancy": "unknown",
       "missing": "unknown",
       "missingPrompt": "unknown",
-      "comment": "新增 project config 路径存在但 YAML/contract 无效的场景；下一步只保留目标状态与 Silvermoon contract，不嵌入通用修复教程或动态 recheck command。"
+      "comment": "复用 schema capability 的 migration-required facts，独立呈现 project config 历史版本与 migration path。"
+    },
+    {
+      "scenario": "project-config-invalid-version",
+      "verdict": "pending",
+      "redundancy": "unknown",
+      "missing": "unknown",
+      "missingPrompt": "unknown",
+      "comment": "registry 确认 active CLI 已最新时，future schema version 归为独立版本号错误，而不是更新提示。"
+    },
+    {
+      "scenario": "project-config-future-version",
+      "verdict": "pending",
+      "redundancy": "unknown",
+      "missing": "unknown",
+      "missingPrompt": "unknown",
+      "comment": "仅在 registry 证明新版 CLI 可用时，将 project config 分类为版本过新并提示升级 active CLI。"
+    },
+    {
+      "scenario": "project-config-invalid-format",
+      "verdict": "pending",
+      "redundancy": "unknown",
+      "missing": "unknown",
+      "missingPrompt": "unknown",
+      "comment": "project config 版本已知但 YAML/字段不符合该版本 schema 时使用独立内容错误 Problem。"
     },
     {
       "scenario": "repository-worktree-untracked",

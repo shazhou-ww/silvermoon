@@ -151,18 +151,63 @@
       }
     },
     {
-      "id": "project-config-invalid",
-      "state": "project-config-invalid",
+      "id": "project-config-historical-version",
+      "state": "project-config-historical-version",
+      "idea": "whats-next-template-review",
+      "languages": ["en-US", "zh-CN"],
+      "flow": {
+        "objective": "target idea → owner project",
+        "check": "project-schema-ready",
+        "branch": "项目配置历史版本",
+        "previousState": ".silvermoon/config.yaml 使用当前 target schema version 2。",
+        "transitionAction": "把 project config 改为可读取但需要迁移的 version 1。",
+        "currentState": "Project 报告历史版本、target version 和声明的 migration path。",
+        "nextAction": "目标是按 schema capability 把 project config 迁移到当前 target，不能只修改 version 字段。"
+      }
+    },
+    {
+      "id": "project-config-invalid-version",
+      "state": "project-config-invalid-version",
+      "idea": "whats-next-template-review",
+      "languages": ["en-US", "zh-CN"],
+      "flow": {
+        "objective": "target idea → owner project",
+        "check": "project-schema-ready",
+        "branch": "项目配置版本号错误",
+        "previousState": "project config 声明 active CLI 可读取的 schema 版本。",
+        "transitionAction": "把 config version 改为 3，并让隔离 registry 确认 active CLI 已是最新。",
+        "currentState": "Project 明确报告版本号错误，而不是等待 CLI 更新。",
+        "nextAction": "目标是让 project config 声明当前支持的版本并符合该版本 contract。"
+      }
+    },
+    {
+      "id": "project-config-future-version",
+      "state": "project-config-future-version",
+      "idea": "whats-next-template-review",
+      "languages": ["en-US", "zh-CN"],
+      "flow": {
+        "objective": "target idea → owner project",
+        "check": "project-schema-ready",
+        "branch": "项目配置版本过新",
+        "previousState": "project config 声明 active CLI 无法读取的 schema version 3。",
+        "transitionAction": "让隔离 registry 返回更高版本的 Silvermoon CLI。",
+        "currentState": "Project 证明有新版 CLI 可用，才把该配置分类为版本过新。",
+        "nextAction": "目标是升级 active CLI，使其支持 project config 声明的 schema 版本。"
+      }
+    },
+    {
+      "id": "project-config-invalid-format",
+      "state": "project-config-invalid-format",
       "idea": "whats-next-template-review",
       "languages": ["en-US", "zh-CN"],
       "flow": {
         "objective": "target idea → owner project",
         "check": "project-config-valid",
-        "branch": "项目配置无效",
-        "previousState": ".silvermoon/config.yaml 满足当前 project config contract。",
+        "branch": "项目配置内容无效",
+        "previousState": ".silvermoon/config.yaml 声明已知版本并满足对应 schema。",
         "transitionAction": "保留 config 路径，但写入无法解析的 YAML。",
-        "currentState": "Project 直接报告 config contract 诊断，不继续 repository 或 Idea checks。",
-        "nextAction": "目标是让 .silvermoon/config.yaml 满足当前 Silvermoon project config contract。"
+        "currentState": "Project 报告版本已知但内容不符合 schema，不继续 repository 或 Idea checks。",
+        "nextAction": "目标是让 project config 内容符合其声明版本的 schema。"
       }
     },
     {

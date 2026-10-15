@@ -59,33 +59,57 @@ test("parses namespace lookups and rejects unsafe or malformed input", () => {
 test("exposes typed static guidance metadata from Reference frontmatter", async () => {
   const english = await readObjectiveReference(
     "project",
-    "problems/repository",
+    "problems/repository-worktree",
     "en-US",
   );
   assert.match(
     english.page.description ?? "",
-    /repository does not yet satisfy the Git state required to advance repository or Idea work safely/,
+    /worktree/i,
   );
   assert.match(
     english.page.instruction ?? "",
-    /goal is a clean repository attached to a local branch.+preserving unknown work/,
+    /Preserve unknown work.+clean worktree/,
   );
   assert.match(english.page.content, /## Problem guidance/);
 
   const chinese = await readObjectiveReference(
     "project",
-    "problems/repository",
+    "problems/repository-worktree",
     "zh-CN",
   );
   assert.match(
     chinese.page.description ?? "",
-    /repository 尚未满足安全推进 repository 或 Idea 工作所需的 Git 状态/,
+    /worktree/i,
   );
   assert.match(
     chinese.page.instruction ?? "",
-    /目标是在保留未知工作的前提下.+upstream 与配置 primary 一致/,
+    /保留未知工作.+worktree clean/,
   );
   assert.match(chinese.page.content, /## 问题说明/);
+
+  const configuration = await readObjectiveReference(
+    "device",
+    "problems/device-configuration-format",
+    "en-US",
+  );
+  assert.match(
+    configuration.page.instruction ?? "",
+    /silvermoon reference page:user-configuration --language en-US/,
+  );
+  assert.doesNotMatch(
+    configuration.page.instruction ?? "",
+    /silvermoon reference page device pages\//,
+  );
+
+  const projectMetadata = await resolveObjectiveReference(
+    "page:project-metadata",
+    "zh-CN",
+  );
+  assert.ok("page" in projectMetadata);
+  assert.equal(projectMetadata.owner, "project");
+  assert.equal(projectMetadata.referenceId, "pages/project-metadata");
+  assert.match(projectMetadata.page.content, /\.silvermoon\/config\.yaml/);
+  assert.match(projectMetadata.page.content, /silvermoon create-idea/);
 });
 
 test("preserves 404 semantics and rejects invalid IDs and unsupported locales", async () => {
