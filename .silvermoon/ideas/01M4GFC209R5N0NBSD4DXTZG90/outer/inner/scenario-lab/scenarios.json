@@ -12,7 +12,7 @@
         "previousState": "个人配置有效，当前 checkout 已通过 pnpm setup:dev 链接为设备级全局 runtime。",
         "transitionAction": "从 PATH 移除全局 bin 目录，但以绝对路径执行同一个 Silvermoon binary，模拟绕过全局入口。",
         "currentState": "目标仍是 Idea，但 prerequisite chain 在 runtime-unready 由 Device 独占；只报告 PATH 问题，不评估或输出 Idea lifecycle 行动。",
-        "nextAction": "在观测到的 source checkout 中运行 pnpm setup:dev，确保 npm global bin 已加入 PATH，再用 silvermoon 重试；通过后沿同一链进入 device-skill-discoverable。"
+        "nextAction": "目标是让稳定的设备级 silvermoon 可执行文件可由 PATH 发现；source checkout 可使用 pnpm setup:dev，其他安装来源可使用全局安装，然后重试同一检查。"
       }
     },
     {
@@ -27,7 +27,7 @@
         "previousState": "设备级全局 runtime 可发现，canonical skill 已链接到个人 discovery 路径。",
         "transitionAction": "删除个人级 silvermoon skill 链接，再通过全局 silvermoon 执行同一 idea probe。",
         "currentState": "Device 在 skill-unready 独占当前 Objective；Project 与 Idea 暂不评估，也不输出 lifecycle 行动。",
-        "nextAction": "运行 silvermoon-link-skill 或 checkout 的 pnpm link:skill 后重试；通过后进入 device-update-current。"
+        "nextAction": "目标是让 canonical Silvermoon skill 可从个人级 discovery 路径发现；可按安装来源使用链接 helper 或 pnpm setup:dev，然后重试同一检查。"
       }
     },
     {
@@ -42,7 +42,7 @@
         "previousState": "个人配置有效时，Device 可继续验证 runtime、skill 和 update，再把控制交给 Project。",
         "transitionAction": "把个人 config.yaml 的 version 写成 invalid，再运行带准确 idea selector 的 whats-next。",
         "currentState": "目标仍是 Idea，但 Device 在 configuration-invalid 独占当前 owner；Project 与 Idea checks 尚未评估。",
-        "nextAction": "把 version 修复为 1 并重试；device-config-valid 通过后沿 prerequisite chain 进入 device-runtime-linked。"
+        "nextAction": "目标是在保留有效键的同时让个人配置符合 version: 1 contract；完成修复后重试同一检查。"
       }
     },
     {
@@ -57,7 +57,7 @@
         "previousState": "Device 与 Project 配置、layout、schema、guidance checks 已通过，repository 准备验证 clean worktree。",
         "transitionAction": "在 synthetic worktree 新建 scenario-untracked.txt，保留 branch 与 upstream 不变。",
         "currentState": "Project 停在 repository-unready，repository problemTypes 为 worktree-changes。",
-        "nextAction": "检查并保留未知工作，移除本场景自有文件后重试；通过后进入 repository-head-present。"
+        "nextAction": "目标是在保留未知工作的前提下，为报告的未跟踪文件确定明确去向；完成处置后重试同一检查。"
       }
     },
     {
@@ -72,7 +72,7 @@
         "previousState": "worktree clean 且 HEAD 存在，scenario 分支原本跟踪 origin/main。",
         "transitionAction": "切换到 origin/main 的 detached HEAD，再运行同一 idea probe。",
         "currentState": "Project 停在 repository-unready，branch identity 为空，problemTypes 为 detached-head。",
-        "nextAction": "保留工作后切回 scenario 并恢复 origin/main upstream；该 check 通过后进入 repository-primary-fetched。"
+        "nextAction": "目标是在不丢失工作的前提下，把当前 commit 附着到跟踪 configured primary 的本地分支；完成后重试同一检查。"
       }
     },
     {
@@ -87,7 +87,7 @@
         "previousState": "worktree clean、HEAD 存在，scenario 分支原本跟踪 synthetic origin/main。",
         "transitionAction": "保留 scenario 分支但执行 git branch --unset-upstream，再运行同一 idea probe。",
         "currentState": "Project 停在 repository-unready，分支名存在但 remote/upstream 为空，problemTypes 为 primary-upstream-mismatch。",
-        "nextAction": "重新设置 origin/main upstream 并验证；该 check 通过后进入 repository-primary-fetched。"
+        "nextAction": "目标是让当前分支跟踪 configured primary；可按现状复用或新增 named remote 并设置 upstream，验证后重试同一检查。"
       }
     },
     {
@@ -101,7 +101,7 @@
         "previousState": "Device prerequisite 已达到 update-unconfirmed，Project 的全部 advancement checks 已通过，但尚未选择 idea。",
         "transitionAction": "运行 silvermoon whats-next，不传 ULID 或 alias。",
         "currentState": "报告把 Target Objective 设为 project 并直接到达 terminal，没有列出 active ideas 或选择提示。",
-        "nextAction": "调用者只能另行运行 silvermoon list-ideas 后再传入 selector；当前输出没有说明这一步，列为文案缺失。"
+        "nextAction": "目标是明确选择下一项 Idea 工作；可列出 active Ideas 后传入 selector，或在没有适合候选时创建新 Idea。"
       }
     },
     {
@@ -116,7 +116,7 @@
         "previousState": "Project checks 已通过，调用者开始显式选择要继续的 idea。",
         "transitionAction": "传入不存在的 alias scenario-idea-does-not-exist。",
         "currentState": "报告说明 selector 未匹配，但同时声称没有 active ideas；同一 fixture 中实际存在 implementing idea。",
-        "nextAction": "应列出可选 active ideas 或提示运行 list-ideas，再用准确 ULID/alias 重试；当前输出未提供完整恢复路径。"
+        "nextAction": "目标是解析到唯一 active Idea；可依据输出中的候选使用准确 selector 重试，或在没有适合候选时创建新 Idea。"
       }
     },
     {
@@ -131,7 +131,7 @@
         "previousState": "Project checks 已通过，调用者已从 inventory 取得准确 alias。",
         "transitionAction": "传入 whats-next-template-review，进入该 idea 的当前 lifecycle probe。",
         "currentState": "Idea 为 implementing、control 为 downstream，accepted Ideal 保持有效，当前 implementation revision 尚未 submit。",
-        "nextAction": "继续 Inner World 与 ledger，证据就绪后同步到 primary 并 append submitInner，再重新观测 implementation-unaccepted。"
+        "nextAction": "目标是在已接受范围内完成实现和证据；准备就绪后可同步 exact revision 并提交 Inner World，再重新观测 lifecycle。"
       }
     }
   ]

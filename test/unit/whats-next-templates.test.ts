@@ -99,17 +99,17 @@ function lifecycleIdea(
 }
 
 test("what's next templates select a catalog by language", () => {
-  assert.equal(
+  assert.match(
     whatsNextTemplates("en-US")["idea-not-found"]({ selector: "missing" }),
-    "Idea missing does not match an observed ULID or unique alias.",
+    /Idea missing does not match.+goal is to select.+silvermoon list-ideas.+silvermoon create-idea/,
   );
-  assert.equal(
+  assert.match(
     whatsNextTemplates("zh-CN")["idea-not-found"]({ selector: "missing" }),
-    "Idea missing 未匹配任何已观察到的 ULID 或唯一 alias。",
+    /Idea missing 未匹配.+目标是选中.+silvermoon list-ideas.+silvermoon create-idea/,
   );
-  assert.equal(
+  assert.match(
     whatsNextTemplates("zh-Hans")["idea-not-found"]({ selector: "missing" }),
-    "Idea missing 未匹配任何已观察到的 ULID 或唯一 alias。",
+    /Idea missing 未匹配.+目标是选中.+silvermoon list-ideas.+silvermoon create-idea/,
   );
   assert.equal("navigation-ready" in whatsNextTemplates("en-US"), false);
   assert.equal("lifecycle-inactive" in whatsNextTemplates("en-US"), false);
@@ -269,7 +269,7 @@ test("lifecycle instructions route all six derived template phases", () => {
       state: "implementing",
       submissionState: "unsubmitted",
       expected:
-        "Continue the current idea fixture in phase file Implementation.md",
+        "The goal is to complete implementation evidence",
       excluded: "The current implementation revision was recorded by submitInner",
     },
     {

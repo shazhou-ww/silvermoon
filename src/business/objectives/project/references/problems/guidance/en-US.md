@@ -1,13 +1,13 @@
 ---
-title: "guidance"
-description: "Resolve guidance and probe again."
+title: "Phase guidance is invalid"
+description: "One or more repository-owned phase guidance files do not satisfy the guidance contract."
+instruction: "The goal is valid phase guidance that preserves its intended policy. Review the reported paths and diagnostics, then correct only the invalid frontmatter or content structure and rerun `silvermoon whats-next` to verify it."
 ---
 
 ## Problem guidance
 
-**guidance** means the related Objective condition did not hold in this probe.
-Inspect the returned parameters and current repository facts, preserve unknown work,
-perform the applicable recovery, and probe again.
+One or more repository-owned phase guidance files do not satisfy the guidance
+contract. The Problem fact identifies the affected paths.
 
-This page is the stable knowledge entry. Dynamic paths, revisions, diagnostics,
-and recovery targets come from the current check result.
+The desired outcome is valid guidance with the same intended policy. Use the
+reported diagnostics to choose the smallest frontmatter or structure repair.

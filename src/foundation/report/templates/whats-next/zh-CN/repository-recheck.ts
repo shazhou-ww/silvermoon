@@ -9,6 +9,6 @@ import type { RecheckParameters } from "../contract.ts";
 const repositoryRecheck = ({
   recheckCommand,
 }: RecheckParameters) =>
-  `完成全部适用步骤后，再运行 ${recheckCommand}。`;
+  `repository 达到目标状态后，可用 ${recheckCommand} 验证阻塞是否已经消除。`;
 
 export default repositoryRecheck;

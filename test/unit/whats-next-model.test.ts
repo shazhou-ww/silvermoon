@@ -222,8 +222,10 @@ test("selected Idea stops at its Device prerequisite with one current direction"
   assert.equal(report.response.nextSteps[0]?.text, problemReference?.instruction);
   assert.match(
     report.response.nextSteps[0]?.text ?? "",
-    /source checkout.+pnpm setup:dev.+otherwise.+npm install --global silvermoon.+PATH/,
+    /The goal is to make the intended device runtime reliably reachable/,
   );
+  assert.match(report.response.nextSteps[0]?.text ?? "", /pnpm setup:dev.+source checkout/);
+  assert.match(report.response.nextSteps[0]?.text ?? "", /npm install --global silvermoon/);
   assert.doesNotMatch(
     report.response.nextSteps.map(({ text }) => text).join("\n"),
     /submitInner|Implementation\.md|安装|如有需要/,
@@ -329,6 +331,8 @@ test("project and repository failures gate Idea checks and retain report diagnos
     root: "D:\\fixture",
     head: null,
     primary: null,
+    expectedRepository: "https://example.test/owner/repository.git",
+    expectedBranch: "main",
     branch: null,
   });
   assertNoLocalizedProblemProse(repositoryParameters);
@@ -405,7 +409,11 @@ test("no selector stays Project-only even for one Idea; invalid selectors do not
     if (selector === undefined) {
       assert.equal(report.response.kind, "objective");
       if (report.response.kind === "objective") {
-        assert.deepEqual(report.response.nextSteps, []);
+        assert.equal(report.response.nextSteps.length, 1);
+        assert.match(
+          report.response.nextSteps[0]?.text ?? "",
+          /next goal is to choose the Idea.+silvermoon list-ideas.+silvermoon whats-next/,
+        );
         assert.deepEqual(report.response.objective, {
           target: "project",
           owner: "project",
@@ -584,7 +592,10 @@ test("unknown selectors do not read active Idea metadata", async () => {
   const options = { ...context.options, idea: "missing" };
   const report = await whatsNextUseCase(options, context.ports);
   assert.equal(report.observation.state, "idea-not-found");
-  assert.deepEqual(report.observation.candidates, []);
+  assert.deepEqual(
+    report.observation.candidates.map(({ id, state }) => ({ id, state })),
+    [{ id, state: "implementing" }],
+  );
 });
 
 test("fresh Idea metadata faults and concurrent changes cannot produce stale lifecycle review", async () => {

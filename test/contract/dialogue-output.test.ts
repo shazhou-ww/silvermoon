@@ -3,7 +3,41 @@ import { test } from "node:test";
 
 import { CommandRun } from "../../src/foundation/command-message/index.ts";
 import { renderResponse } from "../../src/foundation/renderer/index.ts";
-import type { DeviceAdvisory } from "../../src/foundation/report/types.ts";
+import type {
+  DeviceAdvisory,
+  ReportJsonValue,
+} from "../../src/foundation/report/types.ts";
+
+function renderObjectiveProblem(
+  id: string,
+  parameters: Readonly<Record<string, ReportJsonValue>>,
+  language: "en-US" | "zh-CN" = "en-US",
+): string {
+  const response: Parameters<typeof renderResponse>[0] = {
+    kind: "objective",
+    language,
+    summary: "A prerequisite is blocked.",
+    objective: {
+      target: "idea",
+      owner: id.startsWith("device-") ? "device" : "project",
+      level: "unready",
+      failingCheck: "fixture-check",
+      terminal: false,
+      problems: [{ id, parameters }],
+      references: [{
+        kind: "problem",
+        id: `problems/${id}`,
+        title: "Fixture problem",
+        description: "The prerequisite is not ready.",
+        command: `silvermoon reference page fixture problems/${id} --language ${language}`,
+        content: "Fixture details.",
+      }],
+    },
+    problems: [{ type: id, summary: "Fixture problem." }],
+    nextSteps: [{ type: "instruction", text: "Reach the required state, then recheck it." }],
+  };
+  return renderResponse(response);
+}
 
 test("renders Objective reports as current status, problems, next action, and compact references", () => {
   const rendered = renderResponse({
@@ -22,8 +56,30 @@ test("renders Objective reports as current status, problems, next action, and co
       failingCheck: "repository-worktree-clean",
       terminal: false,
       problems: [
-        { id: "repository", parameters: { paths: ["first.txt", "second.txt"], branch: "topic" } },
-        { id: "repository", parameters: { paths: ["third.txt"], branch: "topic" } },
+        {
+          id: "repository",
+          parameters: {
+            problemTypes: ["worktree-changes"],
+            changes: {
+              conflicted: [],
+              staged: ["first.txt"],
+              unstaged: ["second.txt"],
+              untracked: [],
+            },
+          },
+        },
+        {
+          id: "repository",
+          parameters: {
+            problemTypes: ["worktree-changes"],
+            changes: {
+              conflicted: [],
+              staged: [],
+              unstaged: [],
+              untracked: ["third.txt"],
+            },
+          },
+        },
       ],
       references: [
         {
@@ -97,8 +153,9 @@ test("renders Objective reports as current status, problems, next action, and co
   assert.match(rendered, /### Problems/);
   assert.match(rendered, /Resolve the repository problem/);
   assert.ok(rendered.indexOf("`first.txt`") < rendered.indexOf("`third.txt`"));
-  assert.match(rendered, /Affected paths: `first\.txt`, `second\.txt`/);
+  assert.match(rendered, /staged `first\.txt`, unstaged `second\.txt`/);
   assert.doesNotMatch(rendered, /Target Objective|Owner Objective|Failing check|ID:|```json/);
+  assert.doesNotMatch(rendered, /problemTypes|Observed state/);
   assert.match(rendered, /### Next action/);
   assert.match(rendered, /### References/);
   assert.match(rendered, /- Level: Safe local repository \(`levels\/repository-unready`\)/);
@@ -156,13 +213,68 @@ test("renders a source checkout as one current runtime fact", () => {
   assert.match(rendered, /^## Idea 推进/m);
   assert.match(
     rendered,
-    /当前 runtime: `D:\\Code\\silvermoon\\dist\\bin\\silvermoon\.js`（source checkout），版本 `0\.5\.0`/,
+    /当前 runtime 是 `D:\\Code\\silvermoon\\dist\\bin\\silvermoon\.js`（source checkout），版本 `0\.5\.0`；对应的 source checkout 根目录是 `D:\\Code\\silvermoon`。/,
   );
-  assert.match(rendered, /Source checkout 路径: `D:\\Code\\silvermoon`/);
   assert.doesNotMatch(
     rendered,
-    /观测到的运行时来源|观测到的运行时版本|checkoutPath/,
+    /观测到的运行时来源|观测到的运行时版本|runtimePath|checkoutPath|source:/,
   );
+});
+
+test("renders structured Objective facts as self-contained prose", () => {
+  const skill = renderObjectiveProblem("device-skill", {
+    status: "missing",
+    expectedRoot: "D:\\Code\\silvermoon\\skills\\silvermoon",
+    paths: [],
+  });
+  assert.match(
+    skill,
+    /Silvermoon's canonical skill is `D:\\Code\\silvermoon\\skills\\silvermoon`, but no personal discovery path currently resolves to it\./,
+  );
+  assert.doesNotMatch(skill, /expectedRoot|paths:|```json/);
+
+  const configuration = renderObjectiveProblem("device-configuration", {
+    configurationPath: "C:\\Users\\agent\\.silvermoon\\config.yaml",
+    diagnosticCodes: ["user-config.unsupported-version"],
+  });
+  assert.match(
+    configuration,
+    /uses an unsupported version; this runtime expects `version: 1`/,
+  );
+  assert.doesNotMatch(configuration, /configurationPath|diagnosticCodes|```json/);
+
+  const detached = renderObjectiveProblem("repository", {
+    problemTypes: ["detached-head"],
+    head: "a".repeat(40),
+    branch: {
+      name: null,
+      remote: null,
+      repository: null,
+      upstreamBranch: null,
+    },
+  });
+  assert.match(
+    detached,
+    /HEAD `aaaaaaaaaaaa` is detached, so the current work is not attached to a local branch\./,
+  );
+  assert.doesNotMatch(detached, /problemTypes|"name": null|```json/);
+
+  const upstream = renderObjectiveProblem("repository", {
+    problemTypes: ["primary-upstream-mismatch"],
+    expectedRepository: "https://github.com/example/project.git",
+    expectedBranch: "main",
+    branch: {
+      name: "scenario",
+      remote: null,
+      repository: null,
+      upstreamBranch: null,
+    },
+  }, "zh-CN");
+  assert.match(
+    upstream,
+    /本地分支 `scenario` 尚未配置 upstream，但应跟踪 `https:\/\/github\.com\/example\/project\.git#main`。/,
+  );
+  assert.doesNotMatch(upstream, /problemTypes|upstreamBranch|```json/);
 });
 
 test("does not render the Device side channel beside an Objective", () => {

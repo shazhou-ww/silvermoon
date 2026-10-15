@@ -1,13 +1,12 @@
 ---
-title: "project"
-description: "处理 project 并重新观测。"
+title: "项目 metadata 尚未就绪"
+description: "项目配置、schema 或 Idea layout 尚未满足安全进行 repository 与 Idea 工作所需的 contract。"
+instruction: "目标是在保留无关内容的同时，让报告的项目 metadata 有效。根据每条自然语言诊断选择最小的适用修改，再运行 `silvermoon whats-next` 验证完整项目 snapshot。"
 ---
 
 ## 问题说明
 
-**project** 表示相关 Objective 条件在本次 probe 中未成立。
-先审阅 check 返回的 parameters 和当前仓库事实，保留未知工作，
-完成对应恢复后重新 probe。
+项目 metadata 尚未满足安全进行 repository 和 Idea 工作的条件。Problem facts
+会解释阻塞本次 probe 的配置、schema 或 layout 条件。
 
-本页只提供稳定知识入口；动态路径、revision、诊断和恢复目标
-来自本次 check result。
+期望结果是有效且完整的项目 snapshot。保留无关内容，并根据每条诊断选择最小修复。

@@ -9,6 +9,6 @@ import type { RecheckParameters } from "../contract.ts";
 const repositoryRecheck = ({
   recheckCommand,
 }: RecheckParameters) =>
-  `After completing every applicable step, run ${recheckCommand} again.`;
+  `Once the repository reaches the intended state, ${recheckCommand} can verify that the blocker is resolved.`;
 
 export default repositoryRecheck;

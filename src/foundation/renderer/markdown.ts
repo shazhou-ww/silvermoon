@@ -89,60 +89,22 @@ function objectiveStatus(
 }
 
 /** @pure */
-function parameterLabel(problemId: string, key: string, language: string) {
-  const problemLabels: Readonly<Record<string, Readonly<Record<string, readonly [string, string]>>>> = {
-    "device-runtime": {
-      source: ["Runtime source", "Runtime 来源"],
-      version: ["Runtime version", "Runtime 版本"],
-    },
-  };
-  const commonLabels: Readonly<Record<string, readonly [string, string]>> = {
-    branch: ["Observed branch", "观测到的分支"],
-    configurationPath: ["Configuration path", "配置路径"],
-    head: ["Observed HEAD", "观测到的 HEAD"],
-    lifecycleState: ["Idea lifecycle state", "Idea 生命周期状态"],
-    path: ["Affected path", "受影响路径"],
-    paths: ["Affected paths", "受影响路径"],
-    phase: ["Idea phase", "Idea 阶段"],
-    primary: ["Observed primary", "观测到的 primary"],
-    problemTypes: ["Observed problem types", "观测到的问题类型"],
-    requirement: ["Required state", "要求状态"],
-    revision: ["Observed revision", "观测到的 revision"],
-    root: ["Observed root", "观测根目录"],
-    state: ["Observed state", "观测状态"],
-    status: ["Observed status", "观测状态"],
-  };
-  const label = problemLabels[problemId]?.[key] ?? commonLabels[key];
-  if (label !== undefined) return localize(language, ...label);
-  const readable = key
-    .replaceAll(/([a-z0-9])([A-Z])/g, "$1 $2")
-    .replaceAll(/[-_]+/g, " ")
-    .toLowerCase();
-  return localize(
-    language,
-    readable.replace(/^./, (character) => character.toUpperCase()),
-    `观测值 ${key}`,
-  );
+function stringValues(value: unknown) {
+  return Array.isArray(value)
+    ? value.filter((entry): entry is string => typeof entry === "string")
+    : [];
 }
 
 /** @pure */
-function parameterValue(
-  value: NonNullable<ReportResponse["objective"]>["problems"][number]["parameters"][string],
-  language: string,
-) {
-  if (value === null) return localize(language, "not observed", "未观测到");
-  if (Array.isArray(value)) {
-    return value.length === 0
-      ? localize(language, "none", "无")
-      : value.map((entry) =>
-        typeof entry === "object" && entry !== null
-          ? codeSpan(JSON.stringify(entry))
-          : codeSpan(String(entry))
-      ).join(", ");
-  }
-  return typeof value === "object"
-    ? codeSpan(JSON.stringify(value))
-    : codeSpan(String(value));
+function proseFacts(lines: string[]) {
+  return lines.map((line) => `   ${line}`);
+}
+
+/** @pure */
+function recordValue(value: unknown): Record<string, unknown> | undefined {
+  return value !== null && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : undefined;
 }
 
 /** @pure */
@@ -165,29 +127,292 @@ function problemFacts(
           `，版本 ${codeSpan(version)}`,
         )
         : "";
-      const facts = [
-        `   - ${localize(language, "Current runtime", "当前 runtime")}: ${
-          codeSpan(runtimePath)
-        }${sourceSuffix}${versionSuffix}`,
-      ];
       const checkoutPath = problem.parameters.checkoutPath;
-      if (
-        source === "source-checkout" && typeof checkoutPath === "string"
-      ) {
-        facts.push(
-          `   - ${localize(language, "Source checkout", "Source checkout 路径")}: ${
-            codeSpan(checkoutPath)
-          }`,
-        );
-      }
-      return facts;
+      const checkoutSuffix = source === "source-checkout"
+          && typeof checkoutPath === "string"
+        ? localize(
+          language,
+          `; its source checkout root is ${codeSpan(checkoutPath)}`,
+          `；对应的 source checkout 根目录是 ${codeSpan(checkoutPath)}`,
+        )
+        : "";
+      return proseFacts([
+        localize(
+          language,
+          `The active runtime is ${codeSpan(runtimePath)}${sourceSuffix}${versionSuffix}${checkoutSuffix}.`,
+          `当前 runtime 是 ${codeSpan(runtimePath)}${sourceSuffix}${versionSuffix}${checkoutSuffix}。`,
+        ),
+      ]);
     }
   }
-  return Object.entries(problem.parameters).map(([key, value]) =>
-    `   - ${parameterLabel(problem.id, key, language)}: ${
-      parameterValue(value, language)
-    }`
-  );
+
+  if (problem.id === "device-configuration") {
+    const path = problem.parameters.configurationPath;
+    const codes = stringValues(problem.parameters.diagnosticCodes);
+    if (typeof path === "string") {
+      const detail = codes.includes("user-config.unsupported-version")
+        ? localize(
+          language,
+          "uses an unsupported version; this runtime expects `version: 1`",
+          "使用了当前 runtime 不支持的版本；这里要求 `version: 1`",
+        )
+        : codes.includes("user-config.missing-version")
+        ? localize(
+          language,
+          "does not declare the required `version: 1`",
+          "缺少必需的 `version: 1`",
+        )
+        : localize(
+          language,
+          "does not satisfy the current user-configuration contract",
+          "不满足当前个人配置 contract",
+        );
+      return proseFacts([
+        localize(
+          language,
+          `The device configuration at ${codeSpan(path)} ${detail}.`,
+          `位于 ${codeSpan(path)} 的设备配置${detail}。`,
+        ),
+      ]);
+    }
+  }
+
+  if (problem.id === "device-skill") {
+    const status = problem.parameters.status;
+    const expectedRoot = problem.parameters.expectedRoot;
+    const paths = stringValues(problem.parameters.paths);
+    if (typeof expectedRoot === "string") {
+      if (status === "missing" || paths.length === 0) {
+        return proseFacts([
+          localize(
+            language,
+            `Silvermoon's canonical skill is ${codeSpan(expectedRoot)}, but no personal discovery path currently resolves to it.`,
+            `Silvermoon 的 canonical skill 位于 ${codeSpan(expectedRoot)}，但当前没有个人级 discovery 路径解析到它。`,
+          ),
+        ]);
+      }
+      return proseFacts([
+        localize(
+          language,
+          `The personal skill registrations at ${
+            paths.map(codeSpan).join(", ")
+          } do not resolve to Silvermoon's canonical skill ${codeSpan(expectedRoot)}.`,
+          `个人级 skill registrations ${
+            paths.map(codeSpan).join("、")
+          } 未解析到 Silvermoon 的 canonical skill ${codeSpan(expectedRoot)}。`,
+        ),
+      ]);
+    }
+  }
+
+  if (problem.id === "device-update") {
+    const current = problem.parameters.currentVersion;
+    const latest = problem.parameters.latestVersion;
+    const channel = problem.parameters.channel;
+    if (typeof current === "string" && typeof latest === "string") {
+      return proseFacts([
+        localize(
+          language,
+          `The device runtime is ${codeSpan(current)}, while the ${
+            typeof channel === "string" ? codeSpan(channel) : "installed"
+          } channel reports ${codeSpan(latest)}.`,
+          `设备级 runtime 当前为 ${codeSpan(current)}，而 ${
+            typeof channel === "string" ? codeSpan(channel) : "对应"
+          } channel 报告的版本是 ${codeSpan(latest)}。`,
+        ),
+      ]);
+    }
+  }
+
+  if (problem.id === "project") {
+    const types = stringValues(problem.parameters.problemTypes);
+    const facts = types.flatMap((type) => {
+      if (type === "schema-invalid") {
+        return [localize(
+          language,
+          "Project metadata contains a value that does not satisfy a supported schema.",
+          "项目 metadata 中存在不满足受支持 schema 的值。",
+        )];
+      }
+      if (type.includes("not-adopted") || type.includes("config-missing")) {
+        return [localize(
+          language,
+          "The repository has not yet been adopted as a Silvermoon project with a valid project configuration.",
+          "该 repository 尚未通过有效项目配置 adopt 为 Silvermoon 项目。",
+        )];
+      }
+      if (type.startsWith("user-")) {
+        return [localize(
+          language,
+          "The personal Silvermoon configuration prevents the complete project snapshot from being resolved.",
+          "个人级 Silvermoon 配置导致完整项目 snapshot 无法解析。",
+        )];
+      }
+      if (type.startsWith("idea-") || type.startsWith("layout-")) {
+        return [localize(
+          language,
+          "The Idea directory layout or metadata is incomplete or invalid.",
+          "Idea 目录 layout 或 metadata 不完整或无效。",
+        )];
+      }
+      if (
+        type.includes("migration")
+        || type.includes("runtime-upgrade")
+        || type.includes("runtime-refresh")
+      ) {
+        return [localize(
+          language,
+          "Project metadata requires a supported migration or runtime before Idea work can continue.",
+          "项目 metadata 需要受支持的 migration 或 runtime，之后才能继续 Idea 工作。",
+        )];
+      }
+      return [];
+    });
+    return proseFacts([...new Set(facts)]);
+  }
+
+  if (problem.id === "repository") {
+    const types = stringValues(problem.parameters.problemTypes);
+    const expectedRepository = problem.parameters.expectedRepository;
+    const expectedBranch = problem.parameters.expectedBranch;
+    const branch = recordValue(problem.parameters.branch);
+
+    if (types.includes("worktree-changes") || types.includes("worktree-conflicts")) {
+      const changes = recordValue(problem.parameters.changes);
+      if (changes !== undefined) {
+        const labels: Readonly<Record<string, readonly [string, string]>> = {
+          conflicted: ["conflicted", "冲突"],
+          staged: ["staged", "已暂存"],
+          unstaged: ["unstaged", "未暂存"],
+          untracked: ["untracked", "未跟踪"],
+        };
+        const observed = Object.entries(labels).flatMap(([key, label]) =>
+          stringValues(changes[key]).map((path) =>
+            localize(
+              language,
+              `${label[0]} ${codeSpan(path)}`,
+              `${label[1]}的 ${codeSpan(path)}`,
+            )
+          )
+        );
+        if (observed.length > 0) {
+          return proseFacts([
+            localize(
+              language,
+              `The worktree contains ${observed.join(", ")}; these changes must be given an intentional disposition before Idea work continues.`,
+              `工作区包含${observed.join("、")}；继续 Idea 工作前，需要为这些修改确定明确去向。`,
+            ),
+          ]);
+        }
+      }
+    }
+
+    if (types.includes("detached-head")) {
+      const head = problem.parameters.head;
+      return proseFacts([
+        localize(
+          language,
+          `HEAD${typeof head === "string" ? ` ${codeSpan(head.slice(0, 12))}` : ""} is detached, so the current work is not attached to a local branch${
+            typeof expectedRepository === "string" && typeof expectedBranch === "string"
+              ? ` tracking ${codeSpan(`${expectedRepository}#${expectedBranch}`)}`
+              : ""
+          }.`,
+          `HEAD${typeof head === "string" ? ` ${codeSpan(head.slice(0, 12))}` : ""} 处于 detached 状态，因此当前工作未附着到${
+            typeof expectedRepository === "string" && typeof expectedBranch === "string"
+              ? `跟踪 ${codeSpan(`${expectedRepository}#${expectedBranch}`)} 的`
+              : ""
+          }本地分支。`,
+        ),
+      ]);
+    }
+
+    if (types.includes("primary-upstream-mismatch")) {
+      const name = branch?.name;
+      const repository = branch?.repository;
+      const upstreamBranch = branch?.upstreamBranch;
+      const expected = typeof expectedRepository === "string" && typeof expectedBranch === "string"
+        ? `${expectedRepository}#${expectedBranch}`
+        : localize(language, "the configured primary", "配置的 primary");
+      const branchName = codeSpan(typeof name === "string" ? name : localize(language, "unknown", "未知"));
+      if (typeof repository === "string" && typeof upstreamBranch === "string") {
+        const actual = codeSpan(`${repository}#${upstreamBranch}`);
+        return proseFacts([
+          localize(
+            language,
+            `Local branch ${branchName} tracks ${actual}, but it must track ${codeSpan(expected)}.`,
+            `本地分支 ${branchName} 当前跟踪 ${actual}，但应跟踪 ${codeSpan(expected)}。`,
+          ),
+        ]);
+      }
+      return proseFacts([
+        localize(
+          language,
+          `Local branch ${branchName} has no configured upstream, but it must track ${codeSpan(expected)}.`,
+          `本地分支 ${branchName} 尚未配置 upstream，但应跟踪 ${codeSpan(expected)}。`,
+        ),
+      ]);
+    }
+
+    const relation = types.find((type) =>
+      type === "primary-ahead" || type === "primary-behind" || type === "primary-diverged"
+    );
+    if (relation !== undefined) {
+      const relationText = relation === "primary-ahead"
+        ? localize(language, "ahead of", "领先于")
+        : relation === "primary-behind"
+        ? localize(language, "behind", "落后于")
+        : localize(language, "diverged from", "已偏离");
+      return proseFacts([
+        localize(
+          language,
+          `The current branch is ${relationText} the configured primary, so its history must be reconciled before Idea work continues.`,
+          `当前分支${relationText}配置的 primary，因此继续 Idea 工作前需要先协调 history。`,
+        ),
+      ]);
+    }
+  }
+
+  if (problem.id === "ideal" || problem.id === "inner" || problem.id === "outer") {
+    const revision = problem.parameters.revision;
+    const requirement = problem.parameters.requirement;
+    const phase = problem.id === "ideal"
+      ? localize(language, "Idea definition", "Idea 定义")
+      : problem.id === "inner"
+      ? localize(language, "implementation", "实现")
+      : localize(language, "deployment", "部署");
+    if (typeof revision === "string" && typeof requirement === "string") {
+      return proseFacts([
+        localize(
+          language,
+          `The current ${phase} revision ${codeSpan(revision.slice(0, 12))} has not reached the required ${codeSpan(requirement)} state, so Idea progress cannot advance.`,
+          `当前${phase} revision ${codeSpan(revision.slice(0, 12))} 尚未达到要求的 ${codeSpan(requirement)} 状态，因此 Idea 无法继续推进。`,
+        ),
+      ]);
+    }
+  }
+
+  if (problem.id === "guidance") {
+    const diagnostics = problem.parameters.diagnostics;
+    const paths = Array.isArray(diagnostics)
+      ? diagnostics.flatMap((entry) =>
+        entry !== null && typeof entry === "object" && "path" in entry
+          && typeof entry.path === "string"
+          ? [entry.path]
+          : []
+      )
+      : [];
+    if (paths.length > 0) {
+      return proseFacts([
+        localize(
+          language,
+          `Phase guidance has contract diagnostics at ${paths.map(codeSpan).join(", ")}.`,
+          `阶段 guidance 在 ${paths.map(codeSpan).join("、")} 存在 contract 诊断。`,
+        ),
+      ]);
+    }
+  }
+
+  return [];
 }
 
 /** @pure */

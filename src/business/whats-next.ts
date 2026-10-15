@@ -10,6 +10,7 @@ import type { CheckResult, ObjectiveLoader } from "../objective-guide/index.ts";
 import type { ObjectiveGuideInstance, ObjectiveObservation } from "../objective-guide/index.ts";
 import type { JsonObject } from "../objective-guide/index.ts";
 import { inspectWorktreeContext, worktreeSnapshot } from "../foundation/git/index.ts";
+import { ideaInventoryItem } from "../foundation/idea-query/index.ts";
 import { observeDevice, observeIdea } from "./shared/index.ts";
 import { createCommandRun } from "../foundation/command-message/index.ts";
 import { ACTIVE_STATES, diagnosticProblem, dialogueReadyObservation } from "../foundation/report/index.ts";
@@ -123,6 +124,22 @@ function firstObjectiveInstruction(
     ({ id, kind }) => kind === "problem" && id === `problems/${problem.id}`,
   );
   return reference?.instruction ?? reference?.description ?? fallback;
+}
+
+function objectiveRecheckInstruction(language: string, command: string) {
+  return localize(
+    language,
+    `Use \`${command}\` to verify the resulting Objective state.`,
+    `完成调整后，用 \`${command}\` 验证 Objective 状态。`,
+  );
+}
+
+function projectReadyInstruction(language: string) {
+  return localize(
+    language,
+    "Project readiness is complete. The next goal is to choose the Idea to advance: possible methods are to inspect active Ideas with `silvermoon list-ideas`, then run `silvermoon whats-next <ULID-or-alias>` for the selected one. If no existing Idea matches genuinely new work, `silvermoon create-idea` is another path.",
+    "项目整备已经完成。下一目标是选择要推进的 Idea：可先用 `silvermoon list-ideas` 查看 active Ideas，再对所选对象运行 `silvermoon whats-next <ULID-or-alias>`。如果确实是没有匹配既有 Idea 的新工作，`silvermoon create-idea` 也是一种路径。",
+  );
 }
 
 function objectiveProblems(observation: ObjectiveObservation) {
@@ -304,7 +321,9 @@ export async function whatsNextUseCase({
         problems: readyObservation.problems,
         ideas: {
           counts: readyObservation.ideas.counts,
-          activeIdeas: [],
+          activeIdeas: readyObservation.ideas.activeIdeas.map((idea) =>
+            ideaInventoryItem(idea)
+          ),
         },
       };
       if (selector === undefined) {
@@ -466,6 +485,9 @@ export async function whatsNextUseCase({
   }
   function repositoryProblems(types: readonly string[]): CheckResult {
     if (repository === undefined) throw new ObjectiveOperationError("Repository sample is unavailable.");
+    if (snapshot?.config === null || snapshot?.config === undefined) {
+      throw new ObjectiveOperationError("Project configuration is unavailable.");
+    }
     if (repository.ready) return passed;
     const problems = repository.observation.problems;
     return problems.some(({ type }) => types.includes(type))
@@ -474,12 +496,24 @@ export async function whatsNextUseCase({
         root: repository.observation.root,
         head: repository.head ?? null,
         primary: repository.primary ?? null,
+        expectedRepository: snapshot.config.primaryRepository,
+        expectedBranch: snapshot.config.primaryBranch,
         branch: repository.branch === undefined ? null : {
           name: repository.branch.branch,
           remote: repository.branch.remote,
           repository: repository.branch.repository,
           upstreamBranch: repository.branch.upstreamBranch,
         },
+        ...(repository.changes === undefined
+          ? {}
+          : {
+            changes: {
+              conflicted: repository.changes.conflicted.map(({ path }) => path),
+              staged: repository.changes.staged.map(({ path }) => path),
+              unstaged: repository.changes.unstaged.map(({ path }) => path),
+              untracked: repository.changes.untracked.map(({ path }) => path),
+            },
+          }),
       })
       : passed;
   }
@@ -519,9 +553,15 @@ export async function whatsNextUseCase({
     });
   };
   loader = createSilvermoonObjectiveLoader({
-    "device-config-valid": async () => sampleDevice().globalConfig.valid ? passed : failed("device-configuration", {
-      configurationPath: sampleDevice().globalConfig.path,
-    }),
+    "device-config-valid": async () => {
+      const device = sampleDevice();
+      return device.globalConfig.valid ? passed : failed("device-configuration", {
+        configurationPath: device.globalConfig.path,
+        diagnosticCodes: device.diagnostics.flatMap(({ code }) =>
+          code === undefined ? [] : [code]
+        ),
+      });
+    },
     "device-runtime-linked": async () => {
       const device = sampleDevice();
       return device.runtime !== null && device.runtime.source !== "source-checkout" && device.runtime.version !== null
@@ -534,10 +574,31 @@ export async function whatsNextUseCase({
             : {}),
         });
     },
-    "device-skill-discoverable": async () => ["ready", "managed-by-host"].includes(sampleDevice().readiness?.skill.status ?? "")
-      ? passed : failed("device-skill", { status: sampleDevice().readiness?.skill.status ?? null }),
-    "device-update-current": async () => ["current", "not-required", "managed-by-host"].includes(sampleDevice().readiness?.update.status ?? "")
-      ? passed : failed("device-update", { status: sampleDevice().readiness?.update.status ?? null }),
+    "device-skill-discoverable": async () => {
+      const skill = sampleDevice().readiness?.skill;
+      return ["ready", "managed-by-host"].includes(skill?.status ?? "")
+        ? passed
+        : failed("device-skill", {
+          status: skill?.status ?? null,
+          expectedRoot: skill?.expectedRoot ?? null,
+          paths: skill?.paths ?? [],
+        });
+    },
+    "device-update-current": async () => {
+      const update = sampleDevice().readiness?.update;
+      return ["current", "not-required", "managed-by-host"].includes(update?.status ?? "")
+        ? passed
+        : failed("device-update", {
+          status: update?.status ?? null,
+          currentVersion: update?.currentVersion ?? null,
+          latestVersion: update !== undefined && "latestVersion" in update
+            ? update.latestVersion ?? null
+            : null,
+          channel: update !== undefined && "channel" in update
+            ? update.channel ?? null
+            : null,
+        });
+    },
     "project-config-valid": async () => {
       if (initialSample) initialSample = false;
       else await project();
@@ -716,7 +777,7 @@ export async function whatsNextUseCase({
           projectedObjective,
           problems[0]?.summary ?? objective.gapSummary,
         ),
-        recheckCommand,
+        objectiveRecheckInstruction(objective.position.owner.language, recheckCommand),
       ],
     });
   }
@@ -748,7 +809,7 @@ export async function whatsNextUseCase({
             projectedObjective,
             problems[0]?.summary ?? objective.gapSummary,
           ),
-          recheckCommand,
+          objectiveRecheckInstruction(objective.position.owner.language, recheckCommand),
         ],
       },
     );
@@ -768,7 +829,9 @@ export async function whatsNextUseCase({
         problems: ready.problems,
         objective: await objectiveProjection("project", objective),
       };
-      finish(terminalObservation, { nextSteps: [] });
+      finish(terminalObservation, {
+        nextSteps: [projectReadyInstruction(guideLanguage)],
+      });
       snapshot = observed;
     } else {
       await operations.selection();
