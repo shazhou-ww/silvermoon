@@ -66,8 +66,8 @@ export function deriveEventIdeaState(
   status: IdeaEventState["status"],
 ) {
   const lifecycle = eventLifecycleStatus(status);
-  if (lifecycle.implementationAcceptedRevision === undefined
-    && status.waivedImplementationRevision !== undefined) {
+  if (lifecycle.implementationAcceptedRevision !== revisions.implementationRevision
+    && status.waivedImplementationRevision === revisions.implementationRevision) {
     lifecycle.implementationAcceptedRevision =
       status.waivedImplementationRevision;
   }

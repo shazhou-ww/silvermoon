@@ -243,6 +243,43 @@ test("late gate waiver applies only to the exact submitted inner revision", () =
     );
 });
 
+test("a current waived revision supersedes stale acceptance without rewriting it", () => {
+  const oldRevision = "4".repeat(40);
+  const state = successfulState(replayIdeaEvents(id, [
+    {
+      sequence: 1,
+      type: "acceptIdeal",
+      payload: { idealRevision: revisions.idealRevision },
+    },
+    {
+      sequence: 2,
+      type: "acceptInner",
+      payload: { implementationRevision: oldRevision },
+    },
+    {
+      sequence: 3,
+      type: "setGateMode",
+      payload: { level: "inner", mode: "waived" },
+    },
+    {
+      sequence: 4,
+      type: "submitInner",
+      payload: { implementationRevision: revisions.implementationRevision },
+    },
+  ]));
+  assert.equal(state.status.implementationAcceptedRevision, oldRevision);
+  assert.equal(
+    state.status.waivedImplementationRevision,
+    revisions.implementationRevision,
+  );
+  assert.equal(deriveEventIdeaState(revisions, state.status), "deploying");
+  assert.equal(state.control?.owner, "downstream");
+  assert.equal(deriveEventIdeaState({
+    ...revisions,
+    implementationRevision: "5".repeat(40),
+  }, state.status), "implementing");
+});
+
 test("restoring explicit before submission keeps the inner human gate", () => {
     const state = successfulState(replayIdeaEvents(id, [
       {
