@@ -30,3 +30,23 @@
 同一 corpus 已生成 9 页 `review.html`：每页并排展示完整 `en-US`/`zh-CN` 原文，
 预载 Agent 对冗余、缺失和缺少提示的初审意见。浏览器验证了分页、逐页表单的
 localStorage 持久化和与 source revision 绑定的 JSON 导出文件名。
+
+## 2026-10-15 最新代码重跑
+
+- Source revision: `47b33317bceb23fd4cbed7fad1845481af2b2802`
+- Source dirty: `false`
+- Runtime: clean checkout 构建并通过 `pnpm setup:dev` 链接的全局 `silvermoon 0.5.0`
+- Environment: `node:24-trixie-slim`，隔离 HOME、synthetic local primary 和工作副本
+- Command: `scenario-lab/run.ps1`
+- Dependency bootstrap: frozen lockfile；当前网络通过显式
+  `SCENARIO_NPM_REGISTRY=https://mirrors.tencent.com/npm/` 完成引导
+- Result: 9 个场景、18 份 `en-US`/`zh-CN` 报告，全部 exit code 0
+- Corpus: idea-local ignored
+  `scenario-lab/corpus/2026-10-15T00-59-55.837Z/`
+
+本次 `review.html` 的 9 个 tab 均显示 Objective/check、分支、前一状态、到达动作、
+当前状态和后续动作；浏览器验证了四列桌面布局、单列窄屏布局、初审状态和 comment
+加载。最新版输出新增两项初审问题：无 selector 的 `whats-next` 直接到达 Project
+terminal 而未提示如何选择 idea；不存在的 selector 报告“没有 active idea”，与同一
+fixture 中可选中的 implementing idea 矛盾。两项仅记录为待人工 review 的问题，没有
+据此推断 review 已完成或修改产品文案。
