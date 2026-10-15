@@ -12,6 +12,10 @@ domainSchema:
     userHome:
       type: string
       minLength: 1
+prerequisite:
+  manifestUri: ../device/manifest.yaml
+  subject: '{"userHome": userHome}'
+  minimumLevelId: update-unconfirmed
 levels:
   - id: configuration-invalid
     advancement:

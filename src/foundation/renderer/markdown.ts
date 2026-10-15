@@ -29,6 +29,157 @@ function objectReference(value: string) {
 }
 
 /** @pure */
+function objectiveName(
+  objective: "device" | "project" | "idea",
+  language: string,
+) {
+  const names = {
+    device: ["Device readiness", "设备整备"],
+    project: ["Project readiness", "项目整备"],
+    idea: ["Idea progress", "Idea 推进"],
+  } as const;
+  const [english, chinese] = names[objective];
+  return localize(language, english, chinese);
+}
+
+/** @pure */
+function objectiveGoal(
+  objective: "device" | "project" | "idea",
+  language: string,
+) {
+  if (language !== "zh-CN") {
+    return objectiveName(objective, language);
+  }
+  return {
+    device: "完成设备整备",
+    project: "完成项目整备",
+    idea: "推进 Idea",
+  }[objective];
+}
+
+/** @pure */
+function objectiveStatus(
+  objective: NonNullable<ReportResponse["objective"]>,
+  language: string,
+) {
+  const target = objectiveGoal(objective.target, language);
+  const owner = objectiveName(objective.owner, language);
+  if (objective.terminal) {
+    return localize(
+      language,
+      `This observation confirms that ${owner} is complete.`,
+      `本次观测确认${owner}已完成。`,
+    );
+  }
+  const blocked = objective.problems.length === 1
+    ? localize(language, "The problem below is", "下方问题")
+    : localize(language, "The problems below are", "下方问题");
+  if (objective.target === objective.owner) {
+    return localize(
+      language,
+      `This request targets ${target}. ${blocked} preventing it from continuing.`,
+      `本次请求的目标是${target}。${blocked}阻止继续推进。`,
+    );
+  }
+  return localize(
+    language,
+    `This request targets ${target}, but ${owner} must be completed first. ${blocked} preventing ${owner} from continuing.`,
+    `本次请求的目标是${target}，但必须先完成${owner}。${blocked}阻止${owner}继续。`,
+  );
+}
+
+/** @pure */
+function parameterLabel(problemId: string, key: string, language: string) {
+  const problemLabels: Readonly<Record<string, Readonly<Record<string, readonly [string, string]>>>> = {
+    "device-runtime": {
+      source: ["Runtime source", "Runtime 来源"],
+      version: ["Runtime version", "Runtime 版本"],
+    },
+  };
+  const commonLabels: Readonly<Record<string, readonly [string, string]>> = {
+    branch: ["Observed branch", "观测到的分支"],
+    configurationPath: ["Configuration path", "配置路径"],
+    head: ["Observed HEAD", "观测到的 HEAD"],
+    lifecycleState: ["Idea lifecycle state", "Idea 生命周期状态"],
+    path: ["Affected path", "受影响路径"],
+    paths: ["Affected paths", "受影响路径"],
+    phase: ["Idea phase", "Idea 阶段"],
+    primary: ["Observed primary", "观测到的 primary"],
+    problemTypes: ["Observed problem types", "观测到的问题类型"],
+    requirement: ["Required state", "要求状态"],
+    revision: ["Observed revision", "观测到的 revision"],
+    root: ["Observed root", "观测根目录"],
+    state: ["Observed state", "观测状态"],
+    status: ["Observed status", "观测状态"],
+  };
+  const label = problemLabels[problemId]?.[key] ?? commonLabels[key];
+  if (label !== undefined) return localize(language, ...label);
+  const readable = key
+    .replaceAll(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .replaceAll(/[-_]+/g, " ")
+    .toLowerCase();
+  return localize(
+    language,
+    readable.replace(/^./, (character) => character.toUpperCase()),
+    `观测值 ${key}`,
+  );
+}
+
+/** @pure */
+function parameterValue(
+  value: NonNullable<ReportResponse["objective"]>["problems"][number]["parameters"][string],
+  language: string,
+) {
+  if (value === null) return localize(language, "not observed", "未观测到");
+  if (Array.isArray(value)) {
+    return value.length === 0
+      ? localize(language, "none", "无")
+      : value.map((entry) =>
+        typeof entry === "object" && entry !== null
+          ? codeSpan(JSON.stringify(entry))
+          : codeSpan(String(entry))
+      ).join(", ");
+  }
+  return typeof value === "object"
+    ? codeSpan(JSON.stringify(value))
+    : codeSpan(String(value));
+}
+
+/** @pure */
+function problemFacts(
+  problem: NonNullable<ReportResponse["objective"]>["problems"][number],
+  language: string,
+) {
+  if (problem.id === "device-runtime") {
+    const runtimePath = problem.parameters.runtimePath;
+    const source = problem.parameters.source;
+    const version = problem.parameters.version;
+    if (typeof runtimePath === "string") {
+      const sourceSuffix = source === "source-checkout"
+        ? localize(language, " (source checkout)", "（source checkout）")
+        : "";
+      const versionSuffix = typeof version === "string"
+        ? localize(
+          language,
+          `, version ${codeSpan(version)}`,
+          `，版本 ${codeSpan(version)}`,
+        )
+        : "";
+      return [
+        `   - ${localize(language, "Current runtime", "当前 runtime")}: ${
+          codeSpan(runtimePath)
+        }${sourceSuffix}${versionSuffix}`,
+      ];
+    }
+  }
+  return Object.entries(problem.parameters).map(([key, value]) =>
+    `   - ${parameterLabel(problem.id, key, language)}: ${
+      parameterValue(value, language)
+    }`
+  );
+}
+
+/** @pure */
 function renderVersion(version?: ProjectVersion) {
   if (!version) return null;
   if (version.type === "commit" || version.type === "remote") {
@@ -303,6 +454,26 @@ function renderDeviceAdvisory(
   ) {
     return [];
   }
+  if (device.runtime.source === "source-checkout") {
+    return [
+      `### ${localize(
+        language,
+        "Device advisory (does not affect the project result)",
+        "设备提示（不影响项目判断）",
+      )}`,
+      "",
+      `- ${localize(language, "Problem", "问题")}: ${localize(
+        language,
+        "This command did not run through a device-level `silvermoon` executable discoverable on `PATH`.",
+        "当前命令未通过 `PATH` 中可发现的设备级 `silvermoon` 可执行文件运行。",
+      )}`,
+      `- ${localize(language, "Required action", "必要动作")}: ${localize(
+        language,
+        "Run `pnpm setup:dev` from this Silvermoon source checkout, ensure the global npm bin directory is on `PATH`, then rerun the same command with `silvermoon`.",
+        "在当前 Silvermoon source checkout 中运行 `pnpm setup:dev`，确保 npm global bin 目录已加入 `PATH`，然后用 `silvermoon` 重试当前命令。",
+      )}`,
+    ];
+  }
   const skillDetails = device.skill.summary
     ?? (device.skill.invalidPaths?.length
       ? device.skill.invalidPaths.join(", ")
@@ -364,16 +535,6 @@ function renderDeviceAdvisory(
       ],
     ),
   ];
-  if (device.runtime.source === "source-checkout") {
-    lines.push(
-      "",
-      localize(
-        language,
-        "**Device setup required:** This command bypassed the device-level global Silvermoon link. Link this checkout globally, register its canonical skill by link in a personal discovery path, and rerun with `silvermoon`; the Silvermoon source repository is not an exception to the global runtime boundary.",
-        "**需要完成设备设置：** 本次命令绕过了设备级全局 Silvermoon 链接。请把当前 checkout 链接为全局 runtime，在个人 discovery 路径中以链接注册 canonical skill，然后用 `silvermoon` 重试；Silvermoon 源码仓库也不例外。",
-      ),
-    );
-  }
   return lines;
 }
 
@@ -423,33 +584,34 @@ function renderObjectiveResponse(response: ReportResponse, language: string) {
     throw new TypeError("Objective report requires an Objective projection.");
   }
   const lines = [
-    "## Objective",
+    `## ${objectiveName(objective.target, language)}`,
     "",
-    response.summary,
+    `### ${objective.terminal
+      ? localize(language, "Outcome", "结果")
+      : localize(language, "Current status", "现状")}`,
     "",
-    `### ${localize(language, "Current position", "当前位置")}`,
-    "",
-    `- ${localize(language, "Target Objective", "目标 Objective")}: ${codeSpan(objective.target)}`,
-    `- ${localize(language, "Owner Objective", "所属 Objective")}: ${codeSpan(objective.owner)}`,
-    `- ${localize(language, "Level", "层级")}: ${codeSpan(objective.level)}`,
-    `- ${localize(language, "Failing check", "失败 check")}: ${
-      objective.failingCheck === null
-        ? localize(language, "none", "无")
-        : codeSpan(objective.failingCheck)
-    }`,
-    `- Terminal: ${codeSpan(String(objective.terminal))}`,
+    objectiveStatus(objective, language),
   ];
   const root = response.details?.root;
-  if (root !== undefined) {
-    lines.push(`- ${localize(language, "Root", "根目录")}: ${codeSpan(root)}`);
-  }
   const version = renderVersion(response.details?.version);
-  if (version !== null) {
-    lines.push(`- ${localize(language, "Revision", "Revision")}: ${codeSpan(version)}`);
-  }
-  if (response.details?.primary !== undefined) {
+  const primary = response.details?.primary;
+  if (root !== undefined || version !== null || primary !== undefined) {
+    const context = [
+      ...(root === undefined
+        ? []
+        : [`${localize(language, "root", "根目录")} ${codeSpan(root)}`]),
+      ...(version === null
+        ? []
+        : [`${localize(language, "revision", "revision")} ${codeSpan(version)}`]),
+      ...(primary === undefined
+        ? []
+        : [`primary ${codeSpan(`${primary.repository}#${primary.branch}`)}`]),
+    ];
     lines.push(
-      `- Primary: ${codeSpan(`${response.details.primary.repository}#${response.details.primary.branch}`)}`,
+      "",
+      `${localize(language, "Observation context", "观测上下文")}: ${
+        context.join(localize(language, ", ", "，"))
+      }${localize(language, ".", "。")}`,
     );
   }
   if (response.schemas !== undefined) {
@@ -458,21 +620,16 @@ function renderObjectiveResponse(response: ReportResponse, language: string) {
       lines.push("", ...readiness.map((line) => line.replace(/^### /, "#### ")));
     }
   }
-  if (response.device !== undefined) {
-    const advisory = renderDeviceAdvisory(response.device, language);
-    if (advisory.length > 0) {
-      lines.push("", ...advisory.map((line) => line.replace(/^### /, "#### ")));
-    }
-  }
   if ("idea" in response && response.idea !== undefined) {
+    const identity = response.idea.alias === undefined
+      ? codeSpan(response.idea.id)
+      : `${response.idea.alias} (${codeSpan(response.idea.id)})`;
     lines.push(
       "",
-      `- ${localize(language, "Idea", "Idea")}: ${codeSpan(response.idea.id)}`,
-      `- ${localize(language, "State", "状态")}: ${codeSpan(response.idea.state)}`,
+      `${localize(language, "Selected Idea", "所选 Idea")}: ${identity}; ${
+        localize(language, "lifecycle state", "生命周期状态")
+      } ${codeSpan(response.idea.state)}.`,
     );
-    if (response.idea.alias !== undefined) {
-      lines.push(`- Alias: ${codeSpan(response.idea.alias)}`);
-    }
     lines.push(
       ...renderIdeaCoordination(response.idea, language)
         .map((line) => line.replace(/^### /, "#### ")),
@@ -481,31 +638,38 @@ function renderObjectiveResponse(response: ReportResponse, language: string) {
   if (objective.problems.length > 0) {
     lines.push(
       "",
-      `#### ${localize(language, "Ordered problems", "有序 problems")}`,
+      `### ${localize(language, "Problems", "问题")}`,
       "",
     );
     for (const [index, problem] of objective.problems.entries()) {
+      const reference = objective.references.find(
+        ({ id, kind }) => kind === "problem" && id === `problems/${problem.id}`,
+      );
       lines.push(
-        `${index + 1}. ${codeSpan(problem.id)}`,
-        "",
-        "```json",
-        JSON.stringify(problem.parameters, null, 2),
-        "```",
+        `${index + 1}. ${reference?.description ?? reference?.title ?? codeSpan(problem.id)}`,
+        ...problemFacts(problem, language),
       );
     }
   }
-  if (response.kind === "next-steps" && response.review !== undefined) {
+  const hasNextAction = (response.kind === "next-steps" && response.review !== undefined)
+    || ("nextSteps" in response && response.nextSteps.length > 0)
+    || ("guidance" in response && response.guidance !== undefined);
+  if (hasNextAction) {
     lines.push(
       "",
+      `### ${localize(language, "Next action", "下一步动作")}`,
+      "",
+    );
+  }
+  if (response.kind === "next-steps" && response.review !== undefined) {
+    lines.push(
       ...renderReview(response.review, language)
         .map((line) => line.replace(/^### /, "#### ")),
+      "",
     );
   }
   if ("nextSteps" in response && response.nextSteps.length > 0) {
     lines.push(
-      "",
-      `#### ${localize(language, "Required actions", "必做动作")}`,
-      "",
       ...response.nextSteps.map(({ text }) => text),
     );
   }
@@ -517,7 +681,7 @@ function renderObjectiveResponse(response: ReportResponse, language: string) {
   }
   lines.push(
     "",
-    `### ${localize(language, "Downward guidance", "向下指引")}`,
+    `### ${localize(language, "References", "参考资料")}`,
     "",
   );
   for (const reference of objective.references) {
@@ -527,47 +691,9 @@ function renderObjectiveResponse(response: ReportResponse, language: string) {
       problem: "Problem",
     }[reference.kind];
     lines.push(
-      `#### ${kind}: ${reference.title} (${codeSpan(reference.id)})`,
-      "",
-    );
-    const guidance = [
-      ...(reference.description === undefined
-        ? []
-        : [{
-          label: localize(language, "Description", "说明"),
-          value: reference.description,
-        }]),
-      ...(reference.outcome === undefined
-        ? []
-        : [{
-          label: localize(language, "Outcome", "结果"),
-          value: reference.outcome,
-        }]),
-      ...(reference.instruction === undefined
-        ? []
-        : [{
-          label: localize(language, "Instruction", "指引"),
-          value: reference.instruction,
-        }]),
-      ...(reference.content === ""
-        ? []
-        : [{
-          label: localize(language, "Guidance", "指导"),
-          value: reference.content,
-        }]),
-    ];
-    for (const { label, value } of guidance) {
-      lines.push(`> **${label}:**`);
-      for (const line of value.split("\n")) {
-        lines.push(line === "" ? ">" : `> ${line}`);
-      }
-      lines.push(">");
-    }
-    if (lines.at(-1) === ">") lines.pop();
-    lines.push(
-      "",
-      `- ${localize(language, "Further details", "进一步详情")}: ${codeSpan(reference.command)}`,
-      "",
+      `- ${kind}: ${reference.title} (${codeSpan(reference.id)}) — ${
+        localize(language, "further details", "进一步详情")
+      }: ${codeSpan(reference.command)}`,
     );
   }
   return lines.join("\n");

@@ -21,7 +21,7 @@ import {
 } from "../../src/foundation/coordinates/index.ts";
 import {
   CHANGE_SAMPLE_ITEM_LIMIT,
-  whatsNext,
+  whatsNext as sourceWhatsNext,
 } from "../../src/business/whats-next.ts";
 import { renderResponse } from "../../src/foundation/renderer/index.ts";
 import {
@@ -34,7 +34,10 @@ import {
   setIdeaState,
   submitIdeaState,
 } from "../helpers/repository.ts";
-import { createWhatsNextTestHelpers } from "../helpers/whatsnext.ts";
+import {
+  createWhatsNextTestHelpers,
+  whatsNext,
+} from "../helpers/whatsnext.ts";
 
 const {
   envelopeKeys,
@@ -126,7 +129,7 @@ test("target context distinguishes outside-worktree, invalid Idea context, and G
   const root = await mkdtemp(join(tmpdir(), "silvermoon-unconfigured-"));
   trackTemporaryDirectory(root);
 
-  const outside = await whatsNext({
+  const outside = await sourceWhatsNext({
     language: "zh-cn",
     root,
     userHome: root,
@@ -711,32 +714,25 @@ test("uses a canonical output override without changing content language or pers
   await writeFile(join(repository.root, "local.txt"), "preserve me\n");
   const blocked = await whatsNext({
     idea: "localized",
-    language: "zh-CN",
+    language: "en-US",
     root: repository.root,
     userHome: repository.base,
   });
 
-  assert.equal(blocked.observation.outputLanguage, "zh-CN");
-  assert.match(responseText(blocked), /^检查全部 staged、unstaged 和 untracked 路径/);
+  assert.equal(blocked.observation.outputLanguage, "en-US");
+  assert.match(responseText(blocked), /^Inspect all staged, unstaged, and untracked paths/);
   assert.match(
     responseText(blocked),
-    /silvermoon whats-next "localized" --language zh-CN --audience agent/,
+    /silvermoon whats-next "localized" --language en-US --audience agent/,
   );
   const blockedMarkdown = renderResponse(blocked.response);
-  assert.match(blockedMarkdown, /### 向下指引/);
-  assert.match(blockedMarkdown, /> ## Problem guidance/);
+  assert.match(blockedMarkdown, /### References/);
+  assert.doesNotMatch(blockedMarkdown, /> ## Problem guidance/);
   assert.match(
     blockedMarkdown,
-    /> Preserve unknown work and use the current Problem parameters before applying recovery\./,
+    /further details.*silvermoon reference page project problems\/repository --language en-US/,
   );
-  assert.match(
-    blockedMarkdown,
-    /进一步详情.*silvermoon reference page project problems\/repository --language en-US/,
-  );
-  assert.match(
-    blockedMarkdown,
-    /Project Objective overview \(`silvermoon reference page project system\/overview --language en-US`\)/,
-  );
+  assert.doesNotMatch(blockedMarkdown, /Project Objective overview/);
 });
 
 test("drives gate presentation from content language instead of output language", async () => {
@@ -801,8 +797,14 @@ test("drives gate presentation from content language instead of output language"
 
   const rendered = renderResponse(selected.response);
   assert.match(rendered, /#### Review request template/);
-  assert.match(rendered, /> ## 问题说明/);
-  assert.match(rendered, /> \*\*Description:\*\*\n> 处理 ideal 并重新观测。/);
+  assert.match(rendered, /### References/);
+  assert.match(
+    rendered,
+    /silvermoon reference page idea problems\/ideal --language en-US/,
+  );
+  assert.match(rendered, /### Problems[\s\S]*Resolve ideal and probe again/);
+  assert.doesNotMatch(rendered, /处理 ideal 并重新观测/);
+  assert.doesNotMatch(rendered, /> ## 问题说明/);
   assert.match(rendered, /```markdown\n## 构想验收/);
   assert.match(rendered, /- 构想: \{idea identity\}/);
   assert.match(

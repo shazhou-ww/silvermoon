@@ -710,23 +710,18 @@ decision, risk, or disagreement requires it.
   );
   assert.match(
     lifecycleText,
-    /^## Objective\n\nThe repository must be synchronized before this command can continue\./,
+    /^## Idea progress\n\n### Current status\n\nThis request targets Idea progress, but Project readiness must be completed first\./,
   );
   assert.match(
     lifecycleText,
-    /\n\n### Current position[\s\S]*Target Objective: `idea`[\s\S]*Owner Objective: `project`[\s\S]*1\. `repository`/,
+    /\n\n### Current status[\s\S]*### Problems[\s\S]*1\. .+[\s\S]*Observed state:/,
   );
-  assert.match(lifecycleText, /\n\n### Downward guidance\n/);
-  assert.match(lifecycleText, /> ## Problem guidance/);
-  assert.match(
-    lifecycleText,
-    /> Preserve unknown work and use the current Problem parameters before applying recovery\./,
-  );
-  assert.match(lifecycleText, /Further details: `silvermoon reference page project problems\/repository --language en-US`/);
-  assert.match(
-    lifecycleText,
-    /Project Objective overview \(`silvermoon reference page project system\/overview --language en-US`\)/,
-  );
+  assert.match(lifecycleText, /\n\n### Next action\n/);
+  assert.match(lifecycleText, /\n\n### References\n/);
+  assert.doesNotMatch(lifecycleText, /Target Objective|Owner Objective|Failing check|ID:|```json/);
+  assert.doesNotMatch(lifecycleText, /> ## Problem guidance/);
+  assert.match(lifecycleText, /further details: `silvermoon reference page project problems\/repository --language en-US`/);
+  assert.doesNotMatch(lifecycleText, /Project Objective overview/);
   assert.doesNotMatch(lifecycleText, /### Ideas you can continue/);
   assert.doesNotMatch(lifecycleText, /## Actions and results/);
   const eventConsumer = join(temporaryRoot, "event-consumer");

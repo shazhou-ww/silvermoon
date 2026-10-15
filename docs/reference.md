@@ -435,18 +435,20 @@ projections:
   and any ordered `nextSteps`, choices, items, validation result, review
   context, or guidance needed by the caller.
 
-Dialogue observations and responses also carry the same optional `device`
-advisory. `device.runtime` identifies the running package as `global`, `host`,
-or `source-checkout`; `device.skill` reports personal-link health; and
+Dialogue observations and responses also carry optional `device` telemetry.
+`device.runtime` identifies the running package as `global`, `host`, or
+`source-checkout`; `device.skill` reports personal-link health; and
 `device.update` reports `current`, `available`, `unavailable`,
 `managed-by-host`, or `source-checkout` with cache or registry provenance. Its
 optional `channel` identifies the npm dist-tag selected from the installed
 version; `latestVersion` remains the observed target version on that channel.
-For Project and Idea targets these fields remain advisory and never enter
-`problems` or change command success. For a Device target, the corresponding
-Objective checks use the same facts to determine its current level. Snapshot-only
-`check` responses omit `device` so their result depends only on the selected
-project snapshot and explicit primary state.
+For check-backed `whats-next`, Project requires Device through
+`update-unconfirmed`. Configuration, runtime, and skill failures therefore
+retain Device as the single Objective owner even when Project or Idea was the
+target. Update status remains telemetry and does not block those targets.
+These fields never become project `problems` or change project snapshot
+validity. Snapshot-only `check` responses omit `device` so their result depends
+only on the selected project snapshot and explicit primary state.
 
 A selected active v2 idea adds a primary-bound `review` object to its
 `next-steps` response only when the exact current phase revision has a matching
@@ -658,13 +660,18 @@ Observations are discriminated by command intent and `state`:
 - Every check-backed blocked or ready `whats-next` response projects the same
   Objective position: requested target, actual owner (including prerequisite
   ownership), level, failing check, complete ordered Problems with structured
-  parameters, and matching level/check/Problem Reference guidance. Each
+  parameters, and matching level/check/Problem References. Each
   Reference projection preserves kind, ID, title, description, content,
   optional level outcome or Problem instruction, and its further-detail
   command. Internal links are rendered as `silvermoon reference page`
   commands without executing or interpolating Reference content. Markdown
-  renders these as the fixed **Current position** and **Downward guidance**
-  sections. Dynamic paths, revisions, branches, and retry commands remain
+  titles the requested target Objective and renders fixed **Current status**,
+  **Problems**, **Next action**, and compact **References** sections. Current
+  status explains prerequisite ownership in prose, while Problems labels
+  observed facts without exposing raw IDs or parameter JSON. Those machine
+  fields remain unchanged in the structured response. Terminal output renders
+  **Outcome** and **References** only. Markdown does not inline full Reference
+  pages. Dynamic paths, revisions, branches, and retry commands remain
   invocation facts; Reference pages remain stable explanatory knowledge.
 - Selected `whats-next` returns `idea-selected` with only `selectedIdea`
   (`id`, optional `alias`, lifecycle `state`), including terminal ideas. V2
@@ -708,6 +715,8 @@ metadata schema, and layout. It does not inspect execution source, a package
 manager, `package.json`, project-local Silvermoon dependencies, `node_modules`,
 or repository skill paths. Runtime identity, update status, and personal skill
 registration are device facts and do not change a project snapshot result.
+For `whats-next`, the Device Objective consumes those facts as the first
+prerequisite while preserving that snapshot boundary.
 
 Complete project observations expose `schemas`, containing the runtime
 capability-manifest version, its release boundary, and one record for every

@@ -1,13 +1,15 @@
 ---
 title: "device-runtime"
-description: "处理 device-runtime 并重新观测。"
+description: "当前 Silvermoon runtime 无法通过 PATH 中的设备级 silvermoon 可执行文件运行。"
+instruction: "source checkout 在该 checkout 中运行 pnpm setup:dev；其他情况运行 npm install --global silvermoon。确保 npm global bin 目录已加入 PATH，然后用 silvermoon 重试。"
 ---
 
 ## 问题说明
 
-**device-runtime** 表示相关 Objective 条件在本次 probe 中未成立。
-先审阅 check 返回的 parameters 和当前仓库事实，保留未知工作，
-完成对应恢复后重新 probe。
+**device-runtime** 表示当前 runtime 未通过 `PATH` 中可发现的设备级
+`silvermoon` 可执行文件进入。Problem facts 会给出 runtime 入口路径、版本，以及它
+是否为 source checkout。
 
-本页只提供稳定知识入口；动态路径、revision、诊断和恢复目标
-来自本次 check result。
+source checkout 在该 checkout 中运行 `pnpm setup:dev` 以链接 runtime；其他情况
+运行 `npm install --global silvermoon` 完成全局安装。确保 npm global bin 目录已加入
+`PATH`，然后用 `silvermoon` 重试同一命令。

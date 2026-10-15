@@ -14,7 +14,7 @@ import { observeDevice, observeIdea } from "./shared/index.ts";
 import { createCommandRun } from "../foundation/command-message/index.ts";
 import { ACTIVE_STATES, diagnosticProblem, dialogueReadyObservation } from "../foundation/report/index.ts";
 import { inspectAllGuidance, inspectPhaseGuidance } from "../foundation/guidance/index.ts";
-import { canonicalizeOutputLanguage, localize, resolveContentTemplateLanguage, resolveOutputLanguage } from "../foundation/language/index.ts";
+import { canonicalizeOutputLanguage, localize, resolveOutputLanguage } from "../foundation/language/index.ts";
 import { observeSnapshot, withObservationLanguage } from "./shared/index.ts";
 
 import { joinInstructions, lifecycleInstruction, lifecycleReview, phaseGuidanceInstructions, projectInstructions, renderIdeaNotFound, selectIdea } from "../foundation/report/index.ts";
@@ -113,6 +113,63 @@ async function objectiveProjection(
   };
 }
 
+function firstObjectiveInstruction(
+  objective: ObjectiveProjection,
+  fallback: string,
+  language: string,
+) {
+  const problem = objective.problems[0];
+  if (problem === undefined) return fallback;
+  if (problem.id === "device-runtime") {
+    const source = problem.parameters.source;
+    const checkoutPath = problem.parameters.checkoutPath;
+    if (source === "source-checkout" && typeof checkoutPath === "string") {
+      const command = `pnpm --dir "${checkoutPath.replaceAll('"', '\\"')}" setup:dev`;
+      return localize(
+        language,
+        `Link this source checkout as the device runtime with \`${command}\`, then ensure the global npm bin directory is on \`PATH\`.`,
+        `运行 \`${command}\`，将这个 source checkout 链接为设备级 runtime，然后确保 npm global bin 目录已加入 \`PATH\`。`,
+      );
+    }
+    return localize(
+      language,
+      "Install the device runtime with `npm install --global silvermoon`, then ensure the global npm bin directory is on `PATH`.",
+      "运行 `npm install --global silvermoon` 安装设备级 runtime，然后确保 npm global bin 目录已加入 `PATH`。",
+    );
+  }
+  const reference = objective.references.find(
+    ({ id, kind }) => kind === "problem" && id === `problems/${problem.id}`,
+  );
+  return reference?.instruction ?? reference?.description ?? fallback;
+}
+
+function objectiveProblems(observation: ObjectiveObservation) {
+  return observation.position.problems.map(({ id }) => ({
+    type: id,
+    summary: observation.gapSummary,
+  }));
+}
+
+function objectiveReport(
+  source: Observation,
+  objective: ObjectiveProjection,
+  problems: ReturnType<typeof objectiveProblems>,
+): ObjectiveReportObservation {
+  return {
+    state: objective.terminal ? "objective-ready" : "objective-blocked",
+    root: source.root,
+    outputLanguage: source.outputLanguage,
+    problems,
+    ...(source.device === undefined ? {} : { device: source.device }),
+    ...(source.version === undefined ? {} : { version: source.version }),
+    ...(source.configuration === undefined
+      ? {}
+      : { configuration: source.configuration }),
+    ...(source.schemas === undefined ? {} : { schemas: source.schemas }),
+    objective,
+  };
+}
+
 const WHATSNEXT_PORTS = Object.freeze({ createCommandRun, observeSnapshot, assessRepositoryReadiness, createSilvermoonObjectiveLoader, probeObjective, observeDevice, observeIdea, inspectWorktreeContext, worktreeSnapshot });
 
 function navigationSource(
@@ -201,15 +258,6 @@ export async function whatsNextUseCase({
       version: { type: "worktree" },
       deviceObserver: async (options) => {
         deviceSample = await observeDevice(options);
-        if (loader !== undefined) {
-          const device = await loader.load(SILVERMOON_OBJECTIVE_URIS.device);
-          const created = device.createInstance({
-            subject: { userHome: subject.userHome },
-            language: resolveContentTemplateLanguage(deviceSample.user.config?.preferredLanguage ?? "en-US").tag,
-          });
-          if (!created.ok) throw new ObjectiveOperationError(`Device instance creation failed: ${created.error.type}.`);
-          await probeObjective(created.instance);
-        }
         return deviceSample;
       },
     });
@@ -496,8 +544,12 @@ export async function whatsNextUseCase({
       const device = sampleDevice();
       return device.runtime !== null && device.runtime.source !== "source-checkout" && device.runtime.version !== null
         ? passed : failed("device-runtime", {
+          runtimePath: device.runtime?.entry ?? null,
           source: device.runtime?.source ?? null,
           version: device.runtime?.version ?? null,
+          ...(device.runtime?.source === "source-checkout"
+            ? { checkoutPath: device.runtime.packageRoot }
+            : {}),
         });
     },
     "device-skill-discoverable": async () => ["ready", "managed-by-host"].includes(sampleDevice().readiness?.skill.status ?? "")
@@ -660,22 +712,16 @@ export async function whatsNextUseCase({
     const device = await loader.load(SILVERMOON_OBJECTIVE_URIS.device);
     const created = device.createInstance({
       subject: { userHome: subject.userHome },
-      language: resolveContentTemplateLanguage(
-        deviceSample.user.config?.preferredLanguage ?? "en-US",
-      ).tag,
+      language: outputLanguage,
     });
     if (!created.ok) {
       throw new ObjectiveOperationError(`Device instance creation failed: ${created.error.type}.`);
     }
     const objective = await probeObjective(created.instance);
     const projectedObjective = await objectiveProjection("device", objective);
-    const terminal = projectedObjective.terminal;
-    const problems = objective.position.problems.map(({ id }) => ({
-      type: id,
-      summary: objective.gapSummary,
-    }));
+    const problems = objectiveProblems(objective);
     const observation: ObjectiveReportObservation = {
-      state: terminal ? "objective-ready" : "objective-blocked",
+      state: projectedObjective.terminal ? "objective-ready" : "objective-blocked",
       root: context.root,
       outputLanguage,
       problems,
@@ -683,8 +729,12 @@ export async function whatsNextUseCase({
       objective: projectedObjective,
     };
     return runtime.complete(observation, {
-      nextSteps: terminal ? [] : [
-        problems[0]?.summary ?? objective.gapSummary,
+      nextSteps: projectedObjective.terminal ? [] : [
+        firstObjectiveInstruction(
+          projectedObjective,
+          problems[0]?.summary ?? objective.gapSummary,
+          outputLanguage,
+        ),
         recheckCommand,
       ],
     });
@@ -694,7 +744,7 @@ export async function whatsNextUseCase({
   await project();
   const sample = snapshot;
   if (sample === undefined) throw new ObjectiveOperationError("Project observation omitted its sample.");
-  const guideLanguage = resolveContentTemplateLanguage(sample.contentLanguage).tag;
+  const guideLanguage = sample.outputLanguage;
   const routed = selectedSample();
   const scoped = routed?.state === "abandoned" ? null : routed;
   const guide = await loader.load(scoped === null ? SILVERMOON_OBJECTIVE_URIS.project : SILVERMOON_OBJECTIVE_URIS.idea);
@@ -703,6 +753,26 @@ export async function whatsNextUseCase({
   });
   if (!created.ok) throw new ObjectiveOperationError(`Navigation instance creation failed: ${created.error.type}.`);
   const objective = await probeObjective(created.instance);
+  const projectedObjective = await objectiveProjection(
+    selector === undefined ? "project" : "idea",
+    objective,
+  );
+  if (projectedObjective.owner === "device") {
+    const problems = objectiveProblems(objective);
+    return runtime.complete(
+      objectiveReport(sample.observation, projectedObjective, problems),
+      {
+        nextSteps: [
+          firstObjectiveInstruction(
+            projectedObjective,
+            problems[0]?.summary ?? objective.gapSummary,
+            guideLanguage,
+          ),
+          recheckCommand,
+        ],
+      },
+    );
+  }
   if (scoped === null && objective.position.level.id === "terminal") {
     if (selector === undefined) {
       const observed = readySnapshot();
@@ -727,10 +797,6 @@ export async function whatsNextUseCase({
   }
   if (outcome === undefined) throw new TypeError("Navigation checks omitted the report.");
   const isExplicitMiss = outcome.observation.state === "idea-not-found";
-  const projectedObjective = await objectiveProjection(
-    selector === undefined ? "project" : "idea",
-    objective,
-  );
   return runtime.complete(
     isExplicitMiss
       ? outcome.observation

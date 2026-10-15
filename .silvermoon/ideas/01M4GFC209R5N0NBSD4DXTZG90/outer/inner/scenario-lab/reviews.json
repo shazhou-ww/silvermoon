@@ -2,51 +2,51 @@
   "reviews": [
     {
       "scenario": "device-runtime-not-discoverable",
-      "verdict": "issues",
-      "redundancy": "yes",
-      "missing": "no",
-      "missingPrompt": "no",
-      "comment": "同一 source-checkout 问题先出现在三行 advisory 中，又由 Device setup required 段完整复述；恢复动作正确，但主要入口重复。"
+      "verdict": "pending",
+      "redundancy": "unknown",
+      "missing": "unknown",
+      "missingPrompt": "unknown",
+      "comment": "标题按用户请求的 target 显示“Idea 推进 / Idea progress”，现状再说明 Device prerequisite。问题把实际 runtime 入口路径、source checkout 和版本合并为一个事实；下一步给出该 checkout 的 pnpm --dir ... setup:dev 命令，并要求确认 npm global bin 在 PATH 中。等待人工复审。"
     },
     {
       "scenario": "device-skill-not-discoverable",
-      "verdict": "ok",
+      "verdict": "issues",
       "redundancy": "no",
-      "missing": "no",
-      "missingPrompt": "no",
-      "comment": "Personal skill missing 的 advisory 给出准确 target 与 silvermoon-link-skill 恢复入口，同时明确不阻断主体 Idea 判断；未发现该问题本身的重复或缺失。"
+      "missing": "yes",
+      "missingPrompt": "yes",
+      "comment": "target Idea、owner Device 和单方向 prerequisite 已表达清楚；但 Problem 只给 status=missing，Next action 只是“Resolve device-skill”，没有 canonical skill 的预期路径、缺失路径或可执行的链接命令。"
     },
     {
       "scenario": "project-user-config-invalid",
       "verdict": "issues",
       "redundancy": "no",
-      "missing": "no",
-      "missingPrompt": "no",
-      "comment": "check、problemTypes、修复值与重试命令完整；但 zh-CN 必做动作仍嵌入英文诊断 “Use version: 1”，latest-runtime 详情也保留英文 fetch failed，动态诊断的 locale 边界不一致。"
+      "missing": "yes",
+      "missingPrompt": "yes",
+      "comment": "个人配置现在正确地由 Device prerequisite 截获，en-US/zh-CN 不再混用动态文案；但 Problem 只给配置路径，Next action 只是“Resolve device-configuration”，没有说明 version 无效、要求值为 1 或给出具体修复动作。"
     },
     {
       "scenario": "repository-worktree-untracked",
-      "verdict": "ok",
+      "verdict": "issues",
       "redundancy": "no",
-      "missing": "no",
+      "missing": "yes",
       "missingPrompt": "no",
-      "comment": "问题摘要、样本路径、保留未知工作的约束和重试命令完整，未发现明显重复或缺失。"
+      "comment": "保留未知工作和重试方向清楚，但 Problems 只说明 worktree-changes，没有展示本场景实际观测到的 scenario-untracked.txt；调用者仍需自行再次枚举变更。"
     },
     {
       "scenario": "repository-detached-head",
-      "verdict": "ok",
-      "redundancy": "no",
+      "verdict": "issues",
+      "redundancy": "yes",
       "missing": "no",
       "missingPrompt": "no",
-      "comment": "准确给出 detached HEAD、commit、目标 repository/branch 和非破坏性恢复方向，内容紧凑。"
+      "comment": "detached-head、HEAD revision 和非破坏性恢复方向完整；但 branch 事实仍以 name/remote/repository/upstreamBranch 全为 null 的原始 JSON 呈现，脱离 schema 不够易读。"
     },
     {
       "scenario": "repository-upstream-missing",
-      "verdict": "ok",
-      "redundancy": "no",
+      "verdict": "issues",
+      "redundancy": "yes",
       "missing": "no",
       "missingPrompt": "no",
-      "comment": "明确展示当前 upstream 缺失、预期 primary、配置步骤和验证命令，信息闭环。"
+      "comment": "配置 remote/upstream 的动作和验证命令完整；但当前 branch 事实仍以包含多个 null 字段的原始 JSON 呈现，语义可以更直接地表述为 scenario 分支缺少 upstream。"
     },
     {
       "scenario": "navigation-without-selector",

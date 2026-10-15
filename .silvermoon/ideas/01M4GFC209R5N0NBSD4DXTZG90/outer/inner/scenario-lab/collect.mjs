@@ -45,6 +45,20 @@ for (const scenario of source.scenarios) {
   }
   scenarioIds.add(scenario.id);
 }
+const requestedScenarioIds = (process.env.SCENARIO_IDS ?? "")
+  .split(",")
+  .map((value) => value.trim())
+  .filter(Boolean);
+const unknownScenarioIds = requestedScenarioIds.filter((id) => !scenarioIds.has(id));
+if (unknownScenarioIds.length > 0) {
+  throw new TypeError(
+    `Unknown scenario IDs: ${unknownScenarioIds.join(", ")}.`,
+  );
+}
+const selectedScenarioIds = new Set(requestedScenarioIds);
+const scenarios = selectedScenarioIds.size === 0
+  ? source.scenarios
+  : source.scenarios.filter(({ id }) => selectedScenarioIds.has(id));
 
 const outputDirectory = resolve(
   labRoot,
@@ -129,7 +143,7 @@ async function prepareState(state) {
 
 const startedAt = new Date().toISOString();
 const results = [];
-for (const scenario of source.scenarios) {
+for (const scenario of scenarios) {
   await prepareState(scenario.state ?? "baseline");
   for (const language of scenario.languages) {
     const args = ["whats-next"];
@@ -190,7 +204,7 @@ await writeFile(
     projectRoot,
     startedAt,
     finishedAt: new Date().toISOString(),
-    scenarioDefinitions: source.scenarios.map((scenario) => ({
+    scenarioDefinitions: scenarios.map((scenario) => ({
       id: scenario.id,
       state: scenario.state ?? "baseline",
       idea: scenario.idea ?? null,

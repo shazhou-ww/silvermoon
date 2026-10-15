@@ -17,8 +17,10 @@ terminal output, or call another command implementation.
 to the published Objective Guide core through the compatibility facade.
 Checks run serially and aggregate same-level failures; guidance checks report
 unavailable prerequisites explicitly. `whats-next.ts` retains report projection and
-command routing; no selector creates only a Project instance. Device readiness
-is advisory, and project-wide guidance validation does not expose its content.
+command routing; no selector creates only a Project instance. Project requires
+Device through `update-unconfirmed`, so configuration, runtime and skill
+failures retain Device ownership while update status does not block Project or
+Idea. Project-wide guidance validation does not expose its content.
 
 Reusable orchestration lives in [shared](./shared/README.md) only after at least
 two business entries need it. Event revision and recovery are not business

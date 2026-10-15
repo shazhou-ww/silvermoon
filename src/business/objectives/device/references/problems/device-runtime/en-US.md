@@ -1,13 +1,16 @@
 ---
 title: "device-runtime"
-description: "Resolve device-runtime and probe again."
+description: "The current Silvermoon runtime is not available through a device-level silvermoon executable on PATH."
+instruction: "For a source checkout, run pnpm setup:dev from that checkout; otherwise run npm install --global silvermoon. Ensure the global npm bin directory is on PATH, then rerun with silvermoon."
 ---
 
 ## Problem guidance
 
-**device-runtime** means the related Objective condition did not hold in this probe.
-Inspect the returned parameters and current repository facts, preserve unknown work,
-perform the applicable recovery, and probe again.
+**device-runtime** means the current runtime did not enter through a device-level
+`silvermoon` executable discoverable on `PATH`. The Problem facts identify the
+runtime entry path, version, and whether it is a source checkout.
 
-This page is the stable knowledge entry. Dynamic paths, revisions, diagnostics,
-and recovery targets come from the current check result.
+For a source checkout, run `pnpm setup:dev` from that checkout to link the
+runtime. Otherwise install it with `npm install --global silvermoon`. Ensure the
+global npm bin directory is on `PATH`, then rerun the same command with
+`silvermoon`.

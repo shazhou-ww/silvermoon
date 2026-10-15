@@ -20,7 +20,6 @@ import {
 } from "../../src/foundation/coordinates/index.ts";
 import {
   CHANGE_SAMPLE_ITEM_LIMIT,
-  whatsNext,
 } from "../../src/business/whats-next.ts";
 import { renderResponse } from "../../src/foundation/renderer/index.ts";
 import {
@@ -31,7 +30,10 @@ import {
   SECOND_ID,
   setIdeaState,
 } from "../helpers/repository.ts";
-import { createWhatsNextTestHelpers } from "../helpers/whatsnext.ts";
+import {
+  createWhatsNextTestHelpers,
+  whatsNext,
+} from "../helpers/whatsnext.ts";
 
 const {
   envelopeKeys,

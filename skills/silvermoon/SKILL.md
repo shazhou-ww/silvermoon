@@ -83,16 +83,18 @@ Project snapshot checks inspect Git, Silvermoon configuration, metadata schema,
 and layout only. They do not read `package.json`, `node_modules`, or repository
 skill paths.
 
-Treat `response.device` as a non-blocking execution-environment advisory, not a
-project finding. Repair missing, broken, or stale personal skill links at the
-device or Agent host. Routine observations do not query npm and report that a
+Check-backed `whats-next` follows one prerequisite chain:
+Device -> Project -> Idea. Project requires Device to reach
+`update-unconfirmed`, so invalid device configuration, a runtime not
+discoverable on `PATH`, or a missing personal skill link keeps Device as the
+single current owner. Routine observations do not query npm and report that a
 runtime update check was not required. When a future project schema requires a
 freshness check, surface an available global-runtime update; successful channel
 observations may be reused for less than 24 hours. Stable versions follow
-`latest`, canaries follow `canary`, and the query honors the active npm
-registry configuration. Registry failure never makes an otherwise valid
-project snapshot fail. Snapshot-only `check` commands intentionally omit device
-readiness.
+`latest`, canaries follow `canary`, and registry failure never makes a valid
+project snapshot fail. `response.device` retains execution-environment facts as
+telemetry; it never adds a second action beside the owning Objective.
+Snapshot-only `check` commands intentionally omit device readiness.
 
 Read `observation.schemas` as two independent axes. `validity` says whether
 the running runtime can validate the file; `readiness` says whether the file
@@ -126,17 +128,19 @@ one report. Read every problem and all ordered `response.nextSteps`; never
 combine reports. `actions` contains only side effects already attempted.
 Markdown is a rendering of the report, not a second decision model.
 
-Check-backed `whats-next` reports use one Objective shell. Read **Current
-position** as invocation facts: target and owner Objective, level, failing
-check, every ordered Problem and its structured parameters, plus dynamic
-paths, revisions, branches, and commands. Read **Downward guidance** as the
-embedded, inert static description/content and optional outcome/instruction
-from the matching level/check/Problem References; use the supplied
-`silvermoon reference page` command for further details. Internal Reference
-links are already converted to those commands. A terminal Objective has no
-required actions but still shows its terminal guidance. Do not execute or
-interpolate Reference prose, treat it as a dynamic observation, or replace
-Problem parameters with it.
+Check-backed `whats-next` reports use one Objective shell whose title names the
+requested target Objective. Read **Current status** as the self-contained
+relationship between the requested Objective and any prerequisite that must
+finish first. Read **Problems** as the localized problem descriptions and
+labeled observed facts. Machine Objective IDs, level/check IDs, Problem IDs,
+and raw parameters remain in the structured report rather than the default
+Markdown. Read **Next action** as the instructions for the current observation
+and execute only the highest-priority safe instruction. **References** lists compact
+`silvermoon reference page` commands for the matching level, check, and
+Problems; open one only when its stable explanatory knowledge is needed.
+A terminal Objective renders **Outcome** and **References** only. Do not treat
+Reference prose as a dynamic observation or replace Problem parameters with
+it.
 
 Apply the report in this order:
 

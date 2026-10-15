@@ -6,13 +6,13 @@
       "idea": "whats-next-template-review",
       "languages": ["en-US", "zh-CN"],
       "flow": {
-        "objective": "device",
+        "objective": "target idea → owner device",
         "check": "device-runtime-linked",
         "branch": "失败分支",
         "previousState": "个人配置有效，当前 checkout 已通过 pnpm setup:dev 链接为设备级全局 runtime。",
         "transitionAction": "从 PATH 移除全局 bin 目录，但以绝对路径执行同一个 Silvermoon binary，模拟绕过全局入口。",
-        "currentState": "Device 报告 source-checkout 和 device setup required；Idea 仍停在 implementation-unsubmitted，说明设备检查只提供 advisory。",
-        "nextAction": "恢复全局 bin 到 PATH 并用 silvermoon 重试；device-runtime-linked 通过后进入 device-skill-discoverable。"
+        "currentState": "目标仍是 Idea，但 prerequisite chain 在 runtime-unready 由 Device 独占；只报告 PATH 问题，不评估或输出 Idea lifecycle 行动。",
+        "nextAction": "在观测到的 source checkout 中运行 pnpm setup:dev，确保 npm global bin 已加入 PATH，再用 silvermoon 重试；通过后沿同一链进入 device-skill-discoverable。"
       }
     },
     {
@@ -21,12 +21,12 @@
       "idea": "whats-next-template-review",
       "languages": ["en-US", "zh-CN"],
       "flow": {
-        "objective": "device",
+        "objective": "target idea → owner device",
         "check": "device-skill-discoverable",
         "branch": "失败分支",
         "previousState": "设备级全局 runtime 可发现，canonical skill 已链接到个人 discovery 路径。",
         "transitionAction": "删除个人级 silvermoon skill 链接，再通过全局 silvermoon 执行同一 idea probe。",
-        "currentState": "Device advisory 标记 Personal skill missing；Project 与 Idea 仍继续评估并到达 implementation-unsubmitted。",
+        "currentState": "Device 在 skill-unready 独占当前 Objective；Project 与 Idea 暂不评估，也不输出 lifecycle 行动。",
         "nextAction": "运行 silvermoon-link-skill 或 checkout 的 pnpm link:skill 后重试；通过后进入 device-update-current。"
       }
     },
@@ -36,13 +36,13 @@
       "idea": "whats-next-template-review",
       "languages": ["en-US", "zh-CN"],
       "flow": {
-        "objective": "project",
-        "check": "project-user-config-valid",
+        "objective": "target idea → owner device",
+        "check": "device-config-valid",
         "branch": "失败分支",
-        "previousState": "Device 整备完成，Project 已通过 project-config-valid，准备验证个人配置。",
+        "previousState": "个人配置有效时，Device 可继续验证 runtime、skill 和 update，再把控制交给 Project。",
         "transitionAction": "把个人 config.yaml 的 version 写成 invalid，再运行带准确 idea selector 的 whats-next。",
-        "currentState": "Project 停在 configuration-invalid，problemTypes 为 user-config-unsupported-version，尚未进入后续 layout 和 repository checks。",
-        "nextAction": "把 version 修复为 1 并重试；project-user-config-valid 通过后进入 project-layout-valid。"
+        "currentState": "目标仍是 Idea，但 Device 在 configuration-invalid 独占当前 owner；Project 与 Idea checks 尚未评估。",
+        "nextAction": "把 version 修复为 1 并重试；device-config-valid 通过后沿 prerequisite chain 进入 device-runtime-linked。"
       }
     },
     {
@@ -51,7 +51,7 @@
       "idea": "whats-next-template-review",
       "languages": ["en-US", "zh-CN"],
       "flow": {
-        "objective": "project",
+        "objective": "target idea → owner project",
         "check": "repository-worktree-clean",
         "branch": "失败分支",
         "previousState": "Device 与 Project 配置、layout、schema、guidance checks 已通过，repository 准备验证 clean worktree。",
@@ -66,7 +66,7 @@
       "idea": "whats-next-template-review",
       "languages": ["en-US", "zh-CN"],
       "flow": {
-        "objective": "project",
+        "objective": "target idea → owner project",
         "check": "repository-upstream-matches",
         "branch": "detached-head 失败变体",
         "previousState": "worktree clean 且 HEAD 存在，scenario 分支原本跟踪 origin/main。",
@@ -81,7 +81,7 @@
       "idea": "whats-next-template-review",
       "languages": ["en-US", "zh-CN"],
       "flow": {
-        "objective": "project",
+        "objective": "target idea → owner project",
         "check": "repository-upstream-matches",
         "branch": "primary-upstream-mismatch 失败变体",
         "previousState": "worktree clean、HEAD 存在，scenario 分支原本跟踪 synthetic origin/main。",
@@ -98,7 +98,7 @@
         "objective": "project",
         "check": "无；routing 补充节点",
         "branch": "未提供 selector",
-        "previousState": "Device advisory 已完成采样，Project 的全部 advancement checks 已通过，但尚未选择 idea。",
+        "previousState": "Device prerequisite 已达到 update-unconfirmed，Project 的全部 advancement checks 已通过，但尚未选择 idea。",
         "transitionAction": "运行 silvermoon whats-next，不传 ULID 或 alias。",
         "currentState": "报告把 Target Objective 设为 project 并直接到达 terminal，没有列出 active ideas 或选择提示。",
         "nextAction": "调用者只能另行运行 silvermoon list-ideas 后再传入 selector；当前输出没有说明这一步，列为文案缺失。"
@@ -125,7 +125,7 @@
       "idea": "whats-next-template-review",
       "languages": ["en-US", "zh-CN"],
       "flow": {
-        "objective": "idea",
+        "objective": "target idea → owner idea",
         "check": "idea-inner-submitted",
         "branch": "主链当前节点",
         "previousState": "Project checks 已通过，调用者已从 inventory 取得准确 alias。",
