@@ -218,3 +218,28 @@ checkout 路径运行 `pnpm setup:dev`，其他情况运行
 重试命令；具体分支由 Agent 根据同一 Problem 的 runtime 路径、来源和版本 facts
 选择。双语输出与同一 Reference page 一致，场景继续保持 `pending`，等待人工复审；
 本次重跑未记录 `submitInner`。
+
+## 2026-10-15 自闭环、目标优先的完整 clean corpus
+
+- Source revision: `ea7e1fe1679aa92d667663ccc6240a48024753fb`
+- Source dirty: `false`
+- Runtime: 当前隔离 checkout 构建并通过 `pnpm setup:dev` 链接的全局
+  `silvermoon 0.5.0`
+- Environment: `node:24-trixie-slim`，隔离 HOME、synthetic local primary 和工作副本
+- Command: `scenario-lab/run.ps1`
+- Dependency bootstrap: frozen lockfile；
+  `SCENARIO_NPM_REGISTRY=https://mirrors.tencent.com/npm/`
+- Result: 9 个场景、18 份 `en-US`/`zh-CN` 报告，全部 exit code 0
+- Corpus: idea-local ignored
+  `scenario-lab/corpus/2026-10-15T07-48-15.224Z/`
+
+所有场景保持单一当前 Objective。Problem 默认输出将 locale-neutral structured facts
+组织成自闭环自然句，不再显示 `problemTypes`、raw branch JSON 或通用
+`key: value` properties。Next action 先说明需要达到的目标状态，再列出可根据实际
+facts 选择的方法和复查方式。bare Project terminal 现在说明如何选择下一 Idea；
+selector 未匹配时显示真实 active candidates。完整 release validation
+`pnpm check` 和 `silvermoon check --worktree --audience agent` 均通过；企业 npm
+proxy 缺少 `@potential-guide/objective-guide` 时，仅在 validation 进程中使用
+session-local scoped registry 配置，完成后已删除，repository 未写入 registry
+设置。`reviews.json` 的 9 个场景全部保持 `pending`，等待人工 review；未记录
+`submitInner`，也未请求 `acceptInner`。
