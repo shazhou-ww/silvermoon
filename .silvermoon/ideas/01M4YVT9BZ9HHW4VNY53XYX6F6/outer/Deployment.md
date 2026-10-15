@@ -2,9 +2,9 @@
 
 ## Steps
 
-### D-S01: 验证全局运行时输出
+### D-S01: 验证递进 lookup 命令
 
-以本 checkout 链接的设备级全局运行时执行代表性 Device 报告和其中的紧凑 Reference 命令。
+以本 checkout 链接的设备级全局运行时执行代表性 Device 报告，从最外层 objective 调用 Reference lookup，并验证类型路径可打开目标页面。
 
 ### D-S02: 完成发布级仓库验证
 
@@ -12,9 +12,9 @@
 
 ## Acceptance criteria
 
-### D-AC01: 真实命令可用
+### D-AC01: 真实命令递归可用
 
-全局 `silvermoon` 的代表性 en-US/zh-CN Device 输出使用预期默认集合与紧凑形态，复制执行其中命令可成功打开对应页面；以实际 CLI 输出证明。
+全局 `silvermoon` 的代表性 en-US/zh-CN Device 输出遵循默认选择；从最外层 objective 发起的 lookup 可递归打开对应的 level/check/problem 页面；以实际 CLI 输出证明。
 
 ### D-AC02: 发布门禁通过
 
