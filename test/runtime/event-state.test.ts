@@ -20,7 +20,12 @@ import { createRepository, FIRST_ID, SECOND_ID, git } from "../helpers/repositor
 
 type AppendRequest =
   | { type: "submitIdeal"; payload: { idealRevision: string } }
+  | { type: "submitInner"; payload: { implementationRevision: string } }
   | { type: "acceptIdeal"; payload: { idealRevision: string } }
+  | { type: "setGateMode"; payload: {
+    level: "ideal" | "inner" | "outer";
+    mode: "explicit" | "waived";
+  } }
   | { type: "setLanguage"; payload: { language: string } };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -258,6 +263,7 @@ test("human decisions require exact synchronized world, explicit confirmation an
     type: "submitIdeal",
     payload: { idealRevision },
   });
+
   assert.equal(eventReceipt(submitted).outcome, "candidate-written", JSON.stringify(submitted));
   assert.equal((await append(root, request)).observation.state, "check-unavailable");
   const accepted = await append(root, request, { confirmDecision: true });
@@ -266,6 +272,54 @@ test("human decisions require exact synchronized world, explicit confirmation an
   const updated = git(root, "hash-object", "-w", join(root, paths.ideaDocumentPath));
   assert.equal((await append(root, { type: "acceptIdeal", payload: { idealRevision: updated } },
     { confirmDecision: true })).observation.state, "check-unavailable");
+});
+
+test("authorized inner waiver advances an exact submission without acceptInner", async (t) => {
+  const { root } = await fixture(t);
+  await migrate(root);
+  publish(root, "Migrate");
+  const paths = ideaPaths(FIRST_ID);
+  const idealRevision = git(root, "rev-parse", `HEAD:${paths.idealPath}`);
+  const implementationRevision = git(root, "rev-parse", `HEAD:${paths.innerPath}`);
+  await append(root, {
+    type: "submitIdeal",
+    payload: { idealRevision },
+  });
+  await append(root, {
+    type: "acceptIdeal",
+    payload: { idealRevision },
+  }, { confirmDecision: true });
+  const request: AppendRequest = {
+    type: "setGateMode",
+    payload: { level: "inner", mode: "waived" },
+  };
+  assert.equal((await append(root, request)).observation.state, "check-unavailable");
+  assert.equal(
+    eventReceipt(await append(root, request, { confirmDecision: true })).outcome,
+    "candidate-written",
+  );
+  assert.equal(
+    eventReceipt(await append(root, {
+      type: "submitInner",
+      payload: { implementationRevision },
+    })).outcome,
+    "candidate-written",
+  );
+  const receipt = await replay(root);
+  const reduction = requiredRecord(receipt.reduction, "reduction");
+  const state = requiredRecord(reduction.state, "reduction.state");
+  const status = requiredRecord(state.status, "reduction.state.status");
+  assert.equal(status.innerGateMode, "waived");
+  assert.equal(status.waivedImplementationRevision, implementationRevision);
+  assert.equal(status.implementationAcceptedRevision, undefined);
+  assert.equal(
+    requiredRecord(state.control, "reduction.state.control").owner,
+    "downstream",
+  );
+  assert.equal(
+    (await checkRepository({ root, worktree: true })).observation.state,
+    "project-ready",
+  );
 });
 
 test("normal primary prefix is immutable; a reduction-failed base can be repaired and protected again", async (t) => {

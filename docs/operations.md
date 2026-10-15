@@ -243,6 +243,12 @@ the matching `submitIdeal`, `submitInner`, or `submitOuter` for that exact
 revision, integrate the event, and reobserve. Only a current submission with
 upstream control produces the corresponding `response.review`; ping/pong may
 transfer control within the same phase without changing the submission fact.
+If the fresh report shows `inner=waived`, the exact synchronized
+`submitInner` advances directly to deploying with `waived` passage evidence
+and no `acceptInner`; do not manufacture an implementation review or decision.
+Gate modes default independently to `explicit`. `setGateMode` is an upstream
+decision event requiring `--confirm-decision`; only `inner: waived` is
+currently supported, and `ideal` plus `outer` remain explicit.
 
 After an explicit decision, reconfirm that it applies to the selected idea and
 the current reported world revision. For v2, use the

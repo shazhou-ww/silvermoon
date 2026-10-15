@@ -32,13 +32,14 @@ Every record has `type`, an optional `payload`, and an optional `timestamp`.
 New appends always write a CLI-generated UTC RFC 3339 timestamp with millisecond
 precision. Historical records may omit timestamp or retain a stored sequence;
 readers derive sequence from file order. Present timestamps must never decrease;
-missing timestamps are skipped by that check. V2 defines ten business changes
+missing timestamps are skipped by that check. V2 defines eleven business changes
 and two interaction messages:
 
 | Type | Payload |
 | --- | --- |
 | `setAlias` | `{"alias":"unique-name"}` or `{"alias":null}` |
 | `setLanguage` | `{"language":"zh-CN"}` or `{"language":null}` |
+| `setGateMode` | `{"level":"inner","mode":"waived"}` |
 | `submitIdeal` | `{"idealRevision":"<exact world tree OID>"}` |
 | `submitInner` | `{"implementationRevision":"<exact world tree OID>"}` |
 | `submitOuter` | `{"deploymentRevision":"<exact world tree OID>"}` |
@@ -54,20 +55,34 @@ Interaction messages occupy the same ordered log as business events.
 Replay retains ordered `interaction.messages` (`sequence`, `type`, `message`)
 and projects `control.owner` plus `control.lastTransfer`. Initial active
 control is `downstream`. `ping`, each `accept*`, and `resume` transfer control
-downstream; `pong` and each `submit*` transfer it upstream; `acceptOuter` and
-`abandon` end with `none`. Metadata does not transfer control. Selected idea
+downstream; `pong` and each `submit*` normally transfer it upstream;
+`acceptOuter` and `abandon` end with `none`. An inner submission that completes
+a waived gate, or a late waiver of the exact submitted inner revision, instead
+transfers control downstream. Metadata does not transfer control. Selected idea
 reports force terminal ideas to `none` and a stale current-phase submission to
 `downstream`. Consecutive `pong` events, including without a prior `ping`, are
 valid. After `abandon`, only `resume` is valid.
 
 Each `submit*` records the Agent's completion claim for one exact world
 revision without advancing the lifecycle. Reports project every phase as
-`unsubmitted`, `submitted`, `accepted`, or `stale`. The corresponding
+`unsubmitted`, `submitted`, `accepted`, `waived`, or `stale`. The corresponding
 `accept*` is the distinct upstream decision and advances the lifecycle only
 after the same revision was submitted. The sender convention is upstream for
-acceptance decisions, `abandon`, `resume`, and `ping`; downstream for
-submissions and `pong`; and both for metadata. The stateless CLI does not
-authenticate senders or reject messages based on current control.
+acceptance decisions, `setGateMode`, `abandon`, `resume`, and `ping`;
+downstream for submissions and `pong`; and both for metadata. The stateless CLI
+does not authenticate senders or reject messages based on current control.
+
+Every level defaults independently to `explicit`. The event shape permits all
+three level names so policy can evolve without another storage shape, but the
+current runtime accepts `waived` only for `inner`; attempts to waive `ideal` or
+`outer` fail closed. `setGateMode` requires an explicit upstream decision and
+is allowed only while the idea is nonterminal. Setting `inner` to `waived`
+before submission makes the next exact `submitInner` pass without writing
+`acceptInner`. Setting it after submission passes only that submitted revision.
+The reducer persists this as a distinct waived revision. Restoring `explicit`
+before passage keeps the human gate; restoring it after passage does not revoke
+the passed revision. A changed Inner World makes either accepted or waived
+evidence stale, and its next submission follows the mode then in effect.
 
 No actors, repository commits, IDs, observations, imports, creation, arbitrary
 patches, or decision retractions belong in a record.
@@ -159,7 +174,7 @@ Put a business request in a JSON file, without sequence or timestamp, for exampl
 {"type":"setAlias","payload":{"alias":"event-state-model"}}
 ```
 
-For metadata, submissions, and human decisions, bind the request to the
+For metadata, submissions, gate-mode decisions, and human decisions, bind the request to the
 observed log and primary:
 
 ```sh
@@ -198,7 +213,7 @@ provides the matching review template only while that submission is current
 and control is upstream.
 
 Only after an explicit human decision, add `--confirm-decision` for acceptance,
-abandonment, or resumption. This flag asserts authorization; it does not
+gate-mode changes, abandonment, or resumption. This flag asserts authorization; it does not
 manufacture or prove it. Acceptance also requires the correct lifecycle phase,
 the exact world tree already on primary, and a prior `submit*` of that same
 revision. Keep the review-and-synchronization human gate from the main skill.

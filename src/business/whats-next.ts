@@ -320,6 +320,9 @@ export async function whatsNextUseCase({
         ...(selected.eventDigest === undefined
           ? {}
           : { eventDigest: selected.eventDigest }),
+        ...(selected.gateModes === undefined
+          ? {}
+          : { gateModes: selected.gateModes }),
       };
       return CHECK_PASSED;
     },
@@ -474,10 +477,15 @@ export async function whatsNextUseCase({
       ? ["implementing", "deploying", "completed"].includes(selected.state)
       : phase === "inner" ? ["deploying", "completed"].includes(selected.state) : selected.state === "completed";
     const valid = acceptance ? accepted && (submission === undefined
-      || (submission.state === "accepted" && submission.acceptedRevision === selected.revisions[submission.revision.field]))
+      || ((submission.state === "accepted"
+        && submission.acceptedRevision === selected.revisions[submission.revision.field])
+        || (submission.state === "waived"
+          && submission.waivedRevision === selected.revisions[submission.revision.field])))
       : submission === undefined
         ? accepted
-        : (submission.state === "submitted" || submission.state === "accepted")
+        : (submission.state === "submitted"
+          || submission.state === "accepted"
+          || submission.state === "waived")
           && submission.revision.value === selected.revisions[submission.revision.field]
           && (submission.submittedRevision === submission.revision.value || submission.acceptedRevision === submission.revision.value);
     return valid ? passed : failed(phase, {

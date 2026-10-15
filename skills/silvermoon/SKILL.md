@@ -183,10 +183,12 @@ Missing guidance is normal. A guidance problem blocks only the reported
 current action until repaired. `check` validates all three fixed guidance files
 in its selected snapshot but never returns their content.
 
-Every selected v2 report projects `selectedIdea.control` and all three
-`selectedIdea.submissions`. Treat `downstream` as Agent-side control,
+Every selected v2 report projects `selectedIdea.control`, `selectedIdea.gateModes`,
+and all three `selectedIdea.submissions`. Treat `downstream` as Agent-side control,
 `upstream` as upstream/user-side control, and `none` as terminal. A stale
-current-phase submission returns effective control downstream. `response.review`
+current-phase submission returns effective control downstream. A current
+submission may be `waived` instead of `accepted`; this is distinct evidence,
+never an inferred `accept*`. `response.review`
 appears only when the exact current phase revision is submitted and control is
 upstream; before that, follow `response.nextSteps` instead of asking for the
 corresponding acceptance.
@@ -233,7 +235,9 @@ phase while preserving the nested worlds:
   Expand the plan only as concrete work requires it. Preserve the Deployment
   seed unless implementation creates a material external requirement. The
   human gate is acceptance of the exact reported
-  `implementationRevision`.
+  `implementationRevision`. If the observed `inner` gate mode is `waived`, an
+  exact synchronized `submitInner` advances directly to deploying without an
+  `acceptInner` event; reobserve rather than opening an implementation gate.
 - **Deploying:** Use `Deployment.md` and supporting Outer World (现实世界)
   files by refining the preparation seed to drive and verify external outcomes;
   do not recap implementation or change repository deliverables. Synchronize a
