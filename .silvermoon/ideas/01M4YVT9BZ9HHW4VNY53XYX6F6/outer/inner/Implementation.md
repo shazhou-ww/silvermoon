@@ -4,15 +4,15 @@
 
 ### I-S01: 明确递归 lookup 与引用路径
 
-明确如何递归收集三层 Objective 页面、用可选冒号 namespace 解析 lookup，以及无 namespace 自由匹配的唯一命中与歧义规则；同时确定默认展示哪些 References。
+明确如何递归收集三层 Objective 页面、用可选冒号 namespace 精确读取单页，以及无 namespace 复用现有搜索并处理唯一、多项和零结果；同时确定默认展示哪些 References。
 
 ### I-S02: 实现递进 objective lookup
 
-更新报告投影与 CLI 解析，使 lookup 无需 Objective 参数即可递归解析 owner，显式 namespace 可精确定位，无 namespace 可自由匹配，并保留结构化 Reference contract。
+更新报告投影与 CLI 解析，使 lookup 无需 Objective 参数即可递归解析 owner，显式 namespace 可精确读取单页，无 namespace 搜索时唯一命中自动打开、多命中返回列表，并保留结构化 Reference contract。
 
 ### I-S03: 同步双语契约与覆盖
 
-更新 en-US、zh-CN 文案契约、测试夹具和相关文档，覆盖递归查找、可选 namespace、自由匹配、Device 默认选择和按需下钻。
+更新 en-US、zh-CN 文案契约、测试夹具和相关文档，覆盖递归查找、可选 namespace、跨 Objective 搜索、Device 默认选择和按需下钻。
 
 ## Acceptance criteria
 
@@ -22,7 +22,7 @@
 
 ### I-AC02: Namespace 解析明确且下钻保真
 
-`page` 子命令移除后，显式冒号 namespace 可无歧义定位页面；无 namespace 的唯一命中、歧义候选和未命中均有明确结果，并保留 owner、language 和结构化参数；check/problem 下钻通过 CLI 测试证明。
+`page` 子命令移除后，显式冒号 namespace 可无歧义读取页面；无 namespace 时唯一命中自动打开、多命中返回列表、零命中返回空结果，并保留 owner、language 和结构化参数；check/problem 下钻通过 CLI 测试证明。
 
 ### I-AC03: 契约一致且回归通过
 

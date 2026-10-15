@@ -4,11 +4,11 @@
 
 让单页 Reference lookup 不再要求调用方知道页面属于 Device、Project
 还是 Idea，也不强制调用方提供页面类型。运行时从完整 Objective
-prerequisite 链构建候选集合：显式 namespace 用于精确限定类型；没有
-namespace 时执行自由匹配。
+prerequisite 链构建候选集合：显式 namespace 用于精确读取单页；没有
+namespace 时执行 Reference 搜索，唯一命中自动打开，多命中返回列表。
 
-本设计只改变 `whats-next` 使用的单页 lookup。`reference search` 的搜索
-语义与参数暂不改变。
+新入口复用现有 `reference search` 的索引与匹配语义，但把搜索扩展到
+完整 Objective 链并移除调用方提供 Objective 的要求。
 
 ## Before
 
@@ -61,7 +61,7 @@ silvermoon reference check:repository-upstream-matches --language zh-CN
 silvermoon reference problem:repository --language zh-CN
 ```
 
-交互查询可以省略 namespace：
+搜索可以省略 namespace：
 
 ```text
 silvermoon reference repository-upstream-matches --language zh-CN
@@ -76,7 +76,7 @@ silvermoon reference repository --language zh-CN
 | `page` 是独立子命令 | 单页读取由 `reference` 隐含 |
 | 调用方指定 `device/project/idea` | 运行时递归收集并解析 owner |
 | 页面类型是必填路径段 | namespace 是可选冒号前缀 |
-| 未知完整 ID 返回该 owner 的 404 | 无 namespace 时跨类型自由匹配 |
+| 未知完整 ID 返回该 owner 的 404 | 无 namespace 时跨 Objective 与类型搜索 |
 
 ## 候选集合
 
@@ -110,20 +110,22 @@ namespace 使用面向命令的单数名称，稳定 ID 继续使用现有复数
 
 ### 省略 namespace
 
-以 `silvermoon reference repository` 为例，自由匹配按以下优先级进行：
+以 `silvermoon reference repository` 为例，运行时在 Idea、Project、
+Device 的 Reference 索引中执行现有标题、描述与正文搜索。唯一命中时
+直接打开该页面；多个命中时返回搜索结果列表。
 
-1. 完整稳定 ID，例如输入 `problems/repository`。
-2. 稳定 ID 的末段，例如输入 `repository`。
-3. 当前语言下的标题。
-4. 当前语言下的描述与正文搜索索引。
+每个结果包含 namespace、稳定 ID、owner、标题和可复制的显式读取命令：
 
-只有最高命中优先级参与消歧：该级唯一命中时直接打开；多命中时返回
-候选列表，每项包含 namespace、稳定 ID、owner 和可复制的显式命令。
-低优先级结果不得覆盖或稀释更精确的匹配。
+```text
+problem:repository
+  owner: project
+  silvermoon reference problem:repository --language zh-CN
+```
 
-因此 `repository-upstream-matches` 可以唯一解析为 check，而
-`repository` 若同时命中 Problem 和其他页面则要求调用方改用
-`problem:repository` 等显式 namespace。
+结果以 Objective 链顺序和各 Guide 的稳定搜索顺序合并；规范身份
+`owner + referenceId` 相同的结果去重。零结果是成功的空搜索结果，不
+转换为 `system/404`。多个结果时，调用方从列表中选择显式 namespace
+命令读取单页。
 
 ## 参数与结果结构
 
@@ -147,17 +149,18 @@ CLI 接收一个位置参数 `lookup`：
 }
 ```
 
-省略 namespace 时为：
+省略 namespace 时规范化为搜索请求：
 
 ```json
 {
+  "operation": "search",
   "namespace": null,
   "query": "repository",
   "language": "zh-CN"
 }
 ```
 
-唯一命中的结构化结果保留实际 owner 与规范身份：
+显式 namespace 的单页结果保留实际 owner 与规范身份：
 
 ```json
 {
@@ -173,25 +176,31 @@ CLI 接收一个位置参数 `lookup`：
 }
 ```
 
-歧义结果不伪装成页面成功结果：
+无 namespace 的多命中结构化结果是搜索结果集：
 
 ```json
 {
   "lookup": "repository",
-  "status": "ambiguous",
-  "candidates": [
+  "operation": "search",
+  "query": "repository",
+  "results": [
     {
       "namespace": "problem",
       "owner": "project",
       "referenceId": "problems/repository",
+      "title": "Repository 尚未满足安全工作条件",
       "command": "silvermoon reference problem:repository --language zh-CN"
     }
   ]
 }
 ```
 
+无 namespace 的唯一命中返回与显式 namespace 相同的单页结果，并额外
+保留原始 `lookup` 与 `operation: "search"`，使程序能够识别其解析来源。
+零命中返回 `results: []`。
+
 `whats-next` 已知页面的规范身份，因此始终生成显式 namespace 命令，
-不依赖自由匹配：
+不依赖无 namespace 搜索：
 
 ```json
 {
@@ -204,8 +213,8 @@ CLI 接收一个位置参数 `lookup`：
 ```
 
 `kind` 与 `id` 继续保留，供程序消费和渲染；`lookup` 是规范化的 CLI
-寻址值；`command` 仍是可复制执行的完整命令。非 References 的报告字段
-和语义不变。
+寻址值；`command` 仍是可复制执行的完整命令。多命中搜索结果使用同一
+套 namespace 命令下钻。非 References 的报告字段和语义不变。
 
 ## 输入校验
 
@@ -229,8 +238,8 @@ References：
 
 Device level 页面不再仅因当前 owner 是 Device 而默认出现。terminal
 报告仍可保留 terminal 页面，因为此时没有 check/problem 可供下钻。
-报告生成器已知页面类型，所以输出显式 namespace；自由匹配只服务于
-调用方不知道页面类型的查询。
+报告生成器已知页面类型，所以输出显式 namespace；无 namespace 搜索
+服务于调用方不知道页面类型或稳定 ID 的发现过程。
 
 ## 兼容与迁移
 
@@ -240,6 +249,7 @@ Device level 页面不再仅因当前 owner 是 Device 而默认出现。termina
 页面内链和文档只输出新语法。旧语法的移除需要独立的弃用决定，不在
 本 Idea 的验收范围内。
 
-`reference search <objective> <query>` 暂时保持不变。无 namespace 的
-新单页 lookup 已吸收常见发现需求，但它只在唯一命中时打开页面；显式
-搜索仍负责返回完整搜索结果集。
+旧 `reference search <objective> <query>` 先作为兼容入口保留，并与
+新的无 namespace `reference <query>` 复用搜索业务函数。旧入口只搜索
+指定 Objective；新入口递归搜索完整 Objective 链。旧搜索语法的移除
+需要独立的弃用决定，不在本 Idea 的验收范围内。
