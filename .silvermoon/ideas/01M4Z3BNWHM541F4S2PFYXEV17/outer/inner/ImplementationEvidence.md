@@ -21,8 +21,10 @@
 ## 校验
 
 - `node --test test/unit/idea-events.test.ts test/unit/whats-next-model.test.ts test/contract/schema-v2.test.ts test/runtime/event-state.test.ts`：通过，43 tests。
-- `pnpm check:sanity`：一次通过；后续重跑仅被既有 `objective-guide` 并发顺序测试阻断，串行运行同一 sanity 测试集通过，204 tests。
+- `pnpm check:sanity`：通过，204 tests；Windows 验证采用下述限定环境。
 - `pnpm check:skills`：通过，发现 canonical `silvermoon` 与 `publish` skills。
 - `silvermoon check --worktree --audience agent`：通过，完整候选有效。
-- `pnpm check`：类型、构建、pure、package、integration 等阶段通过；Markdown 问题修复后单独校验通过，剩余阻塞为 Windows 原生 TUI 测试进程访问冲突 `3221225477`，单独重跑仍可复现。
+- `pnpm check`：OpenTUI fork 修复后通过，包括 240 unit/runtime、60 contract、160 integration（另两项平台跳过）、package 与干净 npm 安装测试。
 - `pnpm check:commit`：通过。
+
+Windows 原生 TUI 阻塞由 Koffi 2.16.3 修复，干净 npm 安装后的四项原生 TUI 回归全部通过。完整校验使用短物理临时目录、进程级 Git 长路径设置与 `UV_THREADPOOL_SIZE=1`；后者规避既有 Objective 并发顺序测试，不代表修复该独立问题。具体环境、fork 来源、上游 PR 和安装证明见 [runtime-dependencies.md](../../../../../docs/runtime-dependencies.md)。

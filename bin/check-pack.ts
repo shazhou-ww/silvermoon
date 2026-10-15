@@ -163,6 +163,7 @@ if (packed.status !== 0) {
     "docs/objective-guidance.md",
     "docs/reference.md",
     "docs/repository-tasks.md",
+    "docs/runtime-dependencies.md",
     "package.json",
     "schema/capabilities.json",
     "schema/capability-manifest.schema.json",

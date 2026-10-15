@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync, type SpawnSyncReturns } from "node:child_process";
+import { stripTypeScriptTypes } from "node:module";
 import {
   mkdir,
   mkdtemp,
@@ -254,7 +255,6 @@ try {
     /^MIT License\r?\n\r?\nCopyright \(c\) 2026 Silvermoon contributors\r?\n/,
   );
   for (const dependency of [
-    "@jitl/opentui-core",
     "@opentui/core",
     "@opentui/react",
     "react",
@@ -433,6 +433,39 @@ try {
     exported,
     "function,function,function,function,function,function,function,function,function,function,function,function,function|1,2|false,false",
   );
+  assert.equal(
+    run(process.execPath, ["--input-type=module", "-e", `
+      import assert from "node:assert/strict";
+      import { createRequire } from "node:module";
+      import { readFileSync } from "node:fs";
+      import { dirname, join } from "node:path";
+      const require = createRequire(import.meta.url);
+      const runtime = createRequire(require.resolve("silvermoon"));
+      const core = runtime.resolve("@opentui/core");
+      for (const name of ["@opentui/react", "tui-md"]) {
+        assert.equal(createRequire(runtime.resolve(name)).resolve("@opentui/core"), core);
+      }
+      const coreRequire = createRequire(core);
+      const manifest = JSON.parse(readFileSync(join(dirname(core), "package.json")));
+      assert.equal(manifest.optionalDependencies.koffi, "2.16.3");
+      assert.equal(coreRequire("koffi/package.json").version, "2.16.3");
+      console.log("single core; Koffi 2.16.3");
+    `], bootstrap),
+    "single core; Koffi 2.16.3",
+  );
+  if (process.platform === "win32") {
+    const installedTuiTests = (await readFile(
+      join(packageRoot, "test", "runtime", "tui.test.ts"), "utf8",
+    )).replace(
+      "../../src/foundation/tui/index.ts",
+      "./node_modules/silvermoon/dist/src/foundation/tui/index.js",
+    );
+    await writeFile(
+      join(bootstrap, "installed-tui.test.mjs"),
+      stripTypeScriptTypes(installedTuiTests),
+    );
+    run(process.execPath, ["--test", "installed-tui.test.mjs"], bootstrap);
+  }
   assert.equal(
     run(
       process.execPath,
