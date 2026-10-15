@@ -1,57 +1,138 @@
 {
   "scenarios": [
     {
-      "id": "device-config-invalid",
-      "state": "invalid-user-config",
+      "id": "device-runtime-not-discoverable",
+      "state": "global-runtime-path-masked",
       "idea": "whats-next-template-review",
-      "languages": ["en-US", "zh-CN"]
+      "languages": ["en-US", "zh-CN"],
+      "flow": {
+        "objective": "device",
+        "check": "device-runtime-linked",
+        "branch": "失败分支",
+        "previousState": "个人配置有效，当前 checkout 已通过 pnpm setup:dev 链接为设备级全局 runtime。",
+        "transitionAction": "从 PATH 移除全局 bin 目录，但以绝对路径执行同一个 Silvermoon binary，模拟绕过全局入口。",
+        "currentState": "Device 报告 source-checkout 和 device setup required；Idea 仍停在 implementation-unsubmitted，说明设备检查只提供 advisory。",
+        "nextAction": "恢复全局 bin 到 PATH 并用 silvermoon 重试；device-runtime-linked 通过后进入 device-skill-discoverable。"
+      }
     },
     {
       "id": "device-skill-not-discoverable",
       "state": "skill-link-missing",
       "idea": "whats-next-template-review",
-      "languages": ["en-US", "zh-CN"]
+      "languages": ["en-US", "zh-CN"],
+      "flow": {
+        "objective": "device",
+        "check": "device-skill-discoverable",
+        "branch": "失败分支",
+        "previousState": "设备级全局 runtime 可发现，canonical skill 已链接到个人 discovery 路径。",
+        "transitionAction": "删除个人级 silvermoon skill 链接，再通过全局 silvermoon 执行同一 idea probe。",
+        "currentState": "Device advisory 标记 Personal skill missing；Project 与 Idea 仍继续评估并到达 implementation-unsubmitted。",
+        "nextAction": "运行 silvermoon-link-skill 或 checkout 的 pnpm link:skill 后重试；通过后进入 device-update-current。"
+      }
     },
     {
-      "id": "device-runtime-not-discoverable",
-      "state": "global-runtime-path-masked",
+      "id": "project-user-config-invalid",
+      "state": "invalid-user-config",
       "idea": "whats-next-template-review",
-      "languages": ["en-US", "zh-CN"]
+      "languages": ["en-US", "zh-CN"],
+      "flow": {
+        "objective": "project",
+        "check": "project-user-config-valid",
+        "branch": "失败分支",
+        "previousState": "Device 整备完成，Project 已通过 project-config-valid，准备验证个人配置。",
+        "transitionAction": "把个人 config.yaml 的 version 写成 invalid，再运行带准确 idea selector 的 whats-next。",
+        "currentState": "Project 停在 configuration-invalid，problemTypes 为 user-config-unsupported-version，尚未进入后续 layout 和 repository checks。",
+        "nextAction": "把 version 修复为 1 并重试；project-user-config-valid 通过后进入 project-layout-valid。"
+      }
     },
     {
       "id": "repository-worktree-untracked",
       "state": "worktree-untracked",
       "idea": "whats-next-template-review",
-      "languages": ["en-US", "zh-CN"]
+      "languages": ["en-US", "zh-CN"],
+      "flow": {
+        "objective": "project",
+        "check": "repository-worktree-clean",
+        "branch": "失败分支",
+        "previousState": "Device 与 Project 配置、layout、schema、guidance checks 已通过，repository 准备验证 clean worktree。",
+        "transitionAction": "在 synthetic worktree 新建 scenario-untracked.txt，保留 branch 与 upstream 不变。",
+        "currentState": "Project 停在 repository-unready，repository problemTypes 为 worktree-changes。",
+        "nextAction": "检查并保留未知工作，移除本场景自有文件后重试；通过后进入 repository-head-present。"
+      }
     },
     {
       "id": "repository-detached-head",
       "state": "detached-head",
       "idea": "whats-next-template-review",
-      "languages": ["en-US", "zh-CN"]
+      "languages": ["en-US", "zh-CN"],
+      "flow": {
+        "objective": "project",
+        "check": "repository-upstream-matches",
+        "branch": "detached-head 失败变体",
+        "previousState": "worktree clean 且 HEAD 存在，scenario 分支原本跟踪 origin/main。",
+        "transitionAction": "切换到 origin/main 的 detached HEAD，再运行同一 idea probe。",
+        "currentState": "Project 停在 repository-unready，branch identity 为空，problemTypes 为 detached-head。",
+        "nextAction": "保留工作后切回 scenario 并恢复 origin/main upstream；该 check 通过后进入 repository-primary-fetched。"
+      }
     },
     {
       "id": "repository-upstream-missing",
       "state": "upstream-missing",
       "idea": "whats-next-template-review",
-      "languages": ["en-US", "zh-CN"]
+      "languages": ["en-US", "zh-CN"],
+      "flow": {
+        "objective": "project",
+        "check": "repository-upstream-matches",
+        "branch": "primary-upstream-mismatch 失败变体",
+        "previousState": "worktree clean、HEAD 存在，scenario 分支原本跟踪 synthetic origin/main。",
+        "transitionAction": "保留 scenario 分支但执行 git branch --unset-upstream，再运行同一 idea probe。",
+        "currentState": "Project 停在 repository-unready，分支名存在但 remote/upstream 为空，problemTypes 为 primary-upstream-mismatch。",
+        "nextAction": "重新设置 origin/main upstream 并验证；该 check 通过后进入 repository-primary-fetched。"
+      }
+    },
+    {
+      "id": "navigation-without-selector",
+      "state": "baseline",
+      "languages": ["en-US", "zh-CN"],
+      "flow": {
+        "objective": "project",
+        "check": "无；routing 补充节点",
+        "branch": "未提供 selector",
+        "previousState": "Device advisory 已完成采样，Project 的全部 advancement checks 已通过，但尚未选择 idea。",
+        "transitionAction": "运行 silvermoon whats-next，不传 ULID 或 alias。",
+        "currentState": "报告把 Target Objective 设为 project 并直接到达 terminal，没有列出 active ideas 或选择提示。",
+        "nextAction": "调用者只能另行运行 silvermoon list-ideas 后再传入 selector；当前输出没有说明这一步，列为文案缺失。"
+      }
     },
     {
       "id": "idea-selector-not-found",
       "state": "baseline",
       "idea": "scenario-idea-does-not-exist",
-      "languages": ["en-US", "zh-CN"]
+      "languages": ["en-US", "zh-CN"],
+      "flow": {
+        "objective": "idea navigation",
+        "check": "无；routing 补充节点",
+        "branch": "selector not found",
+        "previousState": "Project checks 已通过，调用者开始显式选择要继续的 idea。",
+        "transitionAction": "传入不存在的 alias scenario-idea-does-not-exist。",
+        "currentState": "报告说明 selector 未匹配，但同时声称没有 active ideas；同一 fixture 中实际存在 implementing idea。",
+        "nextAction": "应列出可选 active ideas 或提示运行 list-ideas，再用准确 ULID/alias 重试；当前输出未提供完整恢复路径。"
+      }
     },
     {
       "id": "selected-idea-current-state",
       "state": "baseline",
       "idea": "whats-next-template-review",
-      "languages": ["en-US", "zh-CN"]
-    },
-    {
-      "id": "navigation-without-selector",
-      "state": "baseline",
-      "languages": ["en-US", "zh-CN"]
+      "languages": ["en-US", "zh-CN"],
+      "flow": {
+        "objective": "idea",
+        "check": "idea-inner-submitted",
+        "branch": "主链当前节点",
+        "previousState": "Project checks 已通过，调用者已从 inventory 取得准确 alias。",
+        "transitionAction": "传入 whats-next-template-review，进入该 idea 的当前 lifecycle probe。",
+        "currentState": "Idea 为 implementing、control 为 downstream，accepted Ideal 保持有效，当前 implementation revision 尚未 submit。",
+        "nextAction": "继续 Inner World 与 ledger，证据就绪后同步到 primary 并 append submitInner，再重新观测 implementation-unaccepted。"
+      }
     }
   ]
 }

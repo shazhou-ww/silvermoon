@@ -15,6 +15,10 @@ checkpoint 派生独立场景。
 3. checkout revision、全局 Silvermoon 版本、项目 revision、实际命令与 locale；
 4. routing 覆盖标识及 whats-next 的完整输出。
 
+生成的 review HTML 必须在每个 scenario tab 中并列显示前一状态、到达动作、当前
+状态和后续动作，并标明对应 Objective、check 与失败/补充分支，使相邻文案在主链或
+支链中的关系可直接 review，而不依赖维护者反查场景脚本。
+
 覆盖检查必须从 Device、Project、Idea manifest 读取有序 check，并验证每个 check
 恰有一个通过后继，失败边覆盖其所有可达 problem/阶段结果。失败结果可包含多个
 problems；同一 check 也可能因状态不同返回不同 problem 集。必须采集每个不同的实际

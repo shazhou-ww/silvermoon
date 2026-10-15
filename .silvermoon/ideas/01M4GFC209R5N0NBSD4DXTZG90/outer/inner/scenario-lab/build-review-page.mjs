@@ -43,13 +43,24 @@ export async function buildReviewPage({ labRoot, outputDirectory }) {
   const reviews = new Map(
     reviewSource.reviews.map((review) => [review.scenario, review]),
   );
+  if (!Array.isArray(manifest.scenarioDefinitions)) {
+    throw new TypeError("Manifest must contain scenario transition definitions.");
+  }
+  const definitions = new Map(
+    manifest.scenarioDefinitions.map((definition) => [definition.id, definition]),
+  );
   const grouped = new Map();
   for (const result of manifest.results) {
+    const definition = definitions.get(result.scenario);
+    if (definition === undefined) {
+      throw new Error(`Missing transition definition for ${result.scenario}.`);
+    }
     const page = grouped.get(result.scenario) ?? {
       scenario: result.scenario,
       state: result.state,
       idea: result.idea,
       command: result.command,
+      flow: definition.flow,
       reports: {},
     };
     page.reports[result.language] = await readFile(
@@ -100,7 +111,15 @@ export async function buildReviewPage({ labRoot, outputDirectory }) {
     button:disabled { opacity: .4; }
     main { padding: 18px; }
     .metadata { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 8px; margin-bottom: 14px; }
-    .metadata div, .review { padding: 10px; background: #1e293b; border: 1px solid #334155; border-radius: 8px; }
+    .metadata div, .flow, .review { padding: 10px; background: #1e293b; border: 1px solid #334155; border-radius: 8px; }
+    .flow { margin-bottom: 14px; padding: 14px; }
+    .flow-heading { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 16px; align-items: baseline; margin-bottom: 12px; }
+    .flow-heading h2 { margin: 0; font-size: 18px; }
+    .flow-position { color: #cbd5e1; font-size: 14px; }
+    .flow-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px; }
+    .flow-card { position: relative; padding: 12px; background: #0f172a; border: 1px solid #475569; border-radius: 8px; line-height: 1.55; }
+    .flow-card:not(:last-child)::after { content: "→"; position: absolute; right: -15px; top: 50%; transform: translateY(-50%); color: #7dd3fc; font-size: 18px; }
+    .flow-card strong { display: block; margin-bottom: 6px; color: #7dd3fc; }
     .materials { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
     .material { min-width: 0; }
     .material h2 { margin: 0; padding: 10px 12px; background: #1e293b; border: 1px solid #334155; border-radius: 8px 8px 0 0; }
@@ -127,7 +146,8 @@ export async function buildReviewPage({ labRoot, outputDirectory }) {
     textarea { box-sizing: border-box; width: 100%; min-height: 110px; margin-top: 10px; padding: 10px; border-radius: 6px; border: 1px solid #64748b; background: #0f172a; color: #e5e7eb; }
     .hint { color: #94a3b8; font-size: 13px; }
     @media (max-width: 900px) {
-      .materials, .review-grid { grid-template-columns: 1fr; }
+      .materials, .review-grid, .flow-grid { grid-template-columns: 1fr; }
+      .flow-card:not(:last-child)::after { content: "↓"; right: 50%; top: auto; bottom: -19px; transform: translateX(50%); }
       .markdown { height: 38vh; }
     }
   </style>
@@ -147,6 +167,13 @@ export async function buildReviewPage({ labRoot, outputDirectory }) {
   </header>
   <main>
     <section class="metadata" id="metadata"></section>
+    <section class="flow" aria-labelledby="flow-title">
+      <div class="flow-heading">
+        <h2 id="flow-title">状态转换关系</h2>
+        <div class="flow-position" id="flow-position"></div>
+      </div>
+      <div class="flow-grid" id="flow"></div>
+    </section>
     <section class="materials">
       <article class="material"><h2>English (en-US)</h2><div class="markdown" id="en"></div></article>
       <article class="material"><h2>简体中文 (zh-CN)</h2><div class="markdown" id="zh"></div></article>
@@ -192,7 +219,8 @@ export async function buildReviewPage({ labRoot, outputDirectory }) {
     payload.pages.forEach((page, pageIndex) => {
       const option = document.createElement("option");
       option.value = String(pageIndex);
-      option.textContent = page.scenario;
+      option.textContent = (pageIndex + 1) + ". " + page.flow.objective + " / "
+        + page.flow.check + " — " + page.scenario;
       pageSelect.append(option);
     });
     function reviewFor(page) {
@@ -216,6 +244,19 @@ export async function buildReviewPage({ labRoot, outputDirectory }) {
         "<div><strong>Idea</strong><br>" + escapeHtml(page.idea ?? "(none)") + "</div>" +
         "<div><strong>Source</strong><br>" + escapeHtml(payload.sourceRevision.slice(0, 12)) +
         (payload.sourceDirty ? " (dirty)" : " (clean)") + "</div>";
+      byId("flow-position").innerHTML =
+        "<strong>Objective:</strong> " + escapeHtml(page.flow.objective) +
+        " &nbsp; <strong>Check:</strong> " + escapeHtml(page.flow.check) +
+        " &nbsp; <strong>分支:</strong> " + escapeHtml(page.flow.branch);
+      byId("flow").innerHTML = [
+        ["前一状态", page.flow.previousState],
+        ["到达动作", page.flow.transitionAction],
+        ["当前状态", page.flow.currentState],
+        ["后续动作 / 去向", page.flow.nextAction],
+      ].map(([label, value]) =>
+        "<div class=\\"flow-card\\"><strong>" + escapeHtml(label)
+        + "</strong>" + escapeHtml(value) + "</div>"
+      ).join("");
       byId("en").innerHTML = page.renderedReports["en-US"];
       byId("zh").innerHTML = page.renderedReports["zh-CN"];
       fields.forEach((field) => byId(field).value = review[field] ?? "");

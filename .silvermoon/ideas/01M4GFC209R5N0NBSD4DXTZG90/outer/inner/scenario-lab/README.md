@@ -21,12 +21,21 @@ URL 定向到该 bare repository，不访问或写入真实远端。初始场景
 状态、不带 selector 的导航、selector not found，以及设备与 repository 的首批失败
 状态，各运行 `en-US`、`zh-CN`。
 
+依赖引导默认使用官方 npm registry。若当前网络无法访问它，可在运行前设置
+`SCENARIO_NPM_REGISTRY`；该值只传给容器的 Corepack 与 frozen-lockfile 安装，不改变
+被测项目或设备状态。例如：
+
+```powershell
+$env:SCENARIO_NPM_REGISTRY = "https://mirrors.tencent.com/npm/"
+```
+
 输出按时间写入 `corpus/<UTC timestamp>/`，包含完整 stdout、必要的 stderr 和记录
 source revision/dirty 状态、runtime version、locale 与 argv 的 `manifest.json`。
 同一目录的 `review.html` 将每个 scenario 分页展示，英文与中文原文并排，并提供
 标题、表格、列表、引用和代码等 Markdown 组件渲染，以及 OK/有问题、冗余、缺失
-和缺少提示的评审字段。修改保存在浏览器 localStorage，可导出或导入与 source
-revision 绑定的 JSON。
+和缺少提示的评审字段。每个 tab 还展示 Objective/check 与分支位置，以及前一状态、
+到达动作、当前状态和后续动作，明确各段文案在状态链中的关系。修改保存在浏览器
+localStorage，可导出或导入与 source revision 绑定的 JSON。
 `corpus/` 被本目录 `.gitignore` 排除；其中报告只用于本地 review，不作为 idea
 contract 或提交内容。
 

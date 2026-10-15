@@ -5,12 +5,45 @@ import { promisify } from "node:util";
 
 const labRoot = "/scenario-lab";
 const projectRoot = "/workspace";
+const checkoutLabRoot = "/checkout/.silvermoon/ideas/01M4GFC209R5N0NBSD4DXTZG90/outer/inner/scenario-lab";
 const globalBin = `${process.env.HOME}/.npm-global/bin`;
 const globalSilvermoon = `${globalBin}/silvermoon`;
 const skillLink = `${process.env.HOME}/.agents/skills/silvermoon`;
 const source = JSON.parse(await readFile(resolve(labRoot, "scenarios.json"), "utf8"));
 if (!Array.isArray(source.scenarios) || source.scenarios.length === 0) {
   throw new TypeError("Scenario manifest must contain at least one scenario.");
+}
+const flowFields = [
+  "objective",
+  "check",
+  "branch",
+  "previousState",
+  "transitionAction",
+  "currentState",
+  "nextAction",
+];
+const scenarioIds = new Set();
+for (const scenario of source.scenarios) {
+  if (
+    typeof scenario.id !== "string"
+    || !/^[a-z0-9-]+$/.test(scenario.id)
+    || scenarioIds.has(scenario.id)
+    || !Array.isArray(scenario.languages)
+    || scenario.languages.length === 0
+    || scenario.languages.some((language) => !["en-US", "zh-CN"].includes(language))
+    || scenario.flow === null
+    || typeof scenario.flow !== "object"
+    || flowFields.some(
+      (field) => typeof scenario.flow[field] !== "string"
+        || scenario.flow[field].trim() === "",
+    )
+  ) {
+    throw new TypeError(
+      "Each scenario needs a unique stable ID, supported output languages, "
+      + "and complete transition context.",
+    );
+  }
+  scenarioIds.add(scenario.id);
 }
 
 const outputDirectory = resolve(
@@ -97,14 +130,6 @@ async function prepareState(state) {
 const startedAt = new Date().toISOString();
 const results = [];
 for (const scenario of source.scenarios) {
-  if (
-    typeof scenario.id !== "string"
-    || !/^[a-z0-9-]+$/.test(scenario.id)
-    || !Array.isArray(scenario.languages)
-    || scenario.languages.some((language) => !["en-US", "zh-CN"].includes(language))
-  ) {
-    throw new TypeError("Each scenario needs a stable ID and supported output languages.");
-  }
   await prepareState(scenario.state ?? "baseline");
   for (const language of scenario.languages) {
     const args = ["whats-next"];
@@ -160,15 +185,24 @@ await writeFile(
   `${JSON.stringify({
     sourceRevision: process.env.SCENARIO_SOURCE_REVISION ?? "unknown",
     sourceDirty: process.env.SCENARIO_SOURCE_DIRTY === "true",
+    dependencyRegistry: process.env.COREPACK_NPM_REGISTRY ?? "unknown",
     silvermoonVersion: versionResult.stdout.trim(),
     projectRoot,
     startedAt,
     finishedAt: new Date().toISOString(),
+    scenarioDefinitions: source.scenarios.map((scenario) => ({
+      id: scenario.id,
+      state: scenario.state ?? "baseline",
+      idea: scenario.idea ?? null,
+      flow: scenario.flow,
+    })),
     results,
   }, null, 2)}\n`,
   "utf8",
 );
-const { buildReviewPage } = await import("/scenario-lab/build-review-page.mjs");
+const { buildReviewPage } = await import(
+  `${checkoutLabRoot}/build-review-page.mjs`
+);
 await buildReviewPage({ labRoot, outputDirectory });
 
 process.stdout.write(`Collected ${results.length} reports in ${outputDirectory}\n`);

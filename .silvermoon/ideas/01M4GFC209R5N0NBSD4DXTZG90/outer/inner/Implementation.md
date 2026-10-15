@@ -13,7 +13,8 @@
 在本 idea 的 `scenario-lab/` 中准备状态转移和采集脚本。Docker 从空设备开始，只
 初始化一次；按状态图依序构造通过状态与失败 problems，使用当前 checkout 链接的
 全局 `silvermoon` 收集双语完整输出。生成的临时语料留在 idea 目录，不放到其他
-项目目录。
+项目目录。生成的 `review.html` 在每个 scenario tab 中同时展示当前 Objective/check
+状态、由前一状态到达当前状态的动作，以及修复或推进后的下一去向。
 
 ### I-S03: 集中 review 并修正
 
@@ -30,7 +31,8 @@
 ### I-AC02: 语料可复现
 
 全新 Docker 环境可从空设备按状态图构造通过与失败状态，并生成带 check、problem、
-阶段、locale 与 source revision 的完整输出语料，文件留在 idea 的 `scenario-lab/`。
+阶段、locale 与 source revision 的完整输出语料，文件留在 idea 的 `scenario-lab/`；
+HTML 每个 tab 可追踪前一状态、到达动作、当前状态和后续动作。
 
 ### I-AC03: Review 结论可追溯
 

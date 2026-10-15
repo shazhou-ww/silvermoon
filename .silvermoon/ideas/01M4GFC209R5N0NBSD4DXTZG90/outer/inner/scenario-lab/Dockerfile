@@ -1,10 +1,17 @@
 FROM node:24-trixie-slim
 
+ARG SCENARIO_NPM_REGISTRY=https://registry.npmjs.org/
+ENV COREPACK_NPM_REGISTRY=${SCENARIO_NPM_REGISTRY}
+
 RUN apt-get -o Acquire::Retries=5 update \
     && apt-get -o Acquire::Retries=5 install --yes --no-install-recommends ca-certificates git \
     && rm -rf /var/lib/apt/lists/* \
     && corepack enable \
-    && corepack prepare pnpm@11.22.0 --activate
+    && for attempt in 1 2 3 4 5; do \
+      corepack prepare pnpm@11.22.0 --activate && break; \
+      if [ "${attempt}" -eq 5 ]; then exit 1; fi; \
+      sleep "$((attempt * 5))"; \
+    done
 
 ARG SOURCE_REVISION=unknown
 ARG SOURCE_DIRTY=unknown
@@ -22,6 +29,7 @@ WORKDIR /checkout
 
 COPY --chown=scenario-device:scenario-device package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json tsconfig.json tsconfig.build.json /checkout/
 RUN npm config set prefix "${HOME}/.npm-global" \
+    && pnpm config set registry "${SCENARIO_NPM_REGISTRY}" \
     && pnpm install --frozen-lockfile
 
 COPY --chown=scenario-device:scenario-device bin /checkout/bin
