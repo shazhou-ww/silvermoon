@@ -2,10 +2,10 @@
 
 ## 目标
 
-让 `whats-next` 生成的 Reference 命令始终从用户请求的最外层
-Objective 出发，由 Objective prerequisite 链递归定位实际拥有页面的
-Objective。Agent 不再需要先判断当前 owner，也不再把 `page` 作为独立
-子命令传入。
+让单页 Reference lookup 不再要求调用方知道页面属于 Device、Project
+还是 Idea，也不强制调用方提供页面类型。运行时从完整 Objective
+prerequisite 链构建候选集合：显式 namespace 用于精确限定类型；没有
+namespace 时执行自由匹配。
 
 本设计只改变 `whats-next` 使用的单页 lookup。`reference search` 的搜索
 语义与参数暂不改变。
@@ -18,8 +18,7 @@ Objective。Agent 不再需要先判断当前 owner，也不再把 `page` 作为
 silvermoon reference page <objective> <reference-id> [options]
 ```
 
-例如，一个以 Idea 为目标、但当前被 Project prerequisite 阻塞的报告会
-生成：
+例如：
 
 ```text
 silvermoon reference page project levels/repository-unready --language zh-CN
@@ -36,92 +35,137 @@ silvermoon reference page project problems/repository --language zh-CN
 | reference-id | `problems/repository` | 页面类型与稳定 ID |
 | language | `zh-CN` | 输出语言 |
 
-这要求报告和 Agent 都知道当前 owner。Objective 从 Idea 递进到 Project
-或 Device 时，命令的 objective 参数也随 owner 改变，外层请求上下文
-没有保留在 lookup 中。
+这要求报告和 Agent 预先知道 owner 与页面类型。Objective 在 Idea、
+Project、Device 之间递进时，命令也随 owner 改变。
 
 ## After
 
-推荐语法把最外层 Objective 与完整 Reference ID 合成一个 lookup 路径：
+推荐语法只接收一个 lookup，namespace 使用冒号明确表达且可以省略：
 
 ```text
-silvermoon reference <objective>/<reference-id> [options]
+silvermoon reference [<namespace>:]<reference> [options]
 ```
 
 其中：
 
 ```text
-<objective>    ::= device | project | idea
-<reference-id> ::= <page-kind>/<stable-id>
-<page-kind>    ::= levels | checks | problems | pages | system
+<namespace> ::= level | check | problem | page | system
+<reference> ::= <stable-id-or-free-query>
 ```
 
-前述 Idea 报告改为：
+显式 namespace 的报告命令为：
 
 ```text
-silvermoon reference idea/levels/repository-unready --language zh-CN
-silvermoon reference idea/checks/repository-upstream-matches --language zh-CN
-silvermoon reference idea/problems/repository --language zh-CN
+silvermoon reference level:repository-unready --language zh-CN
+silvermoon reference check:repository-upstream-matches --language zh-CN
+silvermoon reference problem:repository --language zh-CN
+```
+
+交互查询可以省略 namespace：
+
+```text
+silvermoon reference repository-upstream-matches --language zh-CN
+silvermoon reference repository --language zh-CN
 ```
 
 变化总结：
 
 | Before | After |
 | --- | --- |
-| `reference page project problems/repository` | `reference idea/problems/repository` |
-| `page` 是独立子命令 | 单页读取由 lookup 路径隐含 |
-| objective 是实际页面 owner | objective 是用户请求的最外层 target |
-| owner 由调用方提前选择 | owner 由 prerequisite 链递归解析 |
-| 页面类型位于单独的 page ID 参数 | 页面类型是 lookup 路径的一部分 |
+| `reference page project problems/repository` | `reference problem:repository` |
+| `page` 是独立子命令 | 单页读取由 `reference` 隐含 |
+| 调用方指定 `device/project/idea` | 运行时递归收集并解析 owner |
+| 页面类型是必填路径段 | namespace 是可选冒号前缀 |
+| 未知完整 ID 返回该 owner 的 404 | 无 namespace 时跨类型自由匹配 |
 
-## 递归解析
+## 候选集合
 
-以 `silvermoon reference idea/problems/repository` 为例：
+运行时加载最外层 bundled Idea Objective，并沿 prerequisite 递归到
+Project、Device，以 `idea -> project -> device` 的稳定顺序收集全部
+Reference 页面。调用方不传 target；实际 owner 只作为解析结果返回。
 
-1. 加载 `idea` Objective，并以 Reference reader 的占位 subject 创建实例。
-2. 在 `idea` 实例读取 `problems/repository`。
-3. 如果返回精确页面，立即结束；如果返回 `system/404`，把同一个
-   Reference ID 委派给 `idea.prerequisite`。
-4. 按 `idea -> project -> device` 顺序重复，直到找到精确页面或链结束。
-5. 找到页面时返回实际 owner；链结束仍未找到时，返回一次包含完整查找
-   链的 `system/404`，不静默选择其他页面。
+页面的规范身份仍由 owner 与完整稳定 ID 共同构成，例如：
 
-查找采用“由外向内、首个精确匹配”规则。这样同一个稳定 ID 在外层
-Objective 中可以有意覆盖 prerequisite 页面，同时每次 lookup 的解析
-顺序确定。结构化结果必须暴露实际 owner，避免把相对 lookup 误认为
-页面的全局身份。
+```text
+project + problems/repository
+```
+
+CLI lookup 是面向人的短寻址，不替代规范身份。
+
+## 解析规则
+
+### 显式 namespace
+
+以 `silvermoon reference problem:repository` 为例：
+
+1. 将 `problem` 映射到现有稳定 ID 前缀 `problems/`。
+2. 在完整候选集合中匹配 `problems/repository`。
+3. 唯一命中时返回页面及实际 owner。
+4. 多个 Objective 含有同一完整稳定 ID 时返回歧义结果及候选 owner，
+   不按遍历顺序静默选择。
+5. 没有命中时返回一次 lookup 失败，并列出同 namespace 的近似候选。
+
+namespace 使用面向命令的单数名称，稳定 ID 继续使用现有复数目录，
+避免改变 packaged Objective Guide 资源。
+
+### 省略 namespace
+
+以 `silvermoon reference repository` 为例，自由匹配按以下优先级进行：
+
+1. 完整稳定 ID，例如输入 `problems/repository`。
+2. 稳定 ID 的末段，例如输入 `repository`。
+3. 当前语言下的标题。
+4. 当前语言下的描述与正文搜索索引。
+
+只有最高命中优先级参与消歧：该级唯一命中时直接打开；多命中时返回
+候选列表，每项包含 namespace、稳定 ID、owner 和可复制的显式命令。
+低优先级结果不得覆盖或稀释更精确的匹配。
+
+因此 `repository-upstream-matches` 可以唯一解析为 check，而
+`repository` 若同时命中 Problem 和其他页面则要求调用方改用
+`problem:repository` 等显式 namespace。
 
 ## 参数与结果结构
 
-CLI 只接收一个新的位置参数 `lookup`：
+CLI 接收一个位置参数 `lookup`：
 
 ```json
 {
-  "lookup": "idea/problems/repository",
+  "lookup": "problem:repository",
   "language": "zh-CN",
   "audience": "agent"
 }
 ```
 
-业务层在读取前将它规范化为：
+业务层将它规范化为：
 
 ```json
 {
-  "target": "idea",
-  "referenceId": "problems/repository",
+  "namespace": "problem",
+  "query": "repository",
   "language": "zh-CN"
 }
 ```
 
-读取结果保留目标、实际 owner 和遍历路径：
+省略 namespace 时为：
 
 ```json
 {
-  "target": "idea",
+  "namespace": null,
+  "query": "repository",
+  "language": "zh-CN"
+}
+```
+
+唯一命中的结构化结果保留实际 owner 与规范身份：
+
+```json
+{
+  "lookup": "problem:repository",
+  "namespace": "problem",
+  "query": "repository",
   "owner": "project",
-  "lookup": "idea/problems/repository",
   "referenceId": "problems/repository",
-  "traversedObjectives": ["idea", "project"],
   "language": "zh-CN",
   "page": {
     "id": "problems/repository"
@@ -129,16 +173,33 @@ CLI 只接收一个新的位置参数 `lookup`：
 }
 ```
 
-`whats-next` 的结构化 Reference projection 相应区分：
+歧义结果不伪装成页面成功结果：
+
+```json
+{
+  "lookup": "repository",
+  "status": "ambiguous",
+  "candidates": [
+    {
+      "namespace": "problem",
+      "owner": "project",
+      "referenceId": "problems/repository",
+      "command": "silvermoon reference problem:repository --language zh-CN"
+    }
+  ]
+}
+```
+
+`whats-next` 已知页面的规范身份，因此始终生成显式 namespace 命令，
+不依赖自由匹配：
 
 ```json
 {
   "kind": "problem",
   "id": "problems/repository",
-  "target": "idea",
   "owner": "project",
-  "lookup": "idea/problems/repository",
-  "command": "silvermoon reference idea/problems/repository --language zh-CN"
+  "lookup": "problem:repository",
+  "command": "silvermoon reference problem:repository --language zh-CN"
 }
 ```
 
@@ -148,12 +209,13 @@ CLI 只接收一个新的位置参数 `lookup`：
 
 ## 输入校验
 
-- `lookup` 必须以已知最外层 Objective 开头，且必须包含非空
-  Reference ID。
-- Reference ID 保留现有稳定 ID，不翻译、不自动改写单复数。
-- 不接受 `.`、`..`、空路径段或反斜杠；连续 `/` 不做静默归一化。
-- 未知页面类型交给现有 Reference reader 处理并最终产生
-  `system/404`，CLI 不维护第二份页面类型注册表。
+- `lookup` 必须非空；至多包含一个 namespace 分隔冒号。
+- 显式 namespace 只接受 `level`、`check`、`problem`、`page`、
+  `system`，不接受 Objective 名称。
+- 冒号前缀存在时，namespace 和 query 都不得为空。
+- Reference 稳定 ID 不翻译；namespace 只负责映射既有类型前缀。
+- 不接受 `.`、`..`、反斜杠或控制字符；无 namespace 的自由文本允许
+  普通空格。
 - `--language`、`--audience` 和 `--json` 保持现有互斥与默认规则。
 
 ## 默认 References
@@ -166,8 +228,9 @@ References：
 - 仅当 level 页面提供上述页面没有覆盖的推进语义时，才包含 level 页面。
 
 Device level 页面不再仅因当前 owner 是 Device 而默认出现。terminal
-报告仍可保留最外层 Objective 的 terminal 页面，因为此时没有
-check/problem 可供下钻。
+报告仍可保留 terminal 页面，因为此时没有 check/problem 可供下钻。
+报告生成器已知页面类型，所以输出显式 namespace；自由匹配只服务于
+调用方不知道页面类型的查询。
 
 ## 兼容与迁移
 
@@ -177,6 +240,6 @@ check/problem 可供下钻。
 页面内链和文档只输出新语法。旧语法的移除需要独立的弃用决定，不在
 本 Idea 的验收范围内。
 
-`reference search <objective> <query>` 保持不变。搜索是否改为路径语法
-需要单独处理自由文本的 quoting、斜杠和编码规则，不与单页 lookup
-绑定交付。
+`reference search <objective> <query>` 暂时保持不变。无 namespace 的
+新单页 lookup 已吸收常见发现需求，但它只在唯一命中时打开页面；显式
+搜索仍负责返回完整搜索结果集。

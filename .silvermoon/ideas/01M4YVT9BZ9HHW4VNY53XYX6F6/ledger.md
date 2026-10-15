@@ -11,7 +11,7 @@
 ### Implementation acceptance criteria
 
 - [ ] **I-AC01:** 递归查找三层 objective
-- [ ] **I-AC02:** 类型路径明确且下钻保真
+- [ ] **I-AC02:** Namespace 解析明确且下钻保真
 - [ ] **I-AC03:** 契约一致且回归通过
 
 ## Deployment
