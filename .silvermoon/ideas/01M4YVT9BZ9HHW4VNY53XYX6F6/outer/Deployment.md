@@ -14,7 +14,7 @@
 
 ### D-AC01: 真实命令递归可用
 
-全局 `silvermoon` 的代表性 en-US/zh-CN Device 输出遵循默认选择；不指定 Objective 的显式 namespace lookup 可递归打开对应的 level/check/problem 页面，无 namespace lookup 在唯一命中时自动打开并在多命中时返回列表；以实际 CLI 输出证明。
+全局 `silvermoon` 的代表性 en-US/zh-CN Device 输出遵循默认选择；不指定 Objective 的显式 namespace lookup 可递归打开对应的 level/check/problem 页面，无 namespace lookup 在唯一命中时自动打开并在多命中时返回列表；默认输出 human-readable Markdown，显式 `--json` 输出结构化结果；以实际 CLI 输出证明。
 
 ### D-AC02: 发布门禁通过
 

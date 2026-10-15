@@ -22,7 +22,7 @@
 
 ### I-AC02: Namespace 解析明确且下钻保真
 
-`page` 子命令移除后，显式冒号 namespace 可无歧义读取页面；无 namespace 时唯一命中自动打开、多命中返回列表、零命中返回空结果，并保留 owner、language 和结构化参数；check/problem 下钻通过 CLI 测试证明。
+`page` 子命令移除后，显式冒号 namespace 可无歧义读取页面；无 namespace 时唯一命中自动打开、多命中返回列表、零命中返回空结果；默认输出 human-readable Markdown，仅显式 `--json` 返回保留 owner、language 等参数的结构化结果；check/problem 下钻通过 CLI 测试证明。
 
 ### I-AC03: 契约一致且回归通过
 

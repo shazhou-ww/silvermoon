@@ -127,6 +127,16 @@ problem:repository
 转换为 `system/404`。多个结果时，调用方从列表中选择显式 namespace
 命令读取单页。
 
+## 输出格式
+
+单页读取、唯一搜索命中、多个搜索结果和空搜索结果默认都渲染为
+human-readable Markdown。`--audience human|agent` 只选择对应的可读
+呈现，不切换数据格式。
+
+只有调用方显式传入 `--json` 时才输出下述结构化结果。`--json` 与
+`--audience` 保持现有互斥规则；不得因为调用方是 Agent、结果数量或
+命令由 `whats-next` 生成而隐式返回 JSON。
+
 ## 参数与结果结构
 
 CLI 接收一个位置参数 `lookup`：
@@ -225,7 +235,8 @@ CLI 接收一个位置参数 `lookup`：
 - Reference 稳定 ID 不翻译；namespace 只负责映射既有类型前缀。
 - 不接受 `.`、`..`、反斜杠或控制字符；无 namespace 的自由文本允许
   普通空格。
-- `--language`、`--audience` 和 `--json` 保持现有互斥与默认规则。
+- `--language`、`--audience` 和 `--json` 保持现有互斥与默认规则；
+  未指定 `--json` 时一律输出 human-readable Markdown。
 
 ## 默认 References
 

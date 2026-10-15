@@ -19,5 +19,5 @@ Reference lookup 不再要求 Agent 指定 Idea、Project 或 Device；运行时
 ## 验收标准
 
 - 对三层递进 objective 的 Reference lookup 无需指定 Objective，并能递归解析目标页面的实际 owner。
-- `page` 不再作为子命令，类型使用可选冒号 namespace；显式 namespace 可精确读取单页，省略时搜索并对唯一命中自动打开、多命中返回列表，check/problem 下钻与结构化参数不丢失。
+- `page` 不再作为子命令，类型使用可选冒号 namespace；显式 namespace 可精确读取单页，省略时搜索并对唯一命中自动打开、多命中返回列表；默认输出 human-readable，仅显式 `--json` 返回结构化结果，check/problem 下钻参数不丢失。
 - Device 默认 References 不再仅因层级存在而包含 level 页面；双语输出、测试和文档与递进 lookup 规则一致。
