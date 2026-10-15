@@ -18,8 +18,8 @@
 
 ### Deployment steps
 
-- [ ] **D-S01:** 验证仓库候选
+- [x] **D-S01:** 验证仓库候选
 
 ### Deployment acceptance criteria
 
-- [ ] **D-AC01:** 仓库候选可交付
+- [x] **D-AC01:** 仓库候选可交付
