@@ -759,7 +759,7 @@ decision, risk, or disagreement requires it.
     /Target Objective|Owner Objective|Failing check|Observed state:|problemTypes|ID:|```json/,
   );
   assert.doesNotMatch(lifecycleText, /> ## Problem guidance/);
-  assert.match(lifecycleText, /further details: `silvermoon reference page project problems\/repository --language en-US`/);
+  assert.match(lifecycleText, /further details: `silvermoon reference problem:repository --language en-US`/);
   assert.doesNotMatch(lifecycleText, /Project Objective overview/);
   assert.doesNotMatch(lifecycleText, /### Ideas you can continue/);
   assert.doesNotMatch(lifecycleText, /## Actions and results/);

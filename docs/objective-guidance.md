@@ -220,11 +220,14 @@ and labeled dynamic facts. Raw target/owner, level/check, Problem IDs, and
 parameter objects remain in the structured response instead of appearing as
 unexplained Markdown fields. **Next action** materializes the current
 instruction and recheck command once. **References** then exposes compact,
-copyable `silvermoon reference page` commands for the matching level, check,
-and Problem pages instead of embedding their full localized content. The
-structured response still retains each Reference projection for programmatic
-consumers. Reference knowledge never substitutes for dynamic Problem
-parameters. Paths, revisions, branches, and recovery commands remain facts
+copyable explicit namespace commands such as
+`silvermoon reference check:repository-worktree-clean` for useful check and
+Problem pages instead of embedding their full localized content. Nonterminal
+Device positions do not include a level page solely because the level exists.
+The structured response still retains each Reference projection for
+programmatic consumers. Reference knowledge never substitutes for dynamic
+Problem parameters. Paths, revisions, branches, and recovery commands remain
+facts
 from the current invocation. Terminal positions render only **Outcome** and
 **References**.
 

@@ -27,9 +27,11 @@ function renderObjectiveProblem(
       references: [{
         kind: "problem",
         id: `problems/${id}`,
+        owner: id.startsWith("device-") ? "device" : "project",
+        lookup: `problem:${id}`,
         title: "Fixture problem",
         description: "The prerequisite is not ready.",
-        command: `silvermoon reference page fixture problems/${id} --language ${language}`,
+        command: `silvermoon reference problem:${id} --language ${language}`,
         content: "Fixture details.",
       }],
     },
@@ -83,24 +85,27 @@ test("renders Objective reports as current status, problems, next action, and co
       ],
       references: [
         {
-          kind: "level", id: "levels/repository-unready", title: "Safe local repository",
+          kind: "level", id: "levels/repository-unready", owner: "project",
+          lookup: "level:repository-unready", title: "Safe local repository",
           description: "The repository is not ready.",
           outcome: "Passing checks advances to the next level.",
-          content: "Read repository synchronization (`silvermoon reference page project pages/repository-synchronization --language en-US`).",
-          command: "silvermoon reference page project levels/repository-unready --language en-US",
+          content: "Read repository synchronization (`silvermoon reference page:repository-synchronization --language en-US`).",
+          command: "silvermoon reference level:repository-unready --language en-US",
         },
         {
-          kind: "check", id: "checks/repository-worktree-clean", title: "Worktree clean",
+          kind: "check", id: "checks/repository-worktree-clean", owner: "project",
+          lookup: "check:repository-worktree-clean", title: "Worktree clean",
           description: "Checks the current worktree.",
           content: "## Check guidance\n\nInspect the sampled worktree.",
-          command: "silvermoon reference page project checks/repository-worktree-clean --language en-US",
+          command: "silvermoon reference check:repository-worktree-clean --language en-US",
         },
         {
-          kind: "problem", id: "problems/repository", title: "Repository recovery",
+          kind: "problem", id: "problems/repository", owner: "project",
+          lookup: "problem:repository", title: "Repository recovery",
           description: "Resolve the repository problem.",
           instruction: "Preserve unknown work before recovery.",
           content: "Use current parameters; do not substitute static examples.",
-          command: "silvermoon reference page project problems/repository --language en-US",
+          command: "silvermoon reference problem:repository --language en-US",
         },
       ],
     },
@@ -123,10 +128,12 @@ test("renders Objective reports as current status, problems, next action, and co
         references: [{
           kind: "level",
           id: "levels/terminal",
+          owner: "project",
+          lookup: "level:terminal",
           title: "目标已达成",
           description: "本次 probe 的全部 checks 已通过。",
           content: "## 含义\n\n这是采样结论，不是永久事实或人工授权。",
-          command: "silvermoon reference page project levels/terminal --language zh-CN",
+          command: "silvermoon reference level:terminal --language zh-CN",
         }],
       },
       problems: [],
@@ -136,7 +143,7 @@ test("renders Objective reports as current status, problems, next action, and co
     assert.match(rendered, /### 参考资料/);
     assert.match(rendered, /### 结果/);
     assert.match(rendered, /^## 项目整备/m);
-    assert.match(rendered, /silvermoon reference page project levels\/terminal --language zh-CN/);
+    assert.match(rendered, /silvermoon reference level:terminal --language zh-CN/);
     assert.doesNotMatch(rendered, /本次 probe 的全部 checks 已通过/);
     assert.doesNotMatch(rendered, /这是采样结论/);
     assert.doesNotMatch(rendered, /### 问题|### 下一步动作/);
@@ -160,7 +167,7 @@ test("renders Objective reports as current status, problems, next action, and co
   assert.match(rendered, /### References/);
   assert.match(rendered, /- Level: Safe local repository \(`levels\/repository-unready`\)/);
   assert.match(rendered, /further details:/);
-  assert.match(rendered, /silvermoon reference page project checks\/repository-worktree-clean --language en-US/);
+  assert.match(rendered, /silvermoon reference check:repository-worktree-clean --language en-US/);
   assert.doesNotMatch(rendered, /Passing checks advances to the next level/);
   assert.doesNotMatch(rendered, /Preserve unknown work before recovery/);
   assert.doesNotMatch(rendered, /## Check guidance/);
@@ -191,11 +198,13 @@ test("renders a source checkout as one current runtime fact", () => {
       references: [{
         kind: "problem",
         id: "problems/device-runtime",
+        owner: "device",
+        lookup: "problem:device-runtime",
         title: "`PATH` 中的设备级 runtime 不可用",
         description:
           "当前 Silvermoon runtime 未通过 `PATH` 中可发现的设备级 `silvermoon` 可执行文件运行。",
         command:
-          "silvermoon reference page device problems/device-runtime --language zh-CN",
+          "silvermoon reference problem:device-runtime --language zh-CN",
         content: "Details.",
       }],
     },
@@ -295,11 +304,13 @@ test("does not render the Device side channel beside an Objective", () => {
       references: [{
         kind: "problem",
         id: "problems/inner",
+        owner: "idea",
+        lookup: "problem:inner",
         title: "inner",
         description: "Continue the current implementation.",
         instruction: "Continue the current implementation.",
         content: "Detailed implementation guidance.",
-        command: "silvermoon reference page idea problems/inner --language en-US",
+        command: "silvermoon reference problem:inner --language en-US",
       }],
     },
     problems: [{

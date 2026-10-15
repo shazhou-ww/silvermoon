@@ -21,6 +21,7 @@ import { observeSnapshot, withObservationLanguage } from "./shared/index.ts";
 import { joinInstructions, lifecycleInstruction, lifecycleReview, phaseGuidanceInstructions, projectInstructions, renderIdeaNotFound, selectIdea } from "../foundation/report/index.ts";
 import {
   objectiveReferenceCommand,
+  objectiveReferenceLookup,
   renderObjectiveReferenceContent,
 } from "./objective-reference.ts";
 import { assessRepositoryReadiness } from "./shared/index.ts";
@@ -70,7 +71,9 @@ async function objectiveProjection(
   const { position } = observation;
   const owner = objectiveId(position.owner);
   const pageIds = [
-    { kind: "level" as const, id: `levels/${position.level.id}` },
+    ...(position.level.id === "terminal" || owner !== "device"
+      ? [{ kind: "level" as const, id: `levels/${position.level.id}` }]
+      : []),
     ...(position.failingCheck === null
       ? []
       : [{ kind: "check" as const, id: `checks/${position.failingCheck}` }]),
@@ -84,6 +87,8 @@ async function objectiveProjection(
     return {
       kind,
       id,
+      owner,
+      lookup: objectiveReferenceLookup(id),
       title: page.title,
       ...(page.description === undefined
         ? {}

@@ -216,8 +216,18 @@ test("selected Idea stops at its Device prerequisite with one current direction"
       checkoutPath: "D:\\checkout",
     },
   }]);
+  assert.deepEqual(
+    report.response.objective.references.map(({ id }) => id),
+    ["checks/device-runtime-linked", "problems/device-runtime"],
+  );
   const problemReference = report.response.objective.references.find(
     ({ id }) => id === "problems/device-runtime",
+  );
+  assert.equal(problemReference?.owner, "device");
+  assert.equal(problemReference?.lookup, "problem:device-runtime");
+  assert.equal(
+    problemReference?.command,
+    "silvermoon reference problem:device-runtime --language en-US",
   );
   assert.equal(report.response.nextSteps[0]?.text, problemReference?.instruction);
   assert.match(
@@ -424,6 +434,8 @@ test("no selector stays Project-only even for one Idea; invalid selectors do not
           references: [{
             kind: "level",
             id: "levels/terminal",
+            owner: "project",
+            lookup: "level:terminal",
             title: "Objective attained",
             description: "All checks passed in this probe.",
             content: [
@@ -432,7 +444,7 @@ test("no selector stays Project-only even for one Idea; invalid selectors do not
               "This terminal means every advancement check required by the current probe passed.",
               "It is a sampled conclusion, not permanent truth, a real-world mutation, or human authorization.",
             ].join("\n"),
-            command: "silvermoon reference page project levels/terminal --language en-US",
+            command: "silvermoon reference level:terminal --language en-US",
           }],
         });
       }
@@ -482,6 +494,8 @@ test("outside-worktree bare navigation targets Device and stops at terminal", as
     references: [{
       kind: "level",
       id: "levels/terminal",
+      owner: "device",
+      lookup: "level:terminal",
       title: "Objective attained",
       description: "All checks passed in this probe.",
       content: [
@@ -490,7 +504,7 @@ test("outside-worktree bare navigation targets Device and stops at terminal", as
         "This terminal means every advancement check required by the current probe passed.",
         "It is a sampled conclusion, not permanent truth, a real-world mutation, or human authorization.",
       ].join("\n"),
-      command: "silvermoon reference page device levels/terminal --language en-US",
+      command: "silvermoon reference level:terminal --language en-US",
     }],
   });
   assert.deepEqual(report.response.nextSteps, []);

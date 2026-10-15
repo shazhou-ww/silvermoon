@@ -27,6 +27,8 @@ export interface ObjectiveProblem {
 export interface ObjectiveReference {
   kind: "level" | "check" | "problem";
   id: string;
+  owner: "device" | "project" | "idea";
+  lookup: string;
   title: string;
   description?: string;
   outcome?: string;

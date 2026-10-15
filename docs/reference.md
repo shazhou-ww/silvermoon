@@ -340,18 +340,46 @@ silvermoon create-idea [--language <tag>] [--audience <human|agent>] [--trace <f
 silvermoon migrate [--apply --expected-digest <sha256> | --resume --confirm-stopped | --rollback --confirm-stopped]
 silvermoon check [--remote | --commit <revision> | --staged | --worktree] [--language <en|en-US|zh|zh-CN>] [--audience <human|agent>] [--trace <file.trace.jsonl>]
 silvermoon event <replay|append> <idea> [--input <request.json>] [--after-length <bytes>] [--after-digest <oid>] [--full-history] [--expected-digest <8+-hex-prefix>] [--expected-primary <commit>] [--confirm-decision] [--audience <human|agent>]
-silvermoon reference page <device|project|idea> <reference-id> [--language <tag>] [--audience <human|agent> | --json]
-silvermoon reference search <device|project|idea> <query> [--language <tag>] [--audience <human|agent> | --json]
+silvermoon reference [<level|check|problem|page|system>:]<reference-or-query> [--language <tag>] [--audience <human|agent> | --json]
 ```
 
 `reference` reads the packaged Objective Guide resources without inspecting or
-changing a repository. `page` preserves the Guide's `system/404` result for a
-missing stable ID, while malformed resources, unsupported locales, and other
-configuration failures exit explicitly. Markdown output expands every
-`[[reference-id|label]]` link into a copyable `silvermoon reference page`
-command. `search` delegates to the Guide's existing `searchPages` index and
-returns stable IDs with the same navigable commands. `--json` returns the
-read-only result directly; human and agent audiences receive Markdown.
+changing a repository. An explicit namespace maps to the existing stable ID
+directories and resolves the page across the Idea -> Project -> Device
+prerequisite chain. If the canonical ID exists under multiple owners, the
+result reports every owner instead of selecting by traversal order.
+
+Without a namespace, `reference` applies the existing title, description, and
+content search semantics across all three Objectives. One result opens
+automatically; multiple results list namespace, owner, stable ID, and a
+copyable explicit command; zero results is a successful empty result. Markdown
+output expands every `[[reference-id|label]]` link into the same explicit
+namespace form. `--json` alone returns structured data; the default and both
+audiences receive Markdown. The older `reference page <objective>
+<reference-id>` and `reference search <objective> <query>` forms remain
+compatibility entry points but are not generated.
+
+An explicit structured page result retains both its short lookup and canonical
+identity:
+
+```json
+{
+  "lookup": "check:repository-upstream-matches",
+  "operation": "read",
+  "namespace": "check",
+  "query": "repository-upstream-matches",
+  "owner": "project",
+  "referenceId": "checks/repository-upstream-matches",
+  "language": "en-US",
+  "page": {
+    "id": "checks/repository-upstream-matches"
+  }
+}
+```
+
+Structured search lists use the same `namespace`, `owner`, `referenceId`, and
+`command` fields. A uniquely matched search returns the page shape with
+`operation: "search"`; an empty search returns `results: []`.
 
 Every valid invocation starts one ordered domain-message stream with
 `intention.accepted`. Observation facts are folded through one immutable
@@ -387,10 +415,12 @@ projections:
         {
           "kind": "level",
           "id": "levels/terminal",
+          "owner": "project",
+          "lookup": "level:terminal",
           "title": "Objective attained",
           "description": "All checks passed in this probe.",
           "content": "## Meaning\n\nThis terminal means every advancement check required by the current probe passed.",
-          "command": "silvermoon reference page project levels/terminal --language en-US"
+          "command": "silvermoon reference level:terminal --language en-US"
         }
       ]
     }
@@ -411,10 +441,12 @@ projections:
         {
           "kind": "level",
           "id": "levels/terminal",
+          "owner": "project",
+          "lookup": "level:terminal",
           "title": "Objective attained",
           "description": "All checks passed in this probe.",
           "content": "## Meaning\n\nThis terminal means every advancement check required by the current probe passed.",
-          "command": "silvermoon reference page project levels/terminal --language en-US"
+          "command": "silvermoon reference level:terminal --language en-US"
         }
       ]
     },
@@ -668,11 +700,14 @@ Observations are discriminated by command intent and `state`:
 - Every check-backed blocked or ready `whats-next` response projects the same
   Objective position: requested target, actual owner (including prerequisite
   ownership), level, failing check, complete ordered Problems with structured
-  parameters, and matching level/check/Problem References. Each
-  Reference projection preserves kind, ID, title, description, content,
+  parameters, and useful check/Problem References. Device does not include a
+  nonterminal level Reference merely because the level exists; terminal
+  reports retain their terminal page. Each Reference projection preserves kind, ID,
+  owner, lookup, title, description, content,
   optional level outcome or Problem instruction, and its further-detail
-  command. Internal links are rendered as `silvermoon reference page`
-  commands without executing or interpolating Reference content. Markdown
+  command. Internal links are rendered as explicit namespace
+  `silvermoon reference` commands without executing or interpolating Reference
+  content. Markdown
   titles the requested target Objective and renders fixed **Current status**,
   **Problems**, **Next action**, and compact **References** sections. Current
   status explains prerequisite ownership in prose, while Problems labels

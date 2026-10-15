@@ -21,14 +21,25 @@ export {
 
 export {
   objectiveReferenceCommand,
+  objectiveReferenceLookup,
+  parseObjectiveReferenceLookup,
   readObjectiveReference,
+  renderObjectiveReferenceLookup,
   renderObjectiveReferenceContent,
   renderObjectiveReferencePage,
   renderObjectiveReferenceSearch,
+  resolveObjectiveReference,
   searchObjectiveReferences,
 } from "./objective-reference.ts";
 export type {
   ObjectiveReferenceAudience,
+  ObjectiveReferenceCandidate,
+  ObjectiveReferenceLookupAmbiguousResult,
+  ObjectiveReferenceLookupNotFoundResult,
+  ObjectiveReferenceLookupPageResult,
+  ObjectiveReferenceLookupResult,
+  ObjectiveReferenceLookupSearchResult,
+  ObjectiveReferenceNamespace,
   ObjectiveReferencePageResult,
   ObjectiveReferenceSearchResult,
   SilvermoonObjectiveId,

@@ -21,8 +21,10 @@ import {
   eventCommand,
   listIdeas,
   readObjectiveReference,
+  renderObjectiveReferenceLookup,
   renderObjectiveReferencePage,
   renderObjectiveReferenceSearch,
+  resolveObjectiveReference,
   runProjectSchemaMigration,
   searchObjectiveReferences,
   whatsNext,
@@ -455,48 +457,65 @@ Examples:
 
   const reference = program.command("reference")
     .description("read or search bundled Objective Reference pages")
+    .argument("<lookup>", "[namespace:]reference-or-query")
+    .argument("[legacy-objective]", "compatibility Objective for page/search")
+    .argument("[legacy-value]", "compatibility page ID or query")
     .addHelpCommand(false)
     .configureHelp({ sortOptions: true, sortSubcommands: false });
 
-  addReferenceOptions(
-    reference.command("page")
-      .description("read one stable Reference page")
-      .addArgument(new Argument("<objective>").choices(OBJECTIVES))
-      .argument("<page-id>"),
-  ).action(async (
-    objective: SilvermoonObjectiveId,
-    pageId: string,
+  addReferenceOptions(reference).action(async (
+    lookup: string,
+    legacyObjective: string | undefined,
+    legacyValue: string | undefined,
     options: CliOptions,
   ) => {
-    const result = await readObjectiveReference(
-      objective,
-      pageId,
-      options.language,
-    );
+    const legacyOperation = lookup === "page" || lookup === "search";
+    const hasLegacyArguments = legacyObjective !== undefined
+      || legacyValue !== undefined;
+    if (legacyOperation && hasLegacyArguments) {
+      if (
+        legacyObjective === undefined
+        || legacyValue === undefined
+        || !OBJECTIVES.includes(legacyObjective)
+      ) {
+        const error = new Error(
+          `legacy reference ${lookup} requires <device|project|idea> and a value`,
+        );
+        Object.assign(error, { exitCode: 2 });
+        throw error;
+      }
+      const objective = legacyObjective as SilvermoonObjectiveId;
+      if (lookup === "page") {
+        const result = await readObjectiveReference(
+          objective,
+          legacyValue,
+          options.language,
+        );
+        io.log(options.json
+          ? JSON.stringify(result, null, 2)
+          : renderObjectiveReferencePage(result, options.audience ?? "human"));
+      } else {
+        const result = await searchObjectiveReferences(
+          objective,
+          legacyValue,
+          options.language,
+        );
+        io.log(options.json
+          ? JSON.stringify(result, null, 2)
+          : renderObjectiveReferenceSearch(result, options.audience ?? "human"));
+      }
+      program.setOptionValue("resultCode", 0);
+      return;
+    }
+    if (legacyObjective !== undefined || legacyValue !== undefined) {
+      const error = new Error("new reference lookup accepts exactly one positional argument");
+      Object.assign(error, { exitCode: 2 });
+      throw error;
+    }
+    const result = await resolveObjectiveReference(lookup, options.language);
     io.log(options.json
       ? JSON.stringify(result, null, 2)
-      : renderObjectiveReferencePage(result, options.audience ?? "human"));
-    program.setOptionValue("resultCode", 0);
-  });
-
-  addReferenceOptions(
-    reference.command("search")
-      .description("search bundled Reference titles, descriptions, and content")
-      .addArgument(new Argument("<objective>").choices(OBJECTIVES))
-      .argument("<query>"),
-  ).action(async (
-    objective: SilvermoonObjectiveId,
-    query: string,
-    options: CliOptions,
-  ) => {
-    const result = await searchObjectiveReferences(
-      objective,
-      query,
-      options.language,
-    );
-    io.log(options.json
-      ? JSON.stringify(result, null, 2)
-      : renderObjectiveReferenceSearch(result, options.audience ?? "human"));
+      : renderObjectiveReferenceLookup(result, options.audience ?? "human"));
     program.setOptionValue("resultCode", 0);
   });
 

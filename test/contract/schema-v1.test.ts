@@ -124,11 +124,13 @@ test("publishes command report, domain message, and trace event schemas", async 
     references: [{
       kind: "problem",
       id: "problems/repository",
+      owner: "project",
+      lookup: "problem:repository",
       title: "Repository recovery",
       description: "Resolve repository and probe again.",
       instruction: "Preserve unknown work.",
       content: "Use the current Problem parameters.",
-      command: "silvermoon reference page project problems/repository --language en-US",
+      command: "silvermoon reference problem:repository --language en-US",
     }],
   };
   const objectiveReport = {

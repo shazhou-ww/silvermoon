@@ -28,9 +28,12 @@ descriptions and human-readable observed facts. Machine Objective,
 level/check, and Problem IDs plus raw parameters remain available in JSON
 instead of appearing as an unexplained status list. **Next action** contains
 the current recovery instruction and recheck command once. **References**
-links the matching level, check, and Problem pages through copyable
-`silvermoon reference page` commands instead of embedding their full static
-content. Terminal reports contain only **Outcome** and **References**.
+links useful check and Problem pages through copyable explicit namespace
+commands such as `silvermoon reference problem:repository` instead of
+embedding their full static content. A level page is included only when it
+adds distinct progression guidance; Device reports do not include one merely
+because a level exists. Terminal reports contain only **Outcome** and
+**References**.
 
 The shared observation exposes the resolved content preference as
 `configuration.preferredLanguage` and the built-in rendering locale as

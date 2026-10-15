@@ -273,6 +273,8 @@ test("[selector-none] naked navigation reaches Project terminal and explains Ide
     references: [{
       kind: "level",
       id: "levels/terminal",
+      owner: "project",
+      lookup: "level:terminal",
       title: "Objective attained",
       description: "All checks passed in this probe.",
       content: [
@@ -281,7 +283,7 @@ test("[selector-none] naked navigation reaches Project terminal and explains Ide
         "This terminal means every advancement check required by the current probe passed.",
         "It is a sampled conclusion, not permanent truth, a real-world mutation, or human authorization.",
       ].join("\n"),
-      command: "silvermoon reference page project levels/terminal --language en-US",
+      command: "silvermoon reference level:terminal --language en-US",
     }],
   });
   assert.equal(report.response.nextSteps.length, 1);
@@ -746,7 +748,7 @@ test("uses a canonical output override without changing content language or pers
   assert.doesNotMatch(blockedMarkdown, /> ## Problem guidance/);
   assert.match(
     blockedMarkdown,
-    /further details.*silvermoon reference page project problems\/repository --language en-US/,
+    /further details.*silvermoon reference problem:repository --language en-US/,
   );
   assert.doesNotMatch(blockedMarkdown, /Project Objective overview/);
 });
@@ -816,7 +818,7 @@ test("drives gate presentation from content language instead of output language"
   assert.match(rendered, /### References/);
   assert.match(
     rendered,
-    /silvermoon reference page idea problems\/ideal --language en-US/,
+    /silvermoon reference problem:ideal --language en-US/,
   );
   assert.match(
     rendered,

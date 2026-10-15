@@ -4,15 +4,15 @@
 
 ### Implementation steps
 
-- [ ] **I-S01:** 明确递归 lookup 与引用路径
-- [ ] **I-S02:** 实现递进 objective lookup
-- [ ] **I-S03:** 同步双语契约与覆盖
+- [x] **I-S01:** 明确递归 lookup 与引用路径
+- [x] **I-S02:** 实现递进 objective lookup
+- [x] **I-S03:** 同步双语契约与覆盖
 
 ### Implementation acceptance criteria
 
-- [ ] **I-AC01:** 递归查找三层 objective
-- [ ] **I-AC02:** Namespace 解析明确且下钻保真
-- [ ] **I-AC03:** 契约一致且回归通过
+- [x] **I-AC01:** 递归查找三层 objective
+- [x] **I-AC02:** Namespace 解析明确且下钻保真
+- [x] **I-AC03:** 契约一致且回归通过
 
 ## Deployment
 

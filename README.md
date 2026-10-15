@@ -77,8 +77,8 @@ silvermoon whats-next
 silvermoon whats-next <ULID-or-alias>
 silvermoon create-idea
 silvermoon list-ideas
-silvermoon reference page project levels/repository-unready --language en-US
-silvermoon reference search idea submission --language en-US
+silvermoon reference level:repository-unready --language en-US
+silvermoon reference submission --language en-US
 ```
 
 > **Note:** Install and update one global Silvermoon runtime for the device or

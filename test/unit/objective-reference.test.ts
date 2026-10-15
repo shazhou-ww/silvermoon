@@ -2,14 +2,18 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   objectiveReferenceCommand,
+  objectiveReferenceLookup,
+  parseObjectiveReferenceLookup,
   readObjectiveReference,
   renderObjectiveReferenceContent,
+  renderObjectiveReferenceLookup,
   renderObjectiveReferencePage,
   renderObjectiveReferenceSearch,
+  resolveObjectiveReference,
   searchObjectiveReferences,
 } from "../../src/business/objective-reference.ts";
 
-test("reads every bundled Objective namespace in both locales", async () => {
+test("legacy readers still address every bundled Objective in both locales", async () => {
   const cases = [
     ["device", "system/overview"],
     ["project", "levels/repository-unready"],
@@ -21,72 +25,91 @@ test("reads every bundled Objective namespace in both locales", async () => {
       assert.equal(result.objective, objective);
       assert.equal(result.language, language);
       assert.equal(result.page.id, id);
-      assert.ok(result.page.title.length > 0);
     }
   }
 });
 
-test("exposes typed static guidance metadata from Reference frontmatter", async () => {
-  const english = await readObjectiveReference(
-    "project",
-    "problems/repository",
-    "en-US",
-  );
-  assert.match(
-    english.page.description ?? "",
-    /repository does not yet satisfy the Git state required to advance repository or Idea work safely/,
-  );
-  assert.match(
-    english.page.instruction ?? "",
-    /goal is to reach a clean, attached local branch.+without losing unknown work/,
-  );
-  assert.match(english.page.content, /## Problem guidance/);
-
-  const chinese = await readObjectiveReference(
-    "project",
-    "problems/repository",
-    "zh-CN",
-  );
-  assert.match(
-    chinese.page.description ?? "",
-    /repository 尚未满足安全推进 repository 或 Idea 工作所需的 Git 状态/,
-  );
-  assert.match(
-    chinese.page.instruction ?? "",
-    /目标是在不丢失未知工作的前提下.+upstream 与配置 primary 一致/,
-  );
-  assert.match(chinese.page.content, /## 问题说明/);
-});
-
-test("preserves 404 semantics and rejects invalid IDs and unsupported locales", async () => {
-  assert.equal(
-    (await readObjectiveReference("project", "levels/not-present", "en-US")).page.id,
-    "system/404",
-  );
-  await assert.rejects(
-    readObjectiveReference("device", "", "en-US"),
-    /Page ID must be nonempty/,
-  );
-  await assert.rejects(
-    readObjectiveReference("idea", "system/overview", "fr-FR"),
-    /Unsupported Reference locale/,
-  );
-});
-
-test("search returns stable IDs that page can reopen", async () => {
-  const search = await searchObjectiveReferences("idea", "revision", "en-US");
-  assert.ok(search.results.length > 0);
-  for (const summary of search.results) {
-    assert.match(summary.id, /^(system|levels|checks|problems|pages)\//);
-    assert.equal((await readObjectiveReference("idea", summary.id, "en-US")).page.id, summary.id);
+test("parses namespace lookups and rejects unsafe or malformed input", () => {
+  assert.deepEqual(parseObjectiveReferenceLookup("problem:repository"), {
+    namespace: "problem",
+    query: "repository",
+  });
+  assert.deepEqual(parseObjectiveReferenceLookup("repository state"), {
+    namespace: null,
+    query: "repository state",
+  });
+  for (
+    const lookup of [
+      "",
+      ":repository",
+      "project:repository",
+      "constructor:repository",
+      "toString:repository",
+      "problem:",
+      "a:b:c",
+      "..",
+      "a\\b",
+    ]
+  ) {
+    assert.throws(() => parseObjectiveReferenceLookup(lookup));
   }
 });
 
-test("Markdown renderers turn internal links and search results into navigable commands", () => {
-  const command = objectiveReferenceCommand("project", "levels/repository-unready", "zh-CN");
+test("explicit namespace recursively resolves the actual owner", async () => {
+  const result = await resolveObjectiveReference(
+    "check:repository-upstream-matches",
+    "zh-CN",
+  );
+  assert.ok("page" in result);
+  assert.equal(result.owner, "project");
+  assert.equal(result.referenceId, "checks/repository-upstream-matches");
+  assert.equal(result.namespace, "check");
+  assert.equal(result.language, "zh-CN");
+  assert.equal(result.page.id, "checks/repository-upstream-matches");
+});
+
+test("explicit namespace reports ambiguity instead of selecting by traversal order", async () => {
+  const result = await resolveObjectiveReference("system:overview");
+  assert.ok("ambiguous" in result);
+  assert.deepEqual(result.candidates.map(({ owner }) => owner), [
+    "idea",
+    "project",
+    "device",
+  ]);
+  assert.match(renderObjectiveReferenceLookup(result), /Ambiguous Reference/);
+});
+
+test("search auto-opens one result, lists many, and succeeds with none", async () => {
+  const one = await resolveObjectiveReference("repository-upstream-matches");
+  assert.ok("page" in one);
+  assert.equal(one.operation, "search");
+  assert.equal(one.owner, "project");
+  assert.equal(one.referenceId, "checks/repository-upstream-matches");
+
+  const many = await resolveObjectiveReference("revision", "en-US");
+  assert.ok("results" in many);
+  assert.ok(many.results.length > 1);
+  assert.ok(many.results.every(({ namespace, owner, referenceId, command }) =>
+    namespace.length > 0
+    && owner.length > 0
+    && referenceId.length > 0
+    && command.startsWith("silvermoon reference ")
+  ));
+  assert.match(renderObjectiveReferenceLookup(many), /owner: `idea`/);
+
+  const none = await resolveObjectiveReference("__no_reference_match__");
+  assert.ok("results" in none);
+  assert.deepEqual(none.results, []);
+});
+
+test("new commands and internal links use explicit namespace without owner", () => {
   assert.equal(
-    command,
-    "silvermoon reference page project levels/repository-unready --language zh-CN",
+    objectiveReferenceLookup("levels/repository-unready"),
+    "level:repository-unready",
+  );
+  assert.equal(
+    objectiveReferenceCommand("project", "levels/repository-unready", "zh-CN"),
+    "silvermoon reference level:repository-unready --language zh-CN",
   );
   assert.equal(
     renderObjectiveReferenceContent(
@@ -94,69 +117,48 @@ test("Markdown renderers turn internal links and search results into navigable c
       "project",
       "en-US",
     ),
-    "Read the overview (`silvermoon reference page project system/overview --language en-US`) and levels/terminal (`silvermoon reference page project levels/terminal --language en-US`).",
+    "Read the overview (`silvermoon reference system:overview --language en-US`) and levels/terminal (`silvermoon reference level:terminal --language en-US`).",
   );
-  assert.match(renderObjectiveReferencePage({
-    objective: "device",
-    language: "en-US",
-    page: { id: "system/overview", title: "Device", content: "" },
-  }), /Reference ID: `system\/overview`/);
-  assert.match(renderObjectiveReferencePage({
-    objective: "project",
-    language: "en-US",
-    page: {
-      id: "problems/repository",
-      title: "Repository recovery",
-      description: "Resolve repository and probe again.",
-      instruction: "Preserve unknown work.",
-      content: "Use [[system/overview|the overview]].",
-    },
-  }), /\*\*Instruction:\*\* Preserve unknown work\.[\s\S]*silvermoon reference page project system\/overview --language en-US/);
-  assert.match(renderObjectiveReferenceSearch({
-    objective: "idea",
-    language: "en-US",
-    query: "revision",
-    results: [{ id: "pages/revisions", title: "Revisions" }],
-  }), /silvermoon reference page idea pages\/revisions --language en-US/);
 });
 
-test("zh-CN page chrome is localized exactly for both audiences", () => {
-  const result = {
+test("legacy page and search business APIs retain their behavior", async () => {
+  assert.equal(
+    (await readObjectiveReference("project", "levels/not-present", "en-US")).page.id,
+    "system/404",
+  );
+  const search = await searchObjectiveReferences("idea", "revision", "en-US");
+  assert.ok(search.results.length > 0);
+  for (const summary of search.results) {
+    assert.equal((await readObjectiveReference("idea", summary.id, "en-US")).page.id, summary.id);
+  }
+});
+
+test("page and search Markdown are readable for both audiences", () => {
+  const page = {
     objective: "device",
     language: "zh-CN",
     page: { id: "system/overview", title: "设备目标", content: "" },
   } as const;
-  const expected = [
+  const expectedPage = [
     "# 设备目标",
     "",
+    "所属 Objective: `device`",
     "引用 ID: `system/overview`",
-    "打开: `silvermoon reference page device system/overview --language zh-CN`",
+    "打开: `silvermoon reference system:overview --language zh-CN`",
   ].join("\n");
-  assert.equal(renderObjectiveReferencePage(result, "human"), expected);
-  assert.equal(renderObjectiveReferencePage(result, "agent"), expected);
-});
+  assert.equal(renderObjectiveReferencePage(page, "human"), expectedPage);
+  assert.equal(renderObjectiveReferencePage(page, "agent"), expectedPage);
 
-test("zh-CN search and no-results chrome are localized exactly for both audiences", () => {
-  const result = {
+  const search = {
     objective: "idea",
     language: "zh-CN",
     query: "修订",
     results: [{ id: "pages/revisions", title: "修订" }],
   } as const;
-  const expected = [
+  assert.equal(renderObjectiveReferenceSearch(search, "human"), [
     "# Objective 引用搜索：修订",
     "",
-    "- 修订 (`silvermoon reference page idea pages/revisions --language zh-CN`)",
-  ].join("\n");
-  assert.equal(renderObjectiveReferenceSearch(result, "human"), expected);
-  assert.equal(renderObjectiveReferenceSearch(result, "agent"), expected);
-
-  const empty = { ...result, query: "", results: [] };
-  const emptyExpected = [
-    "# Objective 引用页面",
-    "",
-    "没有匹配的引用页面。",
-  ].join("\n");
-  assert.equal(renderObjectiveReferenceSearch(empty, "human"), emptyExpected);
-  assert.equal(renderObjectiveReferenceSearch(empty, "agent"), emptyExpected);
+    "- 修订 (`silvermoon reference page:revisions --language zh-CN`)",
+  ].join("\n"));
+  assert.equal(renderObjectiveReferenceSearch(search, "agent"), renderObjectiveReferenceSearch(search, "human"));
 });

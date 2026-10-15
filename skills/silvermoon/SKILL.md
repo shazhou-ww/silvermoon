@@ -135,9 +135,11 @@ finish first. Read **Problems** as the localized problem descriptions and
 labeled observed facts. Machine Objective IDs, level/check IDs, Problem IDs,
 and raw parameters remain in the structured report rather than the default
 Markdown. Read **Next action** as the instructions for the current observation
-and execute only the highest-priority safe instruction. **References** lists compact
-`silvermoon reference page` commands for the matching level, check, and
-Problems; open one only when its stable explanatory knowledge is needed.
+and execute only the highest-priority safe instruction. **References** lists
+compact explicit namespace commands such as
+`silvermoon reference problem:repository` for useful level, check, and Problem
+pages; the runtime resolves their Objective owner. Open one only when its
+stable explanatory knowledge is needed.
 A terminal Objective renders **Outcome** and **References** only. Do not treat
 Reference prose as a dynamic observation or replace Problem parameters with
 it.
