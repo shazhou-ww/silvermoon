@@ -1,8 +1,12 @@
 ---
 title: "Personal configuration version is newer than this binary supports"
 description: "The personal Silvermoon configuration declares a version newer than the current binary supports."
-instruction: "The goal is for the active Silvermoon CLI to support the version declared by the personal configuration. The npm registry result above reports an available update; upgrade the device-level Silvermoon CLI, then rerun through `silvermoon` so the newer runtime can validate that configuration contract."
 ---
+
+The goal is for the active Silvermoon CLI to support the version declared by the personal
+configuration. The npm registry result above reports an available update; upgrade the device-level
+Silvermoon CLI, then rerun through `silvermoon` so the newer runtime can validate that configuration
+contract.
 
 ## Problem guidance
 

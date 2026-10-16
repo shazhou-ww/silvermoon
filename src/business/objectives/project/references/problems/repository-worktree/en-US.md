@@ -1,8 +1,10 @@
 ---
 title: "Repository worktree is not clean"
 description: "The worktree has conflicts, changes, or an inspection failure that prevents safe advancement."
-instruction: "Preserve unknown work, resolve conflicts or classify changes, and verify a clean worktree before continuing."
 ---
+
+Preserve unknown work, resolve conflicts or classify changes, and verify a clean worktree before
+continuing.
 
 ## Problem guidance
 

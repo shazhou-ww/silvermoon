@@ -1,8 +1,10 @@
 ---
 title: "Project adoption is incomplete"
 description: "The repository has not completed the Silvermoon adoption contract."
-instruction: "Follow the reported adoption findings and preserve existing project content while completing the required setup."
 ---
+
+Follow the reported adoption findings and preserve existing project content while completing the
+required setup.
 
 ## Problem guidance
 

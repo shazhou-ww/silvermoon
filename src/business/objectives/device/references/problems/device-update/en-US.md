@@ -1,8 +1,12 @@
 ---
 title: "A newer device runtime may be available"
 description: "The installed Silvermoon runtime is not confirmed current for its npm channel."
-instruction: "The goal is to use a device runtime that is current for the installed channel without changing project dependencies. Compare the reported current and latest versions; possible approaches include upgrading the global package on that same channel or leaving a host-managed runtime to its host. Verify the selected path through `silvermoon`."
 ---
+
+The goal is to use a device runtime that is current for the installed channel without changing
+project dependencies. Compare the reported current and latest versions; possible approaches include
+upgrading the global package on that same channel or leaving a host-managed runtime to its host.
+Verify the selected path through `silvermoon`.
 
 ## Problem guidance
 

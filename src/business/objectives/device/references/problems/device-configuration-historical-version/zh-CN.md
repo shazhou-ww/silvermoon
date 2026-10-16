@@ -1,8 +1,10 @@
 ---
 title: "个人配置版本过旧"
 description: "个人级 Silvermoon 配置使用当前 binary 仍能识别为历史版本的旧 contract。"
-instruction: "目标是让个人配置使用当前 runtime 支持的版本，并符合该版本的 config contract。保留现有偏好，参考 `silvermoon reference page:user-configuration --language zh-CN` 升级报告的配置文件，随后通过 `silvermoon` 重试。"
 ---
+
+目标是让个人配置使用当前 runtime 支持的版本，并符合该版本的 config contract。保留现有偏好，参考
+`silvermoon reference page:user-configuration --language zh-CN` 升级报告的配置文件，随后通过 `silvermoon` 重试。
 
 ## 问题说明
 

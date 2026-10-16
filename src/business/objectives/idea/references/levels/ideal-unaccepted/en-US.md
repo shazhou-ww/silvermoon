@@ -1,8 +1,9 @@
 ---
 description: "Not yet confirmed: ideal-unaccepted."
 title: "ideal-unaccepted"
-outcome: "Passing checks advances to the next level."
 ---
+
+Passing checks advances to the next level.
 
 ## Level meaning
 

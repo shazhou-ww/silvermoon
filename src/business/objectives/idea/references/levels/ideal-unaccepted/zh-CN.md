@@ -1,8 +1,9 @@
 ---
 description: "尚未确认：ideal-unaccepted。"
 title: "ideal-unaccepted"
-outcome: "通过 checks 后进入下一层。"
 ---
+
+通过 checks 后进入下一层。
 
 ## 层级含义
 

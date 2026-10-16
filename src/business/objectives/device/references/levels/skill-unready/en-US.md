@@ -1,8 +1,9 @@
 ---
 description: "Not yet confirmed: skill-unready."
 title: "skill-unready"
-outcome: "Passing checks advances to the next level."
 ---
+
+Passing checks advances to the next level.
 
 ## Level meaning
 

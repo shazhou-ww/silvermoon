@@ -1,8 +1,11 @@
 ---
 title: "Project phase guidance is invalid"
 description: "One or more repository-owned phase guidance files do not satisfy the guidance contract."
-instruction: "The goal is valid phase guidance that preserves its intended policy. Review the reported paths and diagnostics, then correct only the invalid frontmatter or content structure and rerun `silvermoon whats-next` to verify it."
 ---
+
+The goal is valid phase guidance that preserves its intended policy. Review the reported paths and
+diagnostics, then correct only the invalid frontmatter or content structure and rerun
+`silvermoon whats-next` to verify it.
 
 ## Problem guidance
 

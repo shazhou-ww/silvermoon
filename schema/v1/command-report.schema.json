@@ -56,7 +56,7 @@
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["kind", "id", "owner", "lookup", "title", "content", "command"],
+            "required": ["kind", "id", "owner", "lookup", "title", "description", "references", "content", "command"],
             "properties": {
               "kind": {
                 "enum": ["level", "check", "problem", "page"]
@@ -78,15 +78,16 @@
               },
               "description": {
                 "type": "string",
-                "minLength": 1
+                "minLength": 1,
+                "maxLength": 200
               },
-              "outcome": {
-                "type": "string",
-                "minLength": 1
-              },
-              "instruction": {
-                "type": "string",
-                "minLength": 1
+              "references": {
+                "type": "array",
+                "uniqueItems": true,
+                "items": {
+                  "type": "string",
+                  "pattern": "^(system|levels|checks|problems|pages)/[a-z0-9]+(?:-[a-z0-9]+)*$"
+                }
               },
               "content": {
                 "type": "string"

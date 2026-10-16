@@ -1,7 +1,7 @@
 # Objective Guide Runtime
 
 Silvermoon exports a URI-keyed Objective Guide compatibility facade from its
-package root, backed by `@potential-guide/objective-guide` at `0.2.0-rc.1` (Node
+package root, backed by `@potential-guide/objective-guide` at `0.2.0-rc.2` (Node
 `>=22.13.0`). The [module](../src/objective-guide/README.md) observes one ordered objective;
 it does not execute repairs, autonomous loops or portfolio scheduling.
 
@@ -105,14 +105,31 @@ the path carries identity:
 ---
 title: Repository is not ready
 description: The configured primary has not been confirmed.
-instruction: Preserve local work and synchronize without rewriting history.
+references:
+  - pages/repository-synchronization
 ---
+
+Preserve local work and synchronize without rewriting history.
 
 See [[pages/repository-synchronization]].
 ```
 
-Level pages additionally require `outcome`. Problem `instruction` and ordinary
-page `description` are optional. Internal links use full Reference IDs.
+All pages require a nonempty `title` and `description`; descriptions are TL;DRs
+limited to 200 Unicode code points, including whitespace. Optional `references`
+is an ordered array of unique, language-neutral Reference IDs in the same Guide.
+Omission defaults to `[]` in `readPage()`; explicit `null` is invalid.
+Loading validates metadata, target existence and language coverage for every
+page in every declared language. Unknown metadata fields are rejected.
+
+Former `outcome` and `instruction` metadata belongs in the Markdown body.
+`describeLevels()` no longer exposes `advancementOutcome`; read the level page
+for advancement guidance. Bundled Problem pages put their concise next action
+in the opening paragraph so `whats-next` can materialize it without duplicating
+the rest of the page. Structured Reference projections retain `description`,
+`references` and `content`, not the removed metadata fields.
+Internal body links use full Reference IDs and are validated independently.
+Related references are exposed as commands, without automatically expanding
+their target pages. Guidance moved into the body is now included in page search.
 Missing IDs return `system/404`; malformed resources, dangling links, I/O and
 permission errors remain explicit failures.
 

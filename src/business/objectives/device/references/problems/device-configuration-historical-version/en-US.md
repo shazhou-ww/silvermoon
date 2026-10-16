@@ -1,8 +1,12 @@
 ---
 title: "Personal configuration version is historical"
 description: "The personal Silvermoon configuration uses an older contract that the current binary recognizes as historical."
-instruction: "The goal is for the personal configuration to use a version supported by the current runtime and satisfy that version's configuration contract. Preserve existing preferences and upgrade the reported file using `silvermoon reference page:user-configuration --language en-US`, then rerun through `silvermoon`."
 ---
+
+The goal is for the personal configuration to use a version supported by the current runtime and
+satisfy that version's configuration contract. Preserve existing preferences and upgrade the
+reported file using `silvermoon reference page:user-configuration --language en-US`, then rerun
+through `silvermoon`.
 
 ## Problem guidance
 

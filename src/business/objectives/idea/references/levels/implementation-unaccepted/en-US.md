@@ -1,8 +1,9 @@
 ---
 description: "Not yet confirmed: implementation-unaccepted."
 title: "implementation-unaccepted"
-outcome: "Passing checks advances to the next level."
 ---
+
+Passing checks advances to the next level.
 
 ## Level meaning
 

@@ -1,8 +1,10 @@
 ---
 title: "项目配置版本超出当前 CLI 支持范围"
 description: "`.silvermoon/config.yaml` 声明的 schema 版本比 active CLI 的读取能力更新，并且 registry 已报告可用更新。"
-instruction: "目标是让 active Silvermoon CLI 支持项目配置声明的 schema 版本。npm registry 已报告可用的更新版本；升级 device-level CLI 后，由新版 runtime 重新验证 project metadata。"
 ---
+
+目标是让 active Silvermoon CLI 支持项目配置声明的 schema 版本。npm registry 已报告可用的更新版本；升级 device-level CLI 后，由新版
+runtime 重新验证 project metadata。
 
 ## 问题说明
 

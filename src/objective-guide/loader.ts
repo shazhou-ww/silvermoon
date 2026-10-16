@@ -7,11 +7,10 @@ import {
 import type {
   ObjectiveGuide as PackageGuide,
   ObjectiveGuideInstance as PackageInstance,
-  ReferencePage as PackagePage,
 } from "@potential-guide/objective-guide";
 import type {
   ObjectiveGuide, ObjectiveGuideInstance, ObjectiveLevelDescription,
-  ObjectiveLoader, ObjectiveLoaderOptions, ObjectiveSubject, ReferencePage,
+  ObjectiveLoader, ObjectiveLoaderOptions, ObjectiveSubject,
 } from "./types.ts";
 
 export function createObjectiveLoader(options: ObjectiveLoaderOptions = {}): ObjectiveLoader {
@@ -115,9 +114,7 @@ export function createObjectiveLoader(options: ObjectiveLoaderOptions = {}): Obj
           });
         });
       },
-      async readPage(id) {
-        return referencePage(await source.readPage(id));
-      },
+      readPage: (id) => source.readPage(id),
       searchPages: (query) => source.searchPages(query),
     };
     instances.set(source, Object.freeze(instance));
@@ -125,18 +122,4 @@ export function createObjectiveLoader(options: ObjectiveLoaderOptions = {}): Obj
   }
 
   return Object.freeze({ async load(uri: string) { return wrapGuide(await loader.load(uri)); } });
-}
-
-function referencePage(page: PackagePage): ReferencePage {
-  if ("outcome" in page && (typeof page.outcome !== "string" || page.outcome.trim() === "")) {
-    throw new ObjectiveOperationError("Invalid Reference outcome.");
-  }
-  if ("instruction" in page && (typeof page.instruction !== "string" || page.instruction.trim() === "")) {
-    throw new ObjectiveOperationError("Invalid Reference instruction.");
-  }
-  return Object.freeze({
-    ...page,
-    ...("outcome" in page && typeof page.outcome === "string" ? { outcome: page.outcome } : {}),
-    ...("instruction" in page && typeof page.instruction === "string" ? { instruction: page.instruction } : {}),
-  });
 }

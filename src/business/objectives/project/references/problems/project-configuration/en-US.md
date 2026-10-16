@@ -1,8 +1,11 @@
 ---
 title: "Project configuration is invalid"
 description: "The project configuration does not satisfy the contract required for safe repository and Idea work."
-instruction: "The goal is to make the reported project metadata valid while preserving unrelated content. Use each natural-language diagnostic to choose the smallest applicable edit, then rerun `silvermoon whats-next` to verify the complete project snapshot."
 ---
+
+The goal is to make the reported project metadata valid while preserving unrelated content. Use each
+natural-language diagnostic to choose the smallest applicable edit, then rerun
+`silvermoon whats-next` to verify the complete project snapshot.
 
 ## Problem guidance
 

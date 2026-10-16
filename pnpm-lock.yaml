@@ -18,8 +18,8 @@ importers:
         specifier: https://github.com/shazhou-ww/opentui/releases/download/opentui-0.4.0-koffi-2.16.3-1/opentui-react-0.4.0-koffi.2.16.3.1.tgz
         version: https://github.com/shazhou-ww/opentui/releases/download/opentui-0.4.0-koffi-2.16.3-1/opentui-react-0.4.0-koffi.2.16.3.1.tgz(@opentui/core@https://github.com/shazhou-ww/opentui/releases/download/opentui-0.4.0-koffi-2.16.3-1/opentui-core-0.4.0-koffi.2.16.3.1.tgz(typescript@6.0.3)(web-tree-sitter@0.25.10))(react-devtools-core@7.0.1)(react@19.3.0)(ws@8.22.0)
       '@potential-guide/objective-guide':
-        specifier: 0.2.0-rc.1
-        version: 0.2.0-rc.1
+        specifier: 0.2.0-rc.2
+        version: 0.2.0-rc.2
       commander:
         specifier: ^15.0.0
         version: 15.0.0
@@ -286,8 +286,8 @@ packages:
       react-devtools-core: ^7.0.1
       ws: ^8.18.0
 
-  '@potential-guide/objective-guide@0.2.0-rc.1':
-    resolution: {integrity: sha512-BIpBgH7Z+MI//WV0ozaG3i9wQN5xoK2HnVXJIeXjemmprMHhjagX8CZ3Y53AlSu5M0YIRDv35t814UeQmj836Q==}
+  '@potential-guide/objective-guide@0.2.0-rc.2':
+    resolution: {integrity: sha512-iZWq24Pm2UzMMXGh7Y3egKDwt3jcCe4wPtJyffMDqe3fxPzoN7rGDZ/U8g20bZfZwut86JeJ/pMAoxj5szxryg==}
     engines: {node: '>=22.13.0'}
 
   '@sindresorhus/merge-streams@4.0.0':
@@ -1230,7 +1230,7 @@ snapshots:
       react-reconciler: 0.33.0(react@19.3.0)
       ws: 8.22.0
 
-  '@potential-guide/objective-guide@0.2.0-rc.1':
+  '@potential-guide/objective-guide@0.2.0-rc.2':
     dependencies:
       ajv: 8.20.0
       jsonata: 2.1.0

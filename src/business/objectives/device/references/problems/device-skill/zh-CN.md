@@ -1,8 +1,10 @@
 ---
 title: "个人级 Silvermoon skill 内容不是当前版本"
 description: "个人级 Silvermoon skill 未安装或内容版本不正确。"
-instruction: "目标是让个人级 discovery 路径安装 active runtime 随包提供的 Silvermoon skill，并使其内容 revision 与 canonical skill 一致。使用上方报告的路径运行 `npx skills add \"<canonical-skill-path>\" --global --all`，然后通过 `silvermoon` 重试。"
 ---
+
+目标是让个人级 discovery 路径安装 active runtime 随包提供的 Silvermoon skill，并使其内容 revision 与 canonical skill
+一致。使用上方报告的路径运行 `npx skills add "<canonical-skill-path>" --global --all`，然后通过 `silvermoon` 重试。
 
 ## 问题说明
 

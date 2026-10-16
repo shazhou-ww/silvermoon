@@ -1,8 +1,11 @@
 ---
 title: "Personal Silvermoon skill content is not current"
 description: "The personal Silvermoon skill is not installed or its content version is incorrect."
-instruction: "The goal is for a personal discovery path to contain the Silvermoon skill shipped with the active runtime and for its content revision to match the canonical skill. Use the path reported above to run `npx skills add \"<canonical-skill-path>\" --global --all`, then rerun through `silvermoon`."
 ---
+
+The goal is for a personal discovery path to contain the Silvermoon skill shipped with the active
+runtime and for its content revision to match the canonical skill. Use the path reported above to
+run `npx skills add "<canonical-skill-path>" --global --all`, then rerun through `silvermoon`.
 
 ## Problem guidance
 

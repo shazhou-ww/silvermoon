@@ -373,16 +373,19 @@ export function renderObjectiveReferencePage(
   const { language, page } = result;
   const markdown = [
     `# ${page.title}`,
-    ...(page.description === undefined ? [] : ["", page.description]),
-    ...(page.outcome === undefined
-      ? []
-      : ["", `**${localize(language, "Outcome", "结果")}:** ${page.outcome}`]),
-    ...(page.instruction === undefined
-      ? []
-      : ["", `**${localize(language, "Instruction", "指引")}:** ${page.instruction}`]),
+    "",
+    page.description,
     ...(page.content === ""
       ? []
       : ["", renderObjectiveReferenceContent(page.content, objective, language)]),
+    ...(page.references.length === 0
+      ? []
+      : [
+        "",
+        `## ${localize(language, "Related references", "相关引用")}`,
+        "",
+        ...page.references.map((id) => `- \`${objectiveReferenceCommand(id, language)}\``),
+      ]),
     "",
     `${localize(language, "Owner", "所属 Objective")}: \`${objective}\``,
     `${localize(language, "Reference ID", "引用 ID")}: \`${page.id}\``,

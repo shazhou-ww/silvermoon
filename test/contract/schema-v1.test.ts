@@ -131,8 +131,8 @@ test("publishes command report, domain message, and trace event schemas", async 
       lookup: "problem:repository-worktree",
       title: "Repository recovery",
       description: "Resolve repository and probe again.",
-      instruction: "Preserve unknown work.",
-      content: "Use the current Problem parameters.",
+      references: ["system/overview"],
+      content: "Preserve unknown work.\n\nUse the current Problem parameters.",
       command:
         "silvermoon reference problem:repository-worktree --language en-US",
     }],
@@ -159,6 +159,22 @@ test("publishes command report, domain message, and trace event schemas", async 
     true,
     JSON.stringify(commandReport.errors),
   );
+  for (const invalid of [
+    { instruction: "Repair" },
+    { outcome: "Advance" },
+    { description: "" },
+    { description: "😀".repeat(201) },
+    { references: null },
+    { references: ["system/overview", "system/overview"] },
+    { references: ["pages/missing.md"] },
+  ]) {
+    const report = structuredClone(objectiveReport);
+    Object.assign(report.response.objective.references[0]!, invalid);
+    assert.equal(commandReport(report), false, JSON.stringify(invalid));
+  }
+  const bounded = structuredClone(objectiveReport);
+  bounded.response.objective.references[0]!.description = "😀".repeat(200);
+  assert.equal(commandReport(bounded), true, JSON.stringify(commandReport.errors));
   const { content: _content, ...incompleteReference } = objective.references[0]!;
   const incomplete = structuredClone(objectiveReport);
   incomplete.response.objective.references = [incompleteReference] as typeof objective.references;

@@ -1,8 +1,9 @@
 ---
 title: "Repository worktree 尚未 clean"
 description: "当前 worktree 存在冲突、修改或检查失败，无法安全推进。"
-instruction: "保留未知工作，解决冲突或归类修改，并在继续前验证 worktree clean。"
 ---
+
+保留未知工作，解决冲突或归类修改，并在继续前验证 worktree clean。
 
 ## 问题说明
 

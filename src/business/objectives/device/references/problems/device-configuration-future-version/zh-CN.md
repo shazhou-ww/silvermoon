@@ -1,8 +1,10 @@
 ---
 title: "个人配置版本超出当前 binary 支持范围"
 description: "个人级 Silvermoon 配置声明的版本比当前 binary 支持的版本更新。"
-instruction: "目标是让 active Silvermoon CLI 支持个人配置声明的版本。上方 npm registry 已报告可用的更新版本；升级 device-level Silvermoon CLI 后，通过 `silvermoon` 重试并由新版 runtime 验证该 config contract。"
 ---
+
+目标是让 active Silvermoon CLI 支持个人配置声明的版本。上方 npm registry 已报告可用的更新版本；升级 device-level Silvermoon CLI
+后，通过 `silvermoon` 重试并由新版 runtime 验证该 config contract。
 
 ## 问题说明
 

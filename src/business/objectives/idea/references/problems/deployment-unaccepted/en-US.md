@@ -1,8 +1,10 @@
 ---
 title: "Deployment is not accepted"
 description: "The exact submitted deployment revision still requires its acceptance decision."
-instruction: "Review the deployment contract, ledger, and external evidence; accept only the exact submitted revision."
 ---
+
+Review the deployment contract, ledger, and external evidence; accept only the exact submitted
+revision.
 
 ## Problem guidance
 

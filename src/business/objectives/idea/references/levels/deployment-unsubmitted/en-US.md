@@ -1,8 +1,9 @@
 ---
 description: "Not yet confirmed: deployment-unsubmitted."
 title: "deployment-unsubmitted"
-outcome: "Passing checks advances to the next level."
 ---
+
+Passing checks advances to the next level.
 
 ## Level meaning
 

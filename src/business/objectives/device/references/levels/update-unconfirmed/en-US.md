@@ -1,8 +1,9 @@
 ---
 description: "Not yet confirmed: update-unconfirmed."
 title: "update-unconfirmed"
-outcome: "Passing checks advances to the next level."
 ---
+
+Passing checks advances to the next level.
 
 ## Level meaning
 

@@ -23,7 +23,7 @@ test("keeps runtime dependencies inside their supported engine and peer ranges",
   assert.equal(manifest.dependencies.commander, "^15.0.0");
   assert.equal(manifest.engines.node, ">=22.13.0");
   const objectivePackage = "@potential-guide/objective-guide";
-  const objectiveVersion = "0.2.0-rc.1";
+  const objectiveVersion = "0.2.0-rc.2";
   assert.equal(manifest.dependencies[objectivePackage], objectiveVersion);
   assert.deepEqual(importer[objectivePackage], {
     specifier: objectiveVersion,

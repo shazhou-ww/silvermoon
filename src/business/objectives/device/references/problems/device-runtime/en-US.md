@@ -1,8 +1,13 @@
 ---
 title: "Device runtime unavailable on PATH"
 description: "The current Silvermoon runtime did not run through a device-level `silvermoon` executable discoverable on `PATH`."
-instruction: "The goal is to make the intended device runtime reliably reachable through the `silvermoon` executable on `PATH`. Possible approaches include using `pnpm setup:dev` from the reported checkout when the active runtime is a source checkout, or installing it with `npm install --global silvermoon` otherwise. Confirm that the global npm bin directory is on `PATH`, then use `silvermoon` to verify the result."
 ---
+
+The goal is to make the intended device runtime reliably reachable through the `silvermoon`
+executable on `PATH`. Possible approaches include using `pnpm setup:dev` from the reported checkout
+when the active runtime is a source checkout, or installing it with
+`npm install --global silvermoon` otherwise. Confirm that the global npm bin directory is on `PATH`,
+then use `silvermoon` to verify the result.
 
 ## Problem guidance
 

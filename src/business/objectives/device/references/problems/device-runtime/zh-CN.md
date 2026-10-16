@@ -1,8 +1,11 @@
 ---
 title: "`PATH` 中的设备级 runtime 不可用"
 description: "当前 Silvermoon runtime 未通过 `PATH` 中可发现的设备级 `silvermoon` 可执行文件运行。"
-instruction: "目标是让预期的设备级 runtime 能够通过 `PATH` 中的 `silvermoon` 可执行文件稳定访问。可选方法包括：当前 runtime 来自 source checkout 时，在报告的 checkout 中使用 `pnpm setup:dev`；其他情况可使用 `npm install --global silvermoon` 安装。确认 npm global bin 目录位于 `PATH` 后，再通过 `silvermoon` 验证结果。"
 ---
+
+目标是让预期的设备级 runtime 能够通过 `PATH` 中的 `silvermoon` 可执行文件稳定访问。可选方法包括：当前 runtime 来自 source checkout 时，在报告的
+checkout 中使用 `pnpm setup:dev`；其他情况可使用 `npm install --global silvermoon` 安装。确认 npm global bin 目录位于
+`PATH` 后，再通过 `silvermoon` 验证结果。
 
 ## 问题说明
 

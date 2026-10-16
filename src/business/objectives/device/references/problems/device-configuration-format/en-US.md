@@ -1,8 +1,11 @@
 ---
 title: "Personal configuration format is invalid"
 description: "The personal Silvermoon configuration does not satisfy the YAML contract for its current version."
-instruction: "The goal is for the personal configuration content to satisfy the schema and canonical YAML format for its declared version. Preserve the original file for comparison, rewrite the reported file using `silvermoon reference page:user-configuration --language en-US`, then rerun through `silvermoon`."
 ---
+
+The goal is for the personal configuration content to satisfy the schema and canonical YAML format
+for its declared version. Preserve the original file for comparison, rewrite the reported file using
+`silvermoon reference page:user-configuration --language en-US`, then rerun through `silvermoon`.
 
 ## Problem guidance
 

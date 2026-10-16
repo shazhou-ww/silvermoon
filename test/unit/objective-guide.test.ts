@@ -31,7 +31,7 @@ function manifest(overrides: Partial<ObjectiveGuideManifest> = {}): ObjectiveGui
     ...overrides,
   };
 }
-function markdown(properties: Record<string, string>, body = "") {
+function markdown(properties: Record<string, unknown>, body = "") {
   return `---\n${Object.entries(properties).map(([key, value]) => `${key}: ${JSON.stringify(value)}`).join("\n")}\n---\n${body}\n`;
 }
 function fixture(
@@ -56,8 +56,7 @@ function fixture(
         add(`levels/${level.id}`, language, {
           title: `${level.id} ${language}`,
           description: `Waiting ${language}`,
-          outcome: `Cost and benefit ${language}`,
-        });
+        }, `Cost and benefit ${language}`);
         for (const declared of level.advancement.checks) add(`checks/${declared.id}`, language, {
           title: declared.id, description: `Check ${declared.id} ${language}`,
         });
@@ -115,7 +114,8 @@ test("canonical identity is language-neutral and References provide descriptions
   assert.equal(en.title, "en-US");
   assert.equal(zh.title, "zh-CN");
   assert.deepEqual(en.describeLevels().map(({ id }) => id), ["unready", "terminal"]);
-  assert.equal(en.describeLevels()[0]?.advancementOutcome, "Cost and benefit en-US");
+  assert.equal("advancementOutcome" in en.describeLevels()[0]!, false);
+  assert.equal((await en.readPage("levels/unready")).content, "Cost and benefit en-US");
   assert.equal((await en.readPage("missing")).id, "system/404");
   assert.deepEqual(await en.searchPages("fix it"), [{ id: "problems/problem", title: "Problem en-US" }]);
 });
@@ -132,6 +132,70 @@ test("instance subjects are immutable and schema/language failures remain typed"
   if (invalid.ok || invalid.error.type !== "invalid-subject") assert.fail("Expected subject failure.");
   const unsupported = guide.createInstance({ subject: { root: "x" }, language: "en" });
   if (unsupported.ok || unsupported.error.type !== "unsupported-language") assert.fail("Expected language failure.");
+});
+
+test("References return uniform metadata, ordered links and guidance only in the body", async () => {
+  const context = fixture();
+  const source = new URL("references/", rootUri).href;
+  for (const language of ["en-US", "zh-CN"]) {
+    context.pages.get(source)!.push({
+      uri: new URL(`pages/related/${language}.md`, source).href,
+      source: markdown({
+        title: `Related ${language}`,
+        description: "😀".repeat(200),
+        references: ["levels/unready", "system/overview"],
+      }, "Read [[system/404]]."),
+    });
+  }
+  for (const language of ["en-US", "zh-CN"]) {
+    const current = await instance(context, language);
+    const page = await current.readPage("pages/related");
+    assert.equal([...page.description].length, 200);
+    assert.deepEqual(page.references, ["levels/unready", "system/overview"]);
+    assert.ok(Object.isFrozen(page.references));
+    assert.equal((await current.readPage(page.references[1]!)).title, language);
+    assert.deepEqual((await current.readPage("levels/unready")).references, []);
+    assert.equal("outcome" in page, false);
+    assert.equal("instruction" in page, false);
+    const missing = await current.readPage("pages/missing");
+    assert.equal(missing.id, "system/404");
+    assert.deepEqual(missing.references, []);
+  }
+});
+
+test("loading validates every locale's Reference fields, bounds and actual link targets", async () => {
+  const valid = { title: "Related", description: "Summary" };
+  const invalid: readonly Record<string, unknown>[] = [
+    { title: "Related" },
+    { description: "Summary" },
+    { ...valid, title: " " },
+    { ...valid, description: "" },
+    { ...valid, description: " " },
+    { ...valid, description: 42 },
+    { ...valid, description: "😀".repeat(201) },
+    { ...valid, description: `${"x".repeat(200)} ` },
+    { ...valid, instruction: "Repair" },
+    { ...valid, outcome: "Advance" },
+    { ...valid, extra: true },
+    { ...valid, references: null },
+    { ...valid, references: "system/overview" },
+    { ...valid, references: [42] },
+    { ...valid, references: ["system/overview", "system/overview"] },
+    { ...valid, references: ["https://example.test/page"] },
+    { ...valid, references: ["pages/../overview"] },
+    { ...valid, references: ["pages/missing"] },
+  ];
+  for (const metadata of invalid) {
+    const context = fixture();
+    const source = new URL("references/", rootUri).href;
+    for (const language of ["en-US", "zh-CN"]) {
+      context.pages.get(source)!.push({
+        uri: new URL(`pages/related/${language}.md`, source).href,
+        source: markdown(language === "en-US" ? valid : metadata),
+      });
+    }
+    await assert.rejects(context.loader.load(rootUri), ObjectiveConfigurationError);
+  }
 });
 
 test("position identifies the owner, failing check and complete ordered Problems", async () => {

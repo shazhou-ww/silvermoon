@@ -1,8 +1,10 @@
 ---
 title: "Personal project configuration is invalid"
 description: "The user's project-specific configuration does not satisfy the project contract."
-instruction: "Review the reported configuration path and diagnostics, make the smallest valid correction, and reobserve the project."
 ---
+
+Review the reported configuration path and diagnostics, make the smallest valid correction, and
+reobserve the project.
 
 ## Problem guidance
 

@@ -35,8 +35,8 @@ languages: [en-US, zh-CN]
       await page(root, "system/overview", language, { title: "Project", description: "Prepared project" });
       await page(root, "system/404", language, { title: "Not found", description: "No such page" });
       await page(root, "levels/configuration-invalid", language, {
-        title: "Invalid", description: "Configuration is not valid", outcome: "Repair to continue",
-      });
+        title: "Invalid", description: "Configuration is not valid",
+      }, "Repair to continue");
       await page(root, "levels/terminal", language, { title: "Ready", description: "All ready" });
       await page(root, "checks/ready", language, { title: "Ready check", description: "Checks readiness" });
       await page(root, "problems/project-unready", language, {
@@ -76,7 +76,9 @@ process.stdin.on("end", async () => {
     assert.equal(sample.position.problems[0]?.parameters.configurationPath, "config.yaml");
     assert.equal((await sample.position.owner.readPage("problems/project-unready")).title, "Repair project");
     assert.equal((await result.instance.readPage("missing")).id, "system/404");
+    assert.equal((await result.instance.readPage("levels/configuration-invalid")).content, "Repair to continue");
     assert.deepEqual(await result.instance.searchPages("repair"), [
+      { id: "levels/configuration-invalid", title: "Invalid" },
       { id: "problems/project-unready", title: "Repair project" },
     ]);
   } finally {

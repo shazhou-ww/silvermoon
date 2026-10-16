@@ -1,8 +1,9 @@
 ---
 description: "尚未确认：deployment-unsubmitted。"
 title: "deployment-unsubmitted"
-outcome: "通过 checks 后进入下一层。"
 ---
+
+通过 checks 后进入下一层。
 
 ## 层级含义
 

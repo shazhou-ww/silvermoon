@@ -1,8 +1,10 @@
 ---
 title: "Idea contracts are invalid"
 description: "The selected Idea's world contracts or execution ledger do not satisfy the project layout contract."
-instruction: "Use the reported paths and diagnostics to repair only the invalid Idea artifacts, preserving lifecycle decisions."
 ---
+
+Use the reported paths and diagnostics to repair only the invalid Idea artifacts, preserving
+lifecycle decisions.
 
 ## Problem guidance
 

@@ -1,8 +1,10 @@
 ---
 title: "Project schema is not ready"
 description: "The project schema requires a supported migration or runtime before writes can continue."
-instruction: "Follow the exact reported migration or runtime preparation path; do not edit a schema version field directly."
 ---
+
+Follow the exact reported migration or runtime preparation path; do not edit a schema version field
+directly.
 
 ## Problem guidance
 

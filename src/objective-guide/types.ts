@@ -18,17 +18,15 @@ export interface ReferencePageSummary {
   title: string;
 }
 export interface ReferencePage extends ReferencePageSummary {
-  description?: string;
+  description: string;
+  references: readonly ReferencePageId[];
   content: string;
-  outcome?: string;
-  instruction?: string;
 }
 export interface ObjectiveLevelDescription {
   instance: ObjectiveGuideInstance;
   id: ObjectiveLevelId;
   title: string;
   description: string;
-  advancementOutcome: string | null;
 }
 export interface ObjectiveObservation {
   position: ObjectivePosition;

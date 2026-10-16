@@ -1,8 +1,9 @@
 ---
 title: "实现尚未验收"
 description: "准确的已提交 implementation revision 仍需要 acceptance decision。"
-instruction: "审阅 implementation contract、ledger、代码与证据；只验收准确的已提交 revision，否则退回修改。"
 ---
+
+审阅 implementation contract、ledger、代码与证据；只验收准确的已提交 revision，否则退回修改。
 
 ## 问题说明
 

@@ -30,9 +30,8 @@ export interface ObjectiveReference {
   owner: "device" | "project" | "idea";
   lookup: string;
   title: string;
-  description?: string;
-  outcome?: string;
-  instruction?: string;
+  description: string;
+  references: readonly string[];
   content: string;
   command: string;
 }

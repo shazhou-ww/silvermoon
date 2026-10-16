@@ -1,8 +1,9 @@
 ---
 title: "观测期间 Idea selection 已变化"
 description: "所选 Idea 不再匹配本次 probe 采样的 instance subject。"
-instruction: "停止使用陈旧 sample，并用目标准确 selector 重新运行相同命令。"
 ---
+
+停止使用陈旧 sample，并用目标准确 selector 重新运行相同命令。
 
 ## 问题说明
 

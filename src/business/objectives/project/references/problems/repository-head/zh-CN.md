@@ -1,8 +1,9 @@
 ---
 title: "Repository HEAD 缺失"
 description: "Repository 没有可用的 HEAD commit。"
-instruction: "在不丢失未知工作的前提下创建或选择目标初始历史，然后重新观测。"
 ---
+
+在不丢失未知工作的前提下创建或选择目标初始历史，然后重新观测。
 
 ## 问题说明
 

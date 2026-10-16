@@ -1,8 +1,11 @@
 ---
 title: "Deployment is not submitted"
 description: "The current deployment revision has not been submitted for its next lifecycle gate."
-instruction: "The goal is to make the exact current deployment revision ready for its next gate. Continue deployment or review according to the current state; when evidence is ready, synchronize that revision to primary and record the matching lifecycle event before advancing."
 ---
+
+The goal is to make the exact current deployment revision ready for its next gate. Continue
+deployment or review according to the current state; when evidence is ready, synchronize that
+revision to primary and record the matching lifecycle event before advancing.
 
 ## Problem guidance
 

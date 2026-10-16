@@ -1,8 +1,10 @@
 ---
 title: "Primary guidance is unavailable or invalid"
 description: "The refreshed primary cannot provide valid repository-owned phase guidance."
-instruction: "First satisfy repository readiness, then repair only the guidance diagnostics observed from the exact primary snapshot."
 ---
+
+First satisfy repository readiness, then repair only the guidance diagnostics observed from the
+exact primary snapshot.
 
 ## Problem guidance
 

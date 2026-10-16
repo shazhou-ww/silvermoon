@@ -1,8 +1,9 @@
 ---
 title: "项目配置无效"
 description: "项目配置尚未满足安全进行 repository 与 Idea 工作所需的 contract。"
-instruction: "目标是在保留无关内容的同时，让报告的项目 metadata 有效。根据每条自然语言诊断选择最小的适用修改，再运行 `silvermoon whats-next` 验证完整项目 snapshot。"
 ---
+
+目标是在保留无关内容的同时，让报告的项目 metadata 有效。根据每条自然语言诊断选择最小的适用修改，再运行 `silvermoon whats-next` 验证完整项目 snapshot。
 
 ## 问题说明
 

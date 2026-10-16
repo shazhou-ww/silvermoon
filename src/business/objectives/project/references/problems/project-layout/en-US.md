@@ -1,8 +1,10 @@
 ---
 title: "Project layout is invalid"
 description: "The repository-owned Silvermoon layout does not satisfy its schema."
-instruction: "Use the reported paths and diagnostics to repair the invalid layout without changing unrelated ideas."
 ---
+
+Use the reported paths and diagnostics to repair the invalid layout without changing unrelated
+ideas.
 
 ## Problem guidance
 

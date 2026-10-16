@@ -1,8 +1,12 @@
 ---
 title: "Device configuration is invalid"
 description: "The personal Silvermoon configuration does not satisfy the contract required to determine device readiness."
-instruction: "The goal is to make the reported configuration valid for the current runtime. Review the stated contract mismatch, then correct only the affected YAML field; for a version mismatch, a possible repair is `version: 1`. Preserve unrelated preferences and rerun through `silvermoon` to verify the configuration."
 ---
+
+The goal is to make the reported configuration valid for the current runtime. Review the stated
+contract mismatch, then correct only the affected YAML field; for a version mismatch, a possible
+repair is `version: 1`. Preserve unrelated preferences and rerun through `silvermoon` to verify the
+configuration.
 
 ## Problem guidance
 

@@ -143,7 +143,7 @@ try {
         readPages: async (uri) => [
           ["system/overview", { title: "Project", description: "Ready project" }],
           ["system/404", { title: "Missing", description: "Missing" }],
-          ["levels/unready", { title: "Unready", description: "Pending", outcome: "Repair" }],
+          ["levels/unready", { title: "Unready", description: "Pending" }],
           ["levels/terminal", { title: "Ready", description: "Ready" }],
           ["checks/ready", { title: "Ready check", description: "Check readiness" }],
           ["problems/problem", { title: "Problem", description: "Repair" }],

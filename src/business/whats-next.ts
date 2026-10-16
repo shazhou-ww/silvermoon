@@ -115,13 +115,8 @@ async function objectiveProjection(
       owner,
       lookup: objectiveReferenceLookup(id),
       title: page.title,
-      ...(page.description === undefined
-        ? {}
-        : { description: page.description }),
-      ...(page.outcome === undefined ? {} : { outcome: page.outcome }),
-      ...(page.instruction === undefined
-        ? {}
-        : { instruction: page.instruction }),
+      description: page.description,
+      references: page.references,
       content: renderObjectiveReferenceContent(
         page.content,
         owner,
@@ -153,7 +148,11 @@ function firstObjectiveInstruction(
   const reference = objective.references.find(
     ({ id, kind }) => kind === "problem" && id === `problems/${problem.id}`,
   );
-  const instruction = reference?.instruction;
+  // Bundled Problem pages put their concise next action in the opening paragraph.
+  const opening = reference?.content.split(/\n\s*\n/, 1)[0]?.trim();
+  const instruction = opening === undefined || opening === "" || opening.startsWith("#")
+    ? undefined
+    : opening.replace(/\s*\n\s*/g, " ");
   const canonicalSkillPath = problem.parameters.expectedRoot;
   if (
     instruction !== undefined

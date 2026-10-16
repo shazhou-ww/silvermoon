@@ -1,8 +1,9 @@
 ---
 description: "尚未确认：skill-unready。"
 title: "skill-unready"
-outcome: "通过 checks 后进入下一层。"
 ---
+
+通过 checks 后进入下一层。
 
 ## 层级含义
 

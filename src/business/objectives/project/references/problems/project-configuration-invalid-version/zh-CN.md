@@ -1,8 +1,10 @@
 ---
 title: "项目配置版本号错误"
 description: "`.silvermoon/config.yaml` 没有声明当前已支持的有效 schema 版本。"
-instruction: "目标是让项目配置声明当前支持的版本并符合该版本 contract。参考 `silvermoon reference page:project-metadata --language zh-CN` 修复配置；这不是等待 CLI 更新。"
 ---
+
+目标是让项目配置声明当前支持的版本并符合该版本 contract。参考 `silvermoon reference page:project-metadata --language zh-CN`
+修复配置；这不是等待 CLI 更新。
 
 ## 问题说明
 

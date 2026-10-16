@@ -1,8 +1,11 @@
 ---
 title: "Project configuration version is wrong"
 description: "`.silvermoon/config.yaml` does not declare a valid currently supported schema version."
-instruction: "The goal is for the project configuration to declare a supported version and satisfy that contract. Repair it using `silvermoon reference page:project-metadata --language en-US`; this is not a pending CLI update."
 ---
+
+The goal is for the project configuration to declare a supported version and satisfy that contract.
+Repair it using `silvermoon reference page:project-metadata --language en-US`; this is not a pending
+CLI update.
 
 ## Problem guidance
 

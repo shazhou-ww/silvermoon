@@ -230,7 +230,7 @@ test("selected Idea stops at its Device prerequisite with one current direction"
     "silvermoon reference problem:device-runtime --language en-US",
   );
   assert.equal(report.response.nextSteps.length, 1);
-  assert.equal(report.response.nextSteps[0]?.text, problemReference?.instruction);
+  assert.equal(report.response.nextSteps[0]?.text, problemReference?.content.split(/\n\s*\n/, 1)[0]?.replace(/\s*\n\s*/g, " "));
   assert.match(
     report.response.nextSteps[0]?.text ?? "",
     /The goal is to make the intended device runtime reliably reachable/,
@@ -272,7 +272,7 @@ test("a non-source runtime failure uses the global install command", async () =>
     ({ id }) => id === "problems/device-runtime",
   );
   const instructions = report.response.nextSteps.map(({ text }) => text).join("\n");
-  assert.equal(report.response.nextSteps[0]?.text, problemReference?.instruction);
+  assert.equal(report.response.nextSteps[0]?.text, problemReference?.content.split(/\n\s*\n/, 1)[0]?.replace(/\s*\n\s*/g, " "));
   assert.match(instructions, /npm install --global silvermoon/);
   assert.match(instructions, /pnpm setup:dev/);
 });
@@ -714,6 +714,7 @@ test("no selector stays Project-only even for one Idea; invalid selectors do not
             lookup: "level:terminal",
             title: "Objective attained",
             description: "All checks passed in this probe.",
+            references: [],
             content: [
               "## Meaning",
               "",
@@ -774,6 +775,7 @@ test("outside-worktree bare navigation targets Device and stops at terminal", as
       lookup: "level:terminal",
       title: "Objective attained",
       description: "All checks passed in this probe.",
+      references: [],
       content: [
         "## Meaning",
         "",

@@ -1,8 +1,9 @@
 ---
 description: "Not yet confirmed: configuration-invalid."
 title: "configuration-invalid"
-outcome: "Passing checks advances to the next level."
 ---
+
+Passing checks advances to the next level.
 
 ## Level meaning
 

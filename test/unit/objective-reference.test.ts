@@ -56,7 +56,7 @@ test("parses namespace lookups and rejects unsafe or malformed input", () => {
   }
 });
 
-test("exposes typed static guidance metadata from Reference frontmatter", async () => {
+test("exposes uniform metadata and preserves static guidance in Reference bodies", async () => {
   const english = await readObjectiveReference(
     "project",
     "problems/repository-worktree",
@@ -67,10 +67,13 @@ test("exposes typed static guidance metadata from Reference frontmatter", async 
     /worktree/i,
   );
   assert.match(
-    english.page.instruction ?? "",
-    /Preserve unknown work.+clean worktree/,
+    english.page.content,
+    /Preserve unknown work[\s\S]+clean worktree/,
   );
   assert.match(english.page.content, /## Problem guidance/);
+  assert.deepEqual(english.page.references, []);
+  assert.equal("instruction" in english.page, false);
+  assert.equal("outcome" in english.page, false);
 
   const chinese = await readObjectiveReference(
     "project",
@@ -82,8 +85,8 @@ test("exposes typed static guidance metadata from Reference frontmatter", async 
     /worktree/i,
   );
   assert.match(
-    chinese.page.instruction ?? "",
-    /保留未知工作.+worktree clean/,
+    chinese.page.content,
+    /保留未知工作[\s\S]+worktree clean/,
   );
   assert.match(chinese.page.content, /## 问题说明/);
 
@@ -93,11 +96,11 @@ test("exposes typed static guidance metadata from Reference frontmatter", async 
     "en-US",
   );
   assert.match(
-    configuration.page.instruction ?? "",
+    configuration.page.content,
     /silvermoon reference page:user-configuration --language en-US/,
   );
   assert.doesNotMatch(
-    configuration.page.instruction ?? "",
+    configuration.page.content,
     /silvermoon reference page device pages\//,
   );
 
@@ -228,10 +231,12 @@ test("page and search Markdown are readable for both audiences", () => {
   const page = {
     objective: "device",
     language: "zh-CN",
-    page: { id: "system/overview", title: "设备目标", content: "" },
+    page: { id: "system/overview", title: "设备目标", description: "设备整备。", references: [], content: "" },
   } as const;
   const expectedPage = [
     "# 设备目标",
+    "",
+    "设备整备。",
     "",
     "所属 Objective: `device`",
     "引用 ID: `system/overview`",
@@ -252,4 +257,22 @@ test("page and search Markdown are readable for both audiences", () => {
     "- 修订 (`silvermoon reference page:revisions --language zh-CN`)",
   ].join("\n"));
   assert.equal(renderObjectiveReferenceSearch(search, "agent"), renderObjectiveReferenceSearch(search, "human"));
+});
+
+test("page Markdown exposes declared related references without expanding their content", () => {
+  const rendered = renderObjectiveReferencePage({
+    objective: "project",
+    language: "en-US",
+    page: {
+      id: "pages/related",
+      title: "Related",
+      description: "Summary",
+      references: ["system/overview", "levels/terminal"],
+      content: "Page content.",
+    },
+  });
+  assert.match(rendered, /## Related references/);
+  assert.match(rendered, /silvermoon reference system:overview --language en-US/);
+  assert.match(rendered, /silvermoon reference level:terminal --language en-US/);
+  assert.match(rendered, /Page content\./);
 });

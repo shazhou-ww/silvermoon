@@ -1,8 +1,10 @@
 ---
 title: "Primary could not be fetched"
 description: "The configured primary snapshot could not be refreshed."
-instruction: "Resolve the reported network, authentication, or remote error and fetch the same configured primary again."
 ---
+
+Resolve the reported network, authentication, or remote error and fetch the same configured primary
+again.
 
 ## Problem guidance
 

@@ -277,6 +277,7 @@ test("[selector-none] naked navigation reaches Project terminal and explains Ide
       lookup: "level:terminal",
       title: "Objective attained",
       description: "All checks passed in this probe.",
+      references: [],
       content: [
         "## Meaning",
         "",

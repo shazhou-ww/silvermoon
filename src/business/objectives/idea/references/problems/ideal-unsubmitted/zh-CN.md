@@ -1,8 +1,10 @@
 ---
 title: "Idea 定义尚未提交"
 description: "当前 Idea 定义 revision 尚未按下一生命周期步骤的要求完成提交或验收。"
-instruction: "目标是让准确的当前 Idea 定义 revision 为下一 gate 就绪。根据当前状态继续定义或 review 工作；证据就绪后，把该 revision 同步到 primary，并在推进前记录匹配的生命周期事件。"
 ---
+
+目标是让准确的当前 Idea 定义 revision 为下一 gate 就绪。根据当前状态继续定义或 review 工作；证据就绪后，把该 revision 同步到
+primary，并在推进前记录匹配的生命周期事件。
 
 ## 问题说明
 

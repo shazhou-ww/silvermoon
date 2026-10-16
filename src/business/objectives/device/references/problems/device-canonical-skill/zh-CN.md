@@ -1,8 +1,12 @@
 ---
 title: "active runtime 的 canonical skill 无法验证"
 description: "当前 Silvermoon runtime 随包提供的 canonical skill 无法读取或计算内容 revision。"
-instruction: "目标是让 active Silvermoon CLI package 可用，并让其随包 canonical skill 可读取且能计算 expected revision。先排查 active `silvermoon` executable、package root、上方 skill 路径和具体读取错误；磁盘或权限异常应先修复，否则运行 `npm install --global silvermoon@latest` 重装最新版 CLI。达到目标后再修复 personal registration，并通过 `silvermoon` 重试。"
 ---
+
+目标是让 active Silvermoon CLI package 可用，并让其随包 canonical skill 可读取且能计算 expected revision。先排查 active
+`silvermoon` executable、package root、上方 skill 路径和具体读取错误；磁盘或权限异常应先修复，否则运行
+`npm install --global silvermoon@latest` 重装最新版 CLI。达到目标后再修复 personal registration，并通过 `silvermoon`
+重试。
 
 ## 问题说明
 

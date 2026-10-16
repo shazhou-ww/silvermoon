@@ -1,8 +1,10 @@
 ---
 title: "实现尚未提交"
 description: "当前 implementation revision 尚未按下一生命周期步骤的要求完成提交或验收。"
-instruction: "目标是让准确的当前 implementation revision 为下一 gate 就绪。根据当前状态继续实现或 review；证据就绪后，把该 revision 同步到 primary，并在推进前记录匹配的生命周期事件。"
 ---
+
+目标是让准确的当前 implementation revision 为下一 gate 就绪。根据当前状态继续实现或 review；证据就绪后，把该 revision 同步到
+primary，并在推进前记录匹配的生命周期事件。
 
 ## 问题说明
 
