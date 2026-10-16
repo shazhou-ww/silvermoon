@@ -115,14 +115,10 @@ try {
   }
   assert.equal((await stat(join(
     bootstrap, "node_modules", "silvermoon", "dist", "src", "business",
-    "objectives", "project", "checks", "project-config-valid", "run.js",
-  ))).isFile(), true);
-  assert.equal((await stat(join(
-    bootstrap, "node_modules", "silvermoon", "dist", "src", "business",
     "objectives", "idea", "references", "levels", "ideal-unsubmitted", "zh-CN.md",
   ))).isFile(), true);
   const objectiveSmoke = run(process.execPath, ["--input-type=module", "-e", `
-    import { createObjectiveLoader } from "silvermoon";
+    import { loadPilotSpec, observe, readPage, startEffect } from "silvermoon";
     const manifest = {
       schemaVersion: 1, domainSchema: { type: "object" },
       levels: [{
@@ -134,35 +130,47 @@ try {
       defaultLanguage: "en-US",
       languages: ["en-US"],
     };
-    const loader = createObjectiveLoader({
-      checkRunner: { run: async () => ({
-        pass: false, problems: [{ id: "problem", parameters: { path: "config.yaml" } }]
-      }) },
-      resources: {
+    const uri = "git+https://objective.test/repository.git#objectives/project/manifest.yaml";
+    const spec = await loadPilotSpec(uri, {
+        version: "a".repeat(40),
         readText: async () => JSON.stringify(manifest),
         readPages: async (uri) => [
           ["system/overview", { title: "Project", description: "Ready project" }],
           ["system/404", { title: "Missing", description: "Missing" }],
-          ["levels/unready", { title: "Unready", description: "Pending", outcome: "Repair" }],
+          ["levels/unready", { title: "Unready", description: "Pending" }],
           ["levels/terminal", { title: "Ready", description: "Ready" }],
           ["checks/ready", { title: "Ready check", description: "Check readiness" }],
           ["problems/problem", { title: "Problem", description: "Repair" }],
-        ].map(([id, properties]) => ({
-          uri: new URL(id + "/en-US.md", uri).href,
-          source: "---\\n" + Object.entries(properties).map(([key, value]) =>
-            key + ": " + JSON.stringify(value)).join("\\n") + "\\n---\\nReference.\\n",
-        })),
-      },
+        ].map(([id, properties]) => {
+          const pageUri = new URL(uri);
+          pageUri.hash += id + "/en-US.md";
+          return {
+            uri: pageUri.href,
+            source: "---\\n" + Object.entries(properties).map(([key, value]) =>
+              key + ": " + JSON.stringify(value)).join("\\n") + "\\n---\\nReference.\\n",
+          };
+        }),
     });
-    const guide = await loader.load("https://objective.test/manifest");
-    const result = guide.createInstance({ subject: {} });
-    if (!result.ok) throw new Error(result.error.type);
-    const sample = await result.instance.probe();
+    const envelope = await startEffect(observe(
+      { spec, subject: {} },
+      { resolveCheck: () => async () => ({
+        status: 200,
+        payload: {
+          ok: false,
+          problems: [{ id: "problem", parameters: { path: "config.yaml" } }],
+        },
+        message: "",
+      }) },
+    )).await();
+    if (envelope.status !== 200 || envelope.payload === null) {
+      throw new Error(envelope.message);
+    }
+    const sample = envelope.payload;
     console.log(JSON.stringify({
-      levelId: sample.position.level.id,
-      checkId: sample.position.failingCheck,
-      page: (await sample.position.owner.readPage("problems/" + sample.position.problems[0].id)).id,
-      missing: (await result.instance.readPage("missing")).id,
+      levelId: sample.current.levelId,
+      checkId: sample.problems[0].ref.checkId,
+      page: readPage(spec, "problems/" + sample.problems[0].ref.problemId).id,
+      missing: readPage(spec, "missing").id,
     }));
   `], bootstrap);
   assert.deepEqual(JSON.parse(objectiveSmoke), {

@@ -1,16 +1,18 @@
 import { ObjectiveOperationError } from "../objective-guide/index.ts";
 import type {
-  JsonObject,
-  ObjectiveGuideInstance,
-  ReferencePage,
   ReferencePageSummary,
 } from "../objective-guide/index.ts";
 import { localize } from "../foundation/language/index.ts";
 import {
   createSilvermoonObjectiveLoader,
+  silvermoonObjectiveContext,
   SILVERMOON_OBJECTIVE_URIS,
 } from "./objective-guides.ts";
-import type { SilvermoonObjectiveChecks } from "./objective-guides.ts";
+import type {
+  SilvermoonObjectiveChecks,
+  SilvermoonObjectiveContext,
+  SilvermoonReferencePage,
+} from "./objective-guides.ts";
 
 export type SilvermoonObjectiveId = keyof typeof SILVERMOON_OBJECTIVE_URIS;
 export type ObjectiveReferenceAudience = "human" | "agent";
@@ -24,7 +26,7 @@ export type ObjectiveReferenceNamespace =
 export interface ObjectiveReferencePageResult {
   readonly objective: SilvermoonObjectiveId;
   readonly language: string;
-  readonly page: ReferencePage;
+  readonly page: SilvermoonReferencePage;
 }
 
 export interface ObjectiveReferenceSearchResult {
@@ -49,7 +51,7 @@ export interface ObjectiveReferenceLookupPageResult {
   readonly owner: SilvermoonObjectiveId;
   readonly referenceId: string;
   readonly language: string;
-  readonly page: ReferencePage;
+  readonly page: SilvermoonReferencePage;
 }
 
 export interface ObjectiveReferenceLookupSearchResult {
@@ -87,16 +89,6 @@ export type ObjectiveReferenceLookupResult =
   | ObjectiveReferenceLookupAmbiguousResult
   | ObjectiveReferenceLookupNotFoundResult;
 
-const SUBJECTS: Readonly<Record<SilvermoonObjectiveId, JsonObject>> = Object.freeze({
-  device: Object.freeze({ userHome: "reference" }),
-  project: Object.freeze({ root: "reference", userHome: "reference" }),
-  idea: Object.freeze({
-    root: "reference",
-    userHome: "reference",
-    ideaId: "00000000000000000000000000",
-  }),
-});
-
 const NAMESPACE_PREFIXES: Readonly<Record<ObjectiveReferenceNamespace, string>> =
   Object.freeze({
     level: "levels/",
@@ -120,37 +112,26 @@ function isObjectiveReferenceNamespace(
 
 async function referenceInstance(objective: SilvermoonObjectiveId, language: string) {
   const checks = {} as SilvermoonObjectiveChecks;
-  const loader = createSilvermoonObjectiveLoader(checks, { executeEntries: false });
-  const guide = await loader.load(SILVERMOON_OBJECTIVE_URIS[objective]);
-  const created = guide.createInstance({ subject: SUBJECTS[objective], language });
-  if (created.ok) return created.instance;
-  if (created.error.type === "unsupported-language") {
-    throw new ObjectiveOperationError(
-      `Unsupported Reference locale: ${language}. Supported locales: ${
-        created.error.supportedLanguages.join(", ")
-      }.`,
-    );
-  }
-  throw new ObjectiveOperationError(
-    `Could not create ${objective} Reference reader: ${created.error.type}.`,
-  );
+  const loader = createSilvermoonObjectiveLoader(checks);
+  const spec = await loader.load(SILVERMOON_OBJECTIVE_URIS[objective]);
+  return silvermoonObjectiveContext(spec, language);
 }
 
-function ownerOf(instance: ObjectiveGuideInstance): SilvermoonObjectiveId {
+function ownerOf(instance: SilvermoonObjectiveContext): SilvermoonObjectiveId {
   const owner = Object.entries(SILVERMOON_OBJECTIVE_URIS).find(
-    ([, uri]) => uri === instance.guide.manifestUri,
+    ([, uri]) => uri === instance.spec.objectiveId,
   )?.[0];
   if (owner === undefined) {
     throw new ObjectiveOperationError(
-      `Unknown bundled Objective: ${instance.guide.manifestUri}.`,
+      `Unknown bundled Objective: ${instance.spec.objectiveId}.`,
     );
   }
   return owner as SilvermoonObjectiveId;
 }
 
 async function referenceChain(language: string) {
-  const instances: ObjectiveGuideInstance[] = [];
-  let current: ObjectiveGuideInstance | null = await referenceInstance("idea", language);
+  const instances: SilvermoonObjectiveContext[] = [];
+  let current: SilvermoonObjectiveContext | null = await referenceInstance("idea", language);
   while (current !== null) {
     instances.push(current);
     current = current.prerequisite;
@@ -271,7 +252,7 @@ function candidate(
 }
 
 async function allCandidates(
-  chain: readonly ObjectiveGuideInstance[],
+  chain: readonly SilvermoonObjectiveContext[],
   language: string,
 ): Promise<ObjectiveReferenceCandidate[]> {
   const candidates = await Promise.all(chain.map(async (instance) =>

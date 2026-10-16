@@ -2,8 +2,10 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { whatsNextUseCase } from "../../src/business/whats-next.ts";
 import { createSilvermoonObjectiveLoader, SILVERMOON_OBJECTIVE_URIS } from "../../src/business/objective-guides.ts";
-import type { SilvermoonCheckId } from "../../src/business/objective-guides.ts";
-import type { ObjectiveObservation } from "../../src/objective-guide/index.ts";
+import type {
+  SilvermoonCheckId,
+  SilvermoonObjectiveObservation,
+} from "../../src/business/objective-guides.ts";
 import { createCommandRun } from "../../src/foundation/command-message/index.ts";
 import { ideaPaths } from "../../src/foundation/coordinates/index.ts";
 import { inspectPhaseGuidance } from "../../src/foundation/guidance/index.ts";
@@ -114,7 +116,7 @@ function harness(
   device = deviceFixture(),
 ) {
   const calls: string[] = [];
-  const observations: ObjectiveObservation[] = [];
+  const observations: SilvermoonObjectiveObservation[] = [];
   const ports: NonNullable<Parameters<typeof whatsNextUseCase>[1]> = {
     createCommandRun: (intent) => createCommandRun(intent, { eventSink: () => {} }),
     observeSnapshot: async ({ deviceObserver }) => {
@@ -152,10 +154,10 @@ function harness(
       for (const key of Object.keys(checks) as SilvermoonCheckId[]) {
         wrapped[key] = async (subject) => { calls.push(key); return checks[key](subject); };
       }
-      return createSilvermoonObjectiveLoader(wrapped, { executeEntries: false });
+      return createSilvermoonObjectiveLoader(wrapped);
     },
-    probeObjective: async (instance) => {
-      const sample = await instance.probe();
+    probeObjective: async (loader, spec, subject, language, signal) => {
+      const sample = await loader.probe(spec, subject, language, signal);
       observations.push(sample);
       return sample;
     },

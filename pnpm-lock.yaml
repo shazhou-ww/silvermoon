@@ -17,9 +17,12 @@ importers:
       '@opentui/react':
         specifier: https://github.com/shazhou-ww/opentui/releases/download/opentui-0.4.0-koffi-2.16.3-1/opentui-react-0.4.0-koffi.2.16.3.1.tgz
         version: https://github.com/shazhou-ww/opentui/releases/download/opentui-0.4.0-koffi-2.16.3-1/opentui-react-0.4.0-koffi.2.16.3.1.tgz(@opentui/core@https://github.com/shazhou-ww/opentui/releases/download/opentui-0.4.0-koffi-2.16.3-1/opentui-core-0.4.0-koffi.2.16.3.1.tgz(typescript@6.0.3)(web-tree-sitter@0.25.10))(react-devtools-core@7.0.1)(react@19.3.0)(ws@8.22.0)
-      '@potential-guide/objective-guide':
-        specifier: 0.2.0-rc.1
-        version: 0.2.0-rc.1
+      '@potential-guide/effects':
+        specifier: 0.1.0-rc.0
+        version: 0.1.0-rc.0
+      '@potential-guide/objective-pilot':
+        specifier: 0.1.0-rc.0
+        version: 0.1.0-rc.0
       commander:
         specifier: ^15.0.0
         version: 15.0.0
@@ -286,8 +289,12 @@ packages:
       react-devtools-core: ^7.0.1
       ws: ^8.18.0
 
-  '@potential-guide/objective-guide@0.2.0-rc.1':
-    resolution: {integrity: sha512-BIpBgH7Z+MI//WV0ozaG3i9wQN5xoK2HnVXJIeXjemmprMHhjagX8CZ3Y53AlSu5M0YIRDv35t814UeQmj836Q==}
+  '@potential-guide/effects@0.1.0-rc.0':
+    resolution: {integrity: sha512-Gzpo5mg3YA3fyJSi0oNWPcFdgrXnzsVf5Z+KtCycZi7nQZFdH6ROW5+eS4y3URi5zIcRQvceWaN2u8vwZ5em5w==}
+    engines: {node: '>=22.13.0'}
+
+  '@potential-guide/objective-pilot@0.1.0-rc.0':
+    resolution: {integrity: sha512-7u/rCBIV4vR1maBOVFJ6JczSMcNJIbJa83a8unzoURiRFnUqnLZrzB1Zg6HEoZUaJTpUBAF7ndK33lT/tNKgSw==}
     engines: {node: '>=22.13.0'}
 
   '@sindresorhus/merge-streams@4.0.0':
@@ -415,6 +422,9 @@ packages:
   diff@9.0.0:
     resolution: {integrity: sha512-svtcdpS8CgJyqAjEQIXdb3OjhFVVYjzGAPO8WGCmRbrml64SPw/jJD4GoE98aR7r25A0XcgrK3F02yw9R/vhQw==}
     engines: {node: '>=0.3.1'}
+
+  effect@4.0.2:
+    resolution: {integrity: sha512-YeYnLqSFrL4+tCOXRrfNP03w8FILoF/wDl+ukraJAGzXrjcS383W7LAAvGBbLatEyktmLxRq+9xJinx7QzXW5A==}
 
   elkjs@0.11.1:
     resolution: {integrity: sha512-zxxR9k+rx5ktMwT/FwyLdPCrq7xN6e4VGGHH8hA01vVYKjTFik7nHOxBnAYtrgYUB1RpAiLvA1/U2YraWxyKKg==}
@@ -1230,8 +1240,13 @@ snapshots:
       react-reconciler: 0.33.0(react@19.3.0)
       ws: 8.22.0
 
-  '@potential-guide/objective-guide@0.2.0-rc.1':
+  '@potential-guide/effects@0.1.0-rc.0':
     dependencies:
+      effect: 4.0.2
+
+  '@potential-guide/objective-pilot@0.1.0-rc.0':
+    dependencies:
+      '@potential-guide/effects': 0.1.0-rc.0
       ajv: 8.20.0
       jsonata: 2.1.0
       yaml: 2.9.1
@@ -1341,6 +1356,8 @@ snapshots:
       dequal: 2.0.3
 
   diff@9.0.0: {}
+
+  effect@4.0.2: {}
 
   elkjs@0.11.1: {}
 

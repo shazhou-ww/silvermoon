@@ -22,20 +22,26 @@ test("keeps runtime dependencies inside their supported engine and peer ranges",
 
   assert.equal(manifest.dependencies.commander, "^15.0.0");
   assert.equal(manifest.engines.node, ">=22.13.0");
-  const objectivePackage = "@potential-guide/objective-guide";
-  const objectiveVersion = "0.2.0-rc.1";
-  assert.equal(manifest.dependencies[objectivePackage], objectiveVersion);
-  assert.deepEqual(importer[objectivePackage], {
-    specifier: objectiveVersion,
-    version: objectiveVersion,
-  });
-  assert.equal(
-    semver.subset(
-      manifest.engines.node,
-      lock.packages[`${objectivePackage}@${objectiveVersion}`].engines.node,
-    ),
-    true,
-  );
+  for (const packageName of [
+    "@potential-guide/effects",
+    "@potential-guide/objective-pilot",
+  ]) {
+    const version = "0.1.0-rc.0";
+    assert.equal(manifest.dependencies[packageName], version);
+    assert.deepEqual(importer[packageName], {
+      specifier: version,
+      version,
+    });
+    assert.equal(
+      semver.subset(
+        manifest.engines.node,
+        lock.packages[`${packageName}@${version}`].engines.node,
+      ),
+      true,
+    );
+  }
+  assert.ok(!("@potential-guide/objective-guide" in manifest.dependencies));
+  assert.ok(!("silvermoon" in manifest.dependencies));
   assert.ok(!("jsonata" in manifest.dependencies));
   assert.ok(!("ajv" in manifest.dependencies));
   assert.equal(manifest.devDependencies.ajv, "^8.20.0");

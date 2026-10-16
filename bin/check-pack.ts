@@ -219,8 +219,6 @@ if (packed.status !== 0) {
     "src/business/whats-next.js",
     "src/objective-guide/README.md",
     "src/objective-guide/index.js",
-    "src/objective-guide/types.js",
-    "src/objective-guide/loader.js",
     ...objectiveGuideResources,
     "src/foundation/command-message/README.md",
     "src/foundation/command-message/index.js",

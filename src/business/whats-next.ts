@@ -4,10 +4,14 @@ import { homedir } from "node:os";
 import {
   createSilvermoonObjectiveLoader, probeObjective, SILVERMOON_OBJECTIVE_URIS,
 } from "./objective-guides.ts";
-import type { SilvermoonObjectiveCheck } from "./objective-guides.ts";
+import type {
+  SilvermoonObjectiveCheck,
+  SilvermoonObjectiveContext,
+  SilvermoonObjectiveLoader,
+  SilvermoonObjectiveObservation,
+} from "./objective-guides.ts";
 import { ObjectiveOperationError } from "../objective-guide/index.ts";
-import type { CheckResult, ObjectiveLoader } from "../objective-guide/index.ts";
-import type { ObjectiveGuideInstance, ObjectiveObservation } from "../objective-guide/index.ts";
+import type { CheckResult } from "../objective-guide/index.ts";
 import type { JsonObject } from "../objective-guide/index.ts";
 import { inspectWorktreeContext, worktreeSnapshot } from "../foundation/git/index.ts";
 import { ideaInventoryItem } from "../foundation/idea-query/index.ts";
@@ -52,13 +56,13 @@ function pending(code: string, description: string): NavigationGateResult {
 
 type ObjectiveId = ObjectiveProjection["target"];
 
-function objectiveId(instance: ObjectiveGuideInstance): ObjectiveId {
+function objectiveId(instance: SilvermoonObjectiveContext): ObjectiveId {
   const match = Object.entries(SILVERMOON_OBJECTIVE_URIS).find(
-    ([, uri]) => uri === instance.guide.manifestUri,
+    ([, uri]) => uri === instance.spec.objectiveId,
   );
   if (match === undefined) {
     throw new ObjectiveOperationError(
-      `Unknown bundled Objective: ${instance.guide.manifestUri}.`,
+      `Unknown bundled Objective: ${instance.spec.objectiveId}.`,
     );
   }
   return match[0] as ObjectiveId;
@@ -66,7 +70,7 @@ function objectiveId(instance: ObjectiveGuideInstance): ObjectiveId {
 
 async function objectiveProjection(
   target: ObjectiveId,
-  observation: ObjectiveObservation,
+  observation: SilvermoonObjectiveObservation,
 ): Promise<ObjectiveProjection> {
   const { position } = observation;
   const owner = objectiveId(position.owner);
@@ -108,7 +112,7 @@ async function objectiveProjection(
     ...projectMetadataPage,
   ];
   const references = await Promise.all(pageIds.map(async ({ kind, id }) => {
-    const page = await position.owner.readPage(id);
+    const page = position.owner.readPage(id);
     return {
       kind,
       id,
@@ -176,7 +180,7 @@ function projectReadyInstruction(language: string) {
   );
 }
 
-function objectiveProblems(observation: ObjectiveObservation) {
+function objectiveProblems(observation: SilvermoonObjectiveObservation) {
   return observation.position.problems.map(({ id }) => ({
     type: id,
     summary: observation.gapSummary,
@@ -260,7 +264,7 @@ export async function whatsNextUseCase({
   let selectedIdea: IdeaSelectedObservation["selectedIdea"] | undefined;
   let outcome: Outcome | undefined;
   let deviceSample: Awaited<ReturnType<typeof observeDevice>> | undefined;
-  let loader: ObjectiveLoader | undefined;
+  let loader: SilvermoonObjectiveLoader | undefined;
   let initialSample = true;
   const targetRoot = context.kind === "worktree" ? context.root : requestedRoot;
   const subject = { root: targetRoot, userHome: userHome ?? homedir() };
@@ -484,9 +488,9 @@ export async function whatsNextUseCase({
       return CHECK_PASSED;
     },
   };
-  const passed: CheckResult = { pass: true };
+  const passed: CheckResult = { ok: true, problems: [] };
   function failed(id: string, parameters: JsonObject = {}): CheckResult {
-    return { pass: false, problems: [{ id, parameters }] };
+    return { ok: false, problems: [{ id, parameters }] };
   }
   function observedProblemTypes(problems: readonly { type: string }[]): readonly string[] {
     return problems.map(({ type }) => type);
@@ -1001,14 +1005,12 @@ export async function whatsNextUseCase({
       ...(canonicalLanguage === undefined ? {} : { override: canonicalLanguage }),
     }).tag;
     const device = await loader.load(SILVERMOON_OBJECTIVE_URIS.device);
-    const created = device.createInstance({
-      subject: { userHome: subject.userHome },
-      language: outputLanguage,
-    });
-    if (!created.ok) {
-      throw new ObjectiveOperationError(`Device instance creation failed: ${created.error.type}.`);
-    }
-    const objective = await probeObjective(created.instance);
+    const objective = await probeObjective(
+      loader,
+      device,
+      { userHome: subject.userHome },
+      outputLanguage,
+    );
     const projectedObjective = await objectiveProjection("device", objective);
     const problems = objectiveProblems(objective);
     const observation: ObjectiveReportObservation = {
@@ -1036,12 +1038,15 @@ export async function whatsNextUseCase({
   const guideLanguage = sample.outputLanguage;
   const routed = selectedSample();
   const scoped = routed?.state === "abandoned" ? null : routed;
-  const guide = await loader.load(scoped === null ? SILVERMOON_OBJECTIVE_URIS.project : SILVERMOON_OBJECTIVE_URIS.idea);
-  const created = guide.createInstance({
-    subject: scoped === null ? subject : { ...subject, ideaId: scoped.id }, language: guideLanguage,
-  });
-  if (!created.ok) throw new ObjectiveOperationError(`Navigation instance creation failed: ${created.error.type}.`);
-  const objective = await probeObjective(created.instance);
+  const guide = await loader.load(scoped === null
+    ? SILVERMOON_OBJECTIVE_URIS.project
+    : SILVERMOON_OBJECTIVE_URIS.idea);
+  const objective = await probeObjective(
+    loader,
+    guide,
+    scoped === null ? subject : { ...subject, ideaId: scoped.id },
+    guideLanguage,
+  );
   const projectedObjective = await objectiveProjection(
     selector === undefined ? "project" : "idea",
     objective,

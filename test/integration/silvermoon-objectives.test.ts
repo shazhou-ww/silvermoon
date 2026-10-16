@@ -1,30 +1,35 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+
 import {
-  createSilvermoonObjectiveLoader, SILVERMOON_OBJECTIVE_LEVELS,
+  createSilvermoonObjectiveLoader,
+  SILVERMOON_OBJECTIVE_LEVELS,
   SILVERMOON_OBJECTIVE_URIS,
 } from "../../src/business/objective-guides.ts";
 import type {
-  SilvermoonCheckId, SilvermoonObjectiveCheck, SilvermoonObjectiveChecks,
+  SilvermoonCheckId,
+  SilvermoonObjectiveCheck,
+  SilvermoonObjectiveChecks,
 } from "../../src/business/objective-guides.ts";
 
-test("bundled Silvermoon Guide loads real resources and executes its real check entry", async () => {
+test("bundled Silvermoon Pilot loads packaged resources and runs memory probes", async () => {
   const bindings = Object.fromEntries(Object.values(SILVERMOON_OBJECTIVE_LEVELS)
     .flatMap((levels) => levels.flatMap(([, ids]) => ids))
     .map((id): [SilvermoonCheckId, SilvermoonObjectiveCheck] => [id, async () =>
       id === "device-config-valid"
         ? {
-          pass: false,
-          problems: [{ id: "device-configuration", parameters: { configurationPath: "config.yaml" } }],
+          ok: false,
+          problems: [{
+            id: "device-configuration",
+            parameters: { configurationPath: "config.yaml" },
+          }],
         }
-        : { pass: true }])) as SilvermoonObjectiveChecks;
+        : { ok: true, problems: [] }])) as SilvermoonObjectiveChecks;
   const loader = createSilvermoonObjectiveLoader(bindings);
-  const guide = await loader.load(SILVERMOON_OBJECTIVE_URIS.device);
-  const created = guide.createInstance({ subject: { userHome: "home" }, language: "zh-CN" });
-  if (!created.ok) assert.fail("Expected bundled Guide instance.");
-  const observation = await created.instance.probe();
+  const spec = await loader.load(SILVERMOON_OBJECTIVE_URIS.device);
+  const observation = await loader.probe(spec, { userHome: "home" }, "zh-CN");
   assert.equal(observation.position.level.id, "configuration-invalid");
   assert.equal(observation.position.failingCheck, "device-config-valid");
   assert.equal(observation.position.problems[0]?.id, "device-configuration");
-  assert.match((await created.instance.readPage("checks/device-config-valid")).content, /检查内容/);
+  assert.match(observation.position.owner.readPage("checks/device-config-valid").content, /检查内容/);
 });

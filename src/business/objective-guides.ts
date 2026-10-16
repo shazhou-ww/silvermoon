@@ -1,17 +1,37 @@
-import { mkdir, rename, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { relative, sep } from "node:path";
+import { fileURLToPath } from "node:url";
 import {
-  createObjectiveLoader, fileObjectiveCheckRunner, fileObjectiveResources,
+  canonicalManifestUri,
+  createMemoryCheckProbe,
+  describeLevels,
+  fileResources,
+  loadPilotSpec,
   ObjectiveOperationError,
+  observe,
+  readPage,
+  searchPages,
+  startEffect,
 } from "../objective-guide/index.ts";
 import type {
-  CheckResult, ObjectiveGuideInstance, ObjectiveLoader, ObjectiveSubject,
+  CheckResult,
+  JsonObject,
+  PilotObservation,
+  PilotSpec,
+  Problem,
+  ReferencePage,
+  ReferencePageSummary,
+  ResourceResolver,
+  Subject,
 } from "../objective-guide/index.ts";
 
+const OBJECTIVE_REPOSITORY = "git+https://github.com/shazhou-ww/silvermoon.git";
+const OBJECTIVE_ROOT = "src/business/objectives/";
+export const SILVERMOON_OBJECTIVE_VERSION = "5c256bb76829240dafe648e3d5b7c7198a7927ea";
+
 export const SILVERMOON_OBJECTIVE_URIS = Object.freeze({
-  device: new URL("./objectives/device/manifest.yaml", import.meta.url).href,
-  project: new URL("./objectives/project/manifest.yaml", import.meta.url).href,
-  idea: new URL("./objectives/idea/manifest.yaml", import.meta.url).href,
+  device: `${OBJECTIVE_REPOSITORY}#${OBJECTIVE_ROOT}device/manifest.yaml`,
+  project: `${OBJECTIVE_REPOSITORY}#${OBJECTIVE_ROOT}project/manifest.yaml`,
+  idea: `${OBJECTIVE_REPOSITORY}#${OBJECTIVE_ROOT}idea/manifest.yaml`,
 });
 export const SILVERMOON_OBJECTIVE_LEVELS = Object.freeze({
   device: [
@@ -69,45 +89,222 @@ export const SILVERMOON_CHECK_PROBLEMS = Object.freeze({
   "idea-outer-submitted": ["deployment-unsubmitted"],
   "idea-outer-accepted": ["deployment-unaccepted"],
 } as const);
-export type SilvermoonCheckId = keyof typeof SILVERMOON_CHECK_PROBLEMS;
-export type SilvermoonObjectiveCheck = (subject: ObjectiveSubject) => Promise<CheckResult>;
-export type SilvermoonObjectiveChecks = Readonly<Record<SilvermoonCheckId, SilvermoonObjectiveCheck>>;
-export interface SilvermoonObjectiveLoaderOptions {
-  executeEntries?: boolean;
+
+interface LegacyPageMetadata {
+  readonly outcome?: string;
+  readonly instruction?: string;
+}
+export interface SilvermoonReferencePage extends ReferencePage, LegacyPageMetadata {}
+export interface SilvermoonObjectiveContext {
+  readonly spec: PilotSpec;
+  readonly guide: { readonly manifestUri: string };
+  readonly language: string;
+  readonly prerequisite: SilvermoonObjectiveContext | null;
+  readPage(pageId: string): SilvermoonReferencePage;
+  searchPages(query: string): readonly ReferencePageSummary[];
+}
+export interface SilvermoonObjectiveObservation {
+  readonly position: {
+    readonly owner: SilvermoonObjectiveContext;
+    readonly level: { readonly id: string };
+    readonly failingCheck: string | null;
+    readonly problems: readonly { readonly id: string; readonly parameters: JsonObject }[];
+  };
+  readonly gapSummary: string;
+  readonly observedAt: string;
+  readonly versions: Readonly<Record<string, string>>;
 }
 
-export function probeObjective(instance: ObjectiveGuideInstance) {
-  return instance.probe();
+export type SilvermoonCheckId = keyof typeof SILVERMOON_CHECK_PROBLEMS;
+export type SilvermoonObjectiveCheck = (subject: Subject) => Promise<CheckResult>;
+export type SilvermoonObjectiveChecks = Readonly<Record<SilvermoonCheckId, SilvermoonObjectiveCheck>>;
+export interface SilvermoonObjectiveLoader {
+  load(uri: string): Promise<PilotSpec>;
+  probe(
+    spec: PilotSpec,
+    subject: Subject,
+    language: string,
+    signal?: AbortSignal,
+  ): Promise<SilvermoonObjectiveObservation>;
+}
+
+const localRoot = new URL("./objectives/", import.meta.url);
+const pageMetadata = new Map<string, LegacyPageMetadata>();
+
+function localResource(uri: string): URL {
+  const canonical = canonicalManifestUri(uri);
+  const fragment = decodeURIComponent(new URL(canonical).hash.slice(1));
+  if (!canonical.startsWith(OBJECTIVE_REPOSITORY) || !fragment.startsWith(OBJECTIVE_ROOT)) {
+    throw new ObjectiveOperationError(`Unknown bundled Objective resource: ${uri}.`);
+  }
+  return new URL(fragment.slice(OBJECTIVE_ROOT.length), localRoot);
+}
+
+function adaptPage(uri: string, source: string): string {
+  const metadata: { outcome?: string; instruction?: string } = {};
+  const adapted = source.replace(
+    /^(outcome|instruction):[ \t]*(.+)\r?\n/gm,
+    (_line, field: "outcome" | "instruction", encoded: string) => {
+      const value: unknown = JSON.parse(encoded);
+      if (typeof value !== "string" || value.trim() === "") {
+        throw new ObjectiveOperationError(`Invalid ${field} metadata: ${uri}.`);
+      }
+      metadata[field] = value;
+      return "";
+    },
+  );
+  pageMetadata.set(uri, Object.freeze(metadata));
+  return adapted;
+}
+
+const bundledResources: ResourceResolver = {
+  version: SILVERMOON_OBJECTIVE_VERSION,
+  versionFor: async () => SILVERMOON_OBJECTIVE_VERSION,
+  readText: async (uri) => fileResources.readText(localResource(uri).href),
+  async readPages(uri) {
+    const local = localResource(uri);
+    const pages = await fileResources.readPages(local.href);
+    return pages.map((page) => {
+      const path = relative(fileURLToPath(local), fileURLToPath(page.uri))
+        .split(sep)
+        .join("/");
+      const resourceUri = canonicalManifestUri(path, uri);
+      return {
+        uri: resourceUri,
+        source: adaptPage(resourceUri, page.source),
+      };
+    });
+  },
+};
+
+function findSpec(root: PilotSpec, objectiveId: string): PilotSpec {
+  let current: PilotSpec | undefined = root;
+  while (current !== undefined) {
+    if (current.objectiveId === objectiveId) return current;
+    current = current.prerequisite;
+  }
+  throw new ObjectiveOperationError(`Observation referenced an unknown Objective: ${objectiveId}.`);
+}
+
+function pageResourceUri(spec: PilotSpec, pageId: string, language: string) {
+  return canonicalManifestUri(`references/${pageId}/${language}.md`, spec.objectiveId);
+}
+
+function context(spec: PilotSpec, language: string): SilvermoonObjectiveContext {
+  return Object.freeze({
+    spec,
+    guide: Object.freeze({ manifestUri: spec.objectiveId }),
+    language,
+    prerequisite: spec.prerequisite === undefined
+      ? null
+      : context(spec.prerequisite, language),
+    readPage(pageId: string) {
+      const page = readPage(spec, pageId, language);
+      const metadata = pageMetadata.get(pageResourceUri(spec, page.id, language));
+      return Object.freeze({ ...page, ...metadata });
+    },
+    searchPages: (query: string) => searchPages(spec, query, language),
+  });
+}
+
+function problemResult(problem: Problem) {
+  return Object.freeze({
+    id: problem.ref.problemId,
+    parameters: problem.parameters,
+  });
+}
+
+function projectObservation(
+  root: PilotSpec,
+  language: string,
+  observation: PilotObservation,
+): SilvermoonObjectiveObservation {
+  const ownerSpec = findSpec(root, observation.current.objectiveId);
+  const owner = context(ownerSpec, language);
+  return Object.freeze({
+    position: Object.freeze({
+      owner,
+      level: Object.freeze({ id: observation.current.levelId }),
+      failingCheck: observation.current.levelId === "terminal"
+        ? null
+        : observation.problems[0]?.ref.checkId ?? null,
+      problems: Object.freeze(observation.problems.map(problemResult)),
+    }),
+    gapSummary: observation.gapSummary,
+    observedAt: observation.observedAt,
+    versions: observation.versions,
+  });
 }
 
 export function createSilvermoonObjectiveLoader(
   checks: SilvermoonObjectiveChecks,
-  { executeEntries = true }: SilvermoonObjectiveLoaderOptions = {},
-): ObjectiveLoader {
-  return createObjectiveLoader({
-    resources: fileObjectiveResources,
-    checkRunner: {
-      async validate(manifestUri, checkId) {
-        if (executeEntries) await fileObjectiveCheckRunner.validate!(manifestUri, checkId);
-      },
-      async run(manifestUri, checkId, request, signal) {
-        const check = checks[checkId as SilvermoonCheckId];
-        if (check === undefined) throw new ObjectiveOperationError(`Missing bundled check: ${checkId}.`);
-        const result = await check(request.subject);
-        if (!executeEntries) return result;
-        const directory = join(request.probe.tempDirectory, "silvermoon-check-results");
-        await mkdir(directory, { recursive: true });
-        const target = join(directory, `${checkId}.json`);
-        const pending = `${target}.pending`;
-        await writeFile(pending, JSON.stringify(result), "utf8");
-        await rename(pending, target);
-        return await fileObjectiveCheckRunner.run(
-          manifestUri,
-          checkId,
-          request,
-          signal,
+): SilvermoonObjectiveLoader {
+  const specifications = new Map<string, Promise<PilotSpec>>();
+  return Object.freeze({
+    load(uri: string) {
+      const canonical = canonicalManifestUri(uri);
+      let pending = specifications.get(canonical);
+      if (pending === undefined) {
+        pending = loadPilotSpec(canonical, bundledResources);
+        specifications.set(canonical, pending);
+        void pending.catch(() => specifications.delete(canonical));
+      }
+      return pending;
+    },
+    async probe(
+      spec: PilotSpec,
+      subject: Subject,
+      language: string,
+      signal?: AbortSignal,
+    ) {
+      const effect = observe(
+        { spec, subject, language },
+        {
+          resolveCheck(ref) {
+            const check = checks[ref.checkId as SilvermoonCheckId];
+            if (check === undefined) {
+              throw new ObjectiveOperationError(`Missing bundled check: ${ref.checkId}.`);
+            }
+            return createMemoryCheckProbe(async (input) => ({
+              status: 200,
+              payload: await check(input),
+              message: "",
+            }));
+          },
+        },
+      );
+      const envelope = await startEffect(effect, signal).await();
+      if (envelope.status !== 200 || envelope.payload === null) {
+        throw new ObjectiveOperationError(
+          `Objective observation failed (${envelope.status}): ${envelope.message}`,
         );
-      },
+      }
+      return projectObservation(spec, language, envelope.payload);
     },
   });
+}
+
+export function probeObjective(
+  loader: SilvermoonObjectiveLoader,
+  spec: PilotSpec,
+  subject: Subject,
+  language: string,
+  signal?: AbortSignal,
+) {
+  return loader.probe(spec, subject, language, signal);
+}
+
+export function silvermoonObjectiveContext(spec: PilotSpec, language: string) {
+  if (!spec.manifest.languages.includes(language)) {
+    throw new ObjectiveOperationError(
+      `Unsupported Reference locale: ${language}. Supported locales: ${
+        spec.manifest.languages.join(", ")
+      }.`,
+    );
+  }
+  return context(spec, language);
+}
+
+export function describeSilvermoonObjectiveLevels(spec: PilotSpec) {
+  return describeLevels(spec);
 }

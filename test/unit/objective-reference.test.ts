@@ -228,10 +228,18 @@ test("page and search Markdown are readable for both audiences", () => {
   const page = {
     objective: "device",
     language: "zh-CN",
-    page: { id: "system/overview", title: "设备目标", content: "" },
+    page: {
+      id: "system/overview",
+      title: "设备目标",
+      description: "设备目标说明",
+      references: [],
+      content: "",
+    },
   } as const;
   const expectedPage = [
     "# 设备目标",
+    "",
+    "设备目标说明",
     "",
     "所属 Objective: `device`",
     "引用 ID: `system/overview`",
