@@ -31,6 +31,11 @@ pnpm check
 See [Maintaining Silvermoon](./docs/maintaining.md) for validation tiers,
 documentation ownership, and release guidance.
 
+Dependabot keeps `@types/node` on the Node 22 runtime baseline and TypeScript
+on version 6 because the pure-function checker uses its compiler API.
+Major upgrades of these packages require an explicit compatibility migration;
+minor and patch updates remain enabled.
+
 ## Preset updates
 
 Silvermoon derives from `preset-npm-package`. Maintainers merge updates from

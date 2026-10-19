@@ -10,6 +10,13 @@ updates:
       timezone: Etc/UTC
     open-pull-requests-limit: 5
     versioning-strategy: increase-if-necessary
+    ignore:
+      - dependency-name: "@types/node"
+        update-types:
+          - version-update:semver-major
+      - dependency-name: typescript
+        update-types:
+          - version-update:semver-major
     groups:
       production-dependencies:
         dependency-type: production
