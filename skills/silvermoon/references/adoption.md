@@ -8,10 +8,12 @@ Start with a complete diagnosis, even in an unfamiliar repository:
 silvermoon whats-next
 ```
 
-Default output renders only the self-contained response. Add `--json` only
+For ordinary Agent work, use `--format markdown` to render only the
+self-contained response without a TUI. Select `--format json` instead only
 when a programmatic consumer needs the complete
 `intention / observation / actions / response` report (including
-`actions: []` when no side effect was attempted).
+`actions: []` when no side effect was attempted). Choose one format per
+invocation; `--format tui` explicitly requests the interactive view.
 The command may fetch after local readiness passes, but it does not move the
 worktree, index, branches, or named refs.
 

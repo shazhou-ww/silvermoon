@@ -13,11 +13,14 @@ repository or external actions with ordinary tools and Git.
 
 ## Agent Contract
 
-- For every report command, explicitly pass `--audience agent`, including
-  hygiene retries. This keeps Markdown readable when both streams are TTYs;
-  the default human audience may open an interactive TUI.
-- Use `--json` only when a programmatic consumer needs all four report
-  projections. Do not combine `--json` with `--audience agent`.
+- Choose one output format with `--format json|markdown|tui`.
+  For ordinary Agent report commands and hygiene retries, use
+  `--format markdown` to read the response without an interactive TUI.
+  Use `--format json` instead only when a programmatic consumer needs all four
+  report projections. Use `--format tui` for an explicitly requested interactive
+  view. The former `--audience` and `--json` options are not supported.
+- References to report fields below describe the report model; they do not
+  require JSON. Read the rendered Markdown for ordinary Agent work.
 - Use `--language en|en-US|zh|zh-CN` only when the user explicitly requests a
   temporary output locale. Preserve the same canonical option in every retry.
   A temporary output language changes Silvermoon-owned report framing only.
@@ -148,7 +151,7 @@ Apply the report in this order:
 
 1. Handle every reported problem in priority order.
 2. Execute only the current report's highest-priority safe instruction.
-3. Preserve the original command intent, selector, audience, and language
+3. Preserve the original command intent, selector, output format, and language
    options in every hygiene retry.
 4. Reobserve only after an expected repository change, unexpected input, or
    new external result.
@@ -433,7 +436,7 @@ or append observations. An acceptance must match the already submitted exact
 revision. Routine state changes use append only. Exceptional history
 maintenance edits the complete `events.jsonl` file directly, then uses ordinary
 Git review and snapshot/history checks; there is no revise or recover command.
-Keep selector, audience, and output language through conflicts and retries.
+Keep selector, output format, and output language through conflicts and retries.
 
 For v1 projects there is no decision mutation command. After an explicit human
 decision, reconfirm the selected idea and exact revision from `whats-next`;

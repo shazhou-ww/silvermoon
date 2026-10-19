@@ -39,12 +39,12 @@ type Terminal = {
   stdin: { isTTY?: boolean };
   stdout: { isTTY?: boolean };
 };
+type OutputFormat = "json" | "markdown" | "tui";
 type CliOptions = {
   afterDigest?: string;
   afterLength?: number;
   all?: boolean;
   apply?: boolean;
-  audience?: "human" | "agent";
   commit?: string;
   confirmDecision?: boolean;
   createdBefore?: string;
@@ -53,7 +53,7 @@ type CliOptions = {
   expectedPrimary?: string;
   fullHistory?: boolean;
   input?: string;
-  json?: boolean;
+  format?: OutputFormat;
   language?: string;
   limit?: string;
   query?: string;
@@ -133,7 +133,7 @@ if (typeof VERSION !== "string") {
 }
 
 const TRACE_FILE_SUFFIX = ".trace.jsonl";
-const AUDIENCES = ["human", "agent"];
+const OUTPUT_FORMATS = ["json", "markdown", "tui"];
 const OBJECTIVES = ["device", "project", "idea"];
 
 export function normalizeTraceFileName(value: string): string {
@@ -143,22 +143,22 @@ export function normalizeTraceFileName(value: string): string {
 }
 
 function addCommonOptions(command: Command): Command {
-  return command
-    .option("--json", "serialize all four command projections as JSON")
-    .addOption(
-      new Option(
-        "--audience <audience>",
-        "select human TUI or agent Markdown output (default: human)",
-      )
-        .choices(AUDIENCES)
-        .conflicts("json"),
-    )
+  return addFormatOption(command)
     .option(
       "--trace <file.trace.jsonl>",
       "write domain and timing events as JSONL (suffix is appended when omitted)",
       normalizeTraceFileName,
     )
     .option("-r, --root <path>", "repository root", process.cwd());
+}
+
+function addFormatOption(command: Command): Command {
+  return command.addOption(
+    new Option(
+      "--format <format>",
+      "select JSON, raw Markdown, or TUI output (default: TUI on dual TTYs, otherwise Markdown)",
+    ).choices(OUTPUT_FORMATS),
+  );
 }
 
 function eventLengthArgument(value: string) {
@@ -171,18 +171,16 @@ function eventLengthArgument(value: string) {
 }
 
 export function selectOutputRenderer({
-  audience = "human",
-  json = false,
+  format,
   stdinIsTTY = false,
   stdoutIsTTY = false,
 }: {
-  audience?: string;
-  json?: boolean;
+  format?: OutputFormat;
   stdinIsTTY?: boolean;
   stdoutIsTTY?: boolean;
 }): "json" | "markdown" | "tui" {
-  if (json) return "json";
-  if (audience === "human" && stdinIsTTY && stdoutIsTTY) return "tui";
+  if (format !== undefined) return format;
+  if (stdinIsTTY && stdoutIsTTY) return "tui";
   return "markdown";
 }
 
@@ -193,7 +191,17 @@ async function defaultTuiRenderer(content: string, terminal: Terminal): Promise<
 
 export async function render(
   report: CommandReport,
-  { audience = "human", json = false }: Pick<CliOptions, "audience" | "json"> = {},
+  options: Pick<CliOptions, "format"> = {},
+  io: Io = console,
+  runtime: Runtime = {},
+): Promise<void> {
+  await renderOutput(report, () => renderResponse(report.response), options, io, runtime);
+}
+
+async function renderOutput(
+  value: unknown,
+  toMarkdown: () => string,
+  options: Pick<CliOptions, "format">,
   io: Io = console,
   {
     renderTui = defaultTuiRenderer,
@@ -201,17 +209,16 @@ export async function render(
   }: Runtime = {},
 ): Promise<void> {
   const renderer = selectOutputRenderer({
-    audience,
-    json,
+    ...options,
     stdinIsTTY: terminal.stdin.isTTY === true,
     stdoutIsTTY: terminal.stdout.isTTY === true,
   });
   if (renderer === "json") {
-    io.log(JSON.stringify(report, null, 2));
+    io.log(JSON.stringify(value, null, 2));
     return;
   }
 
-  const markdown = renderResponse(report.response);
+  const markdown = toMarkdown();
   if (renderer === "tui") {
     await renderTui(markdown, terminal);
     return;
@@ -225,8 +232,7 @@ function outputRenderer(options: CliOptions, runtime: Runtime): "json" | "markdo
     stdout: process.stdout,
   };
   return selectOutputRenderer({
-    ...(options.audience === undefined ? {} : { audience: options.audience }),
-    ...(options.json === undefined ? {} : { json: options.json }),
+    ...(options.format === undefined ? {} : { format: options.format }),
     stdinIsTTY: terminal.stdin.isTTY === true,
     stdoutIsTTY: terminal.stdout.isTTY === true,
   });
@@ -302,18 +308,12 @@ function collectOption(value: string, previous: string[] = []): string[] {
 }
 
 function addReferenceOptions(command: Command): Command {
-  return command
+  return addFormatOption(command)
     .option(
       "--language <tag>",
       "select the Reference locale (default: en-US)",
       contentLanguageArgument,
       "en-US",
-    )
-    .option("--json", "serialize the Reference result as JSON")
-    .addOption(
-      new Option("--audience <audience>", "select human or agent Markdown output")
-        .choices(AUDIENCES)
-        .conflicts("json"),
     );
 }
 
@@ -332,6 +332,15 @@ export function createProgram(io: Io = console, runtime: Runtime = {}): Command 
       writeErr: (value) => writeTerminalLine(io.error, value),
       writeOut: (value) => writeTerminalLine(io.log, value),
     })
+    .hook("preAction", (_program, command) => {
+      const terminal = runtime.terminal ?? { stdin: process.stdin, stdout: process.stdout };
+      if (command.opts<CliOptions>().format === "tui"
+        && !(terminal.stdin.isTTY && terminal.stdout.isTTY)) {
+        const message = "--format tui requires both stdin and stdout to be TTYs";
+        io.error(`ERROR usage: ${message}`);
+        throw new InvalidArgumentError(message);
+      }
+    })
     .exitOverride()
     .addHelpText("after", `
 Examples:
@@ -341,8 +350,9 @@ Examples:
   $ silvermoon whats-next
   $ silvermoon whats-next <idea>
   $ silvermoon whats-next <idea> --language zh-CN
-  $ silvermoon whats-next <idea> --audience agent
-  $ silvermoon whats-next <idea> --json
+  $ silvermoon whats-next <idea> --format markdown
+  $ silvermoon whats-next <idea> --format json
+  $ silvermoon whats-next <idea> --format tui
   $ silvermoon whats-next <idea> --trace whats-next.trace.jsonl
   $ silvermoon create-idea
   $ silvermoon migrate
@@ -491,18 +501,14 @@ Examples:
           legacyValue,
           options.language,
         );
-        io.log(options.json
-          ? JSON.stringify(result, null, 2)
-          : renderObjectiveReferencePage(result, options.audience ?? "human"));
+        await renderOutput(result, () => renderObjectiveReferencePage(result), options, io, runtime);
       } else {
         const result = await searchObjectiveReferences(
           objective,
           legacyValue,
           options.language,
         );
-        io.log(options.json
-          ? JSON.stringify(result, null, 2)
-          : renderObjectiveReferenceSearch(result, options.audience ?? "human"));
+        await renderOutput(result, () => renderObjectiveReferenceSearch(result), options, io, runtime);
       }
       program.setOptionValue("resultCode", 0);
       return;
@@ -513,9 +519,7 @@ Examples:
       throw error;
     }
     const result = await resolveObjectiveReference(lookup, options.language);
-    io.log(options.json
-      ? JSON.stringify(result, null, 2)
-      : renderObjectiveReferenceLookup(result, options.audience ?? "human"));
+    await renderOutput(result, () => renderObjectiveReferenceLookup(result), options, io, runtime);
     program.setOptionValue("resultCode", 0);
   });
 

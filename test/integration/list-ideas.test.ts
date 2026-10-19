@@ -604,7 +604,7 @@ test("[inventory-layout] fails explicitly on invalid layout even when filters wo
   const output = capture();
   assert.equal(
     await runCli(
-      ["list-ideas", "--state", "preparing", "--root", repository.root, "--json"],
+      ["list-ideas", "--state", "preparing", "--root", repository.root, "--format", "json"],
       output.io,
     ),
     1,
@@ -627,7 +627,7 @@ test("[inventory-cli] CLI renders complete local inventory without lifecycle ins
         "1",
         "--root",
         repository.root,
-        "--json",
+        "--format", "json",
       ],
       json.io,
     ),

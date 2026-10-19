@@ -145,13 +145,13 @@ test("what's next templates render dynamic repository values", () => {
   );
   assert.equal(
     templates["event-history-invalid"]({
-      recheckCommand: "`silvermoon whats-next --audience agent`",
+      recheckCommand: "`silvermoon whats-next --format markdown`",
     }),
     "The goal is valid append-only event history at the selected commit boundary while preserving both histories; repair only an explicitly authorized failure.",
   );
   assert.equal(
     whatsNextTemplates("zh-CN")["event-history-invalid"]({
-      recheckCommand: "`silvermoon whats-next --audience agent`",
+      recheckCommand: "`silvermoon whats-next --format markdown`",
     }),
     "目标是在保留双方历史的前提下，让所选提交边界具有有效的 append-only 事件历史；仅修复已获得明确授权的错误。",
   );
@@ -182,7 +182,7 @@ test("content language templates name concrete idea files", () => {
 
 test("idea metadata templates provide the canonical Idea.md structure", () => {
   const parameters = {
-    command: 'silvermoon whats-next "checkout-flow" --audience agent',
+    command: 'silvermoon whats-next "checkout-flow" --format markdown',
     documentPath: ".silvermoon/ideas/01ABC/outer/inner/ideal/Idea.md",
     message: "Idea document is missing",
   };
@@ -230,7 +230,7 @@ test("idea metadata templates provide the canonical Idea.md structure", () => {
   );
   assert.deepEqual(
     whatsNextTemplates("en-US")["idea-metadata-unavailable"]({
-      command: "silvermoon list-ideas --audience agent",
+      command: "silvermoon list-ideas --format markdown",
       message: "Missing observed idea metadata",
     }),
     {

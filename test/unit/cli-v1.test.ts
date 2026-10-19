@@ -124,7 +124,10 @@ test("registers only the approved command surface", () => {
   for (const command of program.commands.filter((candidate) =>
     !["event", "list-ideas", "migrate", "reference"].includes(candidate.name())
   )) {
-    assert.ok(command.options.some(({ long }) => long === "--audience"));
+    assert.ok(command.options.some(({ long }) => long === "--format"));
+    assert.equal(command.options.some(({ long }) =>
+      ["--audience", "--json", "--output"].includes(long ?? "")
+    ), false);
     assert.ok(command.options.some(({ long }) => long === "--trace"));
     assert.ok(command.options.some(({ long }) => long === "--language"));
   }
@@ -135,7 +138,7 @@ test("registers only the approved command surface", () => {
     ["replay", "append"],
   );
   for (const operation of event.commands) {
-    assert.ok(operation.options.some(({ long }) => long === "--audience"));
+    assert.ok(operation.options.some(({ long }) => long === "--format"));
     assert.ok(operation.options.some(({ long }) => long === "--trace"));
     assert.ok(operation.options.some(({ long }) => long === "--language"));
   }
@@ -144,8 +147,7 @@ test("registers only the approved command surface", () => {
   );
   assert.ok(reference);
   assert.deepEqual(reference.commands, []);
-  assert.ok(reference.options.some(({ long }) => long === "--audience"));
-  assert.ok(reference.options.some(({ long }) => long === "--json"));
+  assert.ok(reference.options.some(({ long }) => long === "--format"));
   assert.ok(reference.options.some(({ long }) => long === "--language"));
   assert.equal(reference.options.some(({ long }) => long === "--root"), false);
   assert.equal(reference.options.some(({ long }) => long === "--trace"), false);
@@ -160,7 +162,7 @@ test("registers only the approved command surface", () => {
     "--query",
     "--sort",
     "--state",
-    "--audience",
+    "--format",
     "--trace",
   ]) {
     assert.ok(list.options.some(({ long }) => long === option), option);
@@ -185,20 +187,20 @@ test("registers only the approved command surface", () => {
 test("Reference CLI preserves 404s, navigation commands, and explicit failures", async () => {
   const direct = capture();
   assert.equal(await runCli([
-    "reference", "check:repository-upstream-matches", "--language", "en-US", "--json",
+    "reference", "check:repository-upstream-matches", "--language", "en-US", "--format", "json",
   ], direct.io), 0);
   assert.equal(JSON.parse(firstLog(direct.logs)).owner, "project");
 
   const discovery = capture();
   assert.equal(await runCli([
-    "reference", "repository-upstream-matches", "--audience", "agent",
+    "reference", "repository-upstream-matches", "--format", "markdown",
   ], discovery.io), 0);
   assert.match(firstLog(discovery.logs), /Owner: `project`/);
 
   for (const query of ["page", "search"]) {
     const literal = capture();
     assert.equal(await runCli([
-      "reference", query, "--json",
+      "reference", query, "--format", "json",
     ], literal.io), 0);
     const result = JSON.parse(firstLog(literal.logs));
     assert.equal(result.lookup, query);
@@ -208,7 +210,7 @@ test("Reference CLI preserves 404s, navigation commands, and explicit failures",
 
   const missing = capture();
   assert.equal(await runCli([
-    "reference", "page", "project", "not/present", "--language", "en-US", "--json",
+    "reference", "page", "project", "not/present", "--language", "en-US", "--format", "json",
   ], missing.io), 0);
   assert.equal(JSON.parse(firstLog(missing.logs)).page.id, "system/404");
 
@@ -223,11 +225,11 @@ test("Reference CLI preserves 404s, navigation commands, and explicit failures",
 
   const human = capture();
   const agent = capture();
-  const audienceArgs = [
+  const referenceArgs = [
     "reference", "search", "idea", "__no_reference_match__", "--language", "zh-CN",
   ];
-  assert.equal(await runCli([...audienceArgs, "--audience", "human"], human.io), 0);
-  assert.equal(await runCli([...audienceArgs, "--audience", "agent"], agent.io), 0);
+  assert.equal(await runCli(referenceArgs, human.io), 0);
+  assert.equal(await runCli([...referenceArgs, "--format", "markdown"], agent.io), 0);
   assert.equal(firstLog(human.logs), [
     "# Objective 引用搜索：__no_reference_match__",
     "",
@@ -368,7 +370,7 @@ test("renders JSON verbatim and default non-TTY output from response only", asyn
   const json = capture();
   const human = capture();
 
-  await render(report, { json: true }, json.io);
+  await render(report, { format: "json" }, json.io);
   await render(report, {}, human.io, { terminal: terminal() });
 
   assert.deepEqual(JSON.parse(firstLog(json.logs)), report);
@@ -454,7 +456,7 @@ test("renders selected ideas and validation without internal projections", async
   assert.doesNotMatch(checkText, /Next steps/);
 });
 
-test("selects output rendering from audience and both TTY states", async () => {
+test("selects an explicit output format or defaults from both TTY states", async () => {
   assert.equal(selectOutputRenderer({}), "markdown");
   assert.equal(
     selectOutputRenderer({ stdinIsTTY: true, stdoutIsTTY: true }),
@@ -462,7 +464,7 @@ test("selects output rendering from audience and both TTY states", async () => {
   );
   assert.equal(
     selectOutputRenderer({
-      audience: "agent",
+      format: "markdown",
       stdinIsTTY: true,
       stdoutIsTTY: true,
     }),
@@ -476,7 +478,14 @@ test("selects output rendering from audience and both TTY states", async () => {
     selectOutputRenderer({ stdinIsTTY: true, stdoutIsTTY: false }),
     "markdown",
   );
-  assert.equal(selectOutputRenderer({ json: true }), "json");
+  assert.equal(selectOutputRenderer({ format: "json" }), "json");
+  for (const format of ["json", "markdown", "tui"] as const) {
+    for (const stdinIsTTY of [false, true]) {
+      for (const stdoutIsTTY of [false, true]) {
+        assert.equal(selectOutputRenderer({ format, stdinIsTTY, stdoutIsTTY }), format);
+      }
+    }
+  }
 
   const report = reportFor();
   const tui = capture();
@@ -500,13 +509,29 @@ test("selects output rendering from audience and both TTY states", async () => {
   assert.match(renderedOutput.content, /^## Choose what to continue/);
 
   const agent = capture();
-  await render(report, { audience: "agent" }, agent.io, {
+  await render(report, { format: "markdown" }, agent.io, {
     renderTui: async () => assert.fail("agent output must not start the TUI"),
     terminal: terminal(true, true),
   });
   const agentText = firstLog(agent.logs);
   assert.equal(agentText, renderedOutput.content);
   assert.doesNotMatch(agentText, /\x1B\[/);
+
+  const json = capture();
+  await render(report, { format: "json" }, json.io, {
+    renderTui: async () => assert.fail("JSON output must not start the TUI"),
+    terminal: terminal(true, true),
+  });
+  assert.deepEqual(JSON.parse(firstLog(json.logs)), report);
+
+  const explicitTui = capture();
+  await render(report, { format: "tui" }, explicitTui.io, {
+    renderTui: async (content) => {
+      assert.equal(content, agentText);
+    },
+    terminal: terminal(true, true),
+  });
+  assert.deepEqual(explicitTui.logs, []);
 });
 
 test("rejects conflicting targets, output modes, and invalid values as usage errors", async () => {
@@ -515,13 +540,54 @@ test("rejects conflicting targets, output modes, and invalid values as usage err
     ["check", "--language", "fr-FR"],
     ["list-ideas", "--language", "fr-FR"],
     ["whats-next", "--language", "fr-FR"],
-    ["whats-next", "--audience", "reader"],
-    ["whats-next", "--json", "--audience", "agent"],
+    ["whats-next", "--format", "reader"],
+    ["whats-next", "--format"],
+    ["whats-next", "--audience", "agent"],
+    ["whats-next", "--json"],
+    ["whats-next", "--output", "markdown"],
   ]) {
     const result = capture();
     assert.equal(await runCli(args, result.io), 2);
     assert.equal(result.logs.length, 0);
     assert.ok(result.errors.length > 0);
+  }
+});
+
+test("rejects explicit TUI on non-TTY streams before executing commands", async () => {
+  for (const [stdinIsTTY, stdoutIsTTY] of [[false, false], [true, false], [false, true]]) {
+    const result = capture();
+    assert.equal(await runCli(
+      ["create-idea", "--root", "nonexistent-output-test-root", "--format", "tui"],
+      result.io,
+      { terminal: terminal(stdinIsTTY, stdoutIsTTY) },
+    ), 2);
+    assert.deepEqual(result.logs, []);
+    assert.match(result.errors.map(String).join("\n"), /requires both stdin and stdout to be TTYs/);
+  }
+});
+
+test("Reference shares explicit JSON, Markdown, and TUI output selection", async () => {
+  const args = ["reference", "check:repository-upstream-matches", "--language", "en-US"];
+  const markdown = capture();
+  await runCli([...args, "--format", "markdown"], markdown.io, {
+    terminal: terminal(true, true),
+    renderTui: async () => assert.fail("Markdown must not start the TUI"),
+  });
+  const json = capture();
+  assert.equal(await runCli([...args, "--format", "json"], json.io, {
+    terminal: terminal(true, true),
+    renderTui: async () => assert.fail("JSON must not start the TUI"),
+  }), 0);
+  assert.equal(JSON.parse(firstLog(json.logs)).page.id, "checks/repository-upstream-matches");
+  for (const outputArgs of [[], ["--format", "tui"]]) {
+    const tui = capture();
+    const rendered: string[] = [];
+    assert.equal(await runCli([...args, ...outputArgs], tui.io, {
+      terminal: terminal(true, true),
+      renderTui: async (content) => { rendered.push(content); },
+    }), 0);
+    assert.deepEqual(tui.logs, []);
+    assert.deepEqual(rendered, [firstLog(markdown.logs)]);
   }
 });
 
@@ -532,8 +598,8 @@ test("preserves Commander conflict and excess-argument diagnostics", async () =>
       /option '--remote' cannot be used with option '--staged'/,
     ],
     [
-      ["whats-next", "--json", "--audience", "agent"],
-      /option '--audience <audience>' cannot be used with option '--json'/,
+      ["whats-next", "--format", "reader"],
+      /argument 'reader' is invalid.*Allowed choices are json, markdown, tui/,
     ],
     [
       ["check", "unexpected"],

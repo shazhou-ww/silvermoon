@@ -116,7 +116,7 @@ jobs:
         run: |
           git remote set-url origin https://github.com/shazhou-ww/silvermoon.git
           git fetch --no-tags origin main
-          node bin/silvermoon.ts check --commit HEAD --audience agent
+          node bin/silvermoon.ts check --commit HEAD --format markdown
 
       - name: Check whitespace
         run: pnpm check:diff

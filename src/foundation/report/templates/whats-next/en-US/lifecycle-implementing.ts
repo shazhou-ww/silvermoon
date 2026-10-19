@@ -27,7 +27,7 @@ const lifecycleImplementing = ({
     `When the evidence is ready, one possible submission path is to synchronize`,
     `the revision to primary and then use \`silvermoon event append ${ideaId}`,
     `--expected-digest ${eventDigest ?? "<event-digest>"}`,
-    `--expected-primary ${primaryCommit} --audience agent\``,
+    `--expected-primary ${primaryCommit} --format markdown\``,
     `to record ${submitAction} for the exact current revision;`,
     `no replay cursor or expected length is required.`,
     `The ${action} gate remains unavailable until that Submit is current,`,

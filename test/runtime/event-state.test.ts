@@ -409,7 +409,7 @@ test("two CLI processes cannot append different events at the same observed posi
   }>((done, reject) => {
     const child = spawn(process.execPath, [cli, "event", "append", FIRST_ID, "--root", root,
       "--input", file, "--expected-digest", observed.digest,
-      "--expected-primary", observed.baseline.commit, "--json"], { windowsHide: true });
+      "--expected-primary", observed.baseline.commit, "--format", "json"], { windowsHide: true });
     let output = "";
     let error = "";
     child.stdout.on("data", (chunk) => { output += chunk; });

@@ -255,8 +255,8 @@ export async function whatsNextUseCase({
     ? "silvermoon whats-next"
     : `silvermoon whats-next ${JSON.stringify(selector)}`;
   const recheckCommand = canonicalLanguage === undefined
-    ? `${baseRecheckCommand} --audience agent`
-    : `${baseRecheckCommand} --language ${canonicalLanguage} --audience agent`;
+    ? `${baseRecheckCommand} --format markdown`
+    : `${baseRecheckCommand} --language ${canonicalLanguage} --format markdown`;
   type Outcome = { observation: Observation; responseContext: ResponseContext };
   let snapshot: SnapshotObservation | undefined;
   let repository: RepositoryReadiness | undefined;

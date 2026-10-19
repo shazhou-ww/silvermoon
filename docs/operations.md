@@ -8,7 +8,7 @@ publishing Silvermoon ideas.
 ```sh
 silvermoon whats-next
 silvermoon whats-next 01M36QGPNTXEPP61DA4KP4AVZF
-silvermoon whats-next publish-documentation --json
+silvermoon whats-next publish-documentation --format json
 silvermoon whats-next publish-documentation --language zh-CN
 ```
 
@@ -113,7 +113,7 @@ silvermoon list-ideas --state active --state completed
 silvermoon list-ideas --all --query documentation
 silvermoon list-ideas --created-since 2026-09-01T00:00:00Z
 silvermoon list-ideas --created-before 2026-10-01T00:00:00Z
-silvermoon list-ideas --sort oldest --limit 25 --json
+silvermoon list-ideas --sort oldest --limit 25 --format json
 ```
 
 The command reads one valid local worktree snapshot. It checks the project
@@ -181,13 +181,15 @@ unpublished local candidate, and never treat publication as acceptance.
 ## Follow One Report
 
 Treat `intention`, `observation`, `actions`, and `response` as one immutable
-report for every command. The implicit `human` audience uses the bundled
+report for every command. By default, the CLI uses the bundled
 `tui-md` view only when both stdin and stdout are TTYs; `q`, `Esc`, and
-`Ctrl+C` exit the view. Human pipelines and redirections receive raw response
-Markdown. `--audience agent` always emits that raw Markdown without TUI control
-sequences. `--json` serializes all four projections and retains `actions: []`
-when no side effect was attempted; an explicit `--audience` conflicts with
-`--json`. Actions are historical facts. Future work appears only in
+`Ctrl+C` exit the view. Pipelines and redirections receive raw response
+Markdown. `--format markdown` always emits that raw Markdown without TUI control
+sequences. `--format json` serializes all four projections and retains `actions: []`
+when no side effect was attempted. `--format tui` explicitly selects the
+interactive view. Choose one output format per invocation; the former
+`--audience` and `--json` options are no longer supported.
+Actions are historical facts. Future work appears only in
 `response.nextSteps`.
 
 Project setup takes precedence over repository synchronization, which takes

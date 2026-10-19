@@ -55,7 +55,7 @@ test("queries through npm so active registry configuration is respected", async 
         "view",
         "silvermoon@latest",
         "version",
-        "--json",
+        "--format", "json",
       ]);
       assert.equal(options.cwd, cwd);
       assert.equal(options.env, env);

@@ -173,7 +173,7 @@ export class ProjectRuntime {
     let stdout: string;
     let exitCode: 0 | 1 = 0;
     try {
-      ({ stdout } = await execute(process.execPath, [entry, command, ...args, "--json"], {
+      ({ stdout } = await execute(process.execPath, [entry, command, ...args, "--format", "json"], {
         cwd: worktree,
         maxBuffer: 32 * 1024 * 1024,
         timeout: 300000,

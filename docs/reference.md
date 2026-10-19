@@ -334,13 +334,13 @@ reconciliation.
 ## Public Commands
 
 ```sh
-silvermoon list-ideas [--state <state>] [--all] [--query <text>] [--created-since <RFC3339>] [--created-before <RFC3339>] [--sort <newest|oldest>] [--limit <positive-integer>] [--language <en|en-US|zh|zh-CN>] [--audience <human|agent>] [--trace <file.trace.jsonl>]
-silvermoon whats-next [idea] [--language <en|en-US|zh|zh-CN>] [--audience <human|agent>] [--trace <file.trace.jsonl>]
-silvermoon create-idea [--language <tag>] [--audience <human|agent>] [--trace <file.trace.jsonl>]
+silvermoon list-ideas [--state <state>] [--all] [--query <text>] [--created-since <RFC3339>] [--created-before <RFC3339>] [--sort <newest|oldest>] [--limit <positive-integer>] [--language <en|en-US|zh|zh-CN>] [--format <json|markdown|tui>] [--trace <file.trace.jsonl>]
+silvermoon whats-next [idea] [--language <en|en-US|zh|zh-CN>] [--format <json|markdown|tui>] [--trace <file.trace.jsonl>]
+silvermoon create-idea [--language <tag>] [--format <json|markdown|tui>] [--trace <file.trace.jsonl>]
 silvermoon migrate [--apply --expected-digest <sha256> | --resume --confirm-stopped | --rollback --confirm-stopped]
-silvermoon check [--remote | --commit <revision> | --staged | --worktree] [--language <en|en-US|zh|zh-CN>] [--audience <human|agent>] [--trace <file.trace.jsonl>]
-silvermoon event <replay|append> <idea> [--input <request.json>] [--after-length <bytes>] [--after-digest <oid>] [--full-history] [--expected-digest <8+-hex-prefix>] [--expected-primary <commit>] [--confirm-decision] [--audience <human|agent>]
-silvermoon reference [<level|check|problem|page|system>:]<reference-or-query> [--language <tag>] [--audience <human|agent> | --json]
+silvermoon check [--remote | --commit <revision> | --staged | --worktree] [--language <en|en-US|zh|zh-CN>] [--format <json|markdown|tui>] [--trace <file.trace.jsonl>]
+silvermoon event <replay|append> <idea> [--input <request.json>] [--after-length <bytes>] [--after-digest <oid>] [--full-history] [--expected-digest <8+-hex-prefix>] [--expected-primary <commit>] [--confirm-decision] [--format <json|markdown|tui>]
+silvermoon reference [<level|check|problem|page|system>:]<reference-or-query> [--language <tag>] [--format <json|markdown|tui>]
 ```
 
 `reference` reads the packaged Objective Guide resources without inspecting or
@@ -354,8 +354,10 @@ content search semantics across all three Objectives. One result opens
 automatically; multiple results list namespace, owner, stable ID, and a
 copyable explicit command; zero results is a successful empty result. Markdown
 output expands every `[[reference-id|label]]` link into the same explicit
-namespace form. `--json` alone returns structured data; the default and both
-audiences receive Markdown. The older `reference page <objective>
+namespace form. `--format json` returns structured data; `--format markdown`
+returns raw Markdown, and `--format tui` opens the interactive view.
+Without `--format`, dual TTYs use the TUI and other streams receive Markdown.
+The older `reference page <objective>
 <reference-id>` and `reference search <objective> <query>` forms remain
 compatibility entry points but are not generated.
 
@@ -572,8 +574,8 @@ neither field. The public observation intentionally omits content so the
 response is the only rendered payload while still remaining a deterministic
 projection.
 
-Audience selection is independent of report construction. When `--audience` is
-omitted, the audience is `human`: stdin and stdout must both be TTYs for the
+Output selection is independent of report construction. When `--format` is
+omitted, stdin and stdout must both be TTYs for the
 bundled `tui-md` view to start. That view supports scrolling; drag to select
 text and press `y` to copy it. On local Windows terminals, the built-in
 PowerShell clipboard command is used when the terminal clipboard protocol is
@@ -586,8 +588,8 @@ The TUI document uses the available terminal width rather than a fixed
 100-column limit. Tables that fit the view measure Chinese characters by
 terminal cells so wide screens do not wrap otherwise-fitting columns; tables
 too wide for the screen retain horizontal navigation.
-If either stream is not a TTY, human output is raw
-Markdown. `--audience agent` always emits raw Markdown without TUI control
+If either stream is not a TTY, default output is raw
+Markdown. `--format markdown` always emits raw Markdown without TUI control
 sequences. On Windows, TUI frames use Node's terminal stream for UTF-8 output
 without changing the console code page. Both Markdown paths render only
 `response`, never the intention, observation, or action history, and derive their
@@ -603,9 +605,13 @@ local calendar date without a time.
 Future dates are labelled as upcoming, not as elapsed. JSON retains exact
 UTC timestamps and all filtering still uses the exact values.
 
-`--json` without an explicitly selected audience serializes the four
-projections from the same domain stream; explicit `--json --audience ...` is a
-usage error. There is no YAML output or second reasoning path. A trustworthy
+`--format json` serializes the four projections from the same domain stream.
+`--format tui` explicitly requests the interactive view and requires both
+stdin and stdout to be TTYs; otherwise the command exits `2` before execution.
+The former `--audience`
+and `--json` flags are no longer supported; replace `--audience agent` with
+`--format markdown` and `--json` with `--format json`.
+There is no YAML output or second reasoning path. A trustworthy
 blocked report still exits `0` for `whats-next` and `create-idea`.
 `list-ideas` exits `0` only for a trustworthy inventory (including an empty
 result) and exits `1` for setup or layout unavailability. `check` exits `0`
@@ -857,7 +863,7 @@ Missing/invalidly encoded history never grants repair permission.
 The immediate predecessor prevents downgrading a v2 project to v1;
 genuine v1 historical snapshots remain readable without auditing their decisions.
 
-Like every public command, `check --json` contains all four projections:
+Like every public command, `check --format json` contains all four projections:
 
 ```json
 {

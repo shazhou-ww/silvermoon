@@ -21,7 +21,7 @@ const submittedUpstream = ({
     `Record an acceptance only with the full revision from response.review`,
     `using silvermoon event append ${ideaId}`,
     `--expected-digest ${eventDigest ?? "<event-digest>"}`,
-    `--expected-primary ${primaryCommit} --audience agent;`,
+    `--expected-primary ${primaryCommit} --format markdown;`,
     `no replay cursor is required.`,
   ].join(" ");
 

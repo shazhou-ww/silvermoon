@@ -195,20 +195,20 @@ try {
     });
   const installedEntryBefore = await readFile(installedEntry);
   const referencePage = JSON.parse(installed(
-    ["reference", "page", "project", "levels/repository-unready", "--language", "zh-CN", "--json"],
+    ["reference", "page", "project", "levels/repository-unready", "--language", "zh-CN", "--format", "json"],
     bootstrap,
   ));
   assert.equal(referencePage.objective, "project");
   assert.equal(referencePage.language, "zh-CN");
   assert.equal(referencePage.page.id, "levels/repository-unready");
   const referenceSearch = JSON.parse(installed(
-    ["reference", "search", "idea", "revision", "--language", "en-US", "--json"],
+    ["reference", "search", "idea", "revision", "--language", "en-US", "--format", "json"],
     bootstrap,
   ));
   assert.ok(referenceSearch.results.length > 0);
   for (const args of [
-    ["list-ideas", "--root", packageRoot, "--json"],
-    ["whats-next", "cli-responsibility-refactor", "--root", packageRoot, "--json"],
+    ["list-ideas", "--root", packageRoot, "--format", "json"],
+    ["whats-next", "cli-responsibility-refactor", "--root", packageRoot, "--format", "json"],
   ]) {
     const result = npmResult(["exec", "--", "silvermoon", ...args], bootstrap);
     if (result.status === null) {
@@ -232,7 +232,7 @@ try {
   assert.deepEqual(await readFile(installedEntry), installedEntryBefore);
   const sourceObservation = spawnSync(process.execPath, [
     installedEntry,
-    "list-ideas", "--root", packageRoot, "--json",
+    "list-ideas", "--root", packageRoot, "--format", "json",
   ], { cwd: bootstrap, encoding: "utf8", timeout: 120_000, windowsHide: true });
   assert.ok([0, 1].includes(sourceObservation.status ?? -1), sourceObservation.stderr);
   const sourceReport = JSON.parse(sourceObservation.stdout);
@@ -283,7 +283,7 @@ try {
     bootstrap,
   );
   const bootstrapReport = JSON.parse(
-    npm(["exec", "--", "silvermoon", "whats-next", "--json"], bootstrap),
+    npm(["exec", "--", "silvermoon", "whats-next", "--format", "json"], bootstrap),
   );
   const bootstrapStatusAfter = run(
     "git",
@@ -318,7 +318,7 @@ try {
     [
       join(bootstrap, "node_modules", "silvermoon", "dist", "bin", "silvermoon.js"),
       "whats-next",
-      "--json",
+      "--format", "json",
     ],
     nonNode,
   ));
@@ -413,7 +413,7 @@ try {
   assert.match(help, /silvermoon whats-next/);
   assert.match(help, /silvermoon create-idea/);
   assert.match(help, /silvermoon check/);
-  assert.match(help, /--audience agent/);
+  assert.match(help, /--format markdown/);
   assert.doesNotMatch(
     help,
     /silvermoon whatsnext|silvermoon task|silvermoon status|silvermoon init|silvermoon skill/,
@@ -504,7 +504,7 @@ try {
     "",
   );
   const inventory = JSON.parse(
-    installed(["list-ideas", "--all", "--json"], consumer),
+    installed(["list-ideas", "--all", "--format", "json"], consumer),
   );
   assert.deepEqual(Object.keys(inventory), [
     "intention",
@@ -520,7 +520,7 @@ try {
   assert.equal(inventory.observation.ideas[0].title, "Installed package smoke");
   const localizedInventory = JSON.parse(
     installed(
-      ["list-ideas", "--language", "ZH", "--json"],
+      ["list-ideas", "--language", "ZH", "--format", "json"],
       consumer,
     ),
   );
@@ -536,8 +536,8 @@ try {
       "list-ideas",
       "--state",
       "active",
-      "--audience",
-      "agent",
+      "--format",
+      "markdown",
     ],
     consumer,
   );
@@ -549,15 +549,15 @@ try {
       "list-ideas",
       "--language",
       "zh-CN",
-      "--audience",
-      "agent",
+      "--format",
+      "markdown",
     ],
     consumer,
   );
   assert.match(localizedInventoryText, /匹配 \d+ 个 idea，返回 \d+ 个。/);
   const localizedCheck = JSON.parse(
     installed(
-      ["check", "--language", "ZH-cn", "--json"],
+      ["check", "--language", "ZH-cn", "--format", "json"],
       consumer,
     ),
   );
@@ -569,7 +569,7 @@ try {
   );
   const guidedLifecycle = JSON.parse(
     installed(
-      ["whats-next", "installed-smoke", "--json"],
+      ["whats-next", "installed-smoke", "--format", "json"],
       consumer,
     ),
   );
@@ -613,12 +613,12 @@ try {
   );
   assert.equal(invalidLanguage.status, 2, invalidLanguage.stderr);
   assert.match(invalidLanguage.stderr, /unsupported output language/);
-  const conflictingOutput = installedResult(
-    ["check", "--json", "--audience", "agent"],
+  const invalidOutput = installedResult(
+    ["check", "--format", "invalid"],
     consumer,
   );
-  assert.equal(conflictingOutput.status, 2, conflictingOutput.stderr);
-  assert.match(conflictingOutput.stderr, /cannot be used with option '--json'/);
+  assert.equal(invalidOutput.status, 2, invalidOutput.stderr);
+  assert.match(invalidOutput.stderr, /Allowed choices are json, markdown, tui/);
   const excessArguments = installedResult(
     ["check", "unexpected"],
     consumer,
@@ -633,7 +633,7 @@ try {
     statusBeforeInvalidLanguage,
   );
   const ideasBefore = await readdir(join(consumer, ".silvermoon", "ideas"));
-  const created = JSON.parse(installed(["create-idea", "--json"], consumer));
+  const created = JSON.parse(installed(["create-idea", "--format", "json"], consumer));
   assert.deepEqual(Object.keys(created).sort(), [
     "actions",
     "intention",
@@ -704,7 +704,7 @@ decision, risk, or disagreement requires it.
   );
   const legacy = installedResult(["whatsnext"], consumer);
   assert.equal(legacy.status, 2, legacy.stderr);
-  const checked = JSON.parse(installed(["check", "--json"], consumer));
+  const checked = JSON.parse(installed(["check", "--format", "json"], consumer));
   assert.deepEqual(Object.keys(checked).sort(), [
     "actions",
     "intention",
@@ -721,7 +721,7 @@ decision, risk, or disagreement requires it.
   assert.match(checkedText, /- Result: valid/);
   assert.doesNotMatch(checkedText, /## Suggested next steps|## Actions and results/);
   const worktree = JSON.parse(
-    installed(["check", "--worktree", "--json"], consumer),
+    installed(["check", "--worktree", "--format", "json"], consumer),
   );
   const createdSummary = worktree.observation.ideas.activeIdeas.find(({ id: ideaId }: { id: string }) =>
     ideaId === createdId
@@ -735,7 +735,7 @@ decision, risk, or disagreement requires it.
         "installed-smoke",
         "--language",
         "zh-cn",
-        "--json",
+        "--format", "json",
       ],
       consumer,
     ),
@@ -805,7 +805,7 @@ decision, risk, or disagreement requires it.
     "whats-next",
     "--root",
     eventConsumer,
-    "--json",
+    "--format", "json",
   ], bootstrap));
   assert.equal(preparation.observation.state, "project-setup-required");
   assert.match(
@@ -836,19 +836,19 @@ decision, risk, or disagreement requires it.
   ], bootstrap));
   assert.equal(migrated.outcome, "migrated");
   const migrationCheck = JSON.parse(run(process.execPath, [eventEntrypoint, "check",
-    "--root", eventConsumer, "--worktree", "--json"], bootstrap));
+    "--root", eventConsumer, "--worktree", "--format", "json"], bootstrap));
   assert.equal(migrationCheck.observation.state, "project-ready");
   run("git", ["add", "."], eventConsumer);
   run("git", ["commit", "-m", "Migrate installed event fixture"], eventConsumer);
   run("git", ["push", "origin", "HEAD:main"], eventConsumer);
   const observedEvents = JSON.parse(run(process.execPath, [eventEntrypoint, "event", "replay",
-    id, "--root", eventConsumer, "--json"], bootstrap)).observation.receipt;
+    id, "--root", eventConsumer, "--format", "json"], bootstrap)).observation.receipt;
   const requestFile = join(temporaryRoot, "event-request.json");
   await writeFile(requestFile, JSON.stringify({ type: "setAlias", payload: { alias: "installed-events" } }));
   const appended = JSON.parse(run(process.execPath, [eventEntrypoint, "event", "append", id,
     "--root", eventConsumer, "--input", requestFile,
     "--expected-digest", observedEvents.digest,
-    "--expected-primary", observedEvents.baseline.commit, "--json"], bootstrap));
+    "--expected-primary", observedEvents.baseline.commit, "--format", "json"], bootstrap));
   assert.equal(appended.observation.receipt.outcome, "candidate-written");
   assert.equal(
     (await readFile(join(eventConsumer, paths.root, "events.jsonl"), "utf8"))
@@ -864,7 +864,7 @@ decision, risk, or disagreement requires it.
     "drift\n",
   );
   const drift = JSON.parse(
-    installed(["check", "--worktree", "--json"], consumer),
+    installed(["check", "--worktree", "--format", "json"], consumer),
   );
   assert.equal(drift.observation.state, "project-ready");
   assert.equal(

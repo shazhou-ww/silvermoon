@@ -21,7 +21,7 @@ const submittedUpstream = ({
     `只有使用 response.review 中的完整 revision`,
     ` 并通过 silvermoon event append ${ideaId}`,
     ` --expected-digest ${eventDigest ?? "<event-digest>"}`,
-    ` --expected-primary ${primaryCommit} --audience agent 才能记录验收；`,
+    ` --expected-primary ${primaryCommit} --format markdown 才能记录验收；`,
     `无需 replay cursor。`,
   ].join("");
 

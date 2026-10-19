@@ -23,7 +23,7 @@ Silvermoon 需要 Node.js 22 或更高版本，并且能通过 Git 访问仓库�
 
 ```text
 请在本项目中运行：
-`silvermoon whats-next --audience agent`
+`silvermoon whats-next --format markdown`
 
 遵循最高优先级指示并保留已有工作。
 每次产生可观察变更后重新运行，直到 Objective 到达 terminal，

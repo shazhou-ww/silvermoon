@@ -111,7 +111,7 @@ test("renders Objective reports as current status, problems, next action, and co
       ],
     },
     problems: [{ type: "worktree-changes", summary: "Preserve the worktree." }],
-    nextSteps: [{ type: "instruction", text: "Inspect the exact paths, then rerun `silvermoon whats-next fixture --audience agent`." }],
+    nextSteps: [{ type: "instruction", text: "Inspect the exact paths, then rerun `silvermoon whats-next fixture --format markdown`." }],
   });
 
   test("terminal Objective renders only outcome and compact references", () => {
@@ -322,7 +322,7 @@ test("does not render the Device side channel beside an Objective", () => {
     }],
     nextSteps: [
       { type: "instruction", text: "Continue the current implementation." },
-      { type: "instruction", text: "Rerun silvermoon whats-next --audience agent." },
+      { type: "instruction", text: "Rerun silvermoon whats-next --format markdown." },
     ],
     device: {
       runtime: { source: "source-checkout", version: "0.5.0" },

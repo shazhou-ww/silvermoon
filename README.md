@@ -36,7 +36,7 @@ From the project directory, send this prompt to your coding agent:
 
 ```text
 In this project, run:
-`silvermoon whats-next --audience agent`
+`silvermoon whats-next --format markdown`
 
 Follow its highest-priority instruction and preserve existing work.
 After each observable change, run it again until the Objective is terminal or

@@ -24,8 +24,8 @@
   [`docs/repository-tasks.md`](docs/repository-tasks.md) only when the user
   invokes `/silvermoon`, requests a new idea, or asks to navigate or continue
   an existing one.
-- Start new ideas with `silvermoon create-idea --audience agent`; otherwise
-  start with `silvermoon whats-next [idea] --audience agent`. Use `--json`
+- Start new ideas with `silvermoon create-idea --format markdown`; otherwise
+  start with `silvermoon whats-next [idea] --format markdown`. Use `--format json`
   instead only for programmatic four-projection consumption. Execute only the
   highest-priority action and preserve invocation options and creation intent
   across hygiene retries.

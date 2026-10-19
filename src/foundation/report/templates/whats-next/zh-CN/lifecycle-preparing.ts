@@ -25,7 +25,7 @@ const lifecyclePreparing = ({
     `构想候选就绪后先同步到 primary，`,
     `再用 silvermoon event append ${ideaId}`,
     ` --expected-digest ${eventDigest ?? "<event-digest>"}`,
-    ` --expected-primary ${primaryCommit} --audience agent`,
+    ` --expected-primary ${primaryCommit} --format markdown`,
     ` 为准确的当前 revision 记录 ${submitAction}；`,
     `无需 replay cursor 或 expected length。`,
     `在该 Submit 对当前 revision 生效前不要请求 ${action}。`,

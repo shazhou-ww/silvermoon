@@ -27,7 +27,7 @@ const lifecycleImplementing = ({
     `证据就绪后，一种可选提交路径是先把 revision 同步到 primary，`,
     `再用 \`silvermoon event append ${ideaId}`,
     ` --expected-digest ${eventDigest ?? "<event-digest>"}`,
-    ` --expected-primary ${primaryCommit} --audience agent\``,
+    ` --expected-primary ${primaryCommit} --format markdown\``,
     ` 为准确的当前 revision 记录 ${submitAction}；`,
     `无需 replay cursor 或 expected length。`,
     `在该 Submit 对当前 revision 生效前，${action} gate 仍不可用，`,

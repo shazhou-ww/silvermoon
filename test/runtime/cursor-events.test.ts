@@ -218,14 +218,14 @@ test("CLI exposes cursor replay additively and rejects incomplete or write-side 
   const entry = fileURLToPath(new URL("../../bin/silvermoon.ts", import.meta.url));
   const run = (...args: string[]) => spawnSync(process.execPath, [entry, ...args], { cwd: root, encoding: "utf8" });
   const result = run("event", "replay", FIRST_ID,
-    "--after-length", String(before.length), "--after-digest", before.digest, "--json");
+    "--after-length", String(before.length), "--after-digest", before.digest, "--format", "json");
   assert.equal(result.status, 0, result.stderr);
   const delta = JSON.parse(result.stdout).observation.receipt;
   assert.deepEqual(delta.events, []);
   assert.equal(delta.outcome, "delta-observed");
-  assert.equal(run("event", "replay", FIRST_ID, "--after-length", "1", "--json").status, 2);
-  assert.equal(run("event", "replay", FIRST_ID, "--after-length", "-1", "--after-digest", before.digest, "--json").status, 2);
-  assert.equal(run("event", "recover", "--after-length", "0", "--after-digest", before.digest, "--json").status, 2);
+  assert.equal(run("event", "replay", FIRST_ID, "--after-length", "1", "--format", "json").status, 2);
+  assert.equal(run("event", "replay", FIRST_ID, "--after-length", "-1", "--after-digest", before.digest, "--format", "json").status, 2);
+  assert.equal(run("event", "recover", "--after-length", "0", "--after-digest", before.digest, "--format", "json").status, 2);
   const alias = await eventCommand({
     root, operation: "replay", idea: "fixture", afterLength: before.length, afterDigest: before.digest,
   });

@@ -99,7 +99,7 @@ contributors must link their checkout globally and use the same `silvermoon`
 command.
 
 ```sh
-silvermoon event replay <idea> --audience agent
+silvermoon event replay <idea> --format markdown
 ```
 
 The receipt gives exact byte `length`, complete-file Git blob `digest`, the
@@ -112,7 +112,7 @@ After a full replay, consumers may use its exact `{ length, digest }` cursor
 to query only subsequent events:
 
 ```sh
-silvermoon event replay <ULID> --after-length <bytes> --after-digest <oid> --audience agent
+silvermoon event replay <ULID> --after-length <bytes> --after-digest <oid> --format markdown
 ```
 
 This additive query requires the canonical ULID and both cursor fields.
@@ -178,7 +178,7 @@ For metadata, submissions, gate-mode decisions, and human decisions, bind the re
 observed log and primary:
 
 ```sh
-silvermoon event append <idea> --input request.json --expected-digest <8+-hex-prefix> --expected-primary <commit> --audience agent
+silvermoon event append <idea> --input request.json --expected-digest <8+-hex-prefix> --expected-primary <commit> --format markdown
 ```
 
 `--expected-digest` is optional. When present it accepts 8 through the complete

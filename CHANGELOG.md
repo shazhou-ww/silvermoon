@@ -3,6 +3,17 @@
 This changelog starts with the Silvermoon 0.3.0 release series. Earlier release
 history remains available through npm and Git tags.
 
+## [Unreleased]
+
+### CLI output selection
+
+- Replaces `--audience` and `--json` with one `--format <json|markdown|tui>`
+  option on report and Reference commands. Agents use `--format markdown`;
+  programmatic consumers use `--format json` with unchanged JSON payloads.
+- Preserves automatic TUI output when both streams are TTYs and raw Markdown
+  otherwise. Explicit `--format tui` requires both streams to be TTYs and
+  rejects non-interactive invocation before command execution.
+
 ## [0.4.0]
 
 ### Global runtime boundary

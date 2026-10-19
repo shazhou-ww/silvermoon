@@ -16,7 +16,7 @@ checkout through the same device-level global boundary used by every project:
 
 ```sh
 pnpm setup:dev
-silvermoon list-ideas --audience agent
+silvermoon list-ideas --format markdown
 ```
 
 `setup:dev` builds the checkout, links it as the global npm package, and

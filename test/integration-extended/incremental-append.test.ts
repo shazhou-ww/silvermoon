@@ -83,7 +83,7 @@ function append(
     "--expected-digest",
     cursor.digest,
     ...extra,
-    "--json",
+    "--format", "json",
   ], { cwd: root, encoding: "utf8", windowsHide: true });
   assert.equal(child.status, 0, child.stderr || child.stdout);
   return JSON.parse(child.stdout).observation.receipt;
@@ -112,7 +112,7 @@ async function exerciseCliStream(t: test.TestContext, count: number) {
     String(first.length),
     "--after-digest",
     first.digest,
-    "--json",
+    "--format", "json",
   ], { cwd: root, encoding: "utf8", windowsHide: true });
   assert.equal(query.status, 0, query.stderr || query.stdout);
   const delta = JSON.parse(query.stdout).observation.receipt;

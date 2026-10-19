@@ -46,7 +46,7 @@
     "check:release": "node bin/run-checks.ts --tier release",
     "check:syntax": "node --check bin/silvermoon.ts",
     "check:pure": "node bin/pure-check.ts",
-    "check:staged": "silvermoon check --staged --audience agent",
+    "check:staged": "silvermoon check --staged --format markdown",
     "check:diff": "git diff --check && git diff --cached --check",
     "check:quick": "npm run check:syntax && npm test",
     "check:skills": "npm run check:skills:discover",

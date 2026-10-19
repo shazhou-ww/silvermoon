@@ -155,7 +155,7 @@ test("runs fast layered validation in ordinary CI", async () => {
   assert.equal(step(contract, "Validate checked-out Silvermoon snapshot").run,
     "git remote set-url origin https://github.com/shazhou-ww/silvermoon.git\n"
     + "git fetch --no-tags origin main\n"
-    + "node bin/silvermoon.ts check --commit HEAD --audience agent\n");
+    + "node bin/silvermoon.ts check --commit HEAD --format markdown\n");
 
   assert.equal(integration["runs-on"], "ubuntu-latest");
   assert.equal(record(step(integration, "Set up Node.js").with)["node-version"], 24);

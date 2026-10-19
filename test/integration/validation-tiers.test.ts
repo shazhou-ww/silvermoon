@@ -51,7 +51,7 @@ import { readFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 const script = process.argv[3];
 if (script === "check:staged") {
-  const result = spawnSync(process.execPath, [${JSON.stringify(cli)}, "check", "--root", process.cwd(), "--staged", "--audience", "agent"], { stdio: "inherit" });
+  const result = spawnSync(process.execPath, [${JSON.stringify(cli)}, "check", "--root", process.cwd(), "--staged", "--format", "markdown"], { stdio: "inherit" });
   process.exit(result.status ?? 1);
 }
 console.log("FIXTURE_WORKTREE " + script + ": " + readFileSync("candidate.txt", "utf8"));

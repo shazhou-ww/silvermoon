@@ -278,7 +278,7 @@ test("uses a protected, least-privilege trusted-publishing workflow", async () =
   assert.equal(integration.run, "pnpm test:integration:all");
   assert.equal(skills.run, "pnpm check:skills");
   const staticChecks = publish.steps.find(({ name }: { name: string }) => name === "Validate local static checks");
-  assert.equal(staticChecks.run, "pnpm lint:markdown\npnpm check:diff\nnode bin/silvermoon.ts check --commit HEAD --audience agent\n");
+  assert.equal(staticChecks.run, "pnpm lint:markdown\npnpm check:diff\nnode bin/silvermoon.ts check --commit HEAD --format markdown\n");
   for (const name of requiredChecks) {
     assert.equal(
       publish.steps.find((candidate: { name: string; }) => candidate.name === name).if,

@@ -76,8 +76,10 @@ test("exposes one consolidated silvermoon skill", async () => {
   );
 
   for (const required of [
-    "--audience agent",
-    "Do not combine `--json` with `--audience agent`",
+    "--format markdown",
+    "--format json|markdown|tui",
+    "Use `--format json` instead only",
+    "require JSON. Read the rendered Markdown for ordinary Agent work.",
     "/silvermoon new",
     "retry `create-idea`,",
     "silvermoon whats-next [idea]",

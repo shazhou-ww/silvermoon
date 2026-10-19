@@ -84,7 +84,7 @@ stable line and that this stable version is not already published.
 Apply this section when the release is a deployment criterion of an active
 Silvermoon idea. Independent package releases skip it.
 
-1. Run `silvermoon whats-next <idea> --json` after the validated release commit
+1. Run `silvermoon whats-next <idea> --format json` after the validated release commit
    is published to primary.
 2. Require the selected idea to be the approved current revision and the action
    to be `implement-idea`. If guidance reports worktree, sync, or another higher

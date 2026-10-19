@@ -50,4 +50,4 @@ preferredLanguage: zh-CN
 3. 仅在项目确有额外 phase policy 时创建固定 `guidance/` 文件。
 4. 使用 `silvermoon create-idea` 创建 idea scaffold；不要手工编造 ULID 或 event
    history。
-5. 使用 `silvermoon check --worktree --audience agent` 验证完整候选。
+5. 使用 `silvermoon check --worktree --format markdown` 验证完整候选。

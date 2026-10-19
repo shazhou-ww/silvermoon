@@ -50,7 +50,7 @@ test("Reference page and search commands are repository-independent and read-onl
   const before = gitStatus();
   const pageLogs: string[] = [];
   assert.equal(await runCli(
-    ["reference", "page", "device", "system/overview", "--language", "zh-CN", "--json"],
+    ["reference", "page", "device", "system/overview", "--language", "zh-CN", "--format", "json"],
     { error: () => {}, log: captureString(pageLogs) },
   ), 0);
   const page = JSON.parse(pageLogs[0] ?? "");
@@ -60,7 +60,7 @@ test("Reference page and search commands are repository-independent and read-onl
 
   const searchLogs: string[] = [];
   assert.equal(await runCli(
-    ["reference", "search", "idea", "revision", "--language", "zh-CN", "--json"],
+    ["reference", "search", "idea", "revision", "--language", "zh-CN", "--format", "json"],
     { error: () => {}, log: captureString(searchLogs) },
   ), 0);
   const search = JSON.parse(searchLogs[0] ?? "");
@@ -85,7 +85,7 @@ test("returns one when check cannot validate a commit", async () => {
         "missing-revision",
         "--root",
         repository.root,
-        "--json",
+        "--format", "json",
       ],
       {
         error: (value) => errors.push(value),
@@ -127,7 +127,7 @@ test("writes schema-valid domain and telemetry events without changing the repor
         "ZH-cn",
         "--root",
         repository.root,
-        "--json",
+        "--format", "json",
       ],
       {
         error: () => {},
@@ -149,7 +149,7 @@ test("writes schema-valid domain and telemetry events without changing the repor
         repository.root,
         "--trace",
         requestedTracePath,
-        "--json",
+        "--format", "json",
       ],
       {
         error: (value) => errors.push(value),
@@ -271,7 +271,7 @@ test("executable traces include bootstrap-to-dispatch duration", async () => {
         repository.root,
         "--trace",
         tracePath,
-        "--json",
+        "--format", "json",
       ],
       { encoding: "utf8", windowsHide: true },
     );
@@ -340,7 +340,7 @@ test("checks the normalized trace target before running the command", async () =
         repository.root,
         "--trace",
         requestedTracePath,
-        "--json",
+        "--format", "json",
       ],
       {
         error: (value) => errors.push(value),
@@ -368,12 +368,12 @@ test("pre-commit staged check fails while unchanged HEAD passes", async () => {
     git(repository.root, "add", "--all");
     const logs: string[] = [];
     const io = { error: () => {}, log: captureString(logs) };
-    assert.equal(await runCli(["check", "--root", repository.root, "--json"], io), 0);
+    assert.equal(await runCli(["check", "--root", repository.root, "--format", "json"], io), 0);
     const head = logs.pop();
     assert.ok(head);
     assert.equal(JSON.parse(head).observation.state, "project-ready");
     assert.equal(
-      await runCli(["check", "--root", repository.root, "--staged", "--json"], io),
+      await runCli(["check", "--root", repository.root, "--staged", "--format", "json"], io),
       1,
     );
     const staged = logs.pop();

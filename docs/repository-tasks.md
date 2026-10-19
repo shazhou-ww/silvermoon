@@ -35,9 +35,9 @@ primary moves, reobserve instead of replaying approval or acceptance.
 Choose the entry command from the user's intent. Explicit inventory requests
 use `silvermoon list-ideas`; explicit new-idea requests use
 `silvermoon create-idea` even when unrelated active ideas exist; all navigation
-uses `silvermoon whats-next [idea]`. Agents should append `--audience agent`
+uses `silvermoon whats-next [idea]`. Agents should append `--format markdown`
 to report commands and hygiene retries to avoid the human TUI on dual-TTY
-streams. Add `--json` instead only for a programmatic
+streams. Add `--format json` instead only for a programmatic
 consumer. All three apply the same project and complete idea-layout checks,
 but their repository readiness differs. `list-ideas` reads the valid local
 worktree snapshot without hygiene, branch, upstream, network, or ancestry

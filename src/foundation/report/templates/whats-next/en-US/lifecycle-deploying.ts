@@ -27,7 +27,7 @@ const lifecycleDeploying = ({
     `When external evidence is ready, synchronize it to primary,`,
     `then use silvermoon event append ${ideaId}`,
     `--expected-digest ${eventDigest ?? "<event-digest>"}`,
-    `--expected-primary ${primaryCommit} --audience agent`,
+    `--expected-primary ${primaryCommit} --format markdown`,
     `to record ${submitAction} for the exact current revision;`,
     `no replay cursor or expected length is required.`,
     `Do not request ${action} before that Submit is current.`,

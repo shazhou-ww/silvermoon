@@ -53,4 +53,4 @@ preferredLanguage: en-US
 4. Use `silvermoon create-idea` for idea scaffolds; do not invent ULIDs or event
    history manually.
 5. Validate the complete candidate with
-   `silvermoon check --worktree --audience agent`.
+   `silvermoon check --worktree --format markdown`.
