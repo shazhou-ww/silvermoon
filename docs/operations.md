@@ -12,11 +12,28 @@ silvermoon whats-next publish-documentation --json
 silvermoon whats-next publish-documentation --language zh-CN
 ```
 
-Without a selector, Silvermoon asks for a choice among multiple active ideas,
-and the option to discuss and create a new idea. This remains true with zero,
-one, or many active ideas: only a selector chooses work. Completed and abandoned
-ideas are excluded from default candidates. A selector is either a canonical
-uppercase ULID or an exact, unique, case-sensitive alias.
+Without a selector, Silvermoon reports the Device Objective outside a Git
+worktree and the Project Objective inside one. A terminal Objective has no
+required action. Idea inventory belongs exclusively to `list-ideas`; pass a
+canonical uppercase ULID or exact, unique, case-sensitive alias to navigate an
+Idea.
+
+Every check-backed `whats-next` report uses one compact Objective shell.
+Its title names the requested target Objective. **Current status** explains in
+one sentence whether that target is advancing directly or waiting for the
+current owner as a prerequisite, followed by a labeled observation context
+when relevant.
+**Problems** contains the complete ordered Problem list with short
+descriptions and human-readable observed facts. Machine Objective,
+level/check, and Problem IDs plus raw parameters remain available in JSON
+instead of appearing as an unexplained status list. **Next action** contains
+the current recovery instruction and recheck command once. **References**
+links useful check and Problem pages through copyable explicit namespace
+commands such as `silvermoon reference problem:repository-worktree` instead of
+embedding their full static content. A level page is included only when it
+adds distinct progression guidance; Device reports do not include one merely
+because a level exists. Terminal reports contain only **Outcome** and
+**References**.
 
 The shared observation exposes the resolved content preference as
 `configuration.preferredLanguage` and the built-in rendering locale as
@@ -27,24 +44,28 @@ entries, same-world supporting artifacts, and the ledger. A caller may use
 markers, and verbatim tool output retain their original form.
 
 Every `whats-next` invocation follows three strict layers. It first checks Git,
-configuration compatibility, metadata schema, and layout. It then checks local
+configuration compatibility, metadata schema, layout and all optional project
+guidance. It then checks local
 conflicts, changes, HEAD, and upstream identity before any remote access. Only
 after those checks pass does it fetch primary, compare ancestry, and route idea
 work. Runtime and personal skill health belong to device readiness, never the
 project snapshot. `whats-next` never edits, checks out, merges, commits,
 stashes, deletes, resets, fast-forwards, or pushes.
 
-Dialogue reports observe runtime source/version, personal skill health, and
-latest-runtime status independently from project readiness. Structured reports
-retain those facts; text and TUI output render the non-blocking device advisory
-only when a device state needs attention. Global installations reuse a
-successful result from the installed version's npm channel for less than 24
-hours; stable versions follow `latest`, canaries follow `canary`, and direct
-source invocations and embedding hosts do not perform that registry query. A direct source
-invocation is reported as device setup debt: link the checkout globally and
-rerun through `silvermoon`.
-Registry or skill failures remain device diagnostics and do not replace
-project problems or lifecycle instructions.
+`whats-next` evaluates one Device -> Project -> Idea prerequisite chain.
+Project requires Device to reach `update-unconfirmed`: invalid device
+configuration, a runtime not discoverable on `PATH`, or a missing personal
+skill link leaves Device as the one current owner. Routine observations mark
+runtime freshness as not required and do not invoke npm. When project
+inspection finds a schema newer than the running runtime can read, a global
+installation queries its installed npm channel and reuses a successful result
+for less than 24 hours; stable versions follow `latest` and canaries follow
+`canary`. Registry failures remain non-blocking telemetry and do not replace
+project problems or lifecycle instructions. Structured reports retain device
+telemetry; Objective text and TUI output do not add it as a parallel advisory.
+Direct source invocations and embedding hosts do not perform the registry
+query. When a source checkout is the observed runtime, repair or install the
+`PATH`-discoverable global entry and rerun through `silvermoon`.
 
 Project schema readiness is reported per schema-bearing file. A valid file at
 the runtime's write target is `current`; a valid readable historical file is
@@ -62,20 +83,24 @@ schema edges. Plan the next project edge with
 `silvermoon migrate --root <project>` and apply only the exact reviewed digest.
 Ordinary navigation never migrates automatically.
 
-When project preparation encounters a future schema, it bypasses the 24-hour
-runtime freshness cache once for that observation. The report distinguishes a
-new runtime being available, the confirmed latest runtime still lacking the
-capability, and an unavailable registry. Snapshot-only `check` remains
-deterministic and performs no registry access.
+When project preparation encounters a future schema, it performs the otherwise
+skipped runtime check and bypasses the 24-hour freshness cache once for that
+observation. The report distinguishes a new runtime being available, the
+confirmed latest runtime still lacking the capability, and an unavailable
+configured registry. Snapshot-only `check` remains deterministic and performs
+no registry access.
 
 When a selector resolves to an actionable phase and synchronization is ready,
-Silvermoon reads only `.silvermoon/guidance/<phase>.md` from the same Git
-snapshot. Missing guidance preserves the previous report shape. Valid guidance
+Silvermoon returns only `.silvermoon/guidance/<phase>.md` from the confirmed Git
+snapshot. All three files and the guidance directory are validated locally and
+again at primary as Project Guide checks; invalid unselected phases also block.
+Missing guidance preserves the previous report shape. Valid guidance
 content appears in `response.guidance`, while `observation.guidance` exposes
-only its path, phase, and content revision. Invalid current-phase guidance
+only its path, phase, and content revision. Invalid project guidance
 returns a `phase-guidance-invalid` observation with remediation instead of
-lifecycle next steps. Bare navigation, unknown selectors, terminal ideas, and any
-higher-priority setup, hygiene, fetch, or ancestry block do not read guidance.
+lifecycle next steps. Bare Objective navigation, unknown selectors, terminal ideas, and any
+higher-priority setup, hygiene, fetch, or ancestry block do not return guidance
+content; project-wide validity checks are separate from content delivery.
 
 ## Query The Local Inventory
 
@@ -92,12 +117,12 @@ silvermoon list-ideas --sort oldest --limit 25 --json
 ```
 
 The command reads one valid local worktree snapshot. It checks the project
-configuration and complete idea layout, but deliberately
-does not check conflicts, cleanliness, current branch, upstream, primary
-ancestry, or primary network availability. The project query never fetches;
-the independent device advisory may refresh the installed npm channel when its cache is
-expired. Filters cannot hide an invalid idea; setup or layout failures return
-a `blocked` four-projection report and exit `1`.
+configuration and complete idea layout, but deliberately does not check
+conflicts, cleanliness, current branch, upstream, primary ancestry, or primary
+network availability. The project query never fetches and does not access npm
+unless schema inspection finds a version newer than the runtime can read.
+Filters cannot hide an invalid idea; setup or layout failures return a
+`blocked` four-projection report and exit `1`.
 
 The default state set is `preparing`, `implementing`, and `deploying`.
 Repeated `--state` values form a deduplicated union, `active` expands to those
@@ -224,6 +249,12 @@ the matching `submitIdeal`, `submitInner`, or `submitOuter` for that exact
 revision, integrate the event, and reobserve. Only a current submission with
 upstream control produces the corresponding `response.review`; ping/pong may
 transfer control within the same phase without changing the submission fact.
+If the fresh report shows `inner=waived`, the exact synchronized
+`submitInner` advances directly to deploying with `waived` passage evidence
+and no `acceptInner`; do not manufacture an implementation review or decision.
+Gate modes default independently to `explicit`. `setGateMode` is an upstream
+decision event requiring `--confirm-decision`; only `inner: waived` is
+currently supported, and `ideal` plus `outer` remain explicit.
 
 After an explicit decision, reconfirm that it applies to the selected idea and
 the current reported world revision. For v2, use the

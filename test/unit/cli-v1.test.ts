@@ -114,7 +114,7 @@ test("registers only the approved command surface", () => {
   const program = createProgram(capture().io);
   assert.deepEqual(
     program.commands.map((command) => command.name()).sort(),
-    ["check", "create-idea", "event", "list-ideas", "migrate", "whats-next"],
+    ["check", "create-idea", "event", "list-ideas", "migrate", "reference", "whats-next"],
   );
   const create = program.commands.find((command) =>
     command.name() === "create-idea"
@@ -122,7 +122,7 @@ test("registers only the approved command surface", () => {
   assert.ok(create);
   assert.ok(create.options.some(({ long }) => long === "--language"));
   for (const command of program.commands.filter((candidate) =>
-    !["event", "list-ideas", "migrate"].includes(candidate.name())
+    !["event", "list-ideas", "migrate", "reference"].includes(candidate.name())
   )) {
     assert.ok(command.options.some(({ long }) => long === "--audience"));
     assert.ok(command.options.some(({ long }) => long === "--trace"));
@@ -139,6 +139,16 @@ test("registers only the approved command surface", () => {
     assert.ok(operation.options.some(({ long }) => long === "--trace"));
     assert.ok(operation.options.some(({ long }) => long === "--language"));
   }
+  const reference = program.commands.find((command) =>
+    command.name() === "reference"
+  );
+  assert.ok(reference);
+  assert.deepEqual(reference.commands, []);
+  assert.ok(reference.options.some(({ long }) => long === "--audience"));
+  assert.ok(reference.options.some(({ long }) => long === "--json"));
+  assert.ok(reference.options.some(({ long }) => long === "--language"));
+  assert.equal(reference.options.some(({ long }) => long === "--root"), false);
+  assert.equal(reference.options.some(({ long }) => long === "--trace"), false);
   const list = program.commands.find((command) => command.name() === "list-ideas");
   assert.ok(list);
   for (const option of [
@@ -170,6 +180,95 @@ test("registers only the approved command surface", () => {
   ]) {
     assert.ok(migrate.options.some(({ long }) => long === option), option);
   }
+});
+
+test("Reference CLI preserves 404s, navigation commands, and explicit failures", async () => {
+  const direct = capture();
+  assert.equal(await runCli([
+    "reference", "check:repository-upstream-matches", "--language", "en-US", "--json",
+  ], direct.io), 0);
+  assert.equal(JSON.parse(firstLog(direct.logs)).owner, "project");
+
+  const discovery = capture();
+  assert.equal(await runCli([
+    "reference", "repository-upstream-matches", "--audience", "agent",
+  ], discovery.io), 0);
+  assert.match(firstLog(discovery.logs), /Owner: `project`/);
+
+  for (const query of ["page", "search"]) {
+    const literal = capture();
+    assert.equal(await runCli([
+      "reference", query, "--json",
+    ], literal.io), 0);
+    const result = JSON.parse(firstLog(literal.logs));
+    assert.equal(result.lookup, query);
+    assert.equal(result.operation, "search");
+    assert.equal(literal.errors.length, 0);
+  }
+
+  const missing = capture();
+  assert.equal(await runCli([
+    "reference", "page", "project", "not/present", "--language", "en-US", "--json",
+  ], missing.io), 0);
+  assert.equal(JSON.parse(firstLog(missing.logs)).page.id, "system/404");
+
+  const search = capture();
+  assert.equal(await runCli([
+    "reference", "search", "idea", "revision", "--language", "zh-CN",
+  ], search.io), 0);
+  assert.match(
+    firstLog(search.logs),
+    /silvermoon reference \S+:\S+ --language zh-CN/,
+  );
+
+  const human = capture();
+  const agent = capture();
+  const audienceArgs = [
+    "reference", "search", "idea", "__no_reference_match__", "--language", "zh-CN",
+  ];
+  assert.equal(await runCli([...audienceArgs, "--audience", "human"], human.io), 0);
+  assert.equal(await runCli([...audienceArgs, "--audience", "agent"], agent.io), 0);
+  assert.equal(firstLog(human.logs), [
+    "# Objective 引用搜索：__no_reference_match__",
+    "",
+    "没有匹配的引用页面。",
+  ].join("\n"));
+  assert.equal(firstLog(agent.logs), firstLog(human.logs));
+
+  const empty = capture();
+  assert.equal(await runCli([
+    "reference", "page", "device", "", "--language", "en-US",
+  ], empty.io), 1);
+  assert.match(String(empty.errors[0]), /Page ID must be nonempty/);
+
+  const locale = capture();
+  assert.equal(await runCli([
+    "reference", "page", "device", "system/overview", "--language", "fr-FR",
+  ], locale.io), 1);
+  assert.match(String(locale.errors[0]), /Unsupported Reference locale/);
+
+  const objective = capture();
+  assert.equal(await runCli([
+    "reference", "page", "unknown", "system/overview",
+  ], objective.io), 2);
+
+  const partial = capture();
+  assert.equal(await runCli([
+    "reference", "page", "project",
+  ], partial.io), 2);
+  assert.match(
+    String(partial.errors[0]),
+    /legacy reference page requires <device\|project\|idea> and a value/,
+  );
+
+  const invalidSearchObjective = capture();
+  assert.equal(await runCli([
+    "reference", "search", "unknown", "repository",
+  ], invalidSearchObjective.io), 2);
+  assert.match(
+    String(invalidSearchObjective.errors[0]),
+    /legacy reference search requires <device\|project\|idea> and a value/,
+  );
 });
 
 test("normalizes trace paths to the exact lowercase suffix", () => {

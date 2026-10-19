@@ -1,2 +1,12 @@
 {"type":"setAlias","timestamp":"2026-10-11T04:15:13.289Z","payload":{"alias":"whats-next-template-review"}}
 {"type":"submitIdeal","timestamp":"2026-10-11T04:19:13.165Z","payload":{"idealRevision":"8f2c4e6a9fcf1589823f166eec2552bf1a65471c"}}
+{"type":"ping","timestamp":"2026-10-14T12:51:12.876Z","payload":{"message":"review-status.md 不应位于 Ideal World；将 review 执行资料移到 Implementation，使逐项 review 的状态更新不再改变 idealRevision。"}}
+{"type":"submitIdeal","timestamp":"2026-10-14T12:53:14.225Z","payload":{"idealRevision":"c6e3fcacaf906529613abd6498d6c1e4b529ef57"}}
+{"type":"ping","timestamp":"2026-10-14T12:55:11.927Z","payload":{"message":"改用专门的 Docker 环境和设计好的初始化脚本，从设备整备开始运行一条主链与若干支链，收集 whats-next 所有可能情况的真实输出，基于完整语料集中 review，而不是对照代码逐项猜测。"}}
+{"type":"ping","timestamp":"2026-10-14T12:56:41.167Z","payload":{"message":"链路设计必须复用连续状态：不要为每个 case 从头初始化；设计少量链路，每条链路只初始化一次并在多个 checkpoint 采集多个 case，只有互斥或不可逆状态才拆分支链。"}}
+{"type":"ping","timestamp":"2026-10-14T12:58:02.898Z","payload":{"message":"覆盖单位应是 Device、Project、Idea 三个 objective 中的每个 check；这些 check 与给出 instruction 的 case 一一对应。链路设计负责用连续 checkpoint 高效覆盖这些 check case，而不是以 template ID 为主清单。"}}
+{"type":"submitIdeal","timestamp":"2026-10-14T12:59:25.937Z","payload":{"idealRevision":"02741d7fff9c8bf9662222483b1e522887e5e7da"}}
+{"type":"ping","timestamp":"2026-10-14T13:03:37.135Z","payload":{"message":"把链路设计收敛为一条可单调推进的线性主链：每个 checkpoint 采集后修复当前阻塞，再前进到下一个状态，不为每个 case 重置；只对互斥、不可逆或会污染后续状态的 case 开分支。覆盖清单以实际 distinct instruction 输出为准，并核对其与底层 checks 的映射，不预设每个 check 都产生独立文本。"}}
+{"type":"submitIdeal","timestamp":"2026-10-14T13:05:15.474Z","payload":{"idealRevision":"73baec57c2704b818103969643c2c3202d8af396"}}
+{"type":"submitIdeal","timestamp":"2026-10-14T13:11:51.332Z","payload":{"idealRevision":"797de35423c282d936828ce8ec48fbe4248d5230"}}
+{"type":"acceptIdeal","timestamp":"2026-10-14T13:13:57.625Z","payload":{"idealRevision":"797de35423c282d936828ce8ec48fbe4248d5230"}}

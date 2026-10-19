@@ -75,7 +75,7 @@
     "test:unit": "node --test \"test/unit/*.test.ts\" \"test/runtime/*.test.ts\""
   },
   "engines": {
-    "node": ">=22.12.0"
+    "node": ">=22.13.0"
   },
   "keywords": [
     "agent-skills",
@@ -122,13 +122,14 @@
     "ajv": "^8.20.0",
     "markdownlint-cli2": "^0.23.3",
     "semver": "^7.8.5",
-    "typescript": "^5.9.3"
+    "typescript": "^6.0.3"
   },
   "dependencies": {
     "@github/copilot-sdk": "1.0.16",
-    "@jitl/opentui-core": "0.4.0",
-    "@opentui/core": "npm:@jitl/opentui-core@0.4.0",
-    "@opentui/react": "npm:@jitl/opentui-react@0.4.0",
+    "@opentui/core": "https://github.com/shazhou-ww/opentui/releases/download/opentui-0.4.0-koffi-2.16.3-1/opentui-core-0.4.0-koffi.2.16.3.1.tgz",
+    "@opentui/react": "https://github.com/shazhou-ww/opentui/releases/download/opentui-0.4.0-koffi-2.16.3-1/opentui-react-0.4.0-koffi.2.16.3.1.tgz",
+    "@potential-guide/effects": "0.1.0-rc.0",
+    "@potential-guide/objective-pilot": "0.1.0-rc.0",
     "commander": "^15.0.0",
     "marked": "^18.0.13",
     "mdast-util-from-markdown": "^2.0.3",

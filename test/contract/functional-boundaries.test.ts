@@ -68,7 +68,7 @@ test("every source directory has a concise responsibility README and explicit ex
     root,
     resolve(root, "business"),
     resolve(root, "business", "shared"),
-    resolve(root, "professional-model"),
+    resolve(root, "objective-guide"),
     ...foundationDirectories,
   ];
   for (const directory of directories) {

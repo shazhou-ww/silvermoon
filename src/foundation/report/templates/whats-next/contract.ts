@@ -20,8 +20,6 @@ export const WHATS_NEXT_TEMPLATE_IDS = Object.freeze([
   "lifecycle-implemented",
   "lifecycle-deploying",
   "lifecycle-deployed",
-  "lifecycle-inactive",
-  "navigation-ready",
   "idea-not-found",
   "worktree-conflicts",
   "head-missing",
@@ -82,7 +80,7 @@ interface LifecycleCurrentParameters {
   ledgerPath: string;
   name: string;
   primaryCommit: string;
-  submissionState: "unsubmitted" | "accepted" | "stale" | null;
+  submissionState: "unsubmitted" | "accepted" | "waived" | "stale" | null;
   submitAction: string;
 }
 
@@ -101,7 +99,7 @@ export interface LifecyclePreparingParameters extends LifecycleCurrentParameters
 export interface LifecyclePreparedParameters extends LifecycleSubmittedParameters {}
 
 export interface LifecycleImplementingParameters extends LifecycleCurrentParameters {
-  idealPath: string;
+  idealDocumentPath: string;
   worldPath: string;
 }
 
@@ -112,15 +110,6 @@ export interface LifecycleDeployingParameters extends LifecycleCurrentParameters
 }
 
 export interface LifecycleDeployedParameters extends LifecycleSubmittedParameters {}
-
-export interface LifecycleInactiveParameters {
-  name: string;
-  state: string;
-}
-
-export interface NavigationParameters {
-  hasActiveIdea: boolean;
-}
 
 export interface IdeaNotFoundParameters {
   selector: string;
@@ -214,10 +203,6 @@ export interface WhatsNextTemplates {
   "lifecycle-deployed": (
     parameters: LifecycleDeployedParameters,
   ) => string;
-  "lifecycle-inactive": (
-    parameters: LifecycleInactiveParameters,
-  ) => string;
-  "navigation-ready": (parameters: NavigationParameters) => string;
   "idea-not-found": (parameters: IdeaNotFoundParameters) => string;
   "worktree-conflicts": (
     parameters: WorktreeConflictsParameters,

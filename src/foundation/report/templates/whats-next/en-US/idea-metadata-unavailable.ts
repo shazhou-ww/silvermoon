@@ -7,16 +7,15 @@ import type { MetadataUnavailableParameters } from "../contract.ts";
 
 /** @pure */
 const ideaMetadataUnavailable = ({
-  command,
   documentPath,
   message,
 }: MetadataUnavailableParameters) =>
   ({
     summary: message,
     nextSteps: documentPath === undefined
-      ? `Repair the reported idea document and retry \`${command}\`.`
+      ? "The goal is a readable canonical Idea.md that satisfies the idea metadata contract."
       : [
-        `Restore ${documentPath} as the current idea's canonical Idea.md.`,
+        `The goal is for ${documentPath} to be the current idea's readable canonical Idea.md.`,
         `Use this canonical template:`,
         "```markdown",
         "# <title>",
@@ -29,7 +28,6 @@ const ideaMetadataUnavailable = ({
         "",
         "## Acceptance criteria",
         "```",
-        `Then retry \`${command}\`.`,
       ].join("\n"),
   });
 

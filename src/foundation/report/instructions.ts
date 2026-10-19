@@ -1,19 +1,14 @@
 import { diagnosticInstruction } from "./dialogue.ts";
-import { resolveContentTemplateLanguage } from "../language/index.ts";
+import { localize, resolveContentTemplateLanguage } from "../language/index.ts";
 import {
   renderContentLanguage,
   renderLifecycleDeployed,
   renderLifecycleDeploying,
   renderLifecycleImplemented,
   renderLifecycleImplementing,
-  renderLifecycleInactive,
   renderLifecyclePrepared,
   renderLifecyclePreparing,
-  renderNavigationReady,
-  renderPhaseGuidanceInvalid,
   renderPreparationSeed,
-  renderProjectRecheck,
-  renderRepositoryRecheck,
   renderReviewPresentation,
   renderReviewPresentationInstruction,
   renderWorktreeChangesStep,
@@ -99,35 +94,32 @@ export function formatInstructionSteps(steps: string[]) {
 /** @pure */
 export function projectInstructions(
   observed: { findings: { instruction: string }[] },
-  root: string,
+  _root: string,
   language: string,
-  recheckCommand = "silvermoon whats-next",
+  _recheckCommand = "silvermoon whats-next",
 ) {
   return joinInstructions([
+    localize(
+      language,
+      "The goal is a valid, complete project snapshot that preserves unrelated content. Apply only repairs that match the observed diagnostics.",
+      "目标是在保留无关内容的同时得到有效且完整的项目 snapshot。只采用与观测诊断相符的修复。",
+    ),
     ...formatInstructionSteps(observed.findings.map(({ instruction }) => instruction)),
-    renderProjectRecheck(language, {
-      recheckCommand: command(root, recheckCommand),
-    }),
   ]);
 }
 
 /** @pure */
 export function phaseGuidanceInstructions(
   diagnostics: Array<Diagnostic & { remediation: string }>,
-  root: string,
+  _root: string,
   language: string,
-  recheckCommand: string,
+  _recheckCommand: string,
 ) {
-  return joinInstructions([
-    ...formatInstructionSteps(
-      diagnostics.map((diagnostic) =>
-        diagnosticInstruction(diagnostic, language)
-      ),
+  return joinInstructions(formatInstructionSteps(
+    diagnostics.map((diagnostic) =>
+      diagnosticInstruction(diagnostic, language)
     ),
-    renderPhaseGuidanceInvalid(language, {
-      recheckCommand: command(root, recheckCommand),
-    }),
-  ]);
+  ));
 }
 
 /** @pure */
@@ -186,17 +178,12 @@ export function worktreeInstructionSteps(changes: WorktreeChanges, language: str
 
 /** @pure */
 export function localRepositoryInstructions(
-  root: string,
+  _root: string,
   steps: string[],
-  language: string,
-  recheckCommand: string,
+  _language: string,
+  _recheckCommand: string,
 ) {
-  return joinInstructions([
-    ...formatInstructionSteps(steps),
-    renderRepositoryRecheck(language, {
-      recheckCommand: command(root, recheckCommand),
-    }),
-  ]);
+  return joinInstructions(formatInstructionSteps(steps));
 }
 
 /** @pure */
@@ -340,6 +327,13 @@ export function lifecycleInstruction(
   contentLanguage: string,
   primaryCommit: string,
 ) {
+  if (
+    idea.state !== "preparing"
+    && idea.state !== "implementing"
+    && idea.state !== "deploying"
+  ) {
+    return "";
+  }
   const name = ideaName(idea);
   const submission = currentSubmission(idea);
   const submissionState = submission?.state ?? null;
@@ -383,7 +377,7 @@ export function lifecycleInstruction(
         documentPath: idea.worlds.implementationRevision.documentPath,
         eventDigest: idea.eventDigest ?? null,
         ideaId: idea.id,
-        idealPath: idea.worlds.idealRevision.path,
+        idealDocumentPath: idea.worlds.idealRevision.documentPath,
         ledgerPath: idea.ledgerPath,
         name,
         primaryCommit,
@@ -415,10 +409,7 @@ export function lifecycleInstruction(
         submitAction: "submitOuter",
         worldPath: idea.worlds.deploymentRevision.path,
       })
-    : renderLifecycleInactive(language, {
-    name,
-    state: idea.state,
-  });
+    : "";
   return joinInstructions([
     instruction,
     idea.state === "preparing" ? preparationSeedInstruction(idea, language) : null,
@@ -429,12 +420,4 @@ export function lifecycleInstruction(
       : null,
     lifecycleContentLanguageInstruction(contentLanguage, language),
   ]);
-}
-
-/** @pure */
-export function navigationInstruction(ideas: Pick<IdeaReference, "state">[], language: string) {
-  const hasActiveIdea = ideas.some(({ state }) =>
-    state === "preparing" || state === "implementing" || state === "deploying"
-  );
-  return renderNavigationReady(language, { hasActiveIdea });
 }

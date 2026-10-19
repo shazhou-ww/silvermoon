@@ -20,6 +20,32 @@ export {
 } from "./list-ideas.ts";
 
 export {
+  objectiveReferenceCommand,
+  objectiveReferenceLookup,
+  parseObjectiveReferenceLookup,
+  readObjectiveReference,
+  renderObjectiveReferenceLookup,
+  renderObjectiveReferenceContent,
+  renderObjectiveReferencePage,
+  renderObjectiveReferenceSearch,
+  resolveObjectiveReference,
+  searchObjectiveReferences,
+} from "./objective-reference.ts";
+export type {
+  ObjectiveReferenceAudience,
+  ObjectiveReferenceCandidate,
+  ObjectiveReferenceLookupAmbiguousResult,
+  ObjectiveReferenceLookupNotFoundResult,
+  ObjectiveReferenceLookupPageResult,
+  ObjectiveReferenceLookupResult,
+  ObjectiveReferenceLookupSearchResult,
+  ObjectiveReferenceNamespace,
+  ObjectiveReferencePageResult,
+  ObjectiveReferenceSearchResult,
+  SilvermoonObjectiveId,
+} from "./objective-reference.ts";
+
+export {
   IMPLEMENTED_SCHEMA_MIGRATIONS,
   resolveProjectSchemaMigration,
   runProjectSchemaMigration,

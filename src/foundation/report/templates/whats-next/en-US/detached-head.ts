@@ -19,8 +19,8 @@ const detachedHead = ({
       ? "The repository has no current local branch."
       : `HEAD ${head} is detached and has no current branch.`,
     nextSteps: [
-      `Preserve current work, then switch to or create the intended local branch`,
-      `whose upstream is ${expectedRepository}#${expectedBranch}.`,
+      `The goal is to attach the current work to a local branch whose upstream is`,
+      `\`${expectedRepository}#${expectedBranch}\` without losing any work.`,
     ].join(" "),
   });
 

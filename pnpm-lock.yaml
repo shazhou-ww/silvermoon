@@ -11,15 +11,18 @@ importers:
       '@github/copilot-sdk':
         specifier: 1.0.16
         version: 1.0.16
-      '@jitl/opentui-core':
-        specifier: 0.4.0
-        version: 0.4.0(typescript@5.9.3)(web-tree-sitter@0.25.10)
       '@opentui/core':
-        specifier: npm:@jitl/opentui-core@0.4.0
-        version: '@jitl/opentui-core@0.4.0(typescript@5.9.3)(web-tree-sitter@0.25.10)'
+        specifier: https://github.com/shazhou-ww/opentui/releases/download/opentui-0.4.0-koffi-2.16.3-1/opentui-core-0.4.0-koffi.2.16.3.1.tgz
+        version: https://github.com/shazhou-ww/opentui/releases/download/opentui-0.4.0-koffi-2.16.3-1/opentui-core-0.4.0-koffi.2.16.3.1.tgz(typescript@6.0.3)(web-tree-sitter@0.25.10)
       '@opentui/react':
-        specifier: npm:@jitl/opentui-react@0.4.0
-        version: '@jitl/opentui-react@0.4.0(react-devtools-core@7.0.1)(react@19.3.0)(typescript@5.9.3)(web-tree-sitter@0.25.10)(ws@8.22.0)'
+        specifier: https://github.com/shazhou-ww/opentui/releases/download/opentui-0.4.0-koffi-2.16.3-1/opentui-react-0.4.0-koffi.2.16.3.1.tgz
+        version: https://github.com/shazhou-ww/opentui/releases/download/opentui-0.4.0-koffi-2.16.3-1/opentui-react-0.4.0-koffi.2.16.3.1.tgz(@opentui/core@https://github.com/shazhou-ww/opentui/releases/download/opentui-0.4.0-koffi-2.16.3-1/opentui-core-0.4.0-koffi.2.16.3.1.tgz(typescript@6.0.3)(web-tree-sitter@0.25.10))(react-devtools-core@7.0.1)(react@19.3.0)(ws@8.22.0)
+      '@potential-guide/effects':
+        specifier: 0.1.0-rc.0
+        version: 0.1.0-rc.0
+      '@potential-guide/objective-pilot':
+        specifier: 0.1.0-rc.0
+        version: 0.1.0-rc.0
       commander:
         specifier: ^15.0.0
         version: 15.0.0
@@ -43,7 +46,7 @@ importers:
         version: 8.3.0
       tui-md:
         specifier: ^0.2.0
-        version: 0.2.0(@jitl/opentui-core@0.4.0(typescript@5.9.3)(web-tree-sitter@0.25.10))(@jitl/opentui-react@0.4.0(react-devtools-core@7.0.1)(react@19.3.0)(typescript@5.9.3)(web-tree-sitter@0.25.10)(ws@8.22.0))(react@19.3.0)
+        version: 0.2.0(@opentui/core@https://github.com/shazhou-ww/opentui/releases/download/opentui-0.4.0-koffi-2.16.3-1/opentui-core-0.4.0-koffi.2.16.3.1.tgz(typescript@6.0.3)(web-tree-sitter@0.25.10))(@opentui/react@https://github.com/shazhou-ww/opentui/releases/download/opentui-0.4.0-koffi-2.16.3-1/opentui-react-0.4.0-koffi.2.16.3.1.tgz(@opentui/core@https://github.com/shazhou-ww/opentui/releases/download/opentui-0.4.0-koffi-2.16.3-1/opentui-core-0.4.0-koffi.2.16.3.1.tgz(typescript@6.0.3)(web-tree-sitter@0.25.10))(react-devtools-core@7.0.1)(react@19.3.0)(ws@8.22.0))(react@19.3.0)
       ws:
         specifier: ^8.22.0
         version: 8.22.0
@@ -73,8 +76,8 @@ importers:
         specifier: ^7.8.5
         version: 7.8.5
       typescript:
-        specifier: ^5.9.3
-        version: 5.9.3
+        specifier: ^6.0.3
+        version: 6.0.3
 
 packages:
 
@@ -167,19 +170,6 @@ packages:
     resolution: {integrity: sha512-6ZdxPPZILUfYp5DqgpVFC+lSJqZkw+qwID7Ly66c3khKhQqZBBWTfPRqGynDBnN4SUGsxVYKZQn6+nNltgYDQg==}
     cpu: [x64]
     os: [win32]
-
-  '@jitl/opentui-core@0.4.0':
-    resolution: {integrity: sha512-vPXBPsfo/mG/WajLHZcgc93Lac8MYOTJt70C75+uHTVuYm2Koe8497B5mBZq8hRvHjrNPgLHlyk8ur+t6jhs6g==}
-    engines: {bun: '>=1.3.0', node: '>=22.12'}
-    peerDependencies:
-      web-tree-sitter: 0.25.10
-
-  '@jitl/opentui-react@0.4.0':
-    resolution: {integrity: sha512-GYEWhESvAw6Nw8HWoIfsFgjx9Jlhb7a2FwrdoB64S2R4wdzPKR08PLL7igbl8E49fgie1U9mJ+ognkfCE6QzWw==}
-    peerDependencies:
-      react: ^18.2.0 || >=19.2.0
-      react-devtools-core: ^7.0.1
-      ws: ^8.18.0
 
   '@koromix/koffi-android-arm64@3.2.1':
     resolution: {integrity: sha512-1pJQ4jnZlUJduK9u9DC5CGy3aOgDUPvIXpNb6syV3+Dh5Q/ugezAIGCqvY+w+1mgXsve0pd0NVvJRjdZNHQ6MA==}
@@ -282,6 +272,30 @@ packages:
   '@nodelib/fs.walk@1.2.8':
     resolution: {integrity: sha512-oGB+UxlgWcgQkgwo8GcEGwemoTFt3FIO9ababBmaGwXIoBKZ+GTy0pP185beGg7Llih/NSHSV2XAs1lnznocSg==}
     engines: {node: '>= 8'}
+
+  '@opentui/core@https://github.com/shazhou-ww/opentui/releases/download/opentui-0.4.0-koffi-2.16.3-1/opentui-core-0.4.0-koffi.2.16.3.1.tgz':
+    resolution: {integrity: sha512-0X2+fU9Xp6agjjggEqB/0OavztsD6uNkvbNkD1D/c+8y6sbYrubOKEn596bI2K5N11fThiKe2KWVEEUhPx0ivw==, tarball: https://github.com/shazhou-ww/opentui/releases/download/opentui-0.4.0-koffi-2.16.3-1/opentui-core-0.4.0-koffi.2.16.3.1.tgz}
+    version: 0.4.0-koffi.2.16.3.1
+    engines: {bun: '>=1.3.0', node: '>=22.12'}
+    peerDependencies:
+      web-tree-sitter: 0.25.10
+
+  '@opentui/react@https://github.com/shazhou-ww/opentui/releases/download/opentui-0.4.0-koffi-2.16.3-1/opentui-react-0.4.0-koffi.2.16.3.1.tgz':
+    resolution: {integrity: sha512-rLB8pCPPUJ6jncucSVJ7pk8Lx1Vk5keLVgMt0bwzFkfRr2dH2r4dd2vMy4fDxWrjFWJLlr45D0SaDxD+ZTLshg==, tarball: https://github.com/shazhou-ww/opentui/releases/download/opentui-0.4.0-koffi-2.16.3-1/opentui-react-0.4.0-koffi.2.16.3.1.tgz}
+    version: 0.4.0-koffi.2.16.3.1
+    peerDependencies:
+      '@opentui/core': 0.4.0-koffi.2.16.3.1
+      react: ^18.2.0 || >=19.2.0
+      react-devtools-core: ^7.0.1
+      ws: ^8.18.0
+
+  '@potential-guide/effects@0.1.0-rc.0':
+    resolution: {integrity: sha512-Gzpo5mg3YA3fyJSi0oNWPcFdgrXnzsVf5Z+KtCycZi7nQZFdH6ROW5+eS4y3URi5zIcRQvceWaN2u8vwZ5em5w==}
+    engines: {node: '>=22.13.0'}
+
+  '@potential-guide/objective-pilot@0.1.0-rc.0':
+    resolution: {integrity: sha512-7u/rCBIV4vR1maBOVFJ6JczSMcNJIbJa83a8unzoURiRFnUqnLZrzB1Zg6HEoZUaJTpUBAF7ndK33lT/tNKgSw==}
+    engines: {node: '>=22.13.0'}
 
   '@sindresorhus/merge-streams@4.0.0':
     resolution: {integrity: sha512-tlqY9xq5ukxTUZBmoOp+m61cqwQD5pHJtFY3Mn8CA8ps6yghLH/Hw8UPdqg4OLmFW3IFlcXnQNmo/dh8HzXYIQ==}
@@ -408,6 +422,9 @@ packages:
   diff@9.0.0:
     resolution: {integrity: sha512-svtcdpS8CgJyqAjEQIXdb3OjhFVVYjzGAPO8WGCmRbrml64SPw/jJD4GoE98aR7r25A0XcgrK3F02yw9R/vhQw==}
     engines: {node: '>=0.3.1'}
+
+  effect@4.0.2:
+    resolution: {integrity: sha512-YeYnLqSFrL4+tCOXRrfNP03w8FILoF/wDl+ukraJAGzXrjcS383W7LAAvGBbLatEyktmLxRq+9xJinx7QzXW5A==}
 
   elkjs@0.11.1:
     resolution: {integrity: sha512-zxxR9k+rx5ktMwT/FwyLdPCrq7xN6e4VGGHH8hA01vVYKjTFik7nHOxBnAYtrgYUB1RpAiLvA1/U2YraWxyKKg==}
@@ -572,6 +589,10 @@ packages:
   json-schema-traverse@1.0.0:
     resolution: {integrity: sha512-NM8/P9n3XjXhIZn1lLhkFaACTOURQXjWhV4BA/RnOv8xvgqtqpAX9IO4mRQxSx1Rlo4tqzeqb0sOlruaOy3dug==}
 
+  jsonata@2.1.0:
+    resolution: {integrity: sha512-OCzaRMK8HobtX8fp37uIVmL8CY1IGc/a6gLsDqz3quExFR09/U78HUzWYr7T31UEB6+Eu0/8dkVD5fFDOl9a8w==}
+    engines: {node: '>= 8'}
+
   jsonc-parser@3.3.1:
     resolution: {integrity: sha512-HUgH65KyejrUFPvHFPbqOY0rsFip3Bo5wb4ngvdi1EpCYWUQDC5V+Y7mZws+DLkr4M//zQJoanu1SP+87Dv1oQ==}
 
@@ -583,8 +604,8 @@ packages:
     resolution: {integrity: sha512-Eeo8Ys1doU1z+x8AZsPpQu+p/QcZBI5PeOo7QGQdy2x2m0MU/hYagBbGOmXwr5KVbEfVuWv9LpnQWeehogurjg==}
     hasBin: true
 
-  koffi@2.15.6:
-    resolution: {integrity: sha512-WQBpM5uo74UQ17UpsFN+PUOrQQg4/nYdey4SGVluQun2drYYfePziLLWdSmFb4wSdWlJC1aimXQnjhPCheRKuw==}
+  koffi@2.16.3:
+    resolution: {integrity: sha512-E9y1AsgYGlaxMhcZzHr8y96QF2U5XzA12GGVAfbWqIubTwPNMXQarfBzePNXHe0xtIEtNd6ifAv3GAKYGUeBAQ==}
 
   koffi@3.2.1:
     resolution: {integrity: sha512-0qE3lZ8jllRqPN4Ob6Ajl7c2bJSJDhQWuKLGP5hIEpHLllJWv1ydHFMhHmHc5p/W9GticKVDbYzZd7TBoQ4CZg==}
@@ -931,13 +952,14 @@ packages:
 
   tui-md@0.2.0:
     resolution: {integrity: sha512-ogTA3floGVqxw1PqS87rkt4b31UXMIHk8RjyjfqymPweQMxJFFHerTKwhpSwGYwDkRWijaEzSaaybTccSC9cmg==}
+    version: 0.2.0
     peerDependencies:
       '@opentui/core': '*'
       '@opentui/react': '*'
       react: '>=18'
 
-  typescript@5.9.3:
-    resolution: {integrity: sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw==}
+  typescript@6.0.3:
+    resolution: {integrity: sha512-y2TvuxSZPDyQakkFRPZHKFm+KKVqIisdg9/CZwm9ftvKXLP8NRWj38/ODjNbr43SsoXqNuAisEf1GdCxqWcdBw==}
     engines: {node: '>=14.17'}
     hasBin: true
 
@@ -1121,40 +1143,6 @@ snapshots:
   '@jitl/opentui-core-win32-x64@0.4.0':
     optional: true
 
-  '@jitl/opentui-core@0.4.0(typescript@5.9.3)(web-tree-sitter@0.25.10)':
-    dependencies:
-      bun-ffi-structs: 0.2.3(typescript@5.9.3)
-      diff: 9.0.0
-      marked: 17.0.1
-      string-width: 7.2.0
-      strip-ansi: 7.1.2
-      web-tree-sitter: 0.25.10
-      yoga-layout: 3.2.1
-    optionalDependencies:
-      '@jitl/opentui-core-darwin-arm64': 0.4.0
-      '@jitl/opentui-core-darwin-x64': 0.4.0
-      '@jitl/opentui-core-linux-arm64': 0.4.0
-      '@jitl/opentui-core-linux-arm64-musl': 0.4.0
-      '@jitl/opentui-core-linux-x64': 0.4.0
-      '@jitl/opentui-core-linux-x64-musl': 0.4.0
-      '@jitl/opentui-core-win32-arm64': 0.4.0
-      '@jitl/opentui-core-win32-x64': 0.4.0
-      koffi: 2.15.6
-      unsafe-pointer: 0.2.0
-    transitivePeerDependencies:
-      - typescript
-
-  '@jitl/opentui-react@0.4.0(react-devtools-core@7.0.1)(react@19.3.0)(typescript@5.9.3)(web-tree-sitter@0.25.10)(ws@8.22.0)':
-    dependencies:
-      '@jitl/opentui-core': 0.4.0(typescript@5.9.3)(web-tree-sitter@0.25.10)
-      react: 19.3.0
-      react-devtools-core: 7.0.1
-      react-reconciler: 0.33.0(react@19.3.0)
-      ws: 8.22.0
-    transitivePeerDependencies:
-      - typescript
-      - web-tree-sitter
-
   '@koromix/koffi-android-arm64@3.2.1':
     optional: true
 
@@ -1220,6 +1208,48 @@ snapshots:
     dependencies:
       '@nodelib/fs.scandir': 2.1.5
       fastq: 1.20.3
+
+  '@opentui/core@https://github.com/shazhou-ww/opentui/releases/download/opentui-0.4.0-koffi-2.16.3-1/opentui-core-0.4.0-koffi.2.16.3.1.tgz(typescript@6.0.3)(web-tree-sitter@0.25.10)':
+    dependencies:
+      bun-ffi-structs: 0.2.3(typescript@6.0.3)
+      diff: 9.0.0
+      marked: 17.0.1
+      string-width: 7.2.0
+      strip-ansi: 7.1.2
+      web-tree-sitter: 0.25.10
+      yoga-layout: 3.2.1
+    optionalDependencies:
+      '@jitl/opentui-core-darwin-arm64': 0.4.0
+      '@jitl/opentui-core-darwin-x64': 0.4.0
+      '@jitl/opentui-core-linux-arm64': 0.4.0
+      '@jitl/opentui-core-linux-arm64-musl': 0.4.0
+      '@jitl/opentui-core-linux-x64': 0.4.0
+      '@jitl/opentui-core-linux-x64-musl': 0.4.0
+      '@jitl/opentui-core-win32-arm64': 0.4.0
+      '@jitl/opentui-core-win32-x64': 0.4.0
+      koffi: 2.16.3
+      unsafe-pointer: 0.2.0
+    transitivePeerDependencies:
+      - typescript
+
+  '@opentui/react@https://github.com/shazhou-ww/opentui/releases/download/opentui-0.4.0-koffi-2.16.3-1/opentui-react-0.4.0-koffi.2.16.3.1.tgz(@opentui/core@https://github.com/shazhou-ww/opentui/releases/download/opentui-0.4.0-koffi-2.16.3-1/opentui-core-0.4.0-koffi.2.16.3.1.tgz(typescript@6.0.3)(web-tree-sitter@0.25.10))(react-devtools-core@7.0.1)(react@19.3.0)(ws@8.22.0)':
+    dependencies:
+      '@opentui/core': https://github.com/shazhou-ww/opentui/releases/download/opentui-0.4.0-koffi-2.16.3-1/opentui-core-0.4.0-koffi.2.16.3.1.tgz(typescript@6.0.3)(web-tree-sitter@0.25.10)
+      react: 19.3.0
+      react-devtools-core: 7.0.1
+      react-reconciler: 0.33.0(react@19.3.0)
+      ws: 8.22.0
+
+  '@potential-guide/effects@0.1.0-rc.0':
+    dependencies:
+      effect: 4.0.2
+
+  '@potential-guide/objective-pilot@0.1.0-rc.0':
+    dependencies:
+      '@potential-guide/effects': 0.1.0-rc.0
+      ajv: 8.20.0
+      jsonata: 2.1.0
+      yaml: 2.9.1
 
   '@sindresorhus/merge-streams@4.0.0': {}
 
@@ -1289,9 +1319,9 @@ snapshots:
     dependencies:
       fill-range: 7.1.1
 
-  bun-ffi-structs@0.2.3(typescript@5.9.3):
+  bun-ffi-structs@0.2.3(typescript@6.0.3):
     dependencies:
-      typescript: 5.9.3
+      typescript: 6.0.3
 
   ccount@2.0.1: {}
 
@@ -1326,6 +1356,8 @@ snapshots:
       dequal: 2.0.3
 
   diff@9.0.0: {}
+
+  effect@4.0.2: {}
 
   elkjs@0.11.1: {}
 
@@ -1557,6 +1589,8 @@ snapshots:
 
   json-schema-traverse@1.0.0: {}
 
+  jsonata@2.1.0: {}
+
   jsonc-parser@3.3.1: {}
 
   jsonpointer@5.0.1: {}
@@ -1565,7 +1599,7 @@ snapshots:
     dependencies:
       commander: 8.3.0
 
-  koffi@2.15.6:
+  koffi@2.16.3:
     optional: true
 
   koffi@3.2.1:
@@ -2213,10 +2247,10 @@ snapshots:
 
   ts-dedent@2.3.0: {}
 
-  tui-md@0.2.0(@jitl/opentui-core@0.4.0(typescript@5.9.3)(web-tree-sitter@0.25.10))(@jitl/opentui-react@0.4.0(react-devtools-core@7.0.1)(react@19.3.0)(typescript@5.9.3)(web-tree-sitter@0.25.10)(ws@8.22.0))(react@19.3.0):
+  tui-md@0.2.0(@opentui/core@https://github.com/shazhou-ww/opentui/releases/download/opentui-0.4.0-koffi-2.16.3-1/opentui-core-0.4.0-koffi.2.16.3.1.tgz(typescript@6.0.3)(web-tree-sitter@0.25.10))(@opentui/react@https://github.com/shazhou-ww/opentui/releases/download/opentui-0.4.0-koffi-2.16.3-1/opentui-react-0.4.0-koffi.2.16.3.1.tgz(@opentui/core@https://github.com/shazhou-ww/opentui/releases/download/opentui-0.4.0-koffi-2.16.3-1/opentui-core-0.4.0-koffi.2.16.3.1.tgz(typescript@6.0.3)(web-tree-sitter@0.25.10))(react-devtools-core@7.0.1)(react@19.3.0)(ws@8.22.0))(react@19.3.0):
     dependencies:
-      '@opentui/core': '@jitl/opentui-core@0.4.0(typescript@5.9.3)(web-tree-sitter@0.25.10)'
-      '@opentui/react': '@jitl/opentui-react@0.4.0(react-devtools-core@7.0.1)(react@19.3.0)(typescript@5.9.3)(web-tree-sitter@0.25.10)(ws@8.22.0)'
+      '@opentui/core': https://github.com/shazhou-ww/opentui/releases/download/opentui-0.4.0-koffi-2.16.3-1/opentui-core-0.4.0-koffi.2.16.3.1.tgz(typescript@6.0.3)(web-tree-sitter@0.25.10)
+      '@opentui/react': https://github.com/shazhou-ww/opentui/releases/download/opentui-0.4.0-koffi-2.16.3-1/opentui-react-0.4.0-koffi.2.16.3.1.tgz(@opentui/core@https://github.com/shazhou-ww/opentui/releases/download/opentui-0.4.0-koffi-2.16.3-1/opentui-core-0.4.0-koffi.2.16.3.1.tgz(typescript@6.0.3)(web-tree-sitter@0.25.10))(react-devtools-core@7.0.1)(react@19.3.0)(ws@8.22.0)
       beautiful-mermaid: 1.1.3
       hast-util-to-string: 3.0.1
       image-dimensions: 2.6.0
@@ -2235,7 +2269,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  typescript@5.9.3: {}
+  typescript@6.0.3: {}
 
   uc.micro@3.0.0: {}
 

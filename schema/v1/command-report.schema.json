@@ -3,6 +3,104 @@
   "$id": "https://github.com/shazhou-ww/silvermoon/raw/refs/heads/main/schema/v1/command-report.schema.json",
   "title": "Silvermoon command report v1",
   "description": "The four public projections returned by every trustworthy Silvermoon command.",
+  "$defs": {
+    "objective": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "target",
+        "owner",
+        "level",
+        "failingCheck",
+        "terminal",
+        "problems",
+        "references"
+      ],
+      "properties": {
+        "target": {
+          "enum": ["device", "project", "idea"]
+        },
+        "owner": {
+          "enum": ["device", "project", "idea"]
+        },
+        "level": {
+          "type": "string",
+          "minLength": 1
+        },
+        "failingCheck": {
+          "type": ["string", "null"]
+        },
+        "terminal": {
+          "type": "boolean"
+        },
+        "problems": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "parameters"],
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "parameters": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "references": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["kind", "id", "owner", "lookup", "title", "content", "command"],
+            "properties": {
+              "kind": {
+                "enum": ["level", "check", "problem", "page"]
+              },
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "owner": {
+                "enum": ["device", "project", "idea"]
+              },
+              "lookup": {
+                "type": "string",
+                "pattern": "^(level|check|problem|page):[^:]+$"
+              },
+              "title": {
+                "type": "string",
+                "minLength": 1
+              },
+              "description": {
+                "type": "string",
+                "minLength": 1
+              },
+              "outcome": {
+                "type": "string",
+                "minLength": 1
+              },
+              "instruction": {
+                "type": "string",
+                "minLength": 1
+              },
+              "content": {
+                "type": "string"
+              },
+              "command": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        }
+      }
+    }
+  },
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -47,6 +145,9 @@
         },
         "problems": {
           "type": "array"
+        },
+        "objective": {
+          "$ref": "#/$defs/objective"
         }
       }
     },
@@ -139,6 +240,7 @@
             "idea-created",
             "idea-list",
             "next-steps",
+            "objective",
             "validation-result",
             "event-result"
           ]
@@ -152,6 +254,9 @@
         "summary": {
           "type": "string",
           "minLength": 1
+        },
+        "objective": {
+          "$ref": "#/$defs/objective"
         },
         "nextSteps": {
           "type": "array",

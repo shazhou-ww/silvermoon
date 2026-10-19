@@ -18,8 +18,10 @@ const detachedHead = ({
     summary: head === null
       ? "repository 当前没有本地分支。"
       : `HEAD ${head} 处于 detached 状态，没有当前分支。`,
-    nextSteps:
-      `保留当前工作，然后切换或创建 upstream 为 ${expectedRepository}#${expectedBranch} 的预期本地分支。`,
+    nextSteps: [
+      `目标是在不丢失当前工作的前提下，把工作附着到 upstream 为 `,
+      `\`${expectedRepository}#${expectedBranch}\` 的本地分支。`,
+    ].join(""),
   });
 
 export default detachedHead;

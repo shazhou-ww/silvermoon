@@ -15,6 +15,28 @@ import { join } from "node:path";
 import { test } from "node:test";
 
 import { linkPersonalSkill } from "../../src/foundation/installation/personal-skill-link.ts";
+import { directoryContentRevision } from "../../src/foundation/installation/skill-content-revision.ts";
+
+test("skill content revisions are path-independent and cover every regular file", async () => {
+  const root = await mkdtemp(join(tmpdir(), "silvermoon-skill-revision-"));
+  const left = join(root, "left");
+  const right = join(root, "right");
+  try {
+    await mkdir(join(left, "references"), { recursive: true });
+    await writeFile(join(left, "SKILL.md"), "skill\n");
+    await writeFile(join(left, "references", "guide.md"), "guide\n");
+    await cp(left, right, { recursive: true });
+
+    const expected = await directoryContentRevision(left);
+    assert.match(expected, /^sha256:[a-f0-9]{64}$/);
+    assert.equal(await directoryContentRevision(right), expected);
+
+    await writeFile(join(right, "references", "guide.md"), "changed\n");
+    assert.notEqual(await directoryContentRevision(right), expected);
+  } finally {
+    await rm(root, { force: true, recursive: true });
+  }
+});
 
 test("links the canonical skill and safely replaces links or an identical copy", async () => {
   const root = await mkdtemp(join(tmpdir(), "silvermoon-skill-link-"));

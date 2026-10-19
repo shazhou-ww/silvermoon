@@ -41,22 +41,25 @@ repository skill paths. Project readiness depends only on Git, Silvermoon
 configuration, metadata schema, and layout. Runtime identity, latest-version
 checks, and personal skill registration belong to device readiness.
 
-Read a dialogue report's device advisory separately from its project
-observation. A global runtime reuses a successful result from its installed npm
-channel for less than 24 hours and validates personal discovery links against the running
-package. Missing, broken, or stale links and registry failures require device
-repair but do not turn a valid project snapshot into
-`project-setup-required`. Healthy device facts remain in structured reports but
-are omitted from text and TUI output. Snapshot-only `check` commands do not
-perform these device checks.
+For check-backed `whats-next`, read Device, Project, and Idea as one
+prerequisite chain. Device configuration, the `PATH`-discoverable runtime, and
+the personal discovery link must pass before Project owns the current
+Objective. Routine commands do not query npm. When a future schema requires a
+runtime freshness check, a global runtime uses its active npm registry
+configuration and reuses a successful channel result for less than 24 hours.
+Registry failures remain non-blocking telemetry, while a missing or stale
+personal link blocks the Device prerequisite. Device facts remain structured
+telemetry, but Objective text and TUI do not render them as a second advisory.
+These checks do not turn a valid project snapshot into
+`project-setup-required`, and snapshot-only `check` commands omit them.
 
 Project observations report every discovered schema-bearing file under
 `observation.schemas`. Validity and current-target readiness are independent:
 a valid v1 file is readable but requires migration before `whats-next` or a
 write workflow continues. `list-ideas` and snapshot-only `check` may read valid
 historical metadata. A future version is never parsed or modified; project
-preparation bypasses the 24-hour latest-runtime cache once and reports the
-runtime freshness outcome.
+preparation performs the otherwise skipped latest-runtime check, bypasses its
+24-hour cache once, and reports the runtime freshness outcome.
 
 Silvermoon's own source repository must not depend on its published package,
 but it uses the same device boundary. Run `pnpm setup:dev` to build and link

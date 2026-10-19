@@ -69,4 +69,7 @@ test("what's next registries contain every catalog file exactly once", async () 
   assert.deepEqual(chineseIds, fileIds);
   assert.deepEqual([...WHATS_NEXT_TEMPLATE_IDS].sort(), fileIds);
   assert.equal(new Set(WHATS_NEXT_TEMPLATE_IDS).size, fileIds.length);
+  assert.ok(fileIds.length <= 30, `expected converged catalog, found ${fileIds.length} templates`);
+  assert.ok(!fileIds.includes("navigation-ready"));
+  assert.ok(!fileIds.includes("lifecycle-inactive"));
 });

@@ -48,8 +48,10 @@ language.
   `silvermoon create-idea`.
 - Otherwise use `silvermoon whats-next [idea]`, passing a selector only when
   the user supplied or previously selected it.
-- Bare `whats-next` lists active ideas and offers creation, even when exactly
-  one idea is active. Never infer selection; require an explicit ULID or alias.
+- Bare `whats-next` targets Device outside a Git worktree and Project inside
+  one. A terminal Objective has no required next step. Use `list-ideas` for
+  inventory, and require an explicit ULID or alias before Idea navigation.
+  A selector outside a worktree is a target-context error.
 
 `list-ideas` validates the local project and complete idea layout, then queries
 the current worktree snapshot without checking conflicts, cleanliness, branch,
@@ -81,13 +83,18 @@ Project snapshot checks inspect Git, Silvermoon configuration, metadata schema,
 and layout only. They do not read `package.json`, `node_modules`, or repository
 skill paths.
 
-Treat `response.device` as a non-blocking execution-environment advisory, not a
-project finding. Surface an available global-runtime update and repair missing,
-broken, or stale personal skill links at the device or Agent host. Successful
-observations of the installed version's npm channel may be reused for less
-than 24 hours; stable versions follow `latest`, canaries follow `canary`, and registry
-failure never makes a valid project snapshot fail. Snapshot-only `check`
-commands intentionally omit device readiness.
+Check-backed `whats-next` follows one prerequisite chain:
+Device -> Project -> Idea. Project requires Device to reach
+`update-unconfirmed`, so invalid device configuration, a runtime not
+discoverable on `PATH`, or a missing personal skill link keeps Device as the
+single current owner. Routine observations do not query npm and report that a
+runtime update check was not required. When a future project schema requires a
+freshness check, surface an available global-runtime update; successful channel
+observations may be reused for less than 24 hours. Stable versions follow
+`latest`, canaries follow `canary`, and registry failure never makes a valid
+project snapshot fail. `response.device` retains execution-environment facts as
+telemetry; it never adds a second action beside the owning Objective.
+Snapshot-only `check` commands intentionally omit device readiness.
 
 Read `observation.schemas` as two independent axes. `validity` says whether
 the running runtime can validate the file; `readiness` says whether the file
@@ -96,7 +103,7 @@ snapshot `check` and remain readable through `list-ideas`, while
 `whats-next` and write preparation require its declared migration first.
 Never edit or guess a future schema. Project preparation forces one
 latest-runtime refresh and reports whether an update exists, the confirmed
-latest still lacks support, or registry freshness is unavailable.
+latest still lacks support, or configured-registry freshness is unavailable.
 
 When preparation reports `migration-required`, use the exact migration path
 declared in `observation.schemas`; do not edit only a version field. With an
@@ -120,6 +127,22 @@ Treat each command's `intention`, `observation`, `actions`, and `response` as
 one report. Read every problem and all ordered `response.nextSteps`; never
 combine reports. `actions` contains only side effects already attempted.
 Markdown is a rendering of the report, not a second decision model.
+
+Check-backed `whats-next` reports use one Objective shell whose title names the
+requested target Objective. Read **Current status** as the self-contained
+relationship between the requested Objective and any prerequisite that must
+finish first. Read **Problems** as the localized problem descriptions and
+labeled observed facts. Machine Objective IDs, level/check IDs, Problem IDs,
+and raw parameters remain in the structured report rather than the default
+Markdown. Read **Next action** as the instructions for the current observation
+and execute only the highest-priority safe instruction. **References** lists
+compact explicit namespace commands such as
+`silvermoon reference problem:repository-worktree` for useful level, check, and Problem
+pages; the runtime resolves their Objective owner. Open one only when its
+stable explanatory knowledge is needed.
+A terminal Objective renders **Outcome** and **References** only. Do not treat
+Reference prose as a dynamic observation or replace Problem parameters with
+it.
 
 Apply the report in this order:
 
@@ -166,10 +189,12 @@ Missing guidance is normal. A guidance problem blocks only the reported
 current action until repaired. `check` validates all three fixed guidance files
 in its selected snapshot but never returns their content.
 
-Every selected v2 report projects `selectedIdea.control` and all three
-`selectedIdea.submissions`. Treat `downstream` as Agent-side control,
+Every selected v2 report projects `selectedIdea.control`, `selectedIdea.gateModes`,
+and all three `selectedIdea.submissions`. Treat `downstream` as Agent-side control,
 `upstream` as upstream/user-side control, and `none` as terminal. A stale
-current-phase submission returns effective control downstream. `response.review`
+current-phase submission returns effective control downstream. A current
+submission may be `waived` instead of `accepted`; this is distinct evidence,
+never an inferred `accept*`. `response.review`
 appears only when the exact current phase revision is submitted and control is
 upstream; before that, follow `response.nextSteps` instead of asking for the
 corresponding acceptance.
@@ -216,7 +241,9 @@ phase while preserving the nested worlds:
   Expand the plan only as concrete work requires it. Preserve the Deployment
   seed unless implementation creates a material external requirement. The
   human gate is acceptance of the exact reported
-  `implementationRevision`.
+  `implementationRevision`. If the observed `inner` gate mode is `waived`, an
+  exact synchronized `submitInner` advances directly to deploying without an
+  `acceptInner` event; reobserve rather than opening an implementation gate.
 - **Deploying:** Use `Deployment.md` and supporting Outer World (现实世界)
   files by refining the preparation seed to drive and verify external outcomes;
   do not recap implementation or change repository deliverables. Synchronize a

@@ -17,6 +17,26 @@ test("does not expose the removed criteria evidence contract", () => {
   assert.equal(Object.hasOwn(silvermoon, "verifyCriteriaEvidence"), false);
 });
 
+test("exports the functional Objective Pilot and Effect boundary", () => {
+  for (const name of [
+    "canonicalManifestUri",
+    "createMemoryCheckProbe",
+    "describeLevels",
+    "loadPilotSpec",
+    "ObjectiveConfigurationError",
+    "ObjectiveOperationError",
+    "observe",
+    "readPage",
+    "searchPages",
+    "startEffect",
+  ] as const) {
+    assert.equal(typeof silvermoon[name], "function");
+  }
+  assert.equal(Object.hasOwn(silvermoon, "createObjectiveLoader"), false);
+  assert.equal(Object.hasOwn(silvermoon, "ObjectiveRegulator"), false);
+  assert.equal(Object.hasOwn(silvermoon, "ObjectivePortfolioSupervisor"), false);
+});
+
 test("exports schema migration discovery and dispatch", () => {
   assert.deepEqual(
     silvermoon.IMPLEMENTED_SCHEMA_MIGRATIONS,

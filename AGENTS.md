@@ -62,6 +62,16 @@
   changes.
 - Do not commit secrets, credentials, tokens, or private customer data.
 
+## Preset lineage
+
+- This repository derives from
+  `https://github.com/shazhou-ww/preset-npm-package.git#main`; keep
+  `.git-lineage.yaml` and the managed `parent` remote aligned with that
+  immediate parent.
+- Use `git-lineage update` from a clean worktree to merge preset updates.
+  Preserve Silvermoon-specific runtime, validation, and release behavior when
+  resolving parent conflicts.
+
 ## npm releases
 
 - Follow [`docs/npm-package-releases.md`](docs/npm-package-releases.md).

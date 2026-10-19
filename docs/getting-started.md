@@ -19,6 +19,11 @@ npm install --global silvermoon
 silvermoon whats-next
 ```
 
+在 Git worktree 外运行 bare `whats-next` 会检查 Device Objective；在 worktree
+内运行时会检查 Project Objective。任一 Objective 到达 terminal 后都不会隐式列出
+idea 或要求选择任务。需要浏览 idea 时使用 `silvermoon list-ideas`，然后把明确的
+ULID 或唯一 alias 传给 `silvermoon whats-next <idea>`。
+
 The default installation follows the stable npm `latest` channel. To opt into
 the daily development channel, install `silvermoon@canary`; return to stable
 with `silvermoon@latest`.
@@ -37,16 +42,19 @@ repositories never declare Silvermoon dependencies or store a Silvermoon skill
 copy. Snapshot checks ignore `package.json`, `node_modules`, and repository
 skill paths.
 
-Dialogue commands report device readiness separately from project readiness.
-For a global installation, Silvermoon verifies that every present personal
-registration resolves to the running package's canonical skill and checks the
-npm channel encoded by the installed version (`latest` for stable versions,
-`canary` for canary versions). A successful channel result is reused from
-`~/.cache/silvermoon/runtime-latest.json` for less than 24 hours. An unavailable
-registry or an invalid skill link is an explicit, non-blocking device advisory;
-it never changes a project snapshot result. Healthy, non-actionable device
-facts remain available in structured reports but are omitted from text and TUI
-output. Snapshot-only `check` commands do not perform either device check.
+Check-backed `whats-next` follows one Device -> Project -> Idea prerequisite
+chain. Device configuration, the `PATH`-discoverable runtime, and the personal
+skill link must pass before Project or Idea becomes the current owner. Routine
+commands do not query npm for runtime freshness. Only after project inspection
+finds a schema version newer than the running runtime can read does Silvermoon
+query the installed version's channel (`latest` for stable versions, `canary`
+for canary versions). The query honors active npm configuration, and a
+successful result is reused from `~/.cache/silvermoon/runtime-latest.json` for
+less than 24 hours. Registry failures remain non-blocking telemetry; an invalid
+skill link blocks the Device prerequisite, but neither changes a snapshot-only
+project result. Device facts remain structured telemetry, and Objective text
+and TUI do not show a parallel advisory. Snapshot-only `check` commands do not
+perform the device checks.
 
 Silvermoon's own source repository uses the same device boundary without a
 self-dependency. Contributors run `pnpm setup:dev` to build the checkout, link

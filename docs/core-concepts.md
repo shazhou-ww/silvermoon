@@ -123,6 +123,8 @@ A project may add phase-specific writing, engineering, or release guidance at
 These files are optional. Silvermoon returns only the current actionable
 phase's file, after higher-priority project and repository readiness checks,
 and identifies its exact Git blob as `contentRevision`.
+`whats-next` validates all three files as project configuration; an invalid
+unselected phase blocks readiness without returning its content.
 
 Phase guidance is additive: it supplements rather than replaces the canonical
 skill and `response.nextSteps`. Public observation carries only provenance;

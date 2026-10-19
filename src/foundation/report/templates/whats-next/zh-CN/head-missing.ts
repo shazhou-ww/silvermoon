@@ -9,7 +9,7 @@ import type { SummaryAndNextSteps } from "../contract.ts";
 const headMissing = (): SummaryAndNextSteps =>
   ({
     summary: "repository 的 HEAD 尚无 commit。",
-    nextSteps: "确认预期分支和应纳入版本控制的文件后，创建初始 commit。",
+    nextSteps: "目标是让 repository HEAD 存在包含预期初始项目内容的 commit。",
   });
 
 export default headMissing;

@@ -75,6 +75,53 @@ export function runGit(root: string, args: readonly string[], { env, input }: Gi
   };
 }
 
+export type WorktreeContext =
+  | { kind: "worktree"; root: string }
+  | { kind: "outside-worktree"; root: string }
+  | { kind: "inspection-failed"; root: string; message: string };
+
+export function inspectWorktreeContext(root: string): WorktreeContext {
+  const requestedRoot = resolve(root);
+  const inspected = runGit(
+    requestedRoot,
+    ["rev-parse", "--is-inside-work-tree"],
+    { env: { LC_ALL: "C", LANG: "C" } },
+  );
+  if (!inspected.ok) {
+    if (
+      inspected.status === 128
+      && /^fatal: not a git repository\b/i.test(inspected.stderr)
+    ) {
+      return { kind: "outside-worktree", root: requestedRoot };
+    }
+    return {
+      kind: "inspection-failed",
+      root: requestedRoot,
+      message: sanitizeGitMessage(
+        inspected.stderr || inspected.error?.message || "Git worktree inspection failed.",
+      ),
+    };
+  }
+  if (inspected.stdout !== "true") {
+    return { kind: "outside-worktree", root: requestedRoot };
+  }
+  const resolved = runGit(
+    requestedRoot,
+    ["rev-parse", "--show-toplevel"],
+    { env: { LC_ALL: "C", LANG: "C" } },
+  );
+  if (!resolved.ok || resolved.stdout.length === 0) {
+    return {
+      kind: "inspection-failed",
+      root: requestedRoot,
+      message: sanitizeGitMessage(
+        resolved.stderr || resolved.error?.message || "Git returned no worktree root.",
+      ),
+    };
+  }
+  return { kind: "worktree", root: resolve(resolved.stdout) };
+}
+
 export async function observeGitCommands<T>(
   observer: ((args: readonly string[]) => void)|null,
   callback: () => T | Promise<T>,

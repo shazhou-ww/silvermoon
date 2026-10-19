@@ -99,61 +99,20 @@ function lifecycleIdea(
 }
 
 test("what's next templates select a catalog by language", () => {
-  assert.equal(
+  assert.match(
     whatsNextTemplates("en-US")["idea-not-found"]({ selector: "missing" }),
-    "Idea missing does not match an observed ULID or unique alias.",
+    /Idea missing does not match.+goal is to select.+silvermoon list-ideas.+silvermoon create-idea/,
   );
-  assert.equal(
+  assert.match(
     whatsNextTemplates("zh-CN")["idea-not-found"]({ selector: "missing" }),
-    "Idea missing 未匹配任何已观察到的 ULID 或唯一 alias。",
+    /Idea missing 未匹配.+目标是选中.+silvermoon list-ideas.+silvermoon create-idea/,
   );
-  assert.equal(
-    whatsNextTemplates("zh-Hans")["navigation-ready"]({
-      hasActiveIdea: false,
-    }),
-    [
-      "当前没有 active idea。",
-      "请先讨论目标，再运行 `silvermoon create-idea` 创建新 idea。",
-    ].join("\n"),
+  assert.match(
+    whatsNextTemplates("zh-Hans")["idea-not-found"]({ selector: "missing" }),
+    /Idea missing 未匹配.+目标是选中.+silvermoon list-ideas.+silvermoon create-idea/,
   );
-});
-
-test("navigation templates distinguish available and absent active ideas", () => {
-  const english = whatsNextTemplates("en-US")["navigation-ready"];
-  assert.equal(
-    english({ hasActiveIdea: true }),
-    [
-      "Choose explicitly whether to continue an active idea or,",
-      "after discussing the goal, create a new one.",
-      "To continue, run `silvermoon whats-next <ULID-or-alias>`.",
-      "To start something else, discuss the goal, then run `silvermoon create-idea`.",
-    ].join(" "),
-  );
-  assert.equal(
-    english({ hasActiveIdea: false }),
-    [
-      "No active ideas are available.",
-      "Discuss the goal, then run `silvermoon create-idea` to create a new idea.",
-    ].join("\n"),
-  );
-
-  const chinese = whatsNextTemplates("zh-CN")["navigation-ready"];
-  assert.equal(
-    chinese({ hasActiveIdea: true }),
-    [
-      "请明确选择继续一个 active idea，",
-      "或先讨论目标，再创建一个新 idea。",
-      "如需继续，运行 `silvermoon whats-next <ULID-or-alias>`；",
-      "如需开始其他工作，先讨论目标，再运行 `silvermoon create-idea`。",
-    ].join(""),
-  );
-  assert.equal(
-    chinese({ hasActiveIdea: false }),
-    [
-      "当前没有 active idea。",
-      "请先讨论目标，再运行 `silvermoon create-idea` 创建新 idea。",
-    ].join("\n"),
-  );
+  assert.equal("navigation-ready" in whatsNextTemplates("en-US"), false);
+  assert.equal("lifecycle-inactive" in whatsNextTemplates("en-US"), false);
 });
 
 test("what's next templates render dynamic repository values", () => {
@@ -161,11 +120,11 @@ test("what's next templates render dynamic repository values", () => {
   assert.deepEqual(templates["head-missing"](), {
     summary: "The repository has no commit at HEAD.",
     nextSteps:
-      "Confirm the intended branch and files to track, then create the initial commit.",
+      "The goal is a repository HEAD commit that preserves the intended initial project content.",
   });
   assert.deepEqual(whatsNextTemplates("zh-CN")["head-missing"](), {
     summary: "repository 的 HEAD 尚无 commit。",
-    nextSteps: "确认预期分支和应纳入版本控制的文件后，创建初始 commit。",
+    nextSteps: "目标是让 repository HEAD 存在包含预期初始项目内容的 commit。",
   });
   assert.deepEqual(
     templates["primary-behind"]({
@@ -181,28 +140,20 @@ test("what's next templates render dynamic repository values", () => {
       summary:
         "Local HEAD is abc123; observed primary is def456; relationship is behind.",
       nextSteps:
-        "Fast-forward branch topic to observed primary def456 with `git merge --ff-only def456` without rewriting history, then run `silvermoon whats-next` again.",
+        "The goal is for branch topic to reach observed primary def456 without rewriting history.",
     },
   );
   assert.equal(
     templates["event-history-invalid"]({
       recheckCommand: "`silvermoon whats-next --audience agent`",
     }),
-    [
-      "Preserve both histories.",
-      "Review the selected commit's event boundary and repair only an authorized failure,",
-      "then retry `silvermoon whats-next --audience agent`.",
-    ].join(" "),
+    "The goal is valid append-only event history at the selected commit boundary while preserving both histories; repair only an explicitly authorized failure.",
   );
   assert.equal(
     whatsNextTemplates("zh-CN")["event-history-invalid"]({
       recheckCommand: "`silvermoon whats-next --audience agent`",
     }),
-    [
-      "保留双方历史。检查所选提交的事件边界，",
-      "仅在获得授权时修复明确的错误，",
-      "然后重试 `silvermoon whats-next --audience agent`。",
-    ].join(""),
+    "目标是在保留双方历史的前提下，让所选提交边界具有有效的 append-only 事件历史；仅修复已获得明确授权的错误。",
   );
 });
 
@@ -240,7 +191,7 @@ test("idea metadata templates provide the canonical Idea.md structure", () => {
     {
       summary: "Idea document is missing",
       nextSteps: [
-        `Restore .silvermoon/ideas/01ABC/outer/inner/ideal/Idea.md as the current idea's canonical Idea.md.`,
+        `The goal is for .silvermoon/ideas/01ABC/outer/inner/ideal/Idea.md to be the current idea's readable canonical Idea.md.`,
         `Use this canonical template:`,
         "```markdown",
         "# <title>",
@@ -253,7 +204,6 @@ test("idea metadata templates provide the canonical Idea.md structure", () => {
         "",
         "## Acceptance criteria",
         "```",
-        `Then retry \`silvermoon whats-next "checkout-flow" --audience agent\`.`,
       ].join("\n"),
     },
   );
@@ -262,7 +212,7 @@ test("idea metadata templates provide the canonical Idea.md structure", () => {
     {
       summary: "无法读取 idea metadata：Idea document is missing",
       nextSteps: [
-        `把 .silvermoon/ideas/01ABC/outer/inner/ideal/Idea.md 恢复为当前 idea 的 canonical Idea.md。`,
+        `目标是让 .silvermoon/ideas/01ABC/outer/inner/ideal/Idea.md 成为当前 idea 可读取的 canonical Idea.md。`,
         `使用以下 canonical template：`,
         "```markdown",
         "# <标题>",
@@ -275,7 +225,6 @@ test("idea metadata templates provide the canonical Idea.md structure", () => {
         "",
         "## 验收标准",
         "```",
-        `然后重新运行 \`silvermoon whats-next "checkout-flow" --audience agent\`。`,
       ].join("\n"),
     },
   );
@@ -287,7 +236,7 @@ test("idea metadata templates provide the canonical Idea.md structure", () => {
     {
       summary: "Missing observed idea metadata",
       nextSteps:
-        "Repair the reported idea document and retry `silvermoon list-ideas --audience agent`.",
+        "The goal is a readable canonical Idea.md that satisfies the idea metadata contract.",
     },
   );
 });
@@ -310,7 +259,7 @@ test("lifecycle instructions route all six derived template phases", () => {
       state: "implementing",
       submissionState: "unsubmitted",
       expected:
-        "Continue the current idea fixture in phase file Implementation.md",
+        "The goal is to complete implementation evidence",
       excluded: "The current implementation revision was recorded by submitInner",
     },
     {

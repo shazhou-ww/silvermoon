@@ -1,11 +1,15 @@
 # Source modules
 
-## 当前专业能力 module
+## 当前 Objective Pilot module
 
-[professional-model](./professional-model/README.md) 是仓库内独立的通用契约与
-拼装执行 module，不新增架构层或独立 npm 包。[whats-next](./business/whats-next.ts)
-的有序检查实际由它组织，领域报告与精确生命周期事实仍由现有基础及业务能力提供。
-详情见[专业能力说明](../docs/professional-model.md)。
+[objective-guide](./objective-guide/README.md) 直接重导
+`@potential-guide/objective-pilot@0.1.0-rc.0` 与
+`@potential-guide/effects@0.1.0-rc.0` 的函数式入口：
+`loadPilotSpec` 加载不可变规格，`observe` 构造单次观测 Effect，
+`startEffect` 负责启动、等待与取消。[whats-next](./business/whats-next.ts)
+将设备、项目、Idea 三个稳定 Git Objective URI 绑定到内存 CheckProbe；领域报告与
+精确生命周期事实仍由现有能力提供。详情见[运行时说明](../docs/objective-guidance.md)。
+旧 Guide instance、check runner 请求和 `{ pass }` 结果协议不保留兼容包装。
 
 ## 三层目标架构
 

@@ -16,19 +16,15 @@ const primaryUpstreamMismatch = ({
   remote,
   repository,
   upstreamBranch,
-  verifyCommand,
 }: PrimaryUpstreamMismatchParameters): SummaryAndNextSteps => {
   const actual = remote === null
     ? "none"
-    : `${repository ?? remote}#${upstreamBranch ?? "unknown"}`;
+    : `\`${repository ?? remote}#${upstreamBranch ?? "unknown"}\``;
   return {
     summary:
       `Branch ${branch} has upstream ${actual}; expected ${expectedRepository}#${expectedBranch}.`,
-    nextSteps: [
-      `Configure a named remote for ${expectedRepository},`,
-      `then set branch ${branch} to track that remote's ${expectedBranch} branch.`,
-      `Verify with ${verifyCommand}.`,
-    ].join(" "),
+    nextSteps:
+      `The goal is for branch \`${branch}\` to track \`${expectedRepository}#${expectedBranch}\`.`,
   };
 };
 

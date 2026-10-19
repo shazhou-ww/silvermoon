@@ -3,8 +3,9 @@
 This page is the authoritative reference for Silvermoon storage, revisions,
 derived state, CLI reports, and validation.
 
-The internal [professional model module](./professional-model.md) organizes
-`whats-next` checks without changing these public contracts.
+The [Objective Guide runtime](./objective-guidance.md) organizes Device,
+Project and Idea checks and supplies the shared Objective position projected by
+`whats-next`.
 
 ## Fixed Storage Layout
 
@@ -62,13 +63,14 @@ and report content is normalized to LF. Silvermoon treats the body as inert
 Markdown: it does not parse frontmatter, interpolate values, resolve includes,
 fetch URLs, execute snippets, translate content, or write it to traces.
 
-Lifecycle commands use on-demand validation. Selected `whats-next` reads only
-the selected actionable phase after project, local repository, fetch, and
-ancestry readiness. `create-idea` reads only preparing guidance after local
-preflight and before writing any scaffold path. Errors in another phase and
-extra directory entries do not preempt those commands. Bare navigation,
-selector misses, completed or abandoned ideas, and readiness blocks do not
-read or return guidance.
+`whats-next` validates all project guidance locally during project preparation,
+then again in the confirmed primary snapshot. Invalid unselected phases or
+extra directory entries block project readiness, including bare navigation and
+terminal Idea routes. After repository readiness, only a selected actionable
+phase's content is returned. `create-idea` still reads only preparing guidance
+after local preflight and before writing a scaffold; its scope is unchanged.
+Bare navigation, selector misses, terminal ideas and readiness blocks never
+return guidance content.
 
 All `check` targets use complete validation: they reject any invalid phase file
 or extra entry in their selected HEAD, worktree, index, commit, or remote
@@ -162,8 +164,9 @@ numbers derived from one-based file order, and a 1 MiB limit per record includin
 LF. New records omit sequence and include a CLI-generated UTC RFC 3339 millisecond
 timestamp. Historical sequence fields and missing timestamps remain readable;
 present timestamps must be nondecreasing. Its strict
-twelve-event union updates accepted and submitted revision facts, interaction
-messages, and unified control; no observations, creation/import markers, or
+thirteen-event union updates gate policy, accepted and submitted revision
+facts, interaction messages, and unified control; no observations,
+creation/import markers, or
 audit envelope are stored. The nested-world revisions and five lifecycle
 states are unchanged.
 
@@ -217,17 +220,24 @@ and use the same `silvermoon migrate` command, which resolves back to the
 unpublished implementation. No navigation command automatically migrates a v1
 project.
 
-V2's ten business types are `setAlias`, `setLanguage`, `submitIdeal`,
+V2's eleven business types are `setAlias`, `setLanguage`, `setGateMode`, `submitIdeal`,
 `submitInner`, `submitOuter`, `acceptIdeal`, `acceptInner`, `acceptOuter`,
 `abandon`, and `resume`. The two interaction types, `ping` and `pong`, carry
 only a nonempty `message` string. Replay retains ordered messages and projects
 `control.owner` with its last transfer across messages, submissions,
-acceptances, and terminal events. Each phase's submitted revision is separate
-from its accepted revision. After `abandon`, only `resume` is legal.
+acceptances, gate passage, and terminal events. Each phase's submitted revision
+is separate from its accepted or waived revision. After `abandon`, only
+`resume` is legal.
 Interaction appends need the local byte precondition but no primary fetch;
 submissions need the exact current world on primary but no human confirmation;
 acceptances additionally require explicit confirmation and the same revision
-already submitted. The CLI cannot authenticate upstream or downstream senders.
+already submitted. Every level defaults to `explicit`; `setGateMode` requires
+explicit upstream confirmation in a nonterminal phase. The current runtime
+accepts `waived` only for `inner`. An exact inner submission under that mode,
+or a late waiver of that submitted revision, advances without `acceptInner`
+while retaining distinct waived evidence. Restoring `explicit` does not revoke
+an already passed revision, and changed world content makes old passage
+evidence stale. The CLI cannot authenticate upstream or downstream senders.
 
 ## Experimental JavaScript Package API
 
@@ -330,7 +340,46 @@ silvermoon create-idea [--language <tag>] [--audience <human|agent>] [--trace <f
 silvermoon migrate [--apply --expected-digest <sha256> | --resume --confirm-stopped | --rollback --confirm-stopped]
 silvermoon check [--remote | --commit <revision> | --staged | --worktree] [--language <en|en-US|zh|zh-CN>] [--audience <human|agent>] [--trace <file.trace.jsonl>]
 silvermoon event <replay|append> <idea> [--input <request.json>] [--after-length <bytes>] [--after-digest <oid>] [--full-history] [--expected-digest <8+-hex-prefix>] [--expected-primary <commit>] [--confirm-decision] [--audience <human|agent>]
+silvermoon reference [<level|check|problem|page|system>:]<reference-or-query> [--language <tag>] [--audience <human|agent> | --json]
 ```
+
+`reference` reads the packaged Objective Guide resources without inspecting or
+changing a repository. An explicit namespace maps to the existing stable ID
+directories and resolves the page across the Idea -> Project -> Device
+prerequisite chain. If the canonical ID exists under multiple owners, the
+result reports every owner instead of selecting by traversal order.
+
+Without a namespace, `reference` applies the existing title, description, and
+content search semantics across all three Objectives. One result opens
+automatically; multiple results list namespace, owner, stable ID, and a
+copyable explicit command; zero results is a successful empty result. Markdown
+output expands every `[[reference-id|label]]` link into the same explicit
+namespace form. `--json` alone returns structured data; the default and both
+audiences receive Markdown. The older `reference page <objective>
+<reference-id>` and `reference search <objective> <query>` forms remain
+compatibility entry points but are not generated.
+
+An explicit structured page result retains both its short lookup and canonical
+identity:
+
+```json
+{
+  "lookup": "check:repository-upstream-matches",
+  "operation": "read",
+  "namespace": "check",
+  "query": "repository-upstream-matches",
+  "owner": "project",
+  "referenceId": "checks/repository-upstream-matches",
+  "language": "en-US",
+  "page": {
+    "id": "checks/repository-upstream-matches"
+  }
+}
+```
+
+Structured search lists use the same `namespace`, `owner`, `referenceId`, and
+`command` fields. A uniquely matched search returns the page shape with
+`operation: "search"`; an empty search returns `results: []`.
 
 Every valid invocation starts one ordered domain-message stream with
 `intention.accepted`. Observation facts are folded through one immutable
@@ -339,7 +388,8 @@ one `action.finished` message with the same run-local action ID. A final
 `response.created` message is emitted only after the observation is terminal
 and no action is pending.
 
-All successful and trustworthy blocked commands return exactly four
+Except for the read-only `reference` resource query described above, all
+successful and trustworthy blocked commands return exactly four
 projections:
 
 ```json
@@ -352,14 +402,55 @@ projections:
     }
   },
   "observation": {
-    "outputLanguage": "en-US"
+    "state": "objective-ready",
+    "outputLanguage": "en-US",
+    "objective": {
+      "target": "project",
+      "owner": "project",
+      "level": "terminal",
+      "failingCheck": null,
+      "terminal": true,
+      "problems": [],
+      "references": [
+        {
+          "kind": "level",
+          "id": "levels/terminal",
+          "owner": "project",
+          "lookup": "level:terminal",
+          "title": "Objective attained",
+          "description": "All checks passed in this probe.",
+          "content": "## Meaning\n\nThis terminal means every advancement check required by the current probe passed.",
+          "command": "silvermoon reference level:terminal --language en-US"
+        }
+      ]
+    }
   },
   "actions": [],
   "response": {
-    "kind": "choice-required",
+    "kind": "objective",
     "language": "en-US",
-    "summary": "No active ideas are available.",
-    "choices": [],
+    "summary": "project Objective is terminal; no required next step remains.",
+    "objective": {
+      "target": "project",
+      "owner": "project",
+      "level": "terminal",
+      "failingCheck": null,
+      "terminal": true,
+      "problems": [],
+      "references": [
+        {
+          "kind": "level",
+          "id": "levels/terminal",
+          "owner": "project",
+          "lookup": "level:terminal",
+          "title": "Objective attained",
+          "description": "All checks passed in this probe.",
+          "content": "## Meaning\n\nThis terminal means every advancement check required by the current probe passed.",
+          "command": "silvermoon reference level:terminal --language en-US"
+        }
+      ]
+    },
+    "problems": [],
     "nextSteps": []
   }
 }
@@ -379,21 +470,25 @@ projections:
   was attempted. Probes and future work do not appear here.
 - `response` is a command-specific discriminated union produced only from the
   intention and final internal observation. Its variants are `blocked`,
-  `choice-required`, `idea-created`, `idea-list`, `next-steps`, and
+  `choice-required`, `idea-created`, `idea-list`, `next-steps`, `objective`,
   `validation-result`, and `event-result`. It contains the localized summary
   and any ordered `nextSteps`, choices, items, validation result, review
   context, or guidance needed by the caller.
 
-Dialogue observations and responses also carry the same optional `device`
-advisory. `device.runtime` identifies the running package as `global`, `host`,
-or `source-checkout`; `device.skill` reports personal-link health; and
+Dialogue observations and responses also carry optional `device` telemetry.
+`device.runtime` identifies the running package as `global`, `host`, or
+`source-checkout`; `device.skill` reports personal-link health; and
 `device.update` reports `current`, `available`, `unavailable`,
 `managed-by-host`, or `source-checkout` with cache or registry provenance. Its
 optional `channel` identifies the npm dist-tag selected from the installed
 version; `latestVersion` remains the observed target version on that channel.
-These fields never enter `problems` or change command success. Snapshot-only
-`check` responses omit `device` so their result depends only on the selected
-project snapshot and explicit primary state.
+For check-backed `whats-next`, Project requires Device through
+`update-unconfirmed`. Configuration, runtime, and skill failures therefore
+retain Device as the single Objective owner even when Project or Idea was the
+target. Update status remains telemetry and does not block those targets.
+These fields never become project `problems` or change project snapshot
+validity. Snapshot-only `check` responses omit `device` so their result depends
+only on the selected project snapshot and explicit primary state.
 
 A selected active v2 idea adds a primary-bound `review` object to its
 `next-steps` response only when the exact current phase revision has a matching
@@ -592,11 +687,35 @@ Observations are discriminated by command intent and `state`:
 - `repository-preparation-required` is used by `create-idea` when its local
   safety checks fail. It includes `root`, `version`, `configuration`, and at
   least one `problem`, but no idea inventory or remote synchronization facts.
-- Bare `whats-next` returns `navigation-ready` with `ideas.counts` and
-  `ideas.activeIdeas` (possibly empty). Each active item includes `id`,
-  lifecycle `state`, UTC `createdAt`, and optional alias/title read from the
-  current idea document; missing titles render as `-`. It never selects a
-  candidate.
+- Bare `whats-next` infers its Objective from path context: Device when the
+  requested path is explicitly outside a Git worktree, and Project when it is
+  inside one. Active Idea inventory is exclusive to `list-ideas`; bare
+  `whats-next` never returns choices. A successful terminal returns
+  `objective-ready` with target/owner, level, no failing check or Problems,
+  its terminal level Reference, and `terminal: true`; it has no required next
+  steps.
+  Worktree inspection failures are explicit setup problems rather than Device
+  fallbacks. A selector requires a worktree and selects the Idea Objective;
+  outside-worktree selectors return `target-context-invalid`.
+- Every check-backed blocked or ready `whats-next` response projects the same
+  Objective position: requested target, actual owner (including prerequisite
+  ownership), level, failing check, complete ordered Problems with structured
+  parameters, and useful check/Problem References. Device does not include a
+  nonterminal level Reference merely because the level exists; terminal
+  reports retain their terminal page. Each Reference projection preserves kind, ID,
+  owner, lookup, title, description, content,
+  optional level outcome or Problem instruction, and its further-detail
+  command. Internal links are rendered as explicit namespace
+  `silvermoon reference` commands without executing or interpolating Reference
+  content. Markdown
+  titles the requested target Objective and renders fixed **Current status**,
+  **Problems**, **Next action**, and compact **References** sections. Current
+  status explains prerequisite ownership in prose, while Problems labels
+  observed facts without exposing raw IDs or parameter JSON. Those machine
+  fields remain unchanged in the structured response. Terminal output renders
+  **Outcome** and **References** only. Markdown does not inline full Reference
+  pages. Dynamic paths, revisions, branches, and retry commands remain
+  invocation facts; Reference pages remain stable explanatory knowledge.
 - Selected `whats-next` returns `idea-selected` with only `selectedIdea`
   (`id`, optional `alias`, lifecycle `state`), including terminal ideas. V2
   selections also include `control` (`owner`, nullable `lastTransfer`) and
@@ -608,8 +727,8 @@ Observations are discriminated by command intent and `state`:
   `idea-not-found` with the same enriched active `candidates`, not a fabricated
   selected idea. An actionable selection may also contain snapshot-bound
   guidance provenance; captured content is in the response.
-- `phase-guidance-invalid` means command readiness reached the current
-  actionable phase, but that phase's optional file exists and is invalid. It
+- `phase-guidance-invalid` means applicable project guidance validation failed
+  (all phases for `whats-next`, preparing for `create-idea`). It
   contains problems and repair instructions, not lifecycle instructions or
   guidance content.
 - After a successful `create-idea` preflight, `idea-created` carries
@@ -639,6 +758,8 @@ metadata schema, and layout. It does not inspect execution source, a package
 manager, `package.json`, project-local Silvermoon dependencies, `node_modules`,
 or repository skill paths. Runtime identity, update status, and personal skill
 registration are device facts and do not change a project snapshot result.
+For `whats-next`, the Device Objective consumes those facts as the first
+prerequisite while preserving that snapshot boundary.
 
 Complete project observations expose `schemas`, containing the runtime
 capability-manifest version, its release boundary, and one record for every
@@ -660,9 +781,9 @@ and upstream identity, then fetch and ancestry. A local branch may have any
 name, but its upstream must identify the configured repository and primary
 branch. Change summaries have fixed item and UTF-8 byte budgets and provide
 full counts and omitted counts; instructions require inspection of the complete
-change set without prescribing a particular diff tool. Bare navigation
-never selects an idea: it always lists every active idea alongside the option
-to discuss and run `create-idea`.
+change set without prescribing a particular diff tool. Bare navigation never
+selects or lists ideas. Use `list-ideas` for inventory and pass an explicit
+ULID or alias to navigate an Idea Objective.
 
 `create-idea` requires a local branch whose upstream identifies the configured
 primary repository and branch, plus a clean worktree; the local branch name is
@@ -686,12 +807,14 @@ The query validates Git presence, configuration, and the complete idea layout
 before filtering. It reads staged, unstaged, and
 untracked idea changes from the current worktree snapshot but never checks
 worktree hygiene, branch, upstream, or primary ancestry, and never fetches or
-accesses the project remote. Its independent device advisory may query the
-installed runtime's npm channel only when the successful device cache is at
-least 24 hours old. Stable versions follow `latest`; named prereleases follow
-their named dist-tag, including `canary`. Text
-and TUI output omit that advisory when every observed device state is healthy
-and non-actionable; structured reports retain the device facts.
+accesses the project remote. It does not query npm during ordinary device
+readiness. If schema inspection finds a version newer than the running runtime
+can read, Silvermoon queries the installed version's npm channel through the
+active npm configuration. Stable versions follow `latest`; named prereleases
+follow their named dist-tag, including `canary`, and successful results remain
+cacheable for less than 24 hours. Text and TUI output omit the device advisory
+when every observed state is healthy and non-actionable; structured reports
+retain the device facts.
 `list-ideas --language <en|en-US|zh|zh-CN>` overrides only Silvermoon-owned
 output for that invocation; without it, the project's resolved output
 language is used.

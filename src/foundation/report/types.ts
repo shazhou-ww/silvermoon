@@ -11,6 +11,42 @@ export interface Problem {
   summary: string;
 }
 
+export type ReportJsonValue =
+  | string
+  | number
+  | boolean
+  | null
+  | readonly ReportJsonValue[]
+  | { readonly [key: string]: ReportJsonValue };
+
+export interface ObjectiveProblem {
+  id: string;
+  parameters: { readonly [key: string]: ReportJsonValue };
+}
+
+export interface ObjectiveReference {
+  kind: "level" | "check" | "problem" | "page";
+  id: string;
+  owner: "device" | "project" | "idea";
+  lookup: string;
+  title: string;
+  description?: string;
+  outcome?: string;
+  instruction?: string;
+  content: string;
+  command: string;
+}
+
+export interface ObjectiveProjection {
+  target: "device" | "project" | "idea";
+  owner: "device" | "project" | "idea";
+  level: string;
+  failingCheck: string | null;
+  terminal: boolean;
+  problems: ObjectiveProblem[];
+  references: ObjectiveReference[];
+}
+
 export interface Diagnostic {
   code: string;
   level?: string;
@@ -40,16 +76,16 @@ export interface DeviceAdvisory {
     status:
       | "ready"
       | "missing"
-      | "mismatched"
-      | "invalid"
+      | "incorrect"
+      | "canonical-unverifiable"
       | "managed-by-host"
       | "source-checkout";
     expectedRoot: string;
+    expectedRevision?: string;
     paths: string[];
-    invalidPaths?: string[];
-    invalidTargets?: Array<{
+    observed?: Array<{
       path: string;
-      target: string | null;
+      revision: string | null;
     }>;
     remediation?: string;
     summary?: string;
@@ -59,6 +95,7 @@ export interface DeviceAdvisory {
       | "available"
       | "current"
       | "unavailable"
+      | "not-required"
       | "managed-by-host"
       | "source-checkout";
     currentVersion: string | null;
@@ -84,6 +121,13 @@ export interface IdeaReference {
   control?: IdeaControlProjection;
   submissions?: IdeaSubmissionsProjection;
   eventDigest?: string;
+  gateModes?: GateModesProjection;
+}
+
+export interface GateModesProjection {
+  ideal: "explicit";
+  inner: "explicit" | "waived";
+  outer: "explicit";
 }
 
 export interface IdeaControlProjection {
@@ -94,7 +138,7 @@ export interface IdeaControlProjection {
       | "ping" | "pong"
       | "submitIdeal" | "submitInner" | "submitOuter"
       | "acceptIdeal" | "acceptInner" | "acceptOuter"
-      | "abandon" | "resume";
+      | "setGateMode" | "abandon" | "resume";
   } | null;
 }
 
@@ -102,13 +146,14 @@ export interface PhaseSubmissionProjection {
   phase: "ideal" | "inner" | "outer";
   submit: "submitIdeal" | "submitInner" | "submitOuter";
   decision: "acceptIdeal" | "acceptInner" | "acceptOuter";
-  state: "unsubmitted" | "submitted" | "accepted" | "stale";
+  state: "unsubmitted" | "submitted" | "accepted" | "waived" | "stale";
   revision: {
     field: "idealRevision" | "implementationRevision" | "deploymentRevision";
     value: string;
   };
   submittedRevision?: string;
   acceptedRevision?: string;
+  waivedRevision?: string;
 }
 
 export interface IdeaSubmissionsProjection {
@@ -207,6 +252,7 @@ interface ObservationBase {
   version?: ProjectVersion;
   configuration?: ProjectConfiguration;
   schemas?: ProjectSchemaReadiness;
+  objective?: ObjectiveProjection;
 }
 
 export interface ProjectSetupObservation extends ObservationBase {
@@ -284,6 +330,11 @@ export interface EventResultObservation extends ObservationBase {
   receipt: EventReceipt;
 }
 
+export interface ObjectiveObservation extends ObservationBase {
+  state: "objective-ready" | "objective-blocked";
+  objective: ObjectiveProjection;
+}
+
 export type Observation =
   | ProjectSetupObservation
   | CheckUnavailableObservation
@@ -294,7 +345,8 @@ export type Observation =
   | IdeaSelectedObservation
   | IdeaCreatedObservation
   | IdeasListedObservation
-  | EventResultObservation;
+  | EventResultObservation
+  | ObjectiveObservation;
 
 export interface CheckTarget {
   type: string;
@@ -346,6 +398,7 @@ interface ResponseBase {
   device?: DeviceAdvisory;
   details?: ResponseDetails;
   schemas?: ProjectSchemaReadiness;
+  objective?: ObjectiveProjection;
 }
 
 export interface ValidationResponse extends ResponseBase {
@@ -401,6 +454,13 @@ export interface IdeaListResponse extends ResponseBase {
   items: IdeaInventoryItem[];
 }
 
+export interface ObjectiveResponse extends ResponseBase {
+  kind: "objective";
+  objective: ObjectiveProjection;
+  nextSteps: InstructionStep[];
+  problems: Problem[];
+}
+
 export type ReportResponse =
   | ValidationResponse
   | EventResponse
@@ -408,7 +468,8 @@ export type ReportResponse =
   | IdeaCreatedResponse
   | ChoiceRequiredResponse
   | NextStepsResponse
-  | IdeaListResponse;
+  | IdeaListResponse
+  | ObjectiveResponse;
 
 export interface DateFacts {
   milliseconds: number;

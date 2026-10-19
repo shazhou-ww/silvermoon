@@ -1,28 +1,27 @@
-# Review 全部 whats-next templates
+# 基于真实输出 review 全部 whats-next 场景
 
 ## 问题
 
-whats-next catalog 包含成对的 en-US/zh-CN 模板，需要逐项人工 review 文案语义、
-命令边界、返回形状和两种 locale 的一致性。目前只有五个模板 ID 已明确完成
-review，其余状态不能从代码修改或测试通过中推断。
+仅对照 whats-next 模板源码逐项 review，难以看清设备、repository 和 lifecycle
+状态组合后的完整输出，也容易遗漏 routing 分支或对实际文本作出错误推断。
 
 ## 结果
 
-以 [review-status.md](./review-status.md) 作为完整 catalog 的 review 清单，逐项完成
-剩余模板 review，并只依据人工明确结论更新状态，最终得到无遗漏的已 review
-catalog。每一项按照 [review-method.md](./review-method.md) 的协作方法处理。
+设计一条从空设备开始、按序推进 Device、Project、Idea checks 的主链：每个 check
+通过时唯一前进到下一个 check；未通过时按可能的 problems 分叉，进入不同报告阶段
+并生成语料。实现层再用状态转移脚本和 Docker 场景完整模拟这些边，供维护者集中
+review 真实的全量输出。
 
 ## 边界
 
-- 一个模板 ID 的 review 同时覆盖对应的 en-US 与 zh-CN 文件。
-- 每次只 review 一个 template ID，不批量推断其他模板的结论。
-- review 状态是人工事实；代码已修改、测试通过或 Agent 判断均不能自动标记完成，
-  也不借 review 工作改变 canonical template ID、机器字段、事件类型或 schema。
+- 场景必须通过隔离环境中的真实 CLI 和项目状态产生，不直接调用模板或伪造输出。
+- 每个 check 的通过只有一个前进出口；失败可能产生不同 problems，须覆盖其报告阶段。
+- Ideal 只描述状态图设计；状态转移脚本、Docker 推进和语料收集属于 Implementation。
+- 主链从空设备初始化一次；失败分支从最近 checkpoint 派生，并在可行时修复后回归主链。
 
 ## 验收标准
 
-- `review-status.md` 精确覆盖 catalog 中除 locale `index.ts` 外的全部模板 ID。
-- `content-language`、`detached-head`、`event-history-invalid`、`head-missing`、
-  `idea-metadata-unavailable` 保持 `reviewed`，其他模板在获得明确 review 前保持
-  `pending`。
-- 所有模板完成 review 后，清单无 `pending`，且相关修正通过模板与 report 验证。
+- 覆盖图逐一列出所有 checks 的唯一通过出口，以及失败时可能产生的 problems、报告
+  阶段和回归/推进路径。
+- 全新 Docker 环境可从设备整备开始完成全部链路，并产出可追溯的双语完整输出。
+- 维护者完成整套语料 review 后无待处理项，相关修正通过 report 与 release 级验证。

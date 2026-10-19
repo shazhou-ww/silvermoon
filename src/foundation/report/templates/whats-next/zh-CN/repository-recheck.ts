@@ -6,9 +6,9 @@
 import type { RecheckParameters } from "../contract.ts";
 
 /** @pure */
-const repositoryRecheck = ({
-  recheckCommand,
-}: RecheckParameters) =>
-  `完成全部适用步骤后，再运行 ${recheckCommand}。`;
+const repositoryRecheck = (
+  _parameters: RecheckParameters,
+) =>
+  "目标是让 repository 满足全部已报告的 readiness 条件，同时保留未知工作。";
 
 export default repositoryRecheck;

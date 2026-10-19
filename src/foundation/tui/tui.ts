@@ -1,5 +1,5 @@
-import { createCliRenderer } from "@jitl/opentui-core";
-import type { CliRenderer } from "@jitl/opentui-core";
+import { createCliRenderer } from "@opentui/core";
+import type { CliRenderer } from "@opentui/core";
 import { win32 } from "node:path";
 import {
   createRoot,

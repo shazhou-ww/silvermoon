@@ -2,33 +2,51 @@
 
 ## Steps
 
-### I-S01: 建立专业能力 module
+### I-S01: 演进 ObjectiveGuide 基础契约
 
-依据[导向模型](./ideal/professional-model.md)在仓库内独立 module 定义固定 Target、Problem、Observation 与能力接口。严格验证 YAML 层级、检查引用顺序、code 到注册 skill 的映射，以及目标字段；guide 统一返回惰性 skill 内容字符串（可含文档引用），未知 code 明确提示知识缺口。逐关异步执行，首失败停止；每次 observe 向检查注册函数注入 useState，各 check 共享显式注册的 `[getState, setState]` 句柄，setter 立即更新、getter 读取最新值，不模拟 React 重渲染或依赖隐式全局上下文。
+按[核心类型契约](./ideal/objective-guidance.md)调整 Loader、语言中立 Guide、
+subject/language-bound instance 与 Manifest。把 level、check、problem 和普通
+页面统一到语言位于最内层的 References 树，以固定协议执行按 `CheckId` 约定
+发现的唯一 `run`/`run.*` entry，并支持跨平台受限 shebang 和 prerequisite 的
+最低可接受 level。每次 probe 用独立 temp directory 取代注入式
+`useState`，供 prerequisite chain 与顺序 checks 通过约定相对路径复用本轮
+临时文件，不新增语言专用 cache helper。
 
-### I-S02: 适配 what's next
+### I-S02: 接入三个作用域的 Guide
 
-把现有导航整备、选取、guidance 与生命周期推进改为注册原子检查，由拼装执行函数组织执行，不增加平行判断。导航 YAML 独立成文件，按 module 相对路径读取，并覆盖构建复制与安装包资源边界；所有跨 check 的可变状态及报告结果通过观察内 useState 句柄管理。复用领域报告和精确版本判据，保留四投影、优先级、控制权、语言、Git/schema 整备与非阻塞设备 advisory；不自动执行 skill、不替代人工接受。
+按[Silvermoon 领域契约](./ideal/silvermoon-objectives.md)把 Device、Project 和
+Idea 的 levels、checks、problems、Project→Idea prerequisite 及命令路由迁移到
+新协议。项目 guidance 检查和 Idea submit/accept 分层保持原有语义。
 
-### I-S03: 验证并记录抽象边界
+### I-S03: 保持现有导航兼容
 
-补充抽象及真实导航适配测试，更新直接相关文档。以已批准 Idea 为边界，不修改 ideal 或预写部署；保持三个高层步骤与三个标准，仅因实际复杂度增加辅助文件。简短验证结论与精确命令结果持久写入主体世界证据文件，ledger 仅镜像稳定 ID，不复制日志；只证明 Silvermoon 场景可用。
+补充核心与实际 CLI 兼容测试，更新相关文档；保留四投影、诊断优先级、设备
+advisory、语言、精确 revision 与人工交接。显式验证领域契约声明的 guidance
+检查范围扩展，不引入其他隐式行为变化。
 
 ## Acceptance criteria
 
-### I-AC01: 拼装语义可验证
+### I-AC01: OG 传输与运行时边界可验证
 
-专项测试覆盖检查顺序、首失败停止、空组及全部通过、0 级兜底、非空问题、未知 code 指导、配置与目标错误、多个 state 句柄独立、异步更新后的最新值、观察内共享及顺序/并发观察隔离；注册结束后不允许新增 state。预期不可用显式报告，程序缺陷不被 broad catch 吞掉。
+类型检查与专项测试覆盖 URI identity/cache、typed creation failures、定义域与
+受限 JSONata、prerequisite 最低层、跨平台 check/shebang 协议、probe cache
+生命周期与隔离边界、稳定 Problem ID、References namespace、完整 locale 叶子，以及固定
+`system/{overview,404}` 与 `levels/terminal`；错误不伪装成成功。
+证据见[核心边界验证](./objective-guidance-evidence.md#i-ac01)。
 
-### I-AC02: 导航行为兼容
+### I-AC02: 三个作用域的契约可验证
 
-针对整备、选取 Idea、guidance、生命周期与人工或外部等待的专项及现有兼容测试证明实际经过新抽象与注入的 state 机制；验证源文件、build 和安装包均读取独立 YAML，读取/解析错误明确传播而非使用旧内嵌配置。保持报告形状、优先级、语言、非阻塞 advisory 和精确 revision、提交、接受同步语义。观察是过程，跨观察不复用通过结论。
+专项与 CLI 测试覆盖领域契约的每层 checks：配置兜底、非阻塞设备 advisory、
+Project prerequisite、项目 guidance 缺失/非法/primary snapshot、无 selector
+仅做项目级导航、无效 selector、准确与 stale submission/acceptance、
+v1 兼容和 abandoned/completed。源码与导出检查证明无 OR/OPS 依赖；
+`list-ideas` 和 snapshot `check` 不新增同步、网络或设备 readiness 门槛。
+证据见[三级 Guide 与兼容验证](./objective-guidance-evidence.md#i-ac02)。
 
 ### I-AC03: 仓库验证通过
 
-通过 `pnpm check:sanity`、变更专项测试、交付前 `pnpm check` 与提交前 `pnpm check:commit`，记录精确命令与结果；通过全局运行时的 worktree/staged 元数据检查后普通提交及非强制同步，再对准确 implementationRevision 记录 submitInner，不进入部署或推断 acceptInner。
-
-## Evidence
-
-三个步骤与三个标准的实现结论、精确验证命令及适用边界见[实现证据](./implementation-evidence.md)；
-技术契约见[专业能力说明](../../../../../docs/professional-model.md)。
+运行 `pnpm check:sanity` 与专项测试，交付前 `pnpm check`，提交前
+`pnpm check:commit`，记录精确命令与结果。经全局运行时 worktree/staged 检查后
+普通提交及非强制同步，再对准确 implementationRevision 记录 submitInner；
+不推断 acceptInner。
+命令和结果见[仓库验证证据](./objective-guidance-evidence.md#i-ac03)。

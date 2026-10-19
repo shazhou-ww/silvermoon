@@ -2,21 +2,22 @@
 
 ## Steps
 
-### D-S01: 验证完整 catalog
+### D-S01: 运行完整场景集
 
-运行 release-grade 检查，确认所有 reviewed 模板、索引、renderers、exports 和测试在
-发布候选中一致。
+在全新 Docker 环境针对最终 revision 重跑主链与全部支链，并执行 release-grade
+检查。
 
-### D-S02: 形成最终 review 结果
+### D-S02: 交付最终 review 结果
 
-向维护者提供无 pending 的清单、已确认修正摘要和验证结果，供最终发布判断。
+向维护者提供完整双语输出语料、无 pending 的 review 状态、已确认修正摘要和验证
+结果，供最终发布判断。
 
 ## Acceptance criteria
 
-### D-AC01: Release 检查通过
+### D-AC01: 最终语料完整
 
-`pnpm check` 证明完整模板 catalog 可构建、测试、打包并通过发布级检查。
+最终 revision 的场景运行证明全部输出可从全新环境重现，覆盖检查无缺口。
 
-### D-AC02: Review 清单关闭
+### D-AC02: Release 检查通过
 
-最终 `review-status.md` 无 pending 项，并可追溯到全部 32 个 template ID。
+最终 `review-status.md` 无 pending 项，且 `pnpm check` 通过发布级检查。

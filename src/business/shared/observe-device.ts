@@ -11,6 +11,7 @@ export async function observeDevice({
   forceRuntimeRefresh = false,
   includeReadiness = true,
   platform,
+  requestLatest,
   userHome,
 }: {
   entryPath?: string;
@@ -18,6 +19,7 @@ export async function observeDevice({
   forceRuntimeRefresh?: boolean;
   includeReadiness?: boolean;
   platform?: NodeJS.Platform;
+  requestLatest?: (channel: string) => Promise<string>;
   userHome?: string | undefined;
 } = {}) {
   const userPromise = loadUserConfig({ home: userHome });
@@ -42,17 +44,30 @@ export async function observeDevice({
     }),
     userPromise,
   ]);
+  const userVersionStatus = "version" in user
+    ? user.version.status
+    : undefined;
   const [skill, update] = await Promise.all([
     inspectPersonalSkill({
       ...(userHome === undefined ? {} : { home: userHome }),
       runtimeSource: runtime.source,
     }),
-    runtime.source === "global"
+    runtime.source === "global" && (
+      forceRuntimeRefresh || userVersionStatus === "future"
+    )
       ? inspectRuntimeUpdate({
         currentVersion: runtime.version,
-        force: forceRuntimeRefresh,
+        ...(env === undefined ? {} : { env }),
+        force: true,
+        ...(requestLatest === undefined ? {} : { requestLatest }),
         ...(userHome === undefined ? {} : { home: userHome }),
       })
+      : runtime.source === "global"
+        ? Promise.resolve({
+          status: "not-required" as const,
+          currentVersion: runtime.version,
+          source: "runtime" as const,
+        })
       : Promise.resolve({
         status: runtime.source === "source-checkout"
           ? "source-checkout" as const

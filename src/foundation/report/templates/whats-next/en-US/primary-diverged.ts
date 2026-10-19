@@ -12,16 +12,12 @@ import type {
 const primaryDiverged = ({
   head,
   primary,
-  recheckCommand,
 }: PrimaryRelationParameters): SummaryAndNextSteps =>
   ({
     summary:
       `Local HEAD is ${head}; observed primary is ${primary}; relationship is diverged.`,
-    nextSteps: [
-      `Preserve local ${head} and remote ${primary},`,
-      `integrate both histories without force-pushing, resolve and validate the result,`,
-      `then run ${recheckCommand} again.`,
-    ].join(" "),
+    nextSteps:
+      `The goal is an integrated, validated history that preserves local ${head} and primary ${primary} without force-pushing.`,
   });
 
 export default primaryDiverged;

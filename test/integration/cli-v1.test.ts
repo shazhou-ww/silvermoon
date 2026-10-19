@@ -10,6 +10,7 @@ import { Ajv2020 } from "ajv/dist/2020.js";
 import { runCli } from "../../bin/silvermoon.ts";
 import { ideaPaths } from "../../src/foundation/coordinates/index.ts";
 import { createRepository, FIRST_ID, git } from "../helpers/repository.ts";
+import { TEST_HOST_RUNTIME_ENTRY } from "../helpers/whatsnext.ts";
 
 const repositoryRoot = fileURLToPath(new URL("../..", import.meta.url));
 
@@ -42,6 +43,30 @@ test("rejects legacy command spellings without changing the repository", async (
   for (const command of ["whatsnext", "new", "newidea", "new-idea"]) {
     assert.equal(await runCli([command], capture()), 2, command);
   }
+  assert.equal(gitStatus(), before);
+});
+
+test("Reference page and search commands are repository-independent and read-only", async () => {
+  const before = gitStatus();
+  const pageLogs: string[] = [];
+  assert.equal(await runCli(
+    ["reference", "page", "device", "system/overview", "--language", "zh-CN", "--json"],
+    { error: () => {}, log: captureString(pageLogs) },
+  ), 0);
+  const page = JSON.parse(pageLogs[0] ?? "");
+  assert.equal(page.objective, "device");
+  assert.equal(page.language, "zh-CN");
+  assert.equal(page.page.id, "system/overview");
+
+  const searchLogs: string[] = [];
+  assert.equal(await runCli(
+    ["reference", "search", "idea", "revision", "--language", "zh-CN", "--json"],
+    { error: () => {}, log: captureString(searchLogs) },
+  ), 0);
+  const search = JSON.parse(searchLogs[0] ?? "");
+  assert.equal(search.objective, "idea");
+  assert.ok(search.results.length > 0);
+  assert.ok(search.results.every(({ id }: { id: string }) => id.includes("/")));
   assert.equal(gitStatus(), before);
 });
 
@@ -108,6 +133,7 @@ test("writes schema-valid domain and telemetry events without changing the repor
         error: () => {},
         log: captureString(baselineLogs),
       },
+      { entryPath: TEST_HOST_RUNTIME_ENTRY },
     );
     assert.equal(baselineResult, 0);
 
@@ -129,6 +155,7 @@ test("writes schema-valid domain and telemetry events without changing the repor
         error: (value) => errors.push(value),
         log: captureString(logs),
       },
+      { entryPath: TEST_HOST_RUNTIME_ENTRY },
     );
 
     assert.equal(result, 0);

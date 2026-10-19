@@ -352,11 +352,8 @@ test("preserves create intent and does not mutate a dirty repository", async () 
   assert.equal(report.observation.state, "repository-preparation-required");
   assert.equal(Object.hasOwn(report.observation, "ideas"), false);
   assert.deepEqual(report.actions, []);
-  assert.match(
-    responseText(report),
-    /silvermoon create-idea --audience agent/,
-  );
-  assert.doesNotMatch(responseText(report), /--json/);
+  assert.match(responseText(report), /^The goal is a clean worktree/);
+  assert.doesNotMatch(responseText(report), /silvermoon create-idea|--json/);
   assert.equal(
     git(repository.root, "status", "--porcelain=v1", "--untracked-files=all"),
     before,

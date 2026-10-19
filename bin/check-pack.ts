@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, join, resolve } from "node:path";
@@ -128,6 +128,17 @@ if (packed.status !== 0) {
   ].map((path) =>
     `src/foundation/report/templates/whats-next/${path}.js`
   );
+  const objectiveRoot = join(packageRoot, "dist", "src", "business", "objectives");
+  const objectiveGuideResources: string[] = [];
+  function collectObjectiveResources(path: string, prefix = "dist/src/business/objectives") {
+    for (const entry of readdirSync(path, { withFileTypes: true })) {
+      const resource = join(path, entry.name);
+      const packaged = `${prefix}/${entry.name}`;
+      if (entry.isDirectory()) collectObjectiveResources(resource, packaged);
+      else objectiveGuideResources.push(packaged);
+    }
+  }
+  collectObjectiveResources(objectiveRoot);
   const maintained = [
     "LICENSE",
     "README.md",
@@ -149,9 +160,10 @@ if (packed.status !== 0) {
     "docs/maintaining.md",
     "docs/npm-package-releases.md",
     "docs/operations.md",
-    "docs/professional-model.md",
+    "docs/objective-guidance.md",
     "docs/reference.md",
     "docs/repository-tasks.md",
+    "docs/runtime-dependencies.md",
     "package.json",
     "schema/capabilities.json",
     "schema/capability-manifest.schema.json",
@@ -182,6 +194,8 @@ if (packed.status !== 0) {
     "src/business/index.js",
     "src/business/list-ideas.js",
     "src/business/migrate-v1-to-v2.js",
+    "src/business/objective-guides.js",
+    "src/business/objective-reference.js",
     "src/business/replay-events.js",
     "src/business/schema-migration.js",
     "src/business/shared/README.md",
@@ -203,11 +217,9 @@ if (packed.status !== 0) {
     "src/business/shared/resolve-idea.js",
     "src/business/shared/with-observation-language.js",
     "src/business/whats-next.js",
-    "src/business/whats-next-model.js",
-    "dist/src/business/whats-next-model.yaml",
-    "src/professional-model/README.md",
-    "src/professional-model/index.js",
-    "src/professional-model/model.js",
+    "src/objective-guide/README.md",
+    "src/objective-guide/index.js",
+    ...objectiveGuideResources,
     "src/foundation/command-message/README.md",
     "src/foundation/command-message/index.js",
     "src/foundation/command-message/observation.js",
@@ -261,6 +273,7 @@ if (packed.status !== 0) {
     "src/foundation/installation/installation.js",
     "src/foundation/installation/personal-skill-link.js",
     "src/foundation/installation/rules.js",
+    "src/foundation/installation/skill-content-revision.js",
     "src/foundation/language/README.md",
     "src/foundation/language/index.js",
     "src/foundation/language/language.js",

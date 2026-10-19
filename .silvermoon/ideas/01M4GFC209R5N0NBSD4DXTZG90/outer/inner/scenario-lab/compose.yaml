@@ -1,0 +1,13 @@
+services:
+  corpus:
+    build:
+      context: ../../../../../../
+      dockerfile: .silvermoon/ideas/01M4GFC209R5N0NBSD4DXTZG90/outer/inner/scenario-lab/Dockerfile
+      args:
+        SOURCE_REVISION: ${SCENARIO_SOURCE_REVISION:-unknown}
+        SOURCE_DIRTY: ${SCENARIO_SOURCE_DIRTY:-unknown}
+        SCENARIO_NPM_REGISTRY: ${SCENARIO_NPM_REGISTRY:-https://registry.npmjs.org/}
+    volumes:
+      - ./:/scenario-lab
+    environment:
+      SCENARIO_IDS: ${SCENARIO_IDS:-}

@@ -1,21 +1,45 @@
-# 用专业能力抽象驱动 what's next
+# 建立 Objective Guidance 类型体系
 
 ## 问题
 
-专业人士的推进方法尚缺少可复用的表达：怎样观察对象、判定层级、报告阻塞问题，并连接对应指导。Silvermoon 已有这些能力，但尚未验证它们能否由统一抽象组织。
+现有专业能力 module 已验证单一目标维度的观察、问题与指导可以驱动
+`whats-next`，但 Objective 定义仍把可执行 checks 绑定到宿主 JavaScript，
+把本地化内容分散在 locale 配置、check 结果和 References 中；各语言独立的
+目录树也不能从结构上保证同一 wiki。
 
 ## 结果
 
-在仓库内建立独立的专业能力 module，包含能力定义与拼装执行函数；让 `whats-next` 使用它，验证这套方法在 Silvermoon 场景中可用。语义见[导向模型](./professional-model.md)，概念与例子见[推演说明](./value-field-reasoning.md)。
+形成以稳定 level、check 与 problem ID 描述目标的 Objective Guide 核心：
+Manifest 只引用 checks，runtime 按 ID 发现 executable 并把返回的 Problem ID
+映射到统一 References wiki；全部语言文件位于 Reference 叶子。Prerequisite
+可以声明最低可接受层。Silvermoon 三个作用域继续建立在
+[核心契约](./objective-guidance.md)和[领域契约](./silvermoon-objectives.md)上。
 
 ## 边界
 
-- 暂不拆包、发布新包或实现其他行业能力，不据单一场景宣称普适性。
-- 保留 CLI 的报告、优先级、语言、控制权、精确版本与同步语义；不把设备 advisory 改成项目阻塞。
-- 导向只建议上升，不保证行动上升；实际状态由重新观察判定，不自动执行 skill 或推断人工接受。
+- 本轮只实现 Guide 核心；公开接口不使用物理隐喻，OR/OPS 不进入 runtime。
+  References 固定在 Guide 根目录，使用 `system/{overview,404}`、
+  `levels/<id>`、`checks/<id>`、`problems/<id>` 和 `pages/<id>`，不扩展为
+  任意知识分类平台；合成 terminal 使用保留节点 `levels/terminal`。
+- Check runtime 不假设 JavaScript module；每个 advancement `CheckId` 按约定
+  解析同名目录中唯一的 `run` 或 `run.*` 入口。进程启动成本可接受，但必须有
+  明确的 JSON 与受限 shebang 协议、超时、输出和信任边界；扩展名不决定
+  interpreter，也不把业务失败伪装成运行错误。
+- 每次完整 probe 使用唯一 temp directory 在独立 checks 间共享临时缓存，
+  不提供 `useState`、`useMemo` 或其他语言专用 API；checks 只按约定相对路径
+  读写本 probe 的临时文件。
+- Prerequisite 可声明 immediate prerequisite 的最低 level；达到该层或后续层
+  即解锁当前 Guide，省略时仍要求 `terminal`，且不跨 Guide 猜测同名 ID。
 
 ## 验收标准
 
-- 专业能力可用统一定义与原子检查组装，执行状态仅在一次观察内共享。
-- `whats-next` 实际通过该抽象导航，而非仅增加未使用的类型或包装。
-- 测试证明抽象的逐关语义及现有导航行为兼容，并明确记录本次验证的适用范围。
+- [核心契约](./objective-guidance.md)明确 URI 身份、Guide/Instance 边界、
+  typed creation failures、定义域与 prerequisite projection、可执行 check
+  协议、probe temp directory 与文件缓存边界、prerequisite 最低层语义、稳定
+  Problem ID，以及按 Reference ID 组织且语言位于最内层的完整 locale 投影；
+  不重复暴露 numeric index 或通用 runtime context。
+- [领域契约](./silvermoon-objectives.md)明确三个作用域的 level、check 与
+  problem vocabulary、非阻塞 Device、Project→Idea 前置、项目级 guidance、
+  selector 路由和精确 submit/accept 分层；配置、装载、check 执行和 instance
+  创建错误不混淆。
+- 映射现有 ProfessionalModel 基线，保留导航的四投影、语言、控制权与精确 revision；项目 guidance 校验范围扩展明确标出并验证，OR/OPS 不进入当前 source/runtime。设计只定义在 Ideal World 辅助文件，实现契约仅列 Steps 与可验证 AC。

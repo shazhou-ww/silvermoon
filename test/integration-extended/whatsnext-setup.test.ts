@@ -21,7 +21,7 @@ import {
 } from "../../src/foundation/coordinates/index.ts";
 import {
   CHANGE_SAMPLE_ITEM_LIMIT,
-  whatsNext,
+  whatsNext as sourceWhatsNext,
 } from "../../src/business/whats-next.ts";
 import { renderResponse } from "../../src/foundation/renderer/index.ts";
 import {
@@ -34,7 +34,10 @@ import {
   setIdeaState,
   submitIdeaState,
 } from "../helpers/repository.ts";
-import { createWhatsNextTestHelpers } from "../helpers/whatsnext.ts";
+import {
+  createWhatsNextTestHelpers,
+  whatsNext,
+} from "../helpers/whatsnext.ts";
 
 const {
   envelopeKeys,
@@ -86,11 +89,6 @@ function firstAction(report: WhatsNextReport) {
   return action;
 }
 
-function choices(report: WhatsNextReport) {
-  assert.ok("choices" in report.response);
-  return report.response.choices;
-}
-
 function ideas(report: WhatsNextReport) {
   assert.ok("ideas" in report.observation);
   const value = report.observation.ideas;
@@ -127,28 +125,40 @@ function recordCommands(commands: string[][]) {
   };
 }
 
-test("project setup reports cumulative observation variants and every setup fix", async () => {
+test("target context distinguishes outside-worktree, invalid Idea context, and Git inspection failure", async () => {
   const root = await mkdtemp(join(tmpdir(), "silvermoon-unconfigured-"));
   trackTemporaryDirectory(root);
 
-  const missingGit = await whatsNext({
+  const outside = await sourceWhatsNext({
     language: "zh-cn",
     root,
     userHome: root,
   });
-  assert.equal(missingGit.observation.state, "project-setup-required");
-  assert.ok("observedThrough" in missingGit.observation);
-  assert.equal(missingGit.observation.observedThrough, "root");
-  assert.equal(missingGit.intention.args.language, "zh-CN");
-  assert.equal(missingGit.observation.outputLanguage, "zh-CN");
-  assert.equal(Object.hasOwn(missingGit.observation, "version"), false);
-  assert.deepEqual(
-    missingGit.observation.problems.map(({ type }: { type: string }) => type),
-    ["git-repository-missing", "config-missing"],
-  );
-  assert.equal(missingGit.actions.length, 0);
-  assert.match(responseText(missingGit), /^1\. .*\n2\. /);
-  assert.match(responseText(missingGit), /处理/);
+  assert.equal(outside.observation.state, "objective-blocked");
+  assert.equal(outside.intention.args.language, "zh-CN");
+  assert.equal(outside.observation.outputLanguage, "zh-CN");
+  assert.equal(outside.response.kind, "objective");
+  if (outside.response.kind !== "objective") assert.fail("Expected Device Objective response.");
+  assert.equal(outside.response.objective.target, "device");
+  assert.equal(outside.response.objective.terminal, false);
+  assert.equal(Object.hasOwn(outside.observation, "version"), false);
+  assert.equal(Object.hasOwn(outside.observation, "configuration"), false);
+
+  const invalidIdeaContext = await whatsNext({
+    idea: FIRST_ID,
+    root,
+    userHome: root,
+  });
+  assert.equal(invalidIdeaContext.observation.state, "project-setup-required");
+  assert.equal(firstProblem(invalidIdeaContext).type, "target-context-invalid");
+  assert.match(responseText(invalidIdeaContext), /Git worktree/);
+
+  const failedInspection = await whatsNext({
+    root: join(root, "missing"),
+    userHome: root,
+  });
+  assert.equal(failedInspection.observation.state, "project-setup-required");
+  assert.equal(firstProblem(failedInspection).type, "git-worktree-inspection-failed");
 
   const configured = await fixture();
   await writeFile(
@@ -193,7 +203,11 @@ primaryBranch: main
     "idea-ledger-missing-file",
   );
   assert.match(firstProblem(observedIdeas).summary, /^在 .*ledger\.md 发现/);
-  assert.match(responseText(observedIdeas), /^修复/);
+  assert.match(
+    responseText(observedIdeas),
+    /^目标是在保留无关内容的同时得到有效且完整的项目 snapshot/,
+  );
+  assert.match(responseText(observedIdeas), /\n修复 .*ledger\.md 的 idea\.ledger\.missing-file/);
   assert.doesNotMatch(responseText(observedIdeas), /^\d+\. /m);
 });
 
@@ -223,7 +237,7 @@ test("package metadata does not participate in lifecycle navigation", async () =
   assert.doesNotMatch(responseText(report), /silvermoon@\^[0-9]+\.[0-9]+\.[0-9]+/);
 });
 
-test("[selector-none] naked navigation lists one active idea without selecting it", async () => {
+test("[selector-none] naked navigation reaches Project terminal and explains Idea selection", async () => {
   const repository = await fixture();
 
   const report = await whatsNext({
@@ -242,29 +256,48 @@ test("[selector-none] naked navigation lists one active idea without selecting i
     args: { idea: null, language: null },
   });
   assert.equal(report.observation.outputLanguage, "en-US");
-  assert.equal(report.observation.state, "navigation-ready");
-  assert.deepEqual(report.observation.ideas.activeIdeas, [{
-    id: FIRST_ID,
-    state: "preparing",
-    createdAt: ideaCreatedAt(FIRST_ID),
-    alias: "fixture",
-    title: "Fixture",
-  }]);
+  assert.equal(report.observation.state, "objective-ready");
   assert.equal(
     report.response.summary,
-    "Current state: navigation-ready. 1 active idea(s) are available.",
+    "project Objective is terminal; no required next step remains.",
   );
-  assert.deepEqual(choices(report), report.observation.ideas.activeIdeas);
-  const rendered = renderResponse(report.response);
-  assert.match(rendered, /### Active ideas/);
-  assert.match(rendered, /\| Alias \/ ID \| State \| Created \| Title \|/);
+  assert.equal(report.response.kind, "objective");
+  if (report.response.kind !== "objective") assert.fail("Expected Project Objective response.");
+  assert.deepEqual(report.response.objective, {
+    target: "project",
+    owner: "project",
+    level: "terminal",
+    failingCheck: null,
+    terminal: true,
+    problems: [],
+    references: [{
+      kind: "level",
+      id: "levels/terminal",
+      owner: "project",
+      lookup: "level:terminal",
+      title: "Objective attained",
+      description: "All checks passed in this probe.",
+      content: [
+        "## Meaning",
+        "",
+        "This terminal means every advancement check required by the current probe passed.",
+        "It is a sampled conclusion, not permanent truth, a real-world mutation, or human authorization.",
+      ].join("\n"),
+      command: "silvermoon reference level:terminal --language en-US",
+    }],
+  });
+  assert.equal(report.response.nextSteps.length, 1);
   assert.match(
-    rendered,
-    /\| fixture \| preparing \| .* \| Fixture \|/,
+    responseText(report),
+    /next goal is to choose the Idea to advance/,
   );
-  assert.doesNotMatch(responseText(report), new RegExp(FIRST_ID));
+  assert.match(responseText(report), /silvermoon list-ideas/);
   assert.match(responseText(report), /silvermoon whats-next <ULID-or-alias>/);
   assert.match(responseText(report), /silvermoon create-idea/);
+  assert.equal(Object.hasOwn(report.observation, "ideas"), false);
+  assert.equal(Object.hasOwn(report.response, "choices"), false);
+  const rendered = renderResponse(report.response);
+  assert.match(rendered, /create-idea|whats-next <ULID-or-alias>/);
   const action = firstAction(report);
   assert.equal(action.type, "fetch-primary");
   assert.equal(action.status, "success");
@@ -274,37 +307,36 @@ test("[selector-none] naked navigation lists one active idea without selecting i
     root: repository.root,
     userHome: repository.base,
   });
-  assert.equal(localized.observation.state, "navigation-ready");
+  assert.equal(localized.observation.state, "objective-ready");
   assert.equal(localized.observation.outputLanguage, "zh-CN");
   assert.equal(
     localized.response.summary,
-    "当前状态：navigation-ready。当前有 1 个 active idea。",
+    "project Objective 已到达 terminal；没有必做的下一步。",
   );
   assert.equal(
     configuration(localized).preferredLanguage,
     "en-US",
   );
-  assert.match(responseText(localized), /^请明确选择/);
+  assert.match(responseText(localized), /下一目标是选择要推进的 Idea/);
+  assert.match(responseText(localized), /silvermoon list-ideas/);
   assert.match(actionCommit(localized), /^[0-9a-f]{40}$/);
   assert.equal(Object.hasOwn(firstAction(localized), "summary"), false);
 });
 
-test("empty navigation stays ready without selecting an idea", async () => {
+test("empty Project also stops at the Project terminal", async () => {
   const repository = await fixture({ ideas: [] });
   const report = await whatsNext({
     root: repository.root,
     userHome: repository.base,
   });
 
-  assert.equal(report.observation.state, "navigation-ready");
-  assert.deepEqual(report.observation.ideas.activeIdeas, []);
-  assert.equal(report.observation.ideas.counts.completed, 0);
+  assert.equal(report.observation.state, "objective-ready");
   assert.equal(Object.hasOwn(report.observation, "selectedIdea"), false);
-  assert.match(renderResponse(report.response), /当前没有 active idea|No active ideas/);
-  assert.match(responseText(report), /create-idea/);
+  assert.equal(Object.hasOwn(report.observation, "ideas"), false);
+  assert.match(renderResponse(report.response), /active Ideas|create-idea/i);
 });
 
-test("navigation renders an alias-less idea without a level-one title", async () => {
+test("an unknown selector lists active Idea candidates without loading titles", async () => {
   const repository = await fixture({
     ideas: [{ id: FIRST_ID, status: {} }],
   });
@@ -315,20 +347,15 @@ test("navigation renders an alias-less idea without a level-one title", async ()
   git(repository.root, "push", "origin", "main");
 
   const report = await whatsNext({
+    idea: "missing",
     root: repository.root,
     userHome: repository.base,
   });
-  assert.deepEqual(choices(report), [{
-    id: FIRST_ID,
-    state: "preparing",
-    createdAt: ideaCreatedAt(FIRST_ID),
-  }]);
-  assert.match(
-    renderResponse(report.response, {
-      now: new Date(Date.parse(ideaCreatedAt(FIRST_ID)) + 7 * 24 * 60 * 60_000),
-    }),
-    new RegExp(`\\| ${FIRST_ID} \\| preparing \\| 7d ago \\| - \\|`),
-  );
+  assert.equal(report.observation.state, "idea-not-found");
+  assert.equal(report.observation.candidates.length, 1);
+  assert.equal(report.observation.candidates[0]?.id, FIRST_ID);
+  assert.equal("choices" in report.response && report.response.choices.length, 1);
+  assert.match(renderResponse(report.response), new RegExp(FIRST_ID));
 });
 
 test("resolves the repository root when invoked from a nested directory", async () => {
@@ -356,7 +383,7 @@ test("resolves the repository root when invoked from a nested directory", async 
   assert.doesNotMatch(responseText(report), /道心|内景|现世/);
 });
 
-test("default navigation excludes completed and abandoned ideas while counting them", async () => {
+test("explicit navigation preserves every lifecycle state", async () => {
   const repository = await fixture({
     ideas: [
       { id: FIRST_ID, status: { alias: "preparing" } },
@@ -382,31 +409,12 @@ test("default navigation excludes completed and abandoned ideas while counting t
   git(repository.root, "commit", "-m", "Set lifecycle states");
   git(repository.root, "push", "origin", "main");
 
-  const report = await whatsNext({
-    root: repository.root,
-    userHome: repository.base,
-  });
-
-  assert.deepEqual(ideas(report).counts, {
-    preparing: 1,
-    implementing: 1,
-    deploying: 1,
-    completed: 1,
-    abandoned: 1,
-  });
-  assert.deepEqual(
-    ideas(report).activeIdeas.map(({ id }) => id),
-    [FIRST_ID, SECOND_ID, DEPLOYING_ID].sort(),
-  );
-  assert.doesNotMatch(responseText(report), new RegExp(COMPLETED_ID));
-  assert.doesNotMatch(responseText(report), new RegExp(ABANDONED_ID));
-
-  const lifecycleCases: ReadonlyArray<readonly [string, string]> = [
+  const lifecycleCases: ReadonlyArray<readonly [string, string | null]> = [
     [FIRST_ID, "acceptIdeal"],
     [SECOND_ID, "acceptInner"],
     [DEPLOYING_ID, "acceptOuter"],
-    [COMPLETED_ID, "Review completed \\(completed\\)"],
-    [ABANDONED_ID, "Review abandoned \\(abandoned\\)"],
+    [COMPLETED_ID, null],
+    [ABANDONED_ID, null],
   ];
   for (const [id, phrase] of lifecycleCases) {
     const selected = await whatsNext({
@@ -418,7 +426,12 @@ test("default navigation excludes completed and abandoned ideas while counting t
     assert.equal(selected.observation.state, "idea-selected");
     assert.equal(selected.observation.selectedIdea.id, id);
     assert.equal(Object.hasOwn(selected.observation, "ideas"), false);
-    assert.match(responseText(selected), new RegExp(phrase));
+    if (phrase === null) {
+      assert.equal(responseText(selected), "");
+      assert.equal(selected.response.objective?.terminal, true);
+    } else {
+      assert.match(responseText(selected), new RegExp(phrase));
+    }
   }
 });
 
@@ -450,12 +463,12 @@ test("uses concrete phase files in localized lifecycle instructions", async () =
   git(repository.root, "commit", "-m", "Set localized lifecycle states");
   git(repository.root, "push", "origin", "main");
 
-  const localizedCases: ReadonlyArray<readonly [string, string]> = [
+  const localizedCases: ReadonlyArray<readonly [string, string | null]> = [
     [FIRST_ID, "记录 submitIdeal"],
     [SECOND_ID, "记录 submitInner"],
     [DEPLOYING_ID, "记录 submitOuter"],
-    [COMPLETED_ID, "复查 completed（completed）"],
-    [ABANDONED_ID, "复查 abandoned（abandoned）"],
+    [COMPLETED_ID, null],
+    [ABANDONED_ID, null],
   ];
   for (const [id, phrase] of localizedCases) {
     const selected = await whatsNext({
@@ -470,7 +483,12 @@ test("uses concrete phase files in localized lifecycle instructions", async () =
       configuration(selected).preferredLanguage,
       "fr-FR",
     );
-    assert.match(responseText(selected), new RegExp(phrase));
+    if (phrase === null) {
+      assert.equal(responseText(selected), "");
+      assert.equal(selected.response.objective?.terminal, true);
+    } else {
+      assert.match(responseText(selected), new RegExp(phrase));
+    }
     assert.doesNotMatch(responseText(selected), /道心|内景|现世/);
     if ([FIRST_ID, SECOND_ID, DEPLOYING_ID].includes(id)) {
       assert.match(
@@ -585,18 +603,14 @@ test("[selector-unknown] reports an unknown selector without guessing", async ()
 
   assert.deepEqual(report.observation.problems, []);
   assert.equal(report.observation.state, "idea-not-found");
-  assert.deepEqual(report.observation.candidates, [{
-    id: FIRST_ID,
-    state: "preparing",
-    createdAt: ideaCreatedAt(FIRST_ID),
-    alias: "fixture",
-    title: "Fixture",
-  }]);
+  assert.equal(report.observation.candidates.length, 1);
+  assert.equal(report.observation.candidates[0]?.id, FIRST_ID);
+  assert.equal(report.observation.candidates[0]?.alias, "fixture");
   assert.equal(report.observation.outputLanguage, "zh-CN");
   assert.equal(Object.hasOwn(report.observation, "selectedIdea"), false);
   assert.match(responseText(report), /未匹配/);
-  assert.doesNotMatch(responseText(report), new RegExp(FIRST_ID));
-  assert.match(responseText(report), /create-idea/);
+  assert.match(renderResponse(report.response), /\| fixture \| preparing \|/);
+  assert.match(responseText(report), /create-idea|active idea/i);
 });
 
 test("[selector-known] [alias-absent] selects an alias-less idea only by explicit ULID", async () => {
@@ -642,10 +656,8 @@ test("resolves preferred language for the selected idea without changing bare na
     "fr",
   );
   assert.equal(selected.observation.outputLanguage, "en-US");
-  assert.equal(
-    configuration(bare).preferredLanguage,
-    "en-US",
-  );
+  assert.equal(configuration(bare).preferredLanguage, "en-US");
+  assert.equal(bare.observation.state, "objective-ready");
   assert.equal(bare.observation.outputLanguage, "en-US");
 });
 
@@ -719,17 +731,22 @@ test("uses a canonical output override without changing content language or pers
   await writeFile(join(repository.root, "local.txt"), "preserve me\n");
   const blocked = await whatsNext({
     idea: "localized",
-    language: "zh-CN",
+    language: "en-US",
     root: repository.root,
     userHome: repository.base,
   });
 
-  assert.equal(blocked.observation.outputLanguage, "zh-CN");
-  assert.match(responseText(blocked), /^检查全部 staged、unstaged 和 untracked 路径/);
+  assert.equal(blocked.observation.outputLanguage, "en-US");
+  assert.match(responseText(blocked), /^The goal is a clean worktree/);
+  assert.doesNotMatch(responseText(blocked), /Inspect all staged|silvermoon whats-next/);
+  const blockedMarkdown = renderResponse(blocked.response);
+  assert.match(blockedMarkdown, /### References/);
+  assert.doesNotMatch(blockedMarkdown, /> ## Problem guidance/);
   assert.match(
-    responseText(blocked),
-    /silvermoon whats-next "localized" --language zh-CN --audience agent/,
+    blockedMarkdown,
+    /further details.*silvermoon reference problem:repository-worktree --language en-US/,
   );
+  assert.doesNotMatch(blockedMarkdown, /Project Objective overview/);
 });
 
 test("drives gate presentation from content language instead of output language", async () => {
@@ -793,14 +810,25 @@ test("drives gate presentation from content language instead of output language"
   assert.match(responseText(selected), /fenced review template/);
 
   const rendered = renderResponse(selected.response);
-  assert.match(rendered, /### Review request template/);
+  assert.match(rendered, /#### Review request template/);
+  assert.match(rendered, /### References/);
+  assert.match(
+    rendered,
+    /silvermoon reference problem:ideal-unaccepted --language en-US/,
+  );
+  assert.match(
+    rendered,
+    /### Problems[\s\S]*exact submitted Idea definition revision still requires its acceptance decision/,
+  );
+  assert.doesNotMatch(rendered, /处理 ideal 并重新观测/);
+  assert.doesNotMatch(rendered, /> ## 问题说明/);
   assert.match(rendered, /```markdown\n## 构想验收/);
   assert.match(rendered, /- 构想: \{idea identity\}/);
   assert.match(
     rendered,
     /- 候选版本: `idealRevision=[0-9a-f]{12}` 位于 primary `[0-9a-f]{12}`/,
   );
-  assert.doesNotMatch(rendered, /```json|"contentLanguage"|"gateLabel"/);
+  assert.doesNotMatch(rendered, /"contentLanguage"|"gateLabel"/);
 });
 
 test("names Chinese review contracts by their canonical artifacts", async () => {

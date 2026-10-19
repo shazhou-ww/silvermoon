@@ -20,7 +20,6 @@ import {
 } from "../../src/foundation/coordinates/index.ts";
 import {
   CHANGE_SAMPLE_ITEM_LIMIT,
-  whatsNext,
 } from "../../src/business/whats-next.ts";
 import { renderResponse } from "../../src/foundation/renderer/index.ts";
 import type { ReviewContext } from "../../src/foundation/report/types.ts";
@@ -33,7 +32,10 @@ import {
   setIdeaState,
   submitIdeaState,
 } from "../helpers/repository.ts";
-import { createWhatsNextTestHelpers } from "../helpers/whatsnext.ts";
+import {
+  createWhatsNextTestHelpers,
+  whatsNext,
+} from "../helpers/whatsnext.ts";
 
 const {
   envelopeKeys,
@@ -131,7 +133,8 @@ test("records fetch failure as a failure outcome with a trustworthy envelope", a
   assert.equal(problem.type, "primary-fetch-failed");
   assert.equal(action.type, "fetch-primary");
   assert.equal(action.status, "failure");
-  assert.match(responseText(report), /network|网络/);
+  assert.match(responseText(report), /goal is for configured primary .* to be fetchable/);
+  assert.doesNotMatch(responseText(report), /silvermoon whats-next/);
 });
 
 test("rejects an unsupported programmatic output language before repository inspection", async () => {
@@ -371,7 +374,7 @@ test("does not load guidance while setup, upstream, or fetch readiness is blocke
   assert.equal(reads, 0);
 });
 
-test("current guidance failures block lifecycle instructions without cross-phase leakage", async () => {
+test("project guidance failures block every selected phase without leaking guidance content", async () => {
   const repository = await fixture({
     ideas: [
       { id: FIRST_ID, status: { alias: "preparing" } },
@@ -418,18 +421,12 @@ test("current guidance failures block lifecycle instructions without cross-phase
     userHome: repository.base,
   });
 
-  assert.equal(preparing.observation.state, "idea-selected");
-  assert.equal(responseGuidance(preparing).content, "Prepare safely.\n");
-  assert.ok(preparing.observation.guidance);
-  assert.equal(
-    Object.hasOwn(preparing.observation.guidance, "content"),
-    false,
-  );
+  assert.equal(preparing.observation.state, "phase-guidance-invalid");
+  assert.equal(Object.hasOwn(preparing.observation, "guidance"), false);
+  assert.equal(Object.hasOwn(preparing.response, "guidance"), false);
   assert.equal(implementing.observation.state, "phase-guidance-invalid");
-  assert.deepEqual(
-    implementing.observation.problems.map(({ type }: { type: string }) => type),
-    ["guidance-file-invalid"],
-  );
+  assert.ok(implementing.observation.problems.some(({ type }) => type === "guidance-file-invalid"));
+  assert.deepEqual(preparing.observation.problems, implementing.observation.problems);
   assert.equal(Object.hasOwn(implementing.observation, "guidance"), false);
   assert.doesNotMatch(
     responseText(implementing),

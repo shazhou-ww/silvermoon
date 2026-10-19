@@ -1,0 +1,75 @@
+schemaVersion: 1
+domainSchema:
+  type: object
+  required:
+    - root
+    - userHome
+    - ideaId
+  additionalProperties: false
+  properties:
+    root:
+      type: string
+      minLength: 1
+    userHome:
+      type: string
+      minLength: 1
+    ideaId:
+      type: string
+      pattern: "^[0-7][0-9A-HJKMNP-TV-Z]{25}$"
+prerequisite:
+  manifestUri: ../project/manifest.yaml
+  subject: '{"root": root, "userHome": userHome}'
+levels:
+  - id: configuration-invalid
+    advancement:
+      checks:
+        - id: idea-metadata-valid
+          problems:
+            - idea-selection-changed
+            - idea-metadata
+            - idea-revision-changed
+            - idea-guidance
+            - idea-inactive
+        - id: idea-contracts-valid
+          problems:
+            - idea-contracts
+  - id: ideal-unsubmitted
+    advancement:
+      checks:
+        - id: idea-ideal-submitted
+          problems:
+            - ideal-unsubmitted
+  - id: ideal-unaccepted
+    advancement:
+      checks:
+        - id: idea-ideal-accepted
+          problems:
+            - ideal-unaccepted
+  - id: implementation-unsubmitted
+    advancement:
+      checks:
+        - id: idea-inner-submitted
+          problems:
+            - implementation-unsubmitted
+  - id: implementation-unaccepted
+    advancement:
+      checks:
+        - id: idea-inner-accepted
+          problems:
+            - implementation-unaccepted
+  - id: deployment-unsubmitted
+    advancement:
+      checks:
+        - id: idea-outer-submitted
+          problems:
+            - deployment-unsubmitted
+  - id: deployment-unaccepted
+    advancement:
+      checks:
+        - id: idea-outer-accepted
+          problems:
+            - deployment-unaccepted
+defaultLanguage: en-US
+languages:
+  - en-US
+  - zh-CN

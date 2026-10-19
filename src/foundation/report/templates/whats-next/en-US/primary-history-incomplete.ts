@@ -12,17 +12,12 @@ import type {
 const primaryHistoryIncomplete = ({
   head,
   primary,
-  recheckCommand,
-  remote,
 }: PrimaryRelationParameters): SummaryAndNextSteps =>
   ({
     summary:
       `Local HEAD is ${head}; observed primary is ${primary}; relationship is unknown.`,
-    nextSteps: [
-      `Deepen the shallow history from remote ${remote}`,
-      `until ${head} and ${primary} can be compared,`,
-      `then run ${recheckCommand} again.`,
-    ].join(" "),
+    nextSteps:
+      `The goal is sufficient local history to compare ${head} with observed primary ${primary} reliably.`,
   });
 
 export default primaryHistoryIncomplete;

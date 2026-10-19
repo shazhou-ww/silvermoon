@@ -1,3 +1,5 @@
+import { execFile } from "node:child_process";
+import type { ExecFileOptionsWithStringEncoding } from "node:child_process";
 import {
   lstat,
   mkdir,
@@ -8,12 +10,15 @@ import {
 import { homedir } from "node:os";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { promisify } from "node:util";
 
+import { npmCommand } from "../process/index.ts";
 import {
   compareSemanticVersions,
   parseSemanticVersion,
   resolveRuntimeUpdateChannel,
 } from "./rules.ts";
+import { directoryContentRevision } from "./skill-content-revision.ts";
 
 const packageRoot = fileURLToPath(new URL(
   import.meta.url.endsWith(".ts") ? "../../.." : "../../../..",
@@ -26,6 +31,7 @@ const PERSONAL_SKILL_PATHS = [
   ".agents/skills/silvermoon",
   ".copilot/skills/silvermoon",
 ] as const;
+const executeFile = promisify(execFile);
 
 interface ReadinessFileSystem {
   lstat: typeof lstat;
@@ -41,6 +47,12 @@ interface LatestCache {
   checkedAt: string;
   latestVersion: string;
 }
+
+type NpmExecutor = (
+  command: string,
+  args: string[],
+  options: ExecFileOptionsWithStringEncoding,
+) => Promise<{ stdout: string; stderr: string }>;
 
 function errorCode(error: unknown) {
   return error instanceof Error && "code" in error
@@ -76,36 +88,73 @@ async function readCache(
   }
 }
 
-async function registryLatest(channel: string) {
-  const response = await fetch(
-    `https://registry.npmjs.org/silvermoon/${encodeURIComponent(channel)}`,
-    {
-      headers: { accept: "application/json" },
-      signal: AbortSignal.timeout(5000),
-    },
+async function executeNpm(
+  command: string,
+  args: string[],
+  options: ExecFileOptionsWithStringEncoding,
+) {
+  return executeFile(command, args, options);
+}
+
+export async function npmRegistryLatest(channel: string, {
+  cwd = process.cwd(),
+  env = process.env,
+  execPath = process.execPath,
+  execute = executeNpm,
+  platform = process.platform,
+}: {
+  cwd?: string;
+  env?: NodeJS.ProcessEnv;
+  execPath?: string;
+  execute?: NpmExecutor;
+  platform?: NodeJS.Platform;
+} = {}) {
+  const invocation = npmCommand(
+    ["view", `silvermoon@${channel}`, "version", "--json"],
+    { env, execPath, platform },
   );
-  if (!response.ok) {
-    throw new Error(`npm registry returned HTTP ${response.status}`);
+  let stdout: string;
+  try {
+    ({ stdout } = await execute(invocation.command, invocation.args, {
+      cwd,
+      encoding: "utf8",
+      env,
+      maxBuffer: 64 * 1024,
+      timeout: 5000,
+      windowsHide: true,
+    }));
+  } catch (error) {
+    throw new Error(
+      `npm view failed for silvermoon@${channel}: ${errorMessage(error)}`,
+      { cause: error },
+    );
   }
-  const body: unknown = await response.json();
-  const version = body && typeof body === "object" && "version" in body
-    ? body.version
-    : null;
+  let version: unknown;
+  try {
+    version = JSON.parse(stdout);
+  } catch (error) {
+    throw new Error(
+      `npm returned an invalid ${channel} version response.`,
+      { cause: error },
+    );
+  }
   if (typeof version !== "string" || parseSemanticVersion(version) === null) {
-    throw new Error(`npm registry returned an invalid ${channel} version`);
+    throw new Error(`npm returned an invalid ${channel} version.`);
   }
   return version;
 }
 
 export async function inspectRuntimeUpdate({
   currentVersion,
+  env = process.env,
   filesystem = { lstat, mkdir, readFile, realpath, writeFile },
   force = false,
   home = homedir(),
   now = Date.now(),
-  requestLatest = registryLatest,
+  requestLatest,
 }: {
   currentVersion: string | null;
+  env?: NodeJS.ProcessEnv;
   filesystem?: ReadinessFileSystem;
   force?: boolean;
   home?: string;
@@ -147,7 +196,10 @@ export async function inspectRuntimeUpdate({
     latestCheckedAt = cached.checkedAt;
   } else {
     try {
-      latestVersion = await requestLatest(channel);
+      latestVersion = await (
+        requestLatest ?? ((requestedChannel) =>
+          npmRegistryLatest(requestedChannel, { env }))
+      )(channel);
     } catch (error) {
       return {
         status: "unavailable" as const,
@@ -274,85 +326,92 @@ export async function inspectPersonalSkill({
     };
   }
   let expectedRoot = resolve(skillRoot);
+  let expectedRevision: string;
   try {
     expectedRoot = await filesystem.realpath(skillRoot);
     await filesystem.readFile(resolve(expectedRoot, "SKILL.md"), "utf8");
+    expectedRevision = await directoryContentRevision(expectedRoot);
   } catch (error) {
     return {
-      status: "invalid" as const,
+      status: "canonical-unverifiable" as const,
       expectedRoot,
       paths: [],
-      remediation: `Repair the Silvermoon installation so ${expectedRoot} contains a readable SKILL.md.`,
-      summary: `Cannot read the installed canonical Silvermoon skill: ${errorMessage(error)}`,
+      remediation: `Repair the active Silvermoon runtime so its canonical skill at ${expectedRoot} can be verified.`,
+      summary: `Cannot verify the active runtime's canonical Silvermoon skill: ${errorMessage(error)}`,
     };
   }
   const paths = [];
-  const invalidPaths = [];
-  const invalidTargets: Array<{ path: string; target: string | null }> = [];
+  const observed: Array<{ path: string; revision: string | null }> = [];
   for (const relativePath of PERSONAL_SKILL_PATHS) {
     const path = resolve(home, relativePath);
     try {
       const metadata = await filesystem.lstat(path);
       if (!metadata.isDirectory() && !metadata.isSymbolicLink()) {
-        invalidPaths.push(path);
-        invalidTargets.push({ path, target: null });
+        observed.push({ path, revision: null });
         continue;
       }
-      let target: string | null;
+      let target: string;
       try {
         target = await filesystem.realpath(path);
       } catch (error) {
         if (errorCode(error) === "ENOENT") {
-          invalidPaths.push(path);
-          invalidTargets.push({ path, target: null });
+          observed.push({ path, revision: null });
           continue;
         }
         throw error;
       }
-      if (target !== expectedRoot) {
-        invalidPaths.push(path);
-        invalidTargets.push({ path, target });
-      }
-      else {
+      let revision: string | null = null;
+      try {
         await filesystem.readFile(resolve(target, "SKILL.md"), "utf8");
+        revision = await directoryContentRevision(target);
+      } catch {
+        observed.push({ path, revision: null });
+        continue;
+      }
+      observed.push({ path, revision });
+      if (revision === expectedRevision) {
         paths.push(path);
       }
     } catch (error) {
       if (errorCode(error) !== "ENOENT") {
         return {
-          status: "invalid" as const,
+          status: "incorrect" as const,
           expectedRoot,
+          expectedRevision,
           paths,
+          observed: [...observed, { path, revision: null }],
+          remediation: `Run npx skills add "${expectedRoot}" --global --all to install the active runtime's canonical skill, then rerun the Silvermoon command.`,
           summary: `Cannot inspect personal Silvermoon skill ${path}: ${errorMessage(error)}`,
         };
       }
     }
   }
-  if (invalidPaths.length > 0) {
+  if (observed.length > paths.length) {
     return {
-      status: "mismatched" as const,
+      status: "incorrect" as const,
       expectedRoot,
+      expectedRevision,
       paths,
-      invalidPaths,
-      invalidTargets,
-      remediation: `Run silvermoon-link-skill to relink the reported personal skill registration to the active global runtime's canonical skill at ${expectedRoot}, then rerun the Silvermoon command.`,
-      summary: invalidTargets.map(({ path, target }) =>
-        `${path} resolves to ${target ?? "an unreadable target"}; expected ${expectedRoot}.`
-      ).join(" "),
+      observed,
+      remediation: `Run npx skills add "${expectedRoot}" --global --all to install the active runtime's canonical skill so its content revision matches ${expectedRevision}, then rerun the Silvermoon command.`,
+      summary: "A discovered personal Silvermoon skill does not match the active runtime's canonical skill content revision.",
     };
   }
   if (paths.length === 0) {
     return {
       status: "missing" as const,
       expectedRoot,
+      expectedRevision,
       paths,
-      remediation: `Run silvermoon-link-skill to link the active global runtime's canonical skill at ${expectedRoot} into the personal discovery path, then rerun the Silvermoon command.`,
+      remediation: `Run npx skills add "${expectedRoot}" --global --all to install the active runtime's canonical skill, then rerun the Silvermoon command.`,
     };
   }
   return {
     status: "ready" as const,
     expectedRoot,
+    expectedRevision,
     paths,
+    observed,
   };
 }
 

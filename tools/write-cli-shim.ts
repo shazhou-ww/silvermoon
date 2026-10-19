@@ -1,8 +1,9 @@
-import { chmod, copyFile, writeFile } from "node:fs/promises";
+import { chmod, cp, writeFile } from "node:fs/promises";
 
-await copyFile(
-  new URL("../src/business/whats-next-model.yaml", import.meta.url),
-  new URL("../dist/src/business/whats-next-model.yaml", import.meta.url),
+await cp(
+  new URL("../src/business/objectives", import.meta.url),
+  new URL("../dist/src/business/objectives", import.meta.url),
+  { recursive: true },
 );
 
 const shimUrl = new URL("../bin/silvermoon.js", import.meta.url);

@@ -114,6 +114,55 @@ test("publishes command report, domain message, and trace event schemas", async 
       nextSteps: [],
     },
   }), true, JSON.stringify(commandReport.errors));
+  const objective = {
+    target: "project",
+    owner: "project",
+    level: "repository-unready",
+    failingCheck: "repository-worktree-clean",
+    terminal: false,
+    problems: [{
+      id: "repository-worktree",
+      parameters: { branch: "topic" },
+    }],
+    references: [{
+      kind: "problem",
+      id: "problems/repository-worktree",
+      owner: "project",
+      lookup: "problem:repository-worktree",
+      title: "Repository recovery",
+      description: "Resolve repository and probe again.",
+      instruction: "Preserve unknown work.",
+      content: "Use the current Problem parameters.",
+      command:
+        "silvermoon reference problem:repository-worktree --language en-US",
+    }],
+  };
+  const objectiveReport = {
+    intention,
+    observation: {
+      state: "repository-sync-required",
+      problems: [],
+      objective,
+    },
+    actions: [],
+    response: {
+      kind: "blocked",
+      language: "en-US",
+      summary: "The repository must be synchronized.",
+      problems: [],
+      nextSteps: [],
+      objective,
+    },
+  };
+  assert.equal(
+    commandReport(objectiveReport),
+    true,
+    JSON.stringify(commandReport.errors),
+  );
+  const { content: _content, ...incompleteReference } = objective.references[0]!;
+  const incomplete = structuredClone(objectiveReport);
+  incomplete.response.objective.references = [incompleteReference] as typeof objective.references;
+  assert.equal(commandReport(incomplete), false);
   assert.equal(traceEvent({
     schemaVersion: 2,
     traceId: "d9428888-122b-4c26-b27c-00a0c5f20d11",

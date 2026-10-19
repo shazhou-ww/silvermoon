@@ -9,10 +9,8 @@ import type { SummaryAndNextSteps } from "../contract.ts";
 const headMissing = (): SummaryAndNextSteps =>
   ({
     summary: "The repository has no commit at HEAD.",
-    nextSteps: [
-      `Confirm the intended branch and files to track,`,
-      `then create the initial commit.`,
-    ].join(" "),
+    nextSteps:
+      "The goal is a repository HEAD commit that preserves the intended initial project content.",
   });
 
 export default headMissing;

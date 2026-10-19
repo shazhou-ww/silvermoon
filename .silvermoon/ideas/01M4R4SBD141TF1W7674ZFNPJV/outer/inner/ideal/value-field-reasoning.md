@@ -1,6 +1,6 @@
 # 从世界状态到专业导向：建模思路的推演
 
-本文整理本次讨论的概念推演，解释为什么可以用状态分层来表达专业人士的工作导向，再由观察、问题与指导组成 Agent 的导航机制。它提供理论背景，不增加本 Idea 的实施范围；具体契约见[专业导向模型](./professional-model.md)。
+本文整理本次讨论的概念推演，解释为什么可以用状态分层来表达专业人士的工作导向，再由观察、问题与指导组成 Agent 的导航机制。它提供理论背景，不增加本 Idea 的实施范围；具体契约见[Objective Guidance 类型体系](./objective-guidance.md)。
 
 ## 1. 起点：我们要表达的不是一条 happy path
 
@@ -27,20 +27,27 @@ Happy path 仍然有用，但只是这个导向下的一条可能路径。
 
 这里的“世界”不是要求程序穷尽整个宇宙，而是概念上承认：影响工作成立与否的事实可能分散在文件、远端系统、人和交互历史中。
 
-观察对象则用于限定本次工作，例如某个项目和 Idea ID。对象不是世界状态的完整输入；观察一个 Idea，也可能需要查询它所在的项目、设备与远端仓库。
+观察对象则用于限定本次工作，例如某个项目和 Idea ID。语言中立
+ObjectiveGuide 用 JSON Schema 描述可接受对象的定义域；
+ObjectiveGuideInstance 把其中一个 `ObjectiveSubject` 与一种 resolved language
+绑定为具体使用上下文。绑定可能因根 subject、某个 prerequisite 投影 subject
+或 chain 中的 language 不成立而失败；这些是 typed creation result，不是
+Promise rejection。对象不是世界状态的完整输入；观察一个 Idea，也可能需要通过
+装载时注入的能力查询它所在的项目、设备与远端仓库。发布窗口、预算和优先级属于
+portfolio policy 的规划事实，不通过通用 runtime context 注入每个 Objective。
 
 ## 3. 如何把世界状态定义成标量场
 
 选定工作对象和目标后，专业人士定义一组有序层级：
 
 ```text
-0 < 1 < 2 < ... < N
+unavailable ≺ operable ≺ terminal
 ```
 
 并为每层给出判定条件，把相关世界状态分类到其中一层：
 
 ```text
-level(世界状态) -> 一个非负整数层级
+level(世界状态) -> 有序集合中的稳定 level ID
 ```
 
 这就是将高维状态投影到有限全序集。可以把它想象成梯田：
@@ -50,9 +57,20 @@ level(世界状态) -> 一个非负整数层级
 - 最高层级唯一，但满足最高层级的具体状态可以有多个；
 - 层级表达顺序，不表达等距的收益、工作量或难度。
 
+在默认传输模型中，Manifest 只列出尚未达到最终价值的显式层级；每层都描述
+通往下一层的 advancement。全部 advancement 通过后，框架合成唯一的 terminal
+“价值达成”层。最终价值由 Guide 的 locale content 描述，并通过 instance 暴露，
+不在层级数组中重复声明。
+
+同一个 Guide 只维护一份语言无关的层级顺序、判据、定义域与前置关系。稳定
+level ID 把这些语义关联到不同 language 的完整 content 和 References；创建
+instance 时选择 language 和 subject，只改变本次表达、检索内容与观察对象，
+不产生另一套 Guide 或层级。若这些结构语义本身不同，就应定义不同的 Objective，
+而不是把差异伪装成翻译。
+
 这种场是离散、分片常量的，不需要假设世界具有连续坐标，也不需要把所有专业判断换算成一个效用总分。
 
-0 层是分类的兜底。实际观察证据不足时，也可以报告 0，但必须同时报告信息不足的问题，不能据此断言对象在现实中完全没有进展。
+首个显式层是分类的兜底。实际观察证据不足时，也可以报告该层，但必须同时报告信息不足的问题，不能据此断言对象在现实中完全没有进展。
 
 ## 4. 标量场怎样表达价值导向
 
@@ -60,7 +78,8 @@ level(世界状态) -> 一个非负整数层级
 
 例如，对一个 Idea，导向可以是：整备工作条件，明确并确认目标，完成实现，最后让现实结果得到验证和接受。越高的层级表示越接近这一特定终局，不表示这个状态在所有人的所有价值维度上都更好。
 
-Harness 每次站在当前层看下一层：
+ObjectiveGuideInstance 负责解释当前层与下一层。可选的
+[ObjectiveRegulator](./objective-regulator.md) 扩展可据此完成单目标复测闭环：
 
 ```text
 现在已经成立的条件是什么？
@@ -109,19 +128,32 @@ Harness 每次站在当前层看下一层：
 ```text
 观察对象
   -> 当前层级
-  -> 阻塞问题：code + 具体说明
+  -> 阻塞问题：reference page ID + 具体说明
 ```
 
-Code 负责连接可复用的专业经验，具体说明负责描述本次情况。只有证据支持的原因才能作为诊断；无法定位原因时，应报告需要进一步观察的问题，而不是猜测。
+Reference page ID 连接可复用的专业经验，具体说明描述本次情况。只有证据支持
+的原因才能作为诊断；无法定位原因时，可以返回普通知识缺口 page，而不是猜测。
+若请求的 page ID 根本不存在，则默认返回当前 locale References 根目录的
+`404.md`（page ID 为 `404`），也可用 `notFoundPageId` 覆盖；这不是“未知问题”
+专用角色，不能用来掩盖装载或 IO 错误。
 
-指导函数则把 code 连接到对应 skill。Skill 可以提供修复经验，也可以指导进一步诊断、人工交接或外部等待，不必是一段固定脚本。未知 code 的兜底指导应明确暴露知识缺口。
+专业知识序列化为由平级 reference pages 组成的参考知识集。入口页面说明问题
+及首要处置方向，再通过正文中的内部链接引用其他知识页面；links 和 tags 不作为
+独立的 ReferencePage 字段，目录层级和搜索索引元数据不决定语义。同一页面可以
+被多个问题共享，链接图也不要求是无环树。
+Observation 中的问题直接给出入口 page ID，当前 level description 引用实际
+负责的 ObjectiveGuideInstance；Agent 调用该 instance 的 `readPage`，再按需沿
+链接阅读或搜索参考知识。Instance 不预先决定遍历深度或返回节点数量，知识缺口
+或 not-found page 也不能伪装成已知解法。
 
 于是专业能力的积累分成两部分：
 
 1. 如何观察、判定和区分问题；
 2. 面对某类问题，怎样提供有用且受约束的指导。
 
-Agent 根据这些信息决定具体解法。它可以选路，但不能为了宣称进展而自行降低判据；执行了 skill 也不等于已升级，仍需重新观察。
+Agent 根据这些信息决定一次具体行动。它可以主动查询参考知识并选择知识路径，
+但不能为了宣称进展而自行降低判据；执行了某个页面描述的方法也不等于已升级，
+仍需重新观察。
 
 ## 7. 为什么把检查看成子层
 
@@ -190,14 +222,30 @@ Agent 根据这些信息决定具体解法。它可以选路，但不能为了�
 
 一个项目可以在 PMO 导向下接近完成，却在设计师导向下仍待验证。这不是矛盾，因为投影的目的不同。
 
-多个场不应自动相加成总分；各场的层级只是序数。主导、门槛、否决和交接需要另行定义，本次不设计这套协调协议。
+多个场不应自动相加成总分；各场的层级只表达各自的次序。可选的
+[Objective Portfolio Supervisor](./objective-portfolio-supervisor.md) 扩展可通过
+portfolio policy 表达主导、门槛、资源、窗口与延后关系，但不能篡改单个
+ObjectiveGuide 的内部判据或把不同层级直接换算成总分。
+同一个 OG 可以创建不同 subject/language-bound instances。如果一个 Objective
+的定义本身以另一个 Objective 的完整层级为前缀，例如 Idea 推进以 Project 整备
+为前提，则通过带 JSONata subject projection 的单个 `prerequisite` 递归组合
+Guide；创建 instance 时再用同一 language 和投影 subject 创建 prerequisite
+instance。前置 Objective 未达到 terminal 时，本地场不被观测。它不是 References
+知识链接、Portfolio 调度关系，也不应隐藏在一个会调用另一 OG 的 check 中。
+本 Idea 只定义该协调边界和类型，不预写具体调度算法。
 
 ## 9. 从理论走向可迭代的专业能力
 
-由此可以把方法论封装为：声明式层级与检查编排、可执行检查副作用、问题对应的 skill，以及公共拼装运行机制。
+由此可以把方法论封装为：声明式层级与检查编排、可执行检查副作用、以问题
+页面为入口的 references，以及公共装载和运行机制。
 
 人和工具定义方向与判断标准，Agent 负责具体求解，新观察检验结果。失败反馈可以用于修正判据、问题分类或指导，不应一律归咎于执行者。
 
 这是一种专业求解能力的通用建模候选，不是已证明适用于所有领域的万能算法。可靠采样、正确诊断和有效行动依然需要专业知识；目标也可能需要人工修订或放弃。
 
-当前验证顺序是：先在仓库内形成独立 module，再让 Silvermoon 的 `whats-next` 实际使用它，检验是否能保留真实行为。只有这一场景得到验证之后，才有依据继续讨论跨领域应用与独立拆包。
+首轮验证已经在仓库内形成独立 module，并让 Silvermoon 的 `whats-next`
+实际使用它，证明单目标观察与指导可以保留真实行为。下一轮只把
+ObjectiveGuide 与 ObjectiveGuideInstance 核心落入 Silvermoon；ObjectiveRegulator
+和 Objective Portfolio Supervisor 保留为独立扩展契约，分别等待真实的单目标
+循环与多目标监督需求。在取得这些证据前，不宣称跨领域适用，也不以独立拆包或
+npm 分发替代模型验证。

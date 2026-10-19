@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync, type SpawnSyncReturns } from "node:child_process";
+import { stripTypeScriptTypes } from "node:module";
 import {
   mkdir,
   mkdtemp,
@@ -106,13 +107,75 @@ try {
     ),
   );
   assert.equal(installedManifest.name, "silvermoon");
-  const installedModel = await readFile(
-    join(bootstrap, "node_modules", "silvermoon", "dist", "src", "business", "whats-next-model.yaml"),
-    "utf8",
-  );
-  assert.equal(installedModel, await readFile(
-    join(packageRoot, "src", "business", "whats-next-model.yaml"), "utf8",
-  ));
+  for (const scope of ["device", "project", "idea"]) {
+    assert.equal((await stat(join(
+      bootstrap, "node_modules", "silvermoon", "dist", "src", "business",
+      "objectives", scope, "manifest.yaml",
+    ))).isFile(), true);
+  }
+  assert.equal((await stat(join(
+    bootstrap, "node_modules", "silvermoon", "dist", "src", "business",
+    "objectives", "idea", "references", "levels", "ideal-unsubmitted", "zh-CN.md",
+  ))).isFile(), true);
+  const objectiveSmoke = run(process.execPath, ["--input-type=module", "-e", `
+    import { loadPilotSpec, observe, readPage, startEffect } from "silvermoon";
+    const manifest = {
+      schemaVersion: 1, domainSchema: { type: "object" },
+      levels: [{
+        id: "unready",
+        advancement: {
+          checks: [{ id: "ready", problems: ["problem"] }],
+        },
+      }],
+      defaultLanguage: "en-US",
+      languages: ["en-US"],
+    };
+    const uri = "git+https://objective.test/repository.git#objectives/project/manifest.yaml";
+    const spec = await loadPilotSpec(uri, {
+        version: "a".repeat(40),
+        readText: async () => JSON.stringify(manifest),
+        readPages: async (uri) => [
+          ["system/overview", { title: "Project", description: "Ready project" }],
+          ["system/404", { title: "Missing", description: "Missing" }],
+          ["levels/unready", { title: "Unready", description: "Pending" }],
+          ["levels/terminal", { title: "Ready", description: "Ready" }],
+          ["checks/ready", { title: "Ready check", description: "Check readiness" }],
+          ["problems/problem", { title: "Problem", description: "Repair" }],
+        ].map(([id, properties]) => {
+          const pageUri = new URL(uri);
+          pageUri.hash += id + "/en-US.md";
+          return {
+            uri: pageUri.href,
+            source: "---\\n" + Object.entries(properties).map(([key, value]) =>
+              key + ": " + JSON.stringify(value)).join("\\n") + "\\n---\\nReference.\\n",
+          };
+        }),
+    });
+    const envelope = await startEffect(observe(
+      { spec, subject: {} },
+      { resolveCheck: () => async () => ({
+        status: 200,
+        payload: {
+          ok: false,
+          problems: [{ id: "problem", parameters: { path: "config.yaml" } }],
+        },
+        message: "",
+      }) },
+    )).await();
+    if (envelope.status !== 200 || envelope.payload === null) {
+      throw new Error(envelope.message);
+    }
+    const sample = envelope.payload;
+    console.log(JSON.stringify({
+      levelId: sample.current.levelId,
+      checkId: sample.problems[0].ref.checkId,
+      page: readPage(spec, "problems/" + sample.problems[0].ref.problemId).id,
+      missing: readPage(spec, "missing").id,
+    }));
+  `], bootstrap);
+  assert.deepEqual(JSON.parse(objectiveSmoke), {
+    levelId: "unready", checkId: "ready", page: "problems/problem", missing: "system/404",
+  });
   const installedEntry = join(
     bootstrap,
     "node_modules",
@@ -131,6 +194,18 @@ try {
       windowsHide: true,
     });
   const installedEntryBefore = await readFile(installedEntry);
+  const referencePage = JSON.parse(installed(
+    ["reference", "page", "project", "levels/repository-unready", "--language", "zh-CN", "--json"],
+    bootstrap,
+  ));
+  assert.equal(referencePage.objective, "project");
+  assert.equal(referencePage.language, "zh-CN");
+  assert.equal(referencePage.page.id, "levels/repository-unready");
+  const referenceSearch = JSON.parse(installed(
+    ["reference", "search", "idea", "revision", "--language", "en-US", "--json"],
+    bootstrap,
+  ));
+  assert.ok(referenceSearch.results.length > 0);
   for (const args of [
     ["list-ideas", "--root", packageRoot, "--json"],
     ["whats-next", "cli-responsibility-refactor", "--root", packageRoot, "--json"],
@@ -193,7 +268,6 @@ try {
     /^MIT License\r?\n\r?\nCopyright \(c\) 2026 Silvermoon contributors\r?\n/,
   );
   for (const dependency of [
-    "@jitl/opentui-core",
     "@opentui/core",
     "@opentui/react",
     "react",
@@ -228,7 +302,7 @@ try {
   );
   assert.deepEqual(
     bootstrapReport.observation.problems.map(({ type }: { type: string }) => type),
-    ["config-missing"],
+    ["project-metadata-missing"],
   );
   assert.equal(bootstrapReport.observation.observedThrough, "version");
   assert.doesNotMatch(
@@ -250,7 +324,7 @@ try {
   ));
   assert.deepEqual(
     nonNodeReport.observation.problems.map(({ type }: { type: string }) => type),
-    ["config-missing"],
+    ["project-metadata-missing"],
   );
   await assert.rejects(readFile(join(nonNode, "package.json")), {
     code: "ENOENT",
@@ -372,6 +446,39 @@ try {
     exported,
     "function,function,function,function,function,function,function,function,function,function,function,function,function|1,2|false,false",
   );
+  assert.equal(
+    run(process.execPath, ["--input-type=module", "-e", `
+      import assert from "node:assert/strict";
+      import { createRequire } from "node:module";
+      import { readFileSync } from "node:fs";
+      import { dirname, join } from "node:path";
+      const require = createRequire(import.meta.url);
+      const runtime = createRequire(require.resolve("silvermoon"));
+      const core = runtime.resolve("@opentui/core");
+      for (const name of ["@opentui/react", "tui-md"]) {
+        assert.equal(createRequire(runtime.resolve(name)).resolve("@opentui/core"), core);
+      }
+      const coreRequire = createRequire(core);
+      const manifest = JSON.parse(readFileSync(join(dirname(core), "package.json")));
+      assert.equal(manifest.optionalDependencies.koffi, "2.16.3");
+      assert.equal(coreRequire("koffi/package.json").version, "2.16.3");
+      console.log("single core; Koffi 2.16.3");
+    `], bootstrap),
+    "single core; Koffi 2.16.3",
+  );
+  if (process.platform === "win32") {
+    const installedTuiTests = (await readFile(
+      join(packageRoot, "test", "runtime", "tui.test.ts"), "utf8",
+    )).replace(
+      "../../src/foundation/tui/index.ts",
+      "./node_modules/silvermoon/dist/src/foundation/tui/index.js",
+    );
+    await writeFile(
+      join(bootstrap, "installed-tui.test.mjs"),
+      stripTypeScriptTypes(installedTuiTests),
+    );
+    run(process.execPath, ["--test", "installed-tui.test.mjs"], bootstrap);
+  }
   assert.equal(
     run(
       process.execPath,
@@ -641,7 +748,10 @@ decision, risk, or disagreement requires it.
   );
   assert.equal(lifecycle.observation.state, "repository-sync-required");
   assert.equal(lifecycle.observation.problems[0].type, "worktree-changes");
-  assert.match(lifecycle.observation.problems[0].summary, /未跟踪=5/);
+  assert.match(
+    lifecycle.observation.problems[0].summary,
+    /工作区包含 5 个未跟踪修改/,
+  );
   assert.deepEqual(lifecycle.actions, []);
   const lifecycleText = installed(
     ["whats-next", "installed-smoke"],
@@ -649,12 +759,24 @@ decision, risk, or disagreement requires it.
   );
   assert.match(
     lifecycleText,
-    /^## Blocked\n\nThe repository must be synchronized before this command can continue\./,
+    /^## Idea progress\n\n### Current status\n\nThis request targets Idea progress, but Project readiness must be completed first\./,
   );
   assert.match(
     lifecycleText,
-    /\n\n### Issues to address\n\n\| Type \| Summary \|\n\| --- \| --- \|\n\| worktree-changes \|/,
+    /\n\n### Current status[\s\S]*### Problems[\s\S]*The worktree has conflicts, changes, or an inspection failure/,
   );
+  assert.match(lifecycleText, /\n\n### Next action\n/);
+  assert.match(lifecycleText, /\n\n### References\n/);
+  assert.doesNotMatch(
+    lifecycleText,
+    /Target Objective|Owner Objective|Failing check|Observed state:|problemTypes|ID:|```json/,
+  );
+  assert.doesNotMatch(lifecycleText, /> ## Problem guidance/);
+  assert.match(
+    lifecycleText,
+    /further details: `silvermoon reference problem:repository-worktree --language en-US`/,
+  );
+  assert.doesNotMatch(lifecycleText, /Project Objective overview/);
   assert.doesNotMatch(lifecycleText, /### Ideas you can continue/);
   assert.doesNotMatch(lifecycleText, /## Actions and results/);
   const eventConsumer = join(temporaryRoot, "event-consumer");
@@ -688,8 +810,9 @@ decision, risk, or disagreement requires it.
   assert.equal(preparation.observation.state, "project-setup-required");
   assert.match(
     JSON.stringify(preparation.response),
-    /host-managed project-v1-to-v2 project migration/,
+    /project-configuration-historical-version/,
   );
+  assert.match(JSON.stringify(preparation.response), /project-v1-to-v2/);
   const migrationPlan = JSON.parse(npm([
     "exec",
     "--",

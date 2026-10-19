@@ -1,0 +1,44 @@
+schemaVersion: 1
+domainSchema:
+  type: object
+  required:
+    - userHome
+  additionalProperties: false
+  properties:
+    userHome:
+      type: string
+      minLength: 1
+levels:
+  - id: configuration-invalid
+    advancement:
+      checks:
+        - id: device-config-valid
+          problems:
+            - device-configuration
+            - device-configuration-historical-version
+            - device-configuration-future-version
+            - device-configuration-invalid-version
+            - device-configuration-format
+  - id: runtime-unready
+    advancement:
+      checks:
+        - id: device-runtime-linked
+          problems:
+            - device-runtime
+  - id: skill-unready
+    advancement:
+      checks:
+        - id: device-skill-discoverable
+          problems:
+            - device-skill
+            - device-canonical-skill
+  - id: update-unconfirmed
+    advancement:
+      checks:
+        - id: device-update-current
+          problems:
+            - device-update
+defaultLanguage: en-US
+languages:
+  - en-US
+  - zh-CN

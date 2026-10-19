@@ -6,13 +6,9 @@
 import type { EventHistoryInvalidParameters } from "../contract.ts";
 
 /** @pure */
-const eventHistoryInvalid = ({
-  recheckCommand,
-}: EventHistoryInvalidParameters) =>
-  [
-    `Preserve both histories.`,
-    `Review the selected commit's event boundary and repair only an authorized failure,`,
-    `then retry ${recheckCommand}.`,
-  ].join(" ");
+const eventHistoryInvalid = (
+  _parameters: EventHistoryInvalidParameters,
+) =>
+  `The goal is valid append-only event history at the selected commit boundary while preserving both histories; repair only an explicitly authorized failure.`;
 
 export default eventHistoryInvalid;

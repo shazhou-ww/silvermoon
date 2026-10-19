@@ -2,20 +2,20 @@
 
 ## Steps
 
-### D-S01: 整备开发运行时
+### D-S01: 整备契约候选运行时
 
-用 `pnpm setup:dev` 将已接受实现的 checkout 链接为设备全局运行时，确认 personal skill 链接仍指向 canonical skill，不发布 npm 包。
+用 `pnpm setup:dev` 将已接受的 Guide 核心实现 checkout 链接为设备全局运行时，确认 personal skill 链接仍指向 canonical skill，不发布 npm 包，也不把 OR/OPS 扩展文档宣称为生产运行能力。
 
-### D-S02: 验证真实 CLI 导航
+### D-S02: 验证现有 CLI 兼容边界
 
-通过全局 `silvermoon` 在实际仓库及受控验证对象上观察导航结果，验证新抽象在设备运行时可用，不创建或推断未授权的接受事实。
+通过全局 `silvermoon` 在实际仓库及受控验证对象上观察导航结果，证明 Guide 核心契约演进未改变 `whats-next` 的现实行为；不实现或启动 OR/OPS 调度，不创建或推断未授权的接受事实。
 
 ## Acceptance criteria
 
 ### D-AC01: 全局运行时指向本仓库
 
-保存 setup 结果和运行时、skill 链接检查证据，证明运行的是本 checkout，而非发布包或其他 checkout。
+保存 setup 结果和运行时、skill 链接检查证据，证明运行的是准确已接受 checkout，而非发布包或其他 checkout。
 
-### D-AC02: 现实导航结果可用
+### D-AC02: 现实导航保持兼容
 
-记录实际 CLI 调用与结果，证明对象选择、阻塞指导及重新观察可用；导航不改写契约或自动记录接受，遇到人工或外部等待能够交接。
+记录实际 CLI 调用与结果，证明对象选择、阻塞指导及重新观察仍可用；类型新增不会自动执行 skill、启动组合调度或记录接受，遇到人工或外部等待仍能交接。

@@ -6,6 +6,6 @@
 
 /** @pure */
 const worktreeChangesStep = () =>
-  `检查全部 staged、unstaged 和 untracked 路径及其修改内容，不要只依据上述样例。保留未知工作，再逐项提交、隔离，或在获得明确授权后放弃。`;
+  `目标是得到 clean worktree，并让每项既有修改都有明确去向，同时保留未知工作。`;
 
 export default worktreeChangesStep;
