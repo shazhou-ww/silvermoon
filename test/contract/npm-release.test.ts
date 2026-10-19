@@ -235,7 +235,7 @@ test("uses a protected, least-privilege trusted-publishing workflow", async () =
   );
   assert.equal(
     setupNode.uses,
-    "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
+    "actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1",
   );
   assert.equal(setupNode.with["node-version"], 24);
   assert.equal(setupNode.with["registry-url"], "https://registry.npmjs.org");
