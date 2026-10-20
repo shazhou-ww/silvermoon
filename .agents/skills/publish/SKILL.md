@@ -9,10 +9,10 @@ disable-model-invocation: true
 # Publish npm package
 
 Publish the allowlisted package through this repository's protected GitHub
-Actions workflow. Stable releases are tag-triggered; canaries are planned from
-the exact `origin/main` head, whose protected deploy-key push creates an
-immutable canary tag and triggers publication. Never publish directly from the
-development machine.
+Actions workflow. Stable releases are tag-triggered; canaries are manually
+dispatched on demand from the exact `origin/main` head, whose protected
+deploy-key push creates an immutable canary tag and triggers publication.
+Never publish directly from the development machine.
 
 ## Safety boundary
 
@@ -30,7 +30,9 @@ development machine.
   `NODE_AUTH_TOKEN`.
 - Release versions and `npm/<release-key>/v<version>` tags are immutable. Never
   move, delete, or recreate a release tag to repair source or validation.
-  Canary versions are also immutable even though they do not have daily tags.
+  Canary versions and their release tags are also immutable.
+- Canary publication is manual-only. Do not add a daily schedule or automatic
+  publication trigger; dispatch it only for an explicit canary release request.
 - Preserve unrelated worktree changes. Stop if they prevent an isolated,
   reviewable release commit.
 - Before creating a tag, require the workflow to use a GitHub-hosted runner,
@@ -125,7 +127,7 @@ commit because it leaves package contents unchanged.
 The tag is the release instruction. Do not run a second publication command.
 
 For a canary, do not create a version commit or GitHub Release. Dispatch the
-trusted workflow from `main`:
+trusted workflow from `main` only on demand; there is no scheduled publication:
 
 ```sh
 gh workflow run publish-npm.yml --ref main

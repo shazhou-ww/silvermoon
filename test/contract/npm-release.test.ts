@@ -40,14 +40,15 @@ test("uses a protected, least-privilege trusted-publishing workflow", async () =
 
   const workflow = document.toJS();
   assert.deepEqual(workflow.on.push.tags, ["npm/**"]);
-  assert.deepEqual(workflow.on.schedule, [{ cron: "0 2 * * *" }]);
+  assert.deepEqual(Object.keys(workflow.on).sort(), ["push", "workflow_dispatch"]);
   assert.equal(workflow.on.workflow_dispatch, null);
   assert.deepEqual(workflow.permissions, {});
 
   const prepareCanary = workflow.jobs["prepare-canary"];
-  assert.match(prepareCanary.if, /github\.ref == 'refs\/heads\/main'/);
-  assert.match(prepareCanary.if, /github\.event_name == 'schedule'/);
-  assert.match(prepareCanary.if, /github\.event_name == 'workflow_dispatch'/);
+  assert.equal(
+    prepareCanary.if,
+    "github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch'",
+  );
   assert.equal(prepareCanary.environment, undefined);
   assert.deepEqual(prepareCanary.permissions, {
     actions: "write",
@@ -444,6 +445,8 @@ test("documents trusted-publisher setup and the protected release procedure", as
     "exact refreshed `origin/main` commit",
     "0.5.0-canary.42.g0123456789ab",
     "gh workflow run publish-npm.yml --ref main",
+    "only on demand",
+    "There is no daily or scheduled canary publication.",
     "silvermoon@canary",
     "silvermoon@latest",
     "git tag npm/silvermoon/v0.2.0-rc.1 origin/main",
@@ -500,6 +503,8 @@ test("provides an explicit project publish skill with immutable release safeguar
     "pnpm check",
     "git tag npm/<release-key>/v<version> origin/main",
     "gh workflow run publish-npm.yml --ref main",
+    "Canary publication is manual-only.",
+    "only on demand; there is no scheduled publication",
     "npm `canary` dist-tag",
     "<next-stable>-canary.<run-number>.g<12-hex-commit>",
     "Silvermoon phase handoff",

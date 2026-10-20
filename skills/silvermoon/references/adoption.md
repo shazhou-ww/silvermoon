@@ -22,7 +22,7 @@ every target repository:
 npm install --global silvermoon
 ```
 
-Use `silvermoon@canary` only when the device should follow daily development
+Use `silvermoon@canary` only when the device should follow on-demand development
 builds; install `silvermoon@latest` to return to the stable channel.
 
 Register that installation's canonical skill in the universal personal

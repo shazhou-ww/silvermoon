@@ -1,8 +1,8 @@
 # npm package releases
 
 This repository publishes an allowlisted package through one trusted GitHub
-Actions workflow. Stable, named prerelease, and daily canary publications all
-use an immutable authorized tag under `npm/`. Daily automation creates its
+Actions workflow. Stable, named prerelease, and ad hoc canary publications all
+use an immutable authorized tag under `npm/`. Manually dispatched automation creates its
 canary tag only at the exact refreshed `origin/main` commit. The committed
 package manifest remains authoritative for the package name and next stable
 version line.
@@ -18,7 +18,7 @@ The two routine channels are:
 | Channel | Source | npm dist-tag | Version identity |
 | --- | --- | --- | --- |
 | Stable | Immutable `npm/silvermoon/v<version>` tag | `latest` | Committed manifest version |
-| Canary | Automated immutable tag at exact protected `origin/main` head | `canary` | `<next-stable>-canary.<run-number>.g<12-hex-commit>` |
+| Canary | Manually dispatched immutable tag at exact protected `origin/main` head | `canary` | `<next-stable>-canary.<run-number>.g<12-hex-commit>` |
 
 A named tagged prerelease such as `npm/silvermoon/v0.5.0-rc.1` still publishes
 with the `rc` dist-tag. Numeric-only prerelease channels are intentionally
@@ -169,14 +169,16 @@ duplicate publication without replacing the existing version.
 
 ## Publish the canary channel
 
-The same trusted workflow runs every day at `02:00 UTC` and supports manual
-dispatch from `main`:
+The same trusted workflow publishes canaries only on demand, through manual
+dispatch from `main`. There is no daily or scheduled canary publication.
+In GitHub Actions, select **Publish npm package**, choose **Run workflow**,
+and select the `main` branch, or run:
 
 ```sh
 gh workflow run publish-npm.yml --ref main
 ```
 
-Canary planning requires the scheduled or manually dispatched workflow commit
+Canary planning requires the manually dispatched workflow commit
 to equal the refreshed `origin/main` head. The committed manifest must contain
 a stable canonical SemVer for the next intended stable line. For a `0.5.0`
 manifest, workflow run `42` at commit `0123456789abcdef...` derives:
@@ -191,12 +193,12 @@ its deploy-key push triggers the same workflow from the tag. If that exact tag
 already exists after an interrupted run, the planner explicitly dispatches it
 instead. The derived version is written only into the isolated package staging
 tree. The workflow does not make a version commit, move `latest`, or create a
-daily GitHub Release. It runs the same build, unit, contract, integration,
+GitHub Release. It runs the same build, unit, contract, integration,
 skill, tarball, installed-package, provenance, and post-publication
 verification gates as a stable release.
 
 If npm's current `canary` dist-tag already has the same `gitHead`, a later
-scheduled or manual run records an unchanged canary and creates no tag.
+manual run records an unchanged canary and creates no tag.
 Rerunning a workflow that already published its exact derived version reuses
 the existing immutable tag, rebuilds, and verifies the same candidate without
 publishing again. Once the stable base version itself exists on npm, canary

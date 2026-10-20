@@ -91,7 +91,7 @@ silvermoon reference search idea submission --language en-US
 > graph.
 
 Stable installations use `silvermoon@latest`. Development devices can opt into
-daily `silvermoon@canary` builds without changing the stable `latest` channel.
+on-demand `silvermoon@canary` builds without changing the stable `latest` channel.
 
 For workflows, see [Operating Silvermoon](./docs/operations.md); for command
 details, see the [Technical Reference](./docs/reference.md).

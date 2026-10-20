@@ -77,6 +77,6 @@
 - Follow [`docs/npm-package-releases.md`](docs/npm-package-releases.md).
 - Publish only through `.github/workflows/publish-npm.yml`, using an immutable
   `npm/silvermoon/v<version>` tag on a commit reachable from `origin/main`.
-  Daily canary automation may create that immutable canary tag only at the
+  Manually dispatched canary automation may create that immutable tag only at the
   exact refreshed `origin/main` head; it must never move npm `latest`. Never
   publish locally or add npm tokens.

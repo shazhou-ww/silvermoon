@@ -25,7 +25,7 @@ idea 或要求选择任务。需要浏览 idea 时使用 `silvermoon list-ideas`
 ULID 或唯一 alias 传给 `silvermoon whats-next <idea>`。
 
 The default installation follows the stable npm `latest` channel. To opt into
-the daily development channel, install `silvermoon@canary`; return to stable
+the on-demand development channel, install `silvermoon@canary`; return to stable
 with `silvermoon@latest`.
 
 Register the global package's canonical skill in the universal personal
