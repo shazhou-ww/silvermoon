@@ -9,14 +9,14 @@ importers:
   .:
     dependencies:
       '@github/copilot-sdk':
-        specifier: 1.0.20
-        version: 1.0.20
+        specifier: 1.0.22
+        version: 1.0.22
       '@opentui/core':
         specifier: https://github.com/shazhou-ww/opentui/releases/download/opentui-0.4.0-koffi-2.16.3-1/opentui-core-0.4.0-koffi.2.16.3.1.tgz
         version: https://github.com/shazhou-ww/opentui/releases/download/opentui-0.4.0-koffi-2.16.3-1/opentui-core-0.4.0-koffi.2.16.3.1.tgz(typescript@6.0.3)(web-tree-sitter@0.25.10)
       '@opentui/react':
         specifier: https://github.com/shazhou-ww/opentui/releases/download/opentui-0.4.0-koffi-2.16.3-1/opentui-react-0.4.0-koffi.2.16.3.1.tgz
-        version: https://github.com/shazhou-ww/opentui/releases/download/opentui-0.4.0-koffi-2.16.3-1/opentui-react-0.4.0-koffi.2.16.3.1.tgz(@opentui/core@https://github.com/shazhou-ww/opentui/releases/download/opentui-0.4.0-koffi-2.16.3-1/opentui-core-0.4.0-koffi.2.16.3.1.tgz(typescript@6.0.3)(web-tree-sitter@0.25.10))(react-devtools-core@7.0.1)(react@19.3.0)(ws@8.22.0)
+        version: https://github.com/shazhou-ww/opentui/releases/download/opentui-0.4.0-koffi-2.16.3-1/opentui-react-0.4.0-koffi.2.16.3.1.tgz(@opentui/core@https://github.com/shazhou-ww/opentui/releases/download/opentui-0.4.0-koffi-2.16.3-1/opentui-core-0.4.0-koffi.2.16.3.1.tgz(typescript@6.0.3)(web-tree-sitter@0.25.10))(react-devtools-core@7.0.1)(react@19.3.1)(ws@8.22.0)
       '@potential-guide/effects':
         specifier: 0.1.0-rc.0
         version: 0.1.0-rc.0
@@ -37,7 +37,7 @@ importers:
         version: 2.2.0
       react:
         specifier: ^19.3.0
-        version: 19.3.0
+        version: 19.3.1
       react-devtools-core:
         specifier: ^7.0.1
         version: 7.0.1
@@ -46,7 +46,7 @@ importers:
         version: 8.3.0
       tui-md:
         specifier: ^0.2.0
-        version: 0.2.0(@opentui/core@https://github.com/shazhou-ww/opentui/releases/download/opentui-0.4.0-koffi-2.16.3-1/opentui-core-0.4.0-koffi.2.16.3.1.tgz(typescript@6.0.3)(web-tree-sitter@0.25.10))(@opentui/react@https://github.com/shazhou-ww/opentui/releases/download/opentui-0.4.0-koffi-2.16.3-1/opentui-react-0.4.0-koffi.2.16.3.1.tgz(@opentui/core@https://github.com/shazhou-ww/opentui/releases/download/opentui-0.4.0-koffi-2.16.3-1/opentui-core-0.4.0-koffi.2.16.3.1.tgz(typescript@6.0.3)(web-tree-sitter@0.25.10))(react-devtools-core@7.0.1)(react@19.3.0)(ws@8.22.0))(react@19.3.0)
+        version: 0.2.0(@opentui/core@https://github.com/shazhou-ww/opentui/releases/download/opentui-0.4.0-koffi-2.16.3-1/opentui-core-0.4.0-koffi.2.16.3.1.tgz(typescript@6.0.3)(web-tree-sitter@0.25.10))(@opentui/react@https://github.com/shazhou-ww/opentui/releases/download/opentui-0.4.0-koffi-2.16.3-1/opentui-react-0.4.0-koffi.2.16.3.1.tgz(@opentui/core@https://github.com/shazhou-ww/opentui/releases/download/opentui-0.4.0-koffi-2.16.3-1/opentui-core-0.4.0-koffi.2.16.3.1.tgz(typescript@6.0.3)(web-tree-sitter@0.25.10))(react-devtools-core@7.0.1)(react@19.3.1)(ws@8.22.0))(react@19.3.1)
       ws:
         specifier: ^8.22.0
         version: 8.22.0
@@ -81,52 +81,52 @@ importers:
 
 packages:
 
-  '@github/copilot-sdk-darwin-arm64@1.0.20':
-    resolution: {integrity: sha512-TSUlQ3FZ7fnAKLyiOH6T/ZtgosPjN1GIn3/3Mo8YwseM6rPXUbe2ODiMPvQLcM2aDFbl2oqlAEtg5ezuAJOjHQ==}
+  '@github/copilot-sdk-darwin-arm64@1.0.22':
+    resolution: {integrity: sha512-qmCCCrPXZzspZgKEitQ5HGlVGHd5kxZPlNUk7AfFcPmhvhfF4p8ROoH2OER5fGMsQwIiuAfz2XyXqkUVCupWKw==}
     cpu: [arm64]
     os: [darwin]
 
-  '@github/copilot-sdk-darwin-x64@1.0.20':
-    resolution: {integrity: sha512-KNCkDDFLcnPEj9hr6Bj5ys1AQxO8BC67PB+UikbVWHn+OHJJGQR9suo8KTja4PggyYX3S1CYwUCPfQ8D8fRuOw==}
+  '@github/copilot-sdk-darwin-x64@1.0.22':
+    resolution: {integrity: sha512-oh0LlHEVTcC6r6rzxEhNPhUgoFRvnP85x4HwF5tEkzldegw6qVYCpB4zwgcy47o51ML4jHlP/jkzq5SOC2z89A==}
     cpu: [x64]
     os: [darwin]
 
-  '@github/copilot-sdk-linux-arm64@1.0.20':
-    resolution: {integrity: sha512-Q1Eb6t4X48QaWr8fm/oQOimkdjuVt66w7OaI4pof/2J9lETGE1pSERyd2RvkeAq0d5zW/VII22hYdUklS+vTxw==}
+  '@github/copilot-sdk-linux-arm64@1.0.22':
+    resolution: {integrity: sha512-E1MLsrO6bXTTqXFb+IZwdkSm3W1j7KOoGvX3aZdIrMPpjLneMeokZNec4716AYwdeWDF1t+mLYWU1ipfkRkhxA==}
     cpu: [arm64]
     os: [linux]
     libc: [glibc]
 
-  '@github/copilot-sdk-linux-x64@1.0.20':
-    resolution: {integrity: sha512-ZF16fwYqpfZXFcX2iMklLj/GwaWXTy+NCZ0+K7f2I3SvDjjieoVPsIY8ZBA8zo9qpGRE3O4ItedAbNSF3ReRBQ==}
+  '@github/copilot-sdk-linux-x64@1.0.22':
+    resolution: {integrity: sha512-9O0RBsP8Eyf5TOp99ISWDjWQwlUbgMSzdvGii4l6LazmWesukglwxLGBmPEVXa8wEpug+LDGifzeJ74+663YsA==}
     cpu: [x64]
     os: [linux]
     libc: [glibc]
 
-  '@github/copilot-sdk-linuxmusl-arm64@1.0.20':
-    resolution: {integrity: sha512-9oalpTzS8bJCh34h7udzT6AZfiv2k6qzmbaivwTMiXe1BOR90PPRTM+L+npqiqUBsNK5WZrjvUQOceWvFARjpA==}
+  '@github/copilot-sdk-linuxmusl-arm64@1.0.22':
+    resolution: {integrity: sha512-wG79J/hMtj1i5xyntIp/vmyAzt7u4BVQQnUaCxnPlWxexmwiuZ5zYwlqrEqIEhl+uXirz90RmOPg3IxiDLfJIA==}
     cpu: [arm64]
     os: [linux]
     libc: [musl]
 
-  '@github/copilot-sdk-linuxmusl-x64@1.0.20':
-    resolution: {integrity: sha512-DMedbPomgJo6Zzj/oPxffiTIibudTBwsZW2PfHDKWqm3zIXgy2ljkie+YtKmyCPTkAhdrFAC4W5jeTH31sS3zQ==}
+  '@github/copilot-sdk-linuxmusl-x64@1.0.22':
+    resolution: {integrity: sha512-aV4Rw/NN+VABR7+Wq9+S22SvyHeJqANejjiiHLJPSxsdpQz7rK+HUkUNLjISiFmBCB4XqZMUwLUbTpsvMLAgHw==}
     cpu: [x64]
     os: [linux]
     libc: [musl]
 
-  '@github/copilot-sdk-win32-arm64@1.0.20':
-    resolution: {integrity: sha512-0JJKl550JFWdeyDucwMcqnuy4q0/hyjgIvCrOeU6gfbPsxZisY3qzhJYIy3wRd5yRJVwa40ZBDkdMI1HSKLI6w==}
+  '@github/copilot-sdk-win32-arm64@1.0.22':
+    resolution: {integrity: sha512-3fqjYt0LUofLpQoIqEeWukA/WnmwbqsyYjqimaKw+onVealtLXCdXwqMy5vcT0raY/f4D3+glvjWFchR5qZq7w==}
     cpu: [arm64]
     os: [win32]
 
-  '@github/copilot-sdk-win32-x64@1.0.20':
-    resolution: {integrity: sha512-O1QAIzjV7qDttOrPC3RqYl0mRIsjGOFnobUN238HXaz29x/v4enDvBShffjCeuIqNmO7Gnjd2p7QX5Jf4+Kkhg==}
+  '@github/copilot-sdk-win32-x64@1.0.22':
+    resolution: {integrity: sha512-yUapm2AapONBj+ty3A/+C5ZjDcGi72CgAggeoEqmD6oQqUnA8+A71fR8avmCV7Rhmwwzb1mh2AZd9wAjrHuwig==}
     cpu: [x64]
     os: [win32]
 
-  '@github/copilot-sdk@1.0.20':
-    resolution: {integrity: sha512-jPeAdTAv3acHNFPTULqP/IqLCc6dJyK8WQZq7gDlTGIXXoPTdbn8Uo8fh0vSqAz2DHy3lQ4e94J62oeGdAH0yA==}
+  '@github/copilot-sdk@1.0.22':
+    resolution: {integrity: sha512-LSyEvV9wMvsjy+MIeF/EfhceTnu64GOLqqmiMXJVqo9j/tOjKCExsKhtarLlriNmxV0der+SAL0Rf18KmMu7Mg==}
     engines: {node: ^20.19.0 || >=22.12.0}
 
   '@jitl/opentui-core-darwin-arm64@0.4.0':
@@ -850,8 +850,8 @@ packages:
     peerDependencies:
       react: ^19.2.0
 
-  react@19.3.0:
-    resolution: {integrity: sha512-E8LUcbtBWt20bbl2YoHfx4ZDBdxVTfOKtCZn9cDSJ4l6/nuoApcpIBcj47t2wZoVX8g2ZHuMHbiShgCR1T5Sog==}
+  react@19.3.1:
+    resolution: {integrity: sha512-QNhWdt7nrgVWWQG58QuGsAR3jv3Hbe4mb4vz7w2csnHavciZJgda1CPNaldF6eVxv90ud3jUXpKlHL69gO38yw==}
     engines: {node: '>=0.10.0'}
 
   refractor@5.0.0:
@@ -1092,44 +1092,44 @@ packages:
 
 snapshots:
 
-  '@github/copilot-sdk-darwin-arm64@1.0.20':
+  '@github/copilot-sdk-darwin-arm64@1.0.22':
     optional: true
 
-  '@github/copilot-sdk-darwin-x64@1.0.20':
+  '@github/copilot-sdk-darwin-x64@1.0.22':
     optional: true
 
-  '@github/copilot-sdk-linux-arm64@1.0.20':
+  '@github/copilot-sdk-linux-arm64@1.0.22':
     optional: true
 
-  '@github/copilot-sdk-linux-x64@1.0.20':
+  '@github/copilot-sdk-linux-x64@1.0.22':
     optional: true
 
-  '@github/copilot-sdk-linuxmusl-arm64@1.0.20':
+  '@github/copilot-sdk-linuxmusl-arm64@1.0.22':
     optional: true
 
-  '@github/copilot-sdk-linuxmusl-x64@1.0.20':
+  '@github/copilot-sdk-linuxmusl-x64@1.0.22':
     optional: true
 
-  '@github/copilot-sdk-win32-arm64@1.0.20':
+  '@github/copilot-sdk-win32-arm64@1.0.22':
     optional: true
 
-  '@github/copilot-sdk-win32-x64@1.0.20':
+  '@github/copilot-sdk-win32-x64@1.0.22':
     optional: true
 
-  '@github/copilot-sdk@1.0.20':
+  '@github/copilot-sdk@1.0.22':
     dependencies:
       koffi: 3.2.1
       vscode-jsonrpc: 8.2.1
       zod: 4.3.6
     optionalDependencies:
-      '@github/copilot-sdk-darwin-arm64': 1.0.20
-      '@github/copilot-sdk-darwin-x64': 1.0.20
-      '@github/copilot-sdk-linux-arm64': 1.0.20
-      '@github/copilot-sdk-linux-x64': 1.0.20
-      '@github/copilot-sdk-linuxmusl-arm64': 1.0.20
-      '@github/copilot-sdk-linuxmusl-x64': 1.0.20
-      '@github/copilot-sdk-win32-arm64': 1.0.20
-      '@github/copilot-sdk-win32-x64': 1.0.20
+      '@github/copilot-sdk-darwin-arm64': 1.0.22
+      '@github/copilot-sdk-darwin-x64': 1.0.22
+      '@github/copilot-sdk-linux-arm64': 1.0.22
+      '@github/copilot-sdk-linux-x64': 1.0.22
+      '@github/copilot-sdk-linuxmusl-arm64': 1.0.22
+      '@github/copilot-sdk-linuxmusl-x64': 1.0.22
+      '@github/copilot-sdk-win32-arm64': 1.0.22
+      '@github/copilot-sdk-win32-x64': 1.0.22
 
   '@jitl/opentui-core-darwin-arm64@0.4.0':
     optional: true
@@ -1244,12 +1244,12 @@ snapshots:
     transitivePeerDependencies:
       - typescript
 
-  '@opentui/react@https://github.com/shazhou-ww/opentui/releases/download/opentui-0.4.0-koffi-2.16.3-1/opentui-react-0.4.0-koffi.2.16.3.1.tgz(@opentui/core@https://github.com/shazhou-ww/opentui/releases/download/opentui-0.4.0-koffi-2.16.3-1/opentui-core-0.4.0-koffi.2.16.3.1.tgz(typescript@6.0.3)(web-tree-sitter@0.25.10))(react-devtools-core@7.0.1)(react@19.3.0)(ws@8.22.0)':
+  '@opentui/react@https://github.com/shazhou-ww/opentui/releases/download/opentui-0.4.0-koffi-2.16.3-1/opentui-react-0.4.0-koffi.2.16.3.1.tgz(@opentui/core@https://github.com/shazhou-ww/opentui/releases/download/opentui-0.4.0-koffi-2.16.3-1/opentui-core-0.4.0-koffi.2.16.3.1.tgz(typescript@6.0.3)(web-tree-sitter@0.25.10))(react-devtools-core@7.0.1)(react@19.3.1)(ws@8.22.0)':
     dependencies:
       '@opentui/core': https://github.com/shazhou-ww/opentui/releases/download/opentui-0.4.0-koffi-2.16.3-1/opentui-core-0.4.0-koffi.2.16.3.1.tgz(typescript@6.0.3)(web-tree-sitter@0.25.10)
-      react: 19.3.0
+      react: 19.3.1
       react-devtools-core: 7.0.1
-      react-reconciler: 0.33.0(react@19.3.0)
+      react-reconciler: 0.33.0(react@19.3.1)
       ws: 8.22.0
 
   '@potential-guide/effects@0.1.0-rc.0':
@@ -2165,12 +2165,12 @@ snapshots:
       - bufferutil
       - utf-8-validate
 
-  react-reconciler@0.33.0(react@19.3.0):
+  react-reconciler@0.33.0(react@19.3.1):
     dependencies:
-      react: 19.3.0
+      react: 19.3.1
       scheduler: 0.27.0
 
-  react@19.3.0: {}
+  react@19.3.1: {}
 
   refractor@5.0.0:
     dependencies:
@@ -2311,14 +2311,14 @@ snapshots:
 
   ts-dedent@2.3.0: {}
 
-  tui-md@0.2.0(@opentui/core@https://github.com/shazhou-ww/opentui/releases/download/opentui-0.4.0-koffi-2.16.3-1/opentui-core-0.4.0-koffi.2.16.3.1.tgz(typescript@6.0.3)(web-tree-sitter@0.25.10))(@opentui/react@https://github.com/shazhou-ww/opentui/releases/download/opentui-0.4.0-koffi-2.16.3-1/opentui-react-0.4.0-koffi.2.16.3.1.tgz(@opentui/core@https://github.com/shazhou-ww/opentui/releases/download/opentui-0.4.0-koffi-2.16.3-1/opentui-core-0.4.0-koffi.2.16.3.1.tgz(typescript@6.0.3)(web-tree-sitter@0.25.10))(react-devtools-core@7.0.1)(react@19.3.0)(ws@8.22.0))(react@19.3.0):
+  tui-md@0.2.0(@opentui/core@https://github.com/shazhou-ww/opentui/releases/download/opentui-0.4.0-koffi-2.16.3-1/opentui-core-0.4.0-koffi.2.16.3.1.tgz(typescript@6.0.3)(web-tree-sitter@0.25.10))(@opentui/react@https://github.com/shazhou-ww/opentui/releases/download/opentui-0.4.0-koffi-2.16.3-1/opentui-react-0.4.0-koffi.2.16.3.1.tgz(@opentui/core@https://github.com/shazhou-ww/opentui/releases/download/opentui-0.4.0-koffi-2.16.3-1/opentui-core-0.4.0-koffi.2.16.3.1.tgz(typescript@6.0.3)(web-tree-sitter@0.25.10))(react-devtools-core@7.0.1)(react@19.3.1)(ws@8.22.0))(react@19.3.1):
     dependencies:
       '@opentui/core': https://github.com/shazhou-ww/opentui/releases/download/opentui-0.4.0-koffi-2.16.3-1/opentui-core-0.4.0-koffi.2.16.3.1.tgz(typescript@6.0.3)(web-tree-sitter@0.25.10)
-      '@opentui/react': https://github.com/shazhou-ww/opentui/releases/download/opentui-0.4.0-koffi-2.16.3-1/opentui-react-0.4.0-koffi.2.16.3.1.tgz(@opentui/core@https://github.com/shazhou-ww/opentui/releases/download/opentui-0.4.0-koffi-2.16.3-1/opentui-core-0.4.0-koffi.2.16.3.1.tgz(typescript@6.0.3)(web-tree-sitter@0.25.10))(react-devtools-core@7.0.1)(react@19.3.0)(ws@8.22.0)
+      '@opentui/react': https://github.com/shazhou-ww/opentui/releases/download/opentui-0.4.0-koffi-2.16.3-1/opentui-react-0.4.0-koffi.2.16.3.1.tgz(@opentui/core@https://github.com/shazhou-ww/opentui/releases/download/opentui-0.4.0-koffi-2.16.3-1/opentui-core-0.4.0-koffi.2.16.3.1.tgz(typescript@6.0.3)(web-tree-sitter@0.25.10))(react-devtools-core@7.0.1)(react@19.3.1)(ws@8.22.0)
       beautiful-mermaid: 1.1.3
       hast-util-to-string: 3.0.1
       image-dimensions: 2.6.0
-      react: 19.3.0
+      react: 19.3.1
       refractor: 5.0.0
       rehype-raw: 7.0.0
       remark-abbr: 1.4.2
