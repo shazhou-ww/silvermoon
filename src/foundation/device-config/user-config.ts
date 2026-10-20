@@ -6,6 +6,7 @@ import { isCanonicalLanguageTag } from "../language/index.ts";
 import { parseStrictYaml, stringifyCanonicalYaml } from "../schema/index.ts";
 
 export const USER_CONFIG_PATH = ".config/silvermoon/config.yaml";
+export const CURRENT_USER_CONFIG_VERSION = 1;
 
 const USER_CONFIG_KEYS = new Set(["version", "preferredLanguage"]);
 
@@ -24,7 +25,9 @@ function diagnostic(code: string, path: string, message: string, remediation: st
 }
 
 function serializeUserConfig(config: { preferredLanguage?: unknown }) {
-  const canonical: { version: 1; preferredLanguage?: unknown } = { version: 1 };
+  const canonical: { version: 1; preferredLanguage?: unknown } = {
+    version: CURRENT_USER_CONFIG_VERSION,
+  };
   if (config.preferredLanguage !== undefined) {
     canonical.preferredLanguage = config.preferredLanguage;
   }
@@ -90,6 +93,17 @@ export async function loadUserConfig({ home = homedir() } = {}) {
   }
 
   const diagnostics = [];
+  const hasVersion = Object.hasOwn(value, "version");
+  const observedVersion = hasVersion ? value.version : undefined;
+  const versionStatus = !hasVersion
+    ? "missing" as const
+    : typeof observedVersion !== "number" || !Number.isInteger(observedVersion)
+    ? "invalid" as const
+    : observedVersion < CURRENT_USER_CONFIG_VERSION
+    ? "historical" as const
+    : observedVersion > CURRENT_USER_CONFIG_VERSION
+    ? "future" as const
+    : "current" as const;
   for (const key of Object.keys(value).sort()) {
     if (!USER_CONFIG_KEYS.has(key)) {
       diagnostics.push(diagnostic(
@@ -100,19 +114,33 @@ export async function loadUserConfig({ home = homedir() } = {}) {
       ));
     }
   }
-  if (!Object.hasOwn(value, "version")) {
+  if (versionStatus === "missing") {
     diagnostics.push(diagnostic(
       "user-config.missing-version",
       `${configPath}#version`,
       "Missing required key: version",
       `Add version: 1 to ${configPath}.`,
     ));
-  } else if (value.version !== 1) {
+  } else if (versionStatus === "historical") {
+    diagnostics.push(diagnostic(
+      "user-config.historical-version",
+      `${configPath}#version`,
+      `Historical Silvermoon user configuration version: ${String(observedVersion)}`,
+      `Upgrade the configuration to version: ${CURRENT_USER_CONFIG_VERSION}.`,
+    ));
+  } else if (versionStatus === "future") {
+    diagnostics.push(diagnostic(
+      "user-config.future-version",
+      `${configPath}#version`,
+      `Future Silvermoon user configuration version: ${String(observedVersion)}`,
+      "Upgrade the Silvermoon CLI if a newer release supports this version; otherwise correct the version.",
+    ));
+  } else if (versionStatus === "invalid") {
     diagnostics.push(diagnostic(
       "user-config.unsupported-version",
       `${configPath}#version`,
-      `Unsupported Silvermoon user configuration version: ${String(value.version)}`,
-      "Use version: 1.",
+      `Invalid Silvermoon user configuration version: ${String(observedVersion)}`,
+      `Use integer version: ${CURRENT_USER_CONFIG_VERSION}.`,
     ));
   }
   if (
@@ -139,6 +167,11 @@ export async function loadUserConfig({ home = homedir() } = {}) {
     config: diagnostics.length === 0 ? value : null,
     configPath,
     diagnostics,
+    version: {
+      status: versionStatus,
+      ...(observedVersion === undefined ? {} : { value: observedVersion }),
+      supported: CURRENT_USER_CONFIG_VERSION,
+    },
   };
 }
 

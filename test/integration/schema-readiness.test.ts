@@ -4,7 +4,6 @@ import { join } from "node:path";
 import { afterEach, test } from "node:test";
 
 import { checkRepository } from "../../src/business/check-repository.ts";
-import { whatsNext } from "../../src/business/whats-next.ts";
 import { observeDevice } from "../../src/business/shared/observe-device.ts";
 import { observeSnapshot } from "../../src/business/shared/observe-snapshot.ts";
 import { renderMarkdownResponse } from "../../src/foundation/renderer/index.ts";
@@ -14,6 +13,7 @@ import {
   FIRST_ID,
   writeIdea,
 } from "../helpers/repository.ts";
+import { whatsNext } from "../helpers/whatsnext.ts";
 
 const temporaryDirectories: string[] = [];
 
@@ -59,11 +59,10 @@ test("historical schemas remain check-valid but block lifecycle preparation", as
   assert.match(markdown, /Project schema preparation/);
   assert.match(markdown, /\.silvermoon\/config\.yaml/);
   assert.match(markdown, /migration-required/);
-  assert.equal(
-    preparation.response.nextSteps?.filter(({ text }) =>
-      text.includes("silvermoon migrate")
-    ).length,
-    1,
+  assert.equal(preparation.response.nextSteps?.length, 1);
+  assert.match(
+    preparation.response.nextSteps?.[0]?.text ?? "",
+    /^The goal is for the project configuration to use the current target version/,
   );
 });
 

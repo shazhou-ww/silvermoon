@@ -65,7 +65,13 @@ export function deriveEventIdeaState(
   revisions: IdeaRevisions,
   status: IdeaEventState["status"],
 ) {
-  return deriveIdeaState(revisions, eventLifecycleStatus(status));
+  const lifecycle = eventLifecycleStatus(status);
+  if (lifecycle.implementationAcceptedRevision !== revisions.implementationRevision
+    && status.waivedImplementationRevision === revisions.implementationRevision) {
+    lifecycle.implementationAcceptedRevision =
+      status.waivedImplementationRevision;
+  }
+  return deriveIdeaState(revisions, lifecycle);
 }
 
 /** @pure */
@@ -170,6 +176,18 @@ export function assertHumanGate(
   primaryWorlds: Record<string, string|undefined>,
   confirmed: boolean,
 ) {
+  if (event.type === "setGateMode") {
+    if (!confirmed) {
+      throw new Error("This event requires an explicit upstream decision; --confirm-decision asserts one, it does not create authorization.");
+    }
+    if (idea.state === "completed" || idea.state === "abandoned") {
+      throw new Error("Gate mode can be set only while the idea is in a nonterminal phase.");
+    }
+    if (event.payload.mode === "waived" && event.payload.level !== "inner") {
+      throw new Error("Gate waiver is currently supported only for the inner level.");
+    }
+    return;
+  }
   const gate = GATES[event.type];
   if (!gate && !["abandon", "resume"].includes(event.type)) return;
   if (!gate) {

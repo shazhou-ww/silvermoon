@@ -13,6 +13,7 @@ import type {
   IdeaEventStatus,
 } from "../../src/foundation/event-codec/index.ts";
 import {
+  assertHumanGate,
   deriveEventIdeaState,
   planFullEventChange,
 } from "../../src/foundation/event-reducer/index.ts";
@@ -53,7 +54,8 @@ test("internal legacy conversion retains status and final v2 retains ordered int
     assert.ok(renamed);
     return validateIdeaEvent({ ...event, type: renamed });
   });
-  assert.equal(IDEA_EVENT_TYPES.length, 12);
+  assert.equal(IDEA_EVENT_TYPES.length, 13);
+  assert.equal(EVENT_PERMISSIONS.setGateMode, "upstream");
   assert.equal(EVENT_PERMISSIONS.acceptIdeal, "upstream");
   assert.equal(EVENT_PERMISSIONS.submitIdeal, "downstream");
   assert.equal(EVENT_PERMISSIONS.ping, "upstream");
@@ -147,7 +149,193 @@ test("serializes submit and accept pairs and replays without mutating inputs", (
     lastTransfer: { sequence: 10, type: "resume" },
   });
   assert.deepEqual(events, saved);
-  assert.deepEqual(replayIdeaEvents(id, []), { ok: true, state: initialEventState(id) });
+  assert.deepEqual(replayIdeaEvents(id, []), {
+    ok: true,
+    state: initialEventState(id),
+  });
+});
+
+test("inner gate waiver is explicit, persistent and distinct from acceptance", () => {
+    const acceptedIdeal = {
+      sequence: 1,
+      type: "acceptIdeal",
+      payload: { idealRevision: revisions.idealRevision },
+    };
+    const setWaived = {
+      sequence: 2,
+      type: "setGateMode",
+      payload: { level: "inner", mode: "waived" },
+    };
+    const submitInner = {
+      sequence: 3,
+      type: "submitInner",
+      payload: { implementationRevision: revisions.implementationRevision },
+    };
+    const events = [acceptedIdeal, setWaived, submitInner];
+    assert.deepEqual(parseIdeaEvents(serializeIdeaEvents(events)), events);
+    const state = successfulState(replayIdeaEvents(id, events));
+    assert.equal(state.status.innerGateMode, "waived");
+    assert.equal(
+      state.status.waivedImplementationRevision,
+      revisions.implementationRevision,
+    );
+    assert.equal(state.status.implementationAcceptedRevision, undefined);
+    assert.equal(deriveEventIdeaState(revisions, state.status), "deploying");
+    assert.deepEqual(state.control, {
+      owner: "downstream",
+      lastTransfer: { sequence: 3, type: "submitInner" },
+    });
+
+    const restored = successfulState(reduceIdeaEvent(state, {
+      sequence: 4,
+      type: "setGateMode",
+      payload: { level: "inner", mode: "explicit" },
+    }));
+    assert.equal(restored.status.innerGateMode, undefined);
+    assert.equal(
+      restored.status.waivedImplementationRevision,
+      revisions.implementationRevision,
+    );
+    assert.equal(deriveEventIdeaState(revisions, restored.status), "deploying");
+});
+
+test("late gate waiver applies only to the exact submitted inner revision", () => {
+    const submitted = successfulState(replayIdeaEvents(id, [
+      {
+        sequence: 1,
+        type: "acceptIdeal",
+        payload: { idealRevision: revisions.idealRevision },
+      },
+      {
+        sequence: 2,
+        type: "submitInner",
+        payload: { implementationRevision: revisions.implementationRevision },
+      },
+    ]));
+    assert.equal(deriveEventIdeaState(revisions, submitted.status), "implementing");
+    assert.equal(submitted.control?.owner, "upstream");
+    const waived = successfulState(reduceIdeaEvent(submitted, {
+      sequence: 3,
+      type: "setGateMode",
+      payload: { level: "inner", mode: "waived" },
+    }));
+    assert.equal(deriveEventIdeaState(revisions, waived.status), "deploying");
+    assert.deepEqual(waived.control, {
+      owner: "downstream",
+      lastTransfer: { sequence: 3, type: "setGateMode" },
+    });
+
+    const changed = {
+      ...revisions,
+      implementationRevision: "4".repeat(40),
+      deploymentRevision: "5".repeat(40),
+    };
+    assert.equal(deriveEventIdeaState(changed, waived.status), "implementing");
+    const refreshed = successfulState(reduceIdeaEvent(waived, {
+      sequence: 4,
+      type: "submitInner",
+      payload: { implementationRevision: changed.implementationRevision },
+    }));
+    assert.equal(deriveEventIdeaState(changed, refreshed.status), "deploying");
+    assert.equal(
+      refreshed.status.waivedImplementationRevision,
+      changed.implementationRevision,
+    );
+});
+
+test("a current waived revision supersedes stale acceptance without rewriting it", () => {
+  const oldRevision = "4".repeat(40);
+  const state = successfulState(replayIdeaEvents(id, [
+    {
+      sequence: 1,
+      type: "acceptIdeal",
+      payload: { idealRevision: revisions.idealRevision },
+    },
+    {
+      sequence: 2,
+      type: "acceptInner",
+      payload: { implementationRevision: oldRevision },
+    },
+    {
+      sequence: 3,
+      type: "setGateMode",
+      payload: { level: "inner", mode: "waived" },
+    },
+    {
+      sequence: 4,
+      type: "submitInner",
+      payload: { implementationRevision: revisions.implementationRevision },
+    },
+  ]));
+  assert.equal(state.status.implementationAcceptedRevision, oldRevision);
+  assert.equal(
+    state.status.waivedImplementationRevision,
+    revisions.implementationRevision,
+  );
+  assert.equal(deriveEventIdeaState(revisions, state.status), "deploying");
+  assert.equal(state.control?.owner, "downstream");
+  assert.equal(deriveEventIdeaState({
+    ...revisions,
+    implementationRevision: "5".repeat(40),
+  }, state.status), "implementing");
+});
+
+test("restoring explicit before submission keeps the inner human gate", () => {
+    const state = successfulState(replayIdeaEvents(id, [
+      {
+        sequence: 1,
+        type: "acceptIdeal",
+        payload: { idealRevision: revisions.idealRevision },
+      },
+      {
+        sequence: 2,
+        type: "setGateMode",
+        payload: { level: "inner", mode: "waived" },
+      },
+      {
+        sequence: 3,
+        type: "setGateMode",
+        payload: { level: "inner", mode: "explicit" },
+      },
+      {
+        sequence: 4,
+        type: "submitInner",
+        payload: { implementationRevision: revisions.implementationRevision },
+      },
+    ]));
+    assert.equal(state.status.innerGateMode, undefined);
+    assert.equal(state.status.waivedImplementationRevision, undefined);
+    assert.equal(deriveEventIdeaState(revisions, state.status), "implementing");
+    assert.equal(state.control?.owner, "upstream");
+});
+
+test("gate mode rejects unsupported waivers and requires upstream authorization", () => {
+    for (const level of ["ideal", "outer"] as const) {
+      assert.equal(failureCode(reduceIdeaEvent(initialEventState(id), {
+        sequence: 1,
+        type: "setGateMode",
+        payload: { level, mode: "waived" },
+      })), "unsupported-gate-waiver");
+    }
+    const event = validateIdeaEvent({
+      sequence: 1,
+      type: "setGateMode",
+      payload: { level: "inner", mode: "waived" },
+    });
+    const idea = {
+      revisions,
+      state: "implementing",
+      status: { id },
+    };
+    assert.throws(
+      () => assertHumanGate(event, idea, revisions, false),
+      /explicit upstream decision/,
+    );
+    assert.doesNotThrow(() => assertHumanGate(event, idea, revisions, true));
+    assert.throws(
+      () => assertHumanGate(event, { ...idea, state: "completed" }, revisions, true),
+      /nonterminal phase/,
+    );
 });
 
 test("new records omit sequence, retain optional timestamps and derive display order", () => {

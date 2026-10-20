@@ -151,13 +151,13 @@ function localizeDeviceAdvisory(
     : device.skill.status === "source-checkout"
       ? `把当前 checkout 链接为设备级全局 Silvermoon runtime，在个人级 skill discovery 路径中以链接注册 ${device.skill.expectedRoot}，然后用 silvermoon 重试。`
       : device.skill.status === "missing"
-      ? `运行 silvermoon-link-skill，把当前全局 runtime 的 canonical skill ${device.skill.expectedRoot} 链接到个人级 discovery 路径，然后重试当前 Silvermoon 命令。`
-      : device.skill.status === "mismatched"
-        ? `运行 silvermoon-link-skill，把报告的个人级 skill registration 重新链接到当前全局 runtime 的 canonical skill ${device.skill.expectedRoot}，然后重试当前 Silvermoon 命令。`
-        : `修复 Silvermoon 安装，确保 ${device.skill.expectedRoot} 包含可读的 SKILL.md。`;
-  const skillSummary = device.skill.status === "mismatched"
-    ? device.skill.invalidTargets?.map(({ path, target }) =>
-      `个人级 skill registration ${path} 当前解析到 ${target ?? "不可读目标"}；当前全局 runtime 期望 ${device.skill.expectedRoot}。`
+      ? `运行 npx skills add "${device.skill.expectedRoot}" --global --all，安装当前 runtime 的 canonical skill，然后重试当前 Silvermoon 命令。`
+      : device.skill.status === "incorrect"
+        ? `运行 npx skills add "${device.skill.expectedRoot}" --global --all，安装当前 runtime 的 canonical skill，使内容 revision 与 ${device.skill.expectedRevision} 一致，然后重试当前 Silvermoon 命令。`
+        : `修复 active Silvermoon runtime，确保 canonical skill ${device.skill.expectedRoot} 可验证。`;
+  const skillSummary = device.skill.status === "incorrect"
+    ? device.skill.observed?.map(({ path, revision }) =>
+      `个人级 Silvermoon skill ${path} 的内容 revision 为 ${revision ?? "不可验证"}；active runtime 期望 ${device.skill.expectedRevision}。`
     ).join(" ")
     : device.skill.summary === undefined
       ? undefined
@@ -434,23 +434,34 @@ async function observeSnapshotInternal({
   );
   let schemas: ProjectSchemaReadiness | undefined;
   let schemaInspectionDiagnostic: Diagnostic | undefined;
-  try {
-    schemas = await traceBusinessAsync(
-      "schema.inspect",
-      {},
-      () => inspectProjectSchemas({
-        ...(filesystem === undefined ? {} : { filesystem }),
-        root: contentRoot ?? adoption.root,
-      }),
-    );
-  } catch (caught) {
-    schemaInspectionDiagnostic = {
-      code: "schema.inspection-failed",
-      level: "error",
-      path: ".silvermoon",
-      message: `Cannot inspect project schemas: ${errorMessage(caught)}`,
-      remediation: "Repair the Silvermoon runtime schema manifest and retry.",
-    };
+  const configBlocksSchemaInspection = adoption.findings.some(
+    ({ sourceDiagnostic }: { sourceDiagnostic?: Diagnostic }) =>
+      sourceDiagnostic !== undefined
+      && [
+        "project.metadata-missing",
+        "config.missing",
+        "config.invalid-yaml",
+      ].includes(sourceDiagnostic.code ?? ""),
+  );
+  if (!configBlocksSchemaInspection) {
+    try {
+      schemas = await traceBusinessAsync(
+        "schema.inspect",
+        {},
+        () => inspectProjectSchemas({
+          ...(filesystem === undefined ? {} : { filesystem }),
+          root: contentRoot ?? adoption.root,
+        }),
+      );
+    } catch (caught) {
+      schemaInspectionDiagnostic = {
+        code: "schema.inspection-failed",
+        level: "error",
+        path: ".silvermoon",
+        message: `Cannot inspect project schemas: ${errorMessage(caught)}`,
+        remediation: "Repair the Silvermoon runtime schema manifest and retry.",
+      };
+    }
   }
   const futureSchema = schemas?.files.some(
     ({ readiness }) => readiness === "runtime-upgrade-required",

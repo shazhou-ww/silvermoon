@@ -1,4 +1,4 @@
-import { mkdir, readFile, rm, unlink, writeFile } from "node:fs/promises";
+import { chmod, cp, mkdir, readFile, rm, unlink, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { execFile, spawn } from "node:child_process";
 import { promisify } from "node:util";
@@ -9,6 +9,10 @@ const checkoutLabRoot = "/checkout/.silvermoon/ideas/01M4GFC209R5N0NBSD4DXTZG90/
 const globalBin = `${process.env.HOME}/.npm-global/bin`;
 const globalSilvermoon = `${globalBin}/silvermoon`;
 const skillLink = `${process.env.HOME}/.agents/skills/silvermoon`;
+const canonicalSkillFile = "/checkout/skills/silvermoon/SKILL.md";
+const canonicalSkillSource = await readFile(canonicalSkillFile, "utf8");
+const fakeBin = "/tmp/silvermoon-scenario-bin";
+const fakeNpm = resolve(fakeBin, "npm");
 const source = JSON.parse(await readFile(resolve(labRoot, "scenarios.json"), "utf8"));
 if (!Array.isArray(source.scenarios) || source.scenarios.length === 0) {
   throw new TypeError("Scenario manifest must contain at least one scenario.");
@@ -45,6 +49,20 @@ for (const scenario of source.scenarios) {
   }
   scenarioIds.add(scenario.id);
 }
+const requestedScenarioIds = (process.env.SCENARIO_IDS ?? "")
+  .split(",")
+  .map((value) => value.trim())
+  .filter(Boolean);
+const unknownScenarioIds = requestedScenarioIds.filter((id) => !scenarioIds.has(id));
+if (unknownScenarioIds.length > 0) {
+  throw new TypeError(
+    `Unknown scenario IDs: ${unknownScenarioIds.join(", ")}.`,
+  );
+}
+const selectedScenarioIds = new Set(requestedScenarioIds);
+const scenarios = selectedScenarioIds.size === 0
+  ? source.scenarios
+  : source.scenarios.filter(({ id }) => selectedScenarioIds.has(id));
 
 const outputDirectory = resolve(
   labRoot,
@@ -84,6 +102,11 @@ async function restoreRepository() {
   await executeFile("git", ["switch", "scenario"], { cwd: projectRoot });
   await executeFile(
     "git",
+    ["restore", "--source=HEAD", "--staged", "--worktree", "--", ".silvermoon"],
+    { cwd: projectRoot },
+  );
+  await executeFile(
+    "git",
     ["branch", "--set-upstream-to=origin/main", "scenario"],
     { cwd: projectRoot },
   );
@@ -91,16 +114,124 @@ async function restoreRepository() {
 
 async function prepareState(state) {
   await restoreRepository();
+  await writeFile(canonicalSkillFile, canonicalSkillSource, "utf8");
+  await rm(fakeBin, { force: true, recursive: true });
   const userConfigPath = `${process.env.HOME}/.config/silvermoon/config.yaml`;
   await writeFile(userConfigPath, "version: 1\npreferredLanguage: zh-CN\n", "utf8");
+  await rm(skillLink, { force: true, recursive: true });
   await executeFile("pnpm", ["link:skill"], { cwd: "/checkout" });
   if (state === "baseline") return;
-  if (state === "invalid-user-config") {
-    await writeFile(userConfigPath, "version: invalid\n", "utf8");
+  if (state === "historical-user-config") {
+    await writeFile(userConfigPath, "version: 0\n", "utf8");
+    return;
+  }
+  if (
+    state === "future-user-config-current-cli"
+    || state === "future-user-config-update-available"
+  ) {
+    await writeFile(userConfigPath, "version: 2\n", "utf8");
+    await mkdir(fakeBin, { recursive: true });
+    await writeFile(
+      fakeNpm,
+      state === "future-user-config-update-available"
+        ? "#!/bin/sh\nprintf '\"999.0.0\"\\n'\n"
+        : "#!/bin/sh\nprintf '\"0.5.0\"\\n'\n",
+      "utf8",
+    );
+    await chmod(fakeNpm, 0o755);
+    return;
+  }
+  if (state === "invalid-user-config-format") {
+    await writeFile(userConfigPath, "version: 1\nlanguage: zh-CN\n", "utf8");
+    return;
+  }
+  if (state === "project-silvermoon-folder-missing") {
+    await rm(resolve(projectRoot, ".silvermoon"), {
+      force: true,
+      recursive: true,
+    });
+    return;
+  }
+  if (state === "project-config-missing") {
+    await rm(resolve(projectRoot, ".silvermoon", "config.yaml"), {
+      force: true,
+    });
+    return;
+  }
+  if (state === "project-config-historical-version") {
+    await rm(resolve(projectRoot, ".silvermoon", "ideas"), {
+      force: true,
+      recursive: true,
+    });
+    await mkdir(resolve(projectRoot, ".silvermoon", "ideas"));
+    await writeFile(
+      resolve(projectRoot, ".silvermoon", "config.yaml"),
+      [
+        "version: 1",
+        "primaryRepository: https://github.com/shazhou-ww/silvermoon.git",
+        "primaryBranch: main",
+        "preferredLanguage: zh-CN",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+    return;
+  }
+  if (
+    state === "project-config-future-version"
+    || state === "project-config-invalid-version"
+  ) {
+    await rm(resolve(projectRoot, ".silvermoon", "ideas"), {
+      force: true,
+      recursive: true,
+    });
+    await mkdir(resolve(projectRoot, ".silvermoon", "ideas"));
+    await writeFile(
+      resolve(projectRoot, ".silvermoon", "config.yaml"),
+      [
+        "version: 3",
+        "primaryRepository: https://github.com/shazhou-ww/silvermoon.git",
+        "primaryBranch: main",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+    await mkdir(fakeBin, { recursive: true });
+    await writeFile(
+      fakeNpm,
+      state === "project-config-future-version"
+        ? "#!/bin/sh\nprintf '\"999.0.0\"\\n'\n"
+        : "#!/bin/sh\nprintf '\"0.5.0\"\\n'\n",
+      "utf8",
+    );
+    await chmod(fakeNpm, 0o755);
+    return;
+  }
+  if (state === "project-config-invalid-format") {
+    await writeFile(
+      resolve(projectRoot, ".silvermoon", "config.yaml"),
+      "version: 2\nprimaryRepository: [invalid\n",
+      "utf8",
+    );
     return;
   }
   if (state === "skill-link-missing") {
     await unlink(skillLink);
+    return;
+  }
+  if (state === "skill-content-mismatched") {
+    await unlink(skillLink);
+    await cp("/checkout/skills/silvermoon", skillLink, { recursive: true });
+    const skillFile = resolve(skillLink, "SKILL.md");
+    await writeFile(
+      skillFile,
+      `${await readFile(skillFile, "utf8")}\nScenario revision mismatch.\n`,
+      "utf8",
+    );
+    return;
+  }
+  if (state === "canonical-skill-unverifiable") {
+    await rm(canonicalSkillFile);
     return;
   }
   if (state === "global-runtime-path-masked") return;
@@ -129,7 +260,7 @@ async function prepareState(state) {
 
 const startedAt = new Date().toISOString();
 const results = [];
-for (const scenario of source.scenarios) {
+for (const scenario of scenarios) {
   await prepareState(scenario.state ?? "baseline");
   for (const language of scenario.languages) {
     const args = ["whats-next"];
@@ -137,6 +268,10 @@ for (const scenario of source.scenarios) {
     args.push("--root", projectRoot, "--language", language, "--audience", "agent");
 
     const hideGlobalRuntime = scenario.state === "global-runtime-path-masked";
+    const overrideNpm = scenario.state === "future-user-config-current-cli"
+      || scenario.state === "future-user-config-update-available"
+      || scenario.state === "project-config-future-version"
+      || scenario.state === "project-config-invalid-version";
     const command = hideGlobalRuntime ? globalSilvermoon : "silvermoon";
     const env = hideGlobalRuntime
       ? {
@@ -145,6 +280,11 @@ for (const scenario of source.scenarios) {
             .split(":")
             .filter((entry) => entry !== globalBin)
             .join(":"),
+        }
+      : overrideNpm
+      ? {
+          ...process.env,
+          PATH: `${fakeBin}:${process.env.PATH ?? ""}`,
         }
       : process.env;
     const result = await runCommand(command, args, env);
@@ -190,7 +330,7 @@ await writeFile(
     projectRoot,
     startedAt,
     finishedAt: new Date().toISOString(),
-    scenarioDefinitions: source.scenarios.map((scenario) => ({
+    scenarioDefinitions: scenarios.map((scenario) => ({
       id: scenario.id,
       state: scenario.state ?? "baseline",
       idea: scenario.idea ?? null,

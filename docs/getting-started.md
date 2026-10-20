@@ -42,21 +42,19 @@ repositories never declare Silvermoon dependencies or store a Silvermoon skill
 copy. Snapshot checks ignore `package.json`, `node_modules`, and repository
 skill paths.
 
-Dialogue commands report device readiness separately from project readiness.
-For a global installation, Silvermoon verifies that every present personal
-registration resolves to the running package's canonical skill. Routine
+Check-backed `whats-next` follows one Device -> Project -> Idea prerequisite
+chain. Device configuration, the `PATH`-discoverable runtime, and the personal
+skill link must pass before Project or Idea becomes the current owner. Routine
 commands do not query npm for runtime freshness. Only after project inspection
 finds a schema version newer than the running runtime can read does Silvermoon
 query the installed version's channel (`latest` for stable versions, `canary`
-for canary versions). The query runs through npm and therefore honors active
-registry, proxy, certificate, and authentication settings from project and user
-`.npmrc` files and `NPM_CONFIG_*` environment variables. A successful result is
-reused from `~/.cache/silvermoon/runtime-latest.json` for less than 24 hours.
-An unavailable registry or an invalid skill link is an explicit, non-blocking
-device advisory; it never changes an otherwise valid project snapshot result.
-Healthy, non-actionable device facts remain available in structured reports
-but are omitted from text and TUI output. Snapshot-only `check` commands do not
-perform either device check.
+for canary versions). The query honors active npm configuration, and a
+successful result is reused from `~/.cache/silvermoon/runtime-latest.json` for
+less than 24 hours. Registry failures remain non-blocking telemetry; an invalid
+skill link blocks the Device prerequisite, but neither changes a snapshot-only
+project result. Device facts remain structured telemetry, and Objective text
+and TUI do not show a parallel advisory. Snapshot-only `check` commands do not
+perform the device checks.
 
 Silvermoon's own source repository uses the same device boundary without a
 self-dependency. Contributors run `pnpm setup:dev` to build the checkout, link

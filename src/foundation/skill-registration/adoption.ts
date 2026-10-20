@@ -33,6 +33,12 @@ function utf8FileSystem(filesystem: AdoptionFileSystem): Utf8FileSystem {
   };
 }
 
+function errorCode(caught: unknown) {
+  return caught instanceof Error && "code" in caught
+    ? caught.code
+    : undefined;
+}
+
 export const SILVERMOON_VERSION = packageJson.version;
 
 export async function inspectAdoption({
@@ -65,6 +71,27 @@ export async function inspectAdoption({
     });
   }
 
+  let projectMetadataUnavailable = false;
+  try {
+    await filesystem.lstat(resolve(snapshotRoot, ".silvermoon"));
+  } catch (caught) {
+    if (errorCode(caught) !== "ENOENT") throw caught;
+    projectMetadataUnavailable = true;
+    const sourceDiagnostic = {
+      code: "project.metadata-missing",
+      level: "error",
+      path: ".silvermoon",
+      message: "Silvermoon project metadata directory is missing.",
+      remediation: "Create complete Silvermoon project metadata in .silvermoon.",
+    };
+    findings.push({
+      priority: 20,
+      problem: diagnosticProblem(sourceDiagnostic),
+      instruction: sourceDiagnostic.remediation,
+      sourceDiagnostic,
+    });
+  }
+
   const loadedConfig = await traceAsync(
     "config.load",
     {},
@@ -74,6 +101,9 @@ export async function inspectAdoption({
     }),
   );
   for (const diagnostic of loadedConfig.diagnostics) {
+    if (projectMetadataUnavailable && diagnostic.code === "config.missing") {
+      continue;
+    }
     if (diagnostic.code === undefined) {
       throw new Error(
         `Configuration diagnostic is missing a code: ${diagnostic.message}`,

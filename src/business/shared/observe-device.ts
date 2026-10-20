@@ -44,12 +44,17 @@ export async function observeDevice({
     }),
     userPromise,
   ]);
+  const userVersionStatus = "version" in user
+    ? user.version.status
+    : undefined;
   const [skill, update] = await Promise.all([
     inspectPersonalSkill({
       ...(userHome === undefined ? {} : { home: userHome }),
       runtimeSource: runtime.source,
     }),
-    runtime.source === "global" && forceRuntimeRefresh
+    runtime.source === "global" && (
+      forceRuntimeRefresh || userVersionStatus === "future"
+    )
       ? inspectRuntimeUpdate({
         currentVersion: runtime.version,
         ...(env === undefined ? {} : { env }),

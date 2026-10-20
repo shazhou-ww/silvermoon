@@ -25,8 +25,10 @@ export interface ObjectiveProblem {
 }
 
 export interface ObjectiveReference {
-  kind: "level" | "check" | "problem";
+  kind: "level" | "check" | "problem" | "page";
   id: string;
+  owner: "device" | "project" | "idea";
+  lookup: string;
   title: string;
   description?: string;
   outcome?: string;
@@ -74,16 +76,16 @@ export interface DeviceAdvisory {
     status:
       | "ready"
       | "missing"
-      | "mismatched"
-      | "invalid"
+      | "incorrect"
+      | "canonical-unverifiable"
       | "managed-by-host"
       | "source-checkout";
     expectedRoot: string;
+    expectedRevision?: string;
     paths: string[];
-    invalidPaths?: string[];
-    invalidTargets?: Array<{
+    observed?: Array<{
       path: string;
-      target: string | null;
+      revision: string | null;
     }>;
     remediation?: string;
     summary?: string;
@@ -119,6 +121,13 @@ export interface IdeaReference {
   control?: IdeaControlProjection;
   submissions?: IdeaSubmissionsProjection;
   eventDigest?: string;
+  gateModes?: GateModesProjection;
+}
+
+export interface GateModesProjection {
+  ideal: "explicit";
+  inner: "explicit" | "waived";
+  outer: "explicit";
 }
 
 export interface IdeaControlProjection {
@@ -129,7 +138,7 @@ export interface IdeaControlProjection {
       | "ping" | "pong"
       | "submitIdeal" | "submitInner" | "submitOuter"
       | "acceptIdeal" | "acceptInner" | "acceptOuter"
-      | "abandon" | "resume";
+      | "setGateMode" | "abandon" | "resume";
   } | null;
 }
 
@@ -137,13 +146,14 @@ export interface PhaseSubmissionProjection {
   phase: "ideal" | "inner" | "outer";
   submit: "submitIdeal" | "submitInner" | "submitOuter";
   decision: "acceptIdeal" | "acceptInner" | "acceptOuter";
-  state: "unsubmitted" | "submitted" | "accepted" | "stale";
+  state: "unsubmitted" | "submitted" | "accepted" | "waived" | "stale";
   revision: {
     field: "idealRevision" | "implementationRevision" | "deploymentRevision";
     value: string;
   };
   submittedRevision?: string;
   acceptedRevision?: string;
+  waivedRevision?: string;
 }
 
 export interface IdeaSubmissionsProjection {

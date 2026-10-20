@@ -67,7 +67,7 @@ test("queries through npm so active registry configuration is respected", async 
   assert.equal(version, "0.5.1");
 });
 
-test("only checks the runtime channel when a future schema requests a refresh", async () => {
+test("checks the runtime channel for a future schema or user configuration", async () => {
   const home = await mkdtemp(join(tmpdir(), "silvermoon-runtime-on-demand-"));
   const globalBin = join(home, "global");
   let entryPath: string;
@@ -108,12 +108,20 @@ test("only checks the runtime channel when a future schema requests a refresh", 
     assert.equal(ordinary.readiness?.update.status, "not-required");
     assert.equal(requests, 0);
 
+    const configDirectory = join(home, ".config", "silvermoon");
+    await mkdir(configDirectory, { recursive: true });
+    await writeFile(join(configDirectory, "config.yaml"), "version: 2\n");
+    const futureConfiguration = await observeDevice(options);
+    assert.equal(futureConfiguration.user.version?.status, "future");
+    assert.equal(futureConfiguration.readiness?.update.status, "available");
+    assert.equal(requests, 1);
+
     const futureSchema = await observeDevice({
       ...options,
       forceRuntimeRefresh: true,
     });
     assert.equal(futureSchema.readiness?.update.status, "available");
-    assert.equal(requests, 1);
+    assert.equal(requests, 2);
   } finally {
     await rm(home, { recursive: true, force: true });
   }
@@ -266,7 +274,7 @@ test("validates personal discovery links without reading a project", async () =>
       runtimeSource: "global",
       skillRoot: packageSkill,
     });
-    assert.equal(invalidInstallation.status, "invalid");
+    assert.equal(invalidInstallation.status, "canonical-unverifiable");
     assert.match(invalidInstallation.summary, /canonical Silvermoon skill/);
 
     await mkdir(packageSkill, { recursive: true });
@@ -278,6 +286,7 @@ test("validates personal discovery links without reading a project", async () =>
       skillRoot: packageSkill,
     });
     assert.equal(missing.status, "missing");
+    assert.match(missing.expectedRevision, /^sha256:[a-f0-9]{64}$/);
 
     await mkdir(dirname(agentsSkill), { recursive: true });
     await symlink(
@@ -292,6 +301,7 @@ test("validates personal discovery links without reading a project", async () =>
     });
     assert.equal(ready.status, "ready");
     assert.deepEqual(ready.paths, [agentsSkill]);
+    assert.equal(ready.observed?.[0]?.revision, ready.expectedRevision);
 
     await mkdir(wrongSkill, { recursive: true });
     await writeFile(join(wrongSkill, "SKILL.md"), "# Stale copy\n");
@@ -301,19 +311,28 @@ test("validates personal discovery links without reading a project", async () =>
       copilotSkill,
       process.platform === "win32" ? "junction" : "dir",
     );
-    const mismatched = await inspectPersonalSkill({
+    const incorrect = await inspectPersonalSkill({
       home,
       runtimeSource: "global",
       skillRoot: packageSkill,
     });
-    assert.equal(mismatched.status, "mismatched");
-    assert.deepEqual(mismatched.invalidPaths, [copilotSkill]);
-    assert.deepEqual(mismatched.invalidTargets, [{
+    assert.equal(incorrect.status, "incorrect");
+    assert.deepEqual(incorrect.observed?.map(({ path }) => path), [
+      agentsSkill,
+      copilotSkill,
+    ]);
+    assert.deepEqual(incorrect.observed?.[1], {
       path: copilotSkill,
-      target: await realpath(wrongSkill),
-    }]);
-    assert.match(mismatched.remediation, /silvermoon-link-skill/);
-    assert.match(mismatched.summary, /resolves to/);
+      revision: /^sha256:/.test(incorrect.observed?.[1]?.revision ?? "")
+        ? incorrect.observed?.[1]?.revision
+        : null,
+    });
+    assert.notEqual(incorrect.observed?.[1]?.revision, incorrect.expectedRevision);
+    assert.match(
+      incorrect.remediation,
+      /npx skills add ".+" --global --all/,
+    );
+    assert.match(incorrect.summary, /content revision/);
 
     assert.equal((await inspectPersonalSkill({
       home,

@@ -4,22 +4,28 @@ import { homedir } from "node:os";
 import {
   createSilvermoonObjectiveLoader, probeObjective, SILVERMOON_OBJECTIVE_URIS,
 } from "./objective-guides.ts";
-import type { SilvermoonObjectiveCheck } from "./objective-guides.ts";
+import type {
+  SilvermoonObjectiveCheck,
+  SilvermoonObjectiveContext,
+  SilvermoonObjectiveLoader,
+  SilvermoonObjectiveObservation,
+} from "./objective-guides.ts";
 import { ObjectiveOperationError } from "../objective-guide/index.ts";
-import type { CheckResult, ObjectiveLoader } from "../objective-guide/index.ts";
-import type { ObjectiveGuideInstance, ObjectiveObservation } from "../objective-guide/index.ts";
+import type { CheckResult } from "../objective-guide/index.ts";
 import type { JsonObject } from "../objective-guide/index.ts";
 import { inspectWorktreeContext, worktreeSnapshot } from "../foundation/git/index.ts";
+import { ideaInventoryItem } from "../foundation/idea-query/index.ts";
 import { observeDevice, observeIdea } from "./shared/index.ts";
 import { createCommandRun } from "../foundation/command-message/index.ts";
 import { ACTIVE_STATES, diagnosticProblem, dialogueReadyObservation } from "../foundation/report/index.ts";
 import { inspectAllGuidance, inspectPhaseGuidance } from "../foundation/guidance/index.ts";
-import { canonicalizeOutputLanguage, localize, resolveContentTemplateLanguage, resolveOutputLanguage } from "../foundation/language/index.ts";
+import { canonicalizeOutputLanguage, localize, resolveOutputLanguage } from "../foundation/language/index.ts";
 import { observeSnapshot, withObservationLanguage } from "./shared/index.ts";
 
 import { joinInstructions, lifecycleInstruction, lifecycleReview, phaseGuidanceInstructions, projectInstructions, renderIdeaNotFound, selectIdea } from "../foundation/report/index.ts";
 import {
   objectiveReferenceCommand,
+  objectiveReferenceLookup,
   renderObjectiveReferenceContent,
 } from "./objective-reference.ts";
 import { assessRepositoryReadiness } from "./shared/index.ts";
@@ -50,13 +56,13 @@ function pending(code: string, description: string): NavigationGateResult {
 
 type ObjectiveId = ObjectiveProjection["target"];
 
-function objectiveId(instance: ObjectiveGuideInstance): ObjectiveId {
+function objectiveId(instance: SilvermoonObjectiveContext): ObjectiveId {
   const match = Object.entries(SILVERMOON_OBJECTIVE_URIS).find(
-    ([, uri]) => uri === instance.guide.manifestUri,
+    ([, uri]) => uri === instance.spec.objectiveId,
   );
   if (match === undefined) {
     throw new ObjectiveOperationError(
-      `Unknown bundled Objective: ${instance.guide.manifestUri}.`,
+      `Unknown bundled Objective: ${instance.spec.objectiveId}.`,
     );
   }
   return match[0] as ObjectiveId;
@@ -64,25 +70,54 @@ function objectiveId(instance: ObjectiveGuideInstance): ObjectiveId {
 
 async function objectiveProjection(
   target: ObjectiveId,
-  observation: ObjectiveObservation,
+  observation: SilvermoonObjectiveObservation,
 ): Promise<ObjectiveProjection> {
   const { position } = observation;
   const owner = objectiveId(position.owner);
+  const seenProblems = new Set<string>();
+  const problems = position.problems.filter(({ id, parameters }) => {
+    const key = `${id}:${JSON.stringify(parameters)}`;
+    if (seenProblems.has(key)) return false;
+    seenProblems.add(key);
+    return true;
+  });
+  const projectMetadataPage = problems.some(({ id, parameters }) =>
+    id.startsWith("project-configuration-")
+    || (
+      ["project-adoption", "project-configuration"].includes(id)
+      && Array.isArray(parameters.problemTypes)
+      && parameters.problemTypes.some((type) =>
+        typeof type === "string"
+        && [
+          "project-metadata-missing",
+          "config-missing",
+          "config-invalid-yaml",
+        ].includes(type)
+      )
+    )
+  )
+    ? [{ kind: "page" as const, id: "pages/project-metadata" }]
+    : [];
   const pageIds = [
-    { kind: "level" as const, id: `levels/${position.level.id}` },
+    ...(position.level.id === "terminal" || owner !== "device"
+      ? [{ kind: "level" as const, id: `levels/${position.level.id}` }]
+      : []),
     ...(position.failingCheck === null
       ? []
       : [{ kind: "check" as const, id: `checks/${position.failingCheck}` }]),
-    ...position.problems.map(({ id }) => ({
+    ...problems.map(({ id }) => ({
       kind: "problem" as const,
       id: `problems/${id}`,
     })),
+    ...projectMetadataPage,
   ];
   const references = await Promise.all(pageIds.map(async ({ kind, id }) => {
-    const page = await position.owner.readPage(id);
+    const page = position.owner.readPage(id);
     return {
       kind,
       id,
+      owner,
+      lookup: objectiveReferenceLookup(id),
       title: page.title,
       ...(page.description === undefined
         ? {}
@@ -105,11 +140,70 @@ async function objectiveProjection(
     level: position.level.id,
     failingCheck: position.failingCheck,
     terminal: position.level.id === "terminal",
-    problems: position.problems.map(({ id, parameters }) => ({
+    problems: problems.map(({ id, parameters }) => ({
       id,
       parameters,
     })),
     references,
+  };
+}
+
+function firstObjectiveInstruction(
+  objective: ObjectiveProjection,
+  fallback: string,
+) {
+  const problem = objective.problems[0];
+  if (problem === undefined) return fallback;
+  const reference = objective.references.find(
+    ({ id, kind }) => kind === "problem" && id === `problems/${problem.id}`,
+  );
+  const instruction = reference?.instruction;
+  const canonicalSkillPath = problem.parameters.expectedRoot;
+  if (
+    instruction !== undefined
+    && typeof canonicalSkillPath === "string"
+    && instruction.includes("<canonical-skill-path>")
+  ) {
+    return instruction.replaceAll(
+      "<canonical-skill-path>",
+      canonicalSkillPath.replaceAll('"', '\\"'),
+    );
+  }
+  return instruction ?? reference?.description ?? fallback;
+}
+
+function projectReadyInstruction(language: string) {
+  return localize(
+    language,
+    "Project readiness is complete. The next goal is to choose the Idea to advance: possible methods are to inspect active Ideas with `silvermoon list-ideas`, then run `silvermoon whats-next <ULID-or-alias>` for the selected one. If no existing Idea matches genuinely new work, `silvermoon create-idea` is another path.",
+    "项目整备已经完成。下一目标是选择要推进的 Idea：可先用 `silvermoon list-ideas` 查看 active Ideas，再对所选对象运行 `silvermoon whats-next <ULID-or-alias>`。如果确实是没有匹配既有 Idea 的新工作，`silvermoon create-idea` 也是一种路径。",
+  );
+}
+
+function objectiveProblems(observation: SilvermoonObjectiveObservation) {
+  return observation.position.problems.map(({ id }) => ({
+    type: id,
+    summary: observation.gapSummary,
+  }));
+}
+
+function objectiveReport(
+  source: Observation,
+  objective: ObjectiveProjection,
+  problems: ReturnType<typeof objectiveProblems>,
+): ObjectiveReportObservation {
+  return {
+    state: objective.terminal ? "objective-ready" : "objective-blocked",
+    root: source.root,
+    outputLanguage: source.outputLanguage,
+    problems,
+    ...(source.device === undefined ? {} : { device: source.device }),
+    ...(source.version === undefined ? {} : { version: source.version }),
+    ...(source.configuration === undefined
+      ? {}
+      : { configuration: source.configuration }),
+    ...(source.schemas === undefined ? {} : { schemas: source.schemas }),
+    objective,
   };
 }
 
@@ -170,7 +264,7 @@ export async function whatsNextUseCase({
   let selectedIdea: IdeaSelectedObservation["selectedIdea"] | undefined;
   let outcome: Outcome | undefined;
   let deviceSample: Awaited<ReturnType<typeof observeDevice>> | undefined;
-  let loader: ObjectiveLoader | undefined;
+  let loader: SilvermoonObjectiveLoader | undefined;
   let initialSample = true;
   const targetRoot = context.kind === "worktree" ? context.root : requestedRoot;
   const subject = { root: targetRoot, userHome: userHome ?? homedir() };
@@ -201,15 +295,6 @@ export async function whatsNextUseCase({
       version: { type: "worktree" },
       deviceObserver: async (options) => {
         deviceSample = await observeDevice(options);
-        if (loader !== undefined) {
-          const device = await loader.load(SILVERMOON_OBJECTIVE_URIS.device);
-          const created = device.createInstance({
-            subject: { userHome: subject.userHome },
-            language: resolveContentTemplateLanguage(deviceSample.user.config?.preferredLanguage ?? "en-US").tag,
-          });
-          if (!created.ok) throw new ObjectiveOperationError(`Device instance creation failed: ${created.error.type}.`);
-          await probeObjective(created.instance);
-        }
         return deviceSample;
       },
     });
@@ -274,7 +359,9 @@ export async function whatsNextUseCase({
         problems: readyObservation.problems,
         ideas: {
           counts: readyObservation.ideas.counts,
-          activeIdeas: [],
+          activeIdeas: readyObservation.ideas.activeIdeas.map((idea) =>
+            ideaInventoryItem(idea)
+          ),
         },
       };
       if (selector === undefined) {
@@ -320,6 +407,9 @@ export async function whatsNextUseCase({
         ...(selected.eventDigest === undefined
           ? {}
           : { eventDigest: selected.eventDigest }),
+        ...(selected.gateModes === undefined
+          ? {}
+          : { gateModes: selected.gateModes }),
       };
       return CHECK_PASSED;
     },
@@ -398,9 +488,9 @@ export async function whatsNextUseCase({
       return CHECK_PASSED;
     },
   };
-  const passed: CheckResult = { pass: true };
+  const passed: CheckResult = { ok: true, problems: [] };
   function failed(id: string, parameters: JsonObject = {}): CheckResult {
-    return { pass: false, problems: [{ id, parameters }] };
+    return { ok: false, problems: [{ id, parameters }] };
   }
   function observedProblemTypes(problems: readonly { type: string }[]): readonly string[] {
     return problems.map(({ type }) => type);
@@ -418,42 +508,155 @@ export async function whatsNextUseCase({
     if (deviceSample === undefined) throw new ObjectiveOperationError("Device observation is unavailable.");
     return deviceSample;
   }
-  function projectProblems(kind: "config" | "user" | "layout" | "adoption" | "schema"): CheckResult {
+  function projectProblems(
+    kind: "config" | "user" | "layout" | "adoption" | "schema" | "guidance",
+  ): CheckResult {
     if (snapshot === undefined) throw new ObjectiveOperationError("Project sample is unavailable.");
     if (snapshot.projectReady) return passed;
     const problems = snapshot.observation.problems;
     const category = (type: string) => {
       if (type.startsWith("user-")) return "user";
+      if (type.includes("guidance")) return "guidance";
       if (type.includes("migration") || type.includes("runtime-upgrade") || type.includes("runtime-refresh")) return "schema";
-      if (type.includes("git-") || type.includes("not-adopted") || type.includes("config-missing")) return "adoption";
+      if (
+        type.includes("git-")
+        || type.includes("not-adopted")
+        || type.includes("config-missing")
+        || type.includes("project-metadata")
+      ) {
+        return "adoption";
+      }
       if (type.startsWith("idea-") || type.startsWith("layout-")) return "layout";
       return "config";
     };
+    const problemId = {
+      config: "project-configuration",
+      user: "project-user-configuration",
+      layout: "project-layout",
+      adoption: "project-adoption",
+      schema: "project-schema",
+      guidance: "project-guidance",
+    }[kind];
     return problems.some(({ type }) => category(type) === kind)
       || (problems.length === 0 && kind === "config")
-      ? failed("project", observedProblemFacts(problems, snapshot.observation.state))
+      ? failed(problemId, observedProblemFacts(problems, snapshot.observation.state))
       : passed;
   }
-  function repositoryProblems(types: readonly string[]): CheckResult {
+  function projectConfigSchema() {
+    return snapshot?.schemas?.files.find(({ family }) =>
+      family === "project-config"
+    );
+  }
+  function projectConfigResult(): CheckResult {
+    if (snapshot === undefined) {
+      throw new ObjectiveOperationError("Project sample is unavailable.");
+    }
+    if (snapshot.projectReady) return passed;
+    const schema = projectConfigSchema();
+    if (schema?.readiness === "runtime-upgrade-required") {
+      const update = deviceSample?.readiness?.update;
+      const parameters = {
+        path: schema.path,
+        observedVersion: schema.schemaVersion,
+        targetVersion: schema.targetVersion,
+        runtimeVersion: update?.currentVersion ?? null,
+        latestVersion: update !== undefined && "latestVersion" in update
+          ? update.latestVersion ?? null
+          : null,
+        channel: update !== undefined && "channel" in update
+          ? update.channel ?? null
+          : null,
+      };
+      if (update?.status === "available") {
+        return failed("project-configuration-future-version", parameters);
+      }
+      if (update?.status === "current") {
+        return failed("project-configuration-invalid-version", parameters);
+      }
+      return failed("project-configuration-runtime-unconfirmed", {
+        status: update?.status ?? "unavailable",
+        path: schema.path,
+        observedVersion: schema.schemaVersion,
+        targetVersion: schema.targetVersion,
+        currentVersion: update?.currentVersion ?? null,
+        latestVersion: parameters.latestVersion,
+        channel: parameters.channel,
+      });
+    }
+    const types = observedProblemTypes(snapshot.observation.problems);
+    const configProblems = types.filter((type) =>
+      type.startsWith("config-") || type === "schema-invalid"
+    );
+    if (configProblems.length === 0) return passed;
+    return failed(
+      configProblems.includes("config-unsupported-version")
+        ? "project-configuration-invalid-version"
+        : "project-configuration-format",
+      {
+        problemTypes: configProblems,
+        path: schema?.path ?? ".silvermoon/config.yaml",
+        observedVersion: schema?.schemaVersion ?? null,
+        targetVersion: schema?.targetVersion ?? null,
+      },
+    );
+  }
+  function projectSchemaResult(): CheckResult {
+    if (snapshot === undefined) {
+      throw new ObjectiveOperationError("Project sample is unavailable.");
+    }
+    if (snapshot.projectReady) return passed;
+    const schema = projectConfigSchema();
+    if (schema?.readiness === "migration-required") {
+      return failed("project-configuration-historical-version", {
+        path: schema.path,
+        observedVersion: schema.schemaVersion,
+        targetVersion: schema.targetVersion,
+        migrationPath: schema.migrationPath?.map(({ id }) => id) ?? [],
+      });
+    }
+    return projectProblems("schema");
+  }
+  function repositoryProblems(
+    problemId: string,
+    types: readonly string[],
+  ): CheckResult {
     if (repository === undefined) throw new ObjectiveOperationError("Repository sample is unavailable.");
+    if (snapshot?.config === null || snapshot?.config === undefined) {
+      throw new ObjectiveOperationError("Project configuration is unavailable.");
+    }
     if (repository.ready) return passed;
     const problems = repository.observation.problems;
     return problems.some(({ type }) => types.includes(type))
-      ? failed("repository", {
+      ? failed(problemId, {
         ...observedProblemFacts(problems, repository.observation.state),
         root: repository.observation.root,
         head: repository.head ?? null,
         primary: repository.primary ?? null,
+        expectedRepository: snapshot.config.primaryRepository,
+        expectedBranch: snapshot.config.primaryBranch,
         branch: repository.branch === undefined ? null : {
           name: repository.branch.branch,
           remote: repository.branch.remote,
           repository: repository.branch.repository,
           upstreamBranch: repository.branch.upstreamBranch,
         },
+        ...(repository.changes === undefined
+          ? {}
+          : {
+            changes: {
+              conflicted: repository.changes.conflicted.map(({ path }) => path),
+              staged: repository.changes.staged.map(({ path }) => path),
+              unstaged: repository.changes.unstaged.map(({ path }) => path),
+              untracked: repository.changes.untracked.map(({ path }) => path),
+            },
+          }),
       })
       : passed;
   }
-  async function allGuidance(tree: string): Promise<CheckResult> {
+  async function allGuidance(
+    tree: string,
+    problemId: string,
+  ): Promise<CheckResult> {
     const observed = readySnapshot();
     const inspected = await guidanceInspector({ gitRoot: observed.observation.root, snapshotTree: tree });
     if (inspected.state === "invalid") {
@@ -461,26 +664,35 @@ export async function whatsNextUseCase({
       finish(dialogueReadyObservation(base, "phase-guidance-invalid", {
         problems: inspected.diagnostics.map((diagnostic) => diagnosticProblem(diagnostic, observed.outputLanguage)),
       }), { nextSteps: phaseGuidanceInstructions(inspected.diagnostics, base.root, observed.outputLanguage, recheckCommand) });
-      return failed("guidance", {
+      return failed(problemId, {
         diagnostics: inspected.diagnostics.map(({ code, path }) => ({ code, path })),
       });
     }
     return passed;
   }
-  const lifecycleCheck = (phase: "ideal" | "inner" | "outer", acceptance: boolean): SilvermoonObjectiveCheck => async () => {
+  const lifecycleCheck = (
+    phase: "ideal" | "inner" | "outer",
+    acceptance: boolean,
+    problemId: string,
+  ): SilvermoonObjectiveCheck => async () => {
     if (selected === null) throw new ObjectiveOperationError("Selected Idea sample is unavailable.");
     const submission = selected.submissions?.[phase];
     const accepted = phase === "ideal"
       ? ["implementing", "deploying", "completed"].includes(selected.state)
       : phase === "inner" ? ["deploying", "completed"].includes(selected.state) : selected.state === "completed";
     const valid = acceptance ? accepted && (submission === undefined
-      || (submission.state === "accepted" && submission.acceptedRevision === selected.revisions[submission.revision.field]))
+      || ((submission.state === "accepted"
+        && submission.acceptedRevision === selected.revisions[submission.revision.field])
+        || (submission.state === "waived"
+          && submission.waivedRevision === selected.revisions[submission.revision.field])))
       : submission === undefined
         ? accepted
-        : (submission.state === "submitted" || submission.state === "accepted")
+        : (submission.state === "submitted"
+          || submission.state === "accepted"
+          || submission.state === "waived")
           && submission.revision.value === selected.revisions[submission.revision.field]
           && (submission.submittedRevision === submission.revision.value || submission.acceptedRevision === submission.revision.value);
-    return valid ? passed : failed(phase, {
+    return valid ? passed : failed(problemId, {
       lifecycleState: selected.state,
       phase,
       requirement: acceptance ? "accepted" : "submitted",
@@ -489,56 +701,166 @@ export async function whatsNextUseCase({
     });
   };
   loader = createSilvermoonObjectiveLoader({
-    "device-config-valid": async () => sampleDevice().globalConfig.valid ? passed : failed("device-configuration", {
-      configurationPath: sampleDevice().globalConfig.path,
-    }),
+    "device-config-valid": async () => {
+      const device = sampleDevice();
+      if (device.globalConfig.valid) return passed;
+      const diagnosticCodes = device.diagnostics.flatMap(({ code }) =>
+        code === undefined ? [] : [code]
+      );
+      const userVersion = "version" in device.user
+        ? device.user.version
+        : undefined;
+      const parameters = {
+        configurationPath: device.globalConfig.path,
+        diagnosticCodes,
+        diagnostics: device.diagnostics.map(({ code, path, message }) => ({
+          ...(code === undefined ? {} : { code }),
+          path,
+          message,
+        })),
+        observedVersion: userVersion?.value ?? null,
+        supportedVersion: userVersion?.supported ?? 1,
+      };
+      if (userVersion?.status === "historical") {
+        return failed("device-configuration-historical-version", parameters);
+      }
+      if (userVersion?.status === "future") {
+        const update = device.readiness?.update;
+        const futureParameters = {
+          ...parameters,
+          runtimeVersion: device.readiness?.runtime.version ?? null,
+          updateStatus: update?.status ?? "unavailable",
+          latestVersion: update !== undefined && "latestVersion" in update
+            ? update.latestVersion ?? null
+            : null,
+          updateSummary: update !== undefined && "summary" in update
+            ? update.summary ?? null
+            : null,
+        };
+        if (update?.status === "available") {
+          return failed("device-configuration-future-version", futureParameters);
+        }
+        if (update?.status === "current") {
+          return failed("device-configuration-invalid-version", futureParameters);
+        }
+        return failed("device-update", {
+          status: update?.status ?? "unavailable",
+          currentVersion: update?.currentVersion ?? null,
+          latestVersion: null,
+          channel: update !== undefined && "channel" in update
+            ? update.channel ?? null
+            : null,
+        });
+      }
+      if (userVersion?.status === "invalid") {
+        return failed("device-configuration-invalid-version", parameters);
+      }
+      return failed("device-configuration-format", parameters);
+    },
     "device-runtime-linked": async () => {
       const device = sampleDevice();
       return device.runtime !== null && device.runtime.source !== "source-checkout" && device.runtime.version !== null
         ? passed : failed("device-runtime", {
+          runtimePath: device.runtime?.entry ?? null,
           source: device.runtime?.source ?? null,
           version: device.runtime?.version ?? null,
+          ...(device.runtime?.source === "source-checkout"
+            ? { checkoutPath: device.runtime.packageRoot }
+            : {}),
         });
     },
-    "device-skill-discoverable": async () => ["ready", "managed-by-host"].includes(sampleDevice().readiness?.skill.status ?? "")
-      ? passed : failed("device-skill", { status: sampleDevice().readiness?.skill.status ?? null }),
-    "device-update-current": async () => ["current", "not-required", "managed-by-host"].includes(sampleDevice().readiness?.update.status ?? "")
-      ? passed : failed("device-update", { status: sampleDevice().readiness?.update.status ?? null }),
+    "device-skill-discoverable": async () => {
+      const skill = sampleDevice().readiness?.skill;
+      return ["ready", "managed-by-host"].includes(skill?.status ?? "")
+        ? passed
+        : failed(
+          skill?.status === "canonical-unverifiable"
+            ? "device-canonical-skill"
+            : "device-skill",
+          {
+          status: skill?.status ?? null,
+          expectedRoot: skill?.expectedRoot ?? null,
+          expectedRevision: skill?.expectedRevision ?? null,
+          paths: skill?.paths ?? [],
+          observed: skill?.observed ?? [],
+          },
+        );
+    },
+    "device-update-current": async () => {
+      const update = sampleDevice().readiness?.update;
+      return ["current", "not-required", "managed-by-host"].includes(update?.status ?? "")
+        ? passed
+        : failed("device-update", {
+          status: update?.status ?? null,
+          currentVersion: update?.currentVersion ?? null,
+          latestVersion: update !== undefined && "latestVersion" in update
+            ? update.latestVersion ?? null
+            : null,
+          channel: update !== undefined && "channel" in update
+            ? update.channel ?? null
+            : null,
+        });
+    },
     "project-config-valid": async () => {
       if (initialSample) initialSample = false;
       else await project();
-      return projectProblems("config");
+      return projectConfigResult();
     },
     "project-user-config-valid": async () => projectProblems("user"),
     "project-layout-valid": async () => projectProblems("layout"),
     "project-adopted": async () => projectProblems("adoption"),
-    "project-schema-ready": async () => projectProblems("schema"),
+    "project-schema-ready": async () => projectSchemaResult(),
     "project-guidance-valid": async () => {
       if (snapshot === undefined) throw new ObjectiveOperationError("Project sample is unavailable.");
       if (!snapshot.projectReady) {
-        return failed("project", { ...observedProblemFacts(snapshot.observation.problems, snapshot.observation.state),
-          prerequisite: "project-ready" });
+        return projectProblems("guidance");
       }
-      return allGuidance(worktreeSnapshot(snapshot.observation.root).tree);
+      return allGuidance(
+        worktreeSnapshot(snapshot.observation.root).tree,
+        "project-guidance",
+      );
     },
     "repository-worktree-clean": async () => {
       await operations.repository();
-      return repositoryProblems(["worktree-conflicts", "worktree-changes", "worktree-inspection-failed"]);
+      return repositoryProblems(
+        "repository-worktree",
+        ["worktree-conflicts", "worktree-changes", "worktree-inspection-failed"],
+      );
     },
-    "repository-head-present": async () => repositoryProblems(["head-missing"]),
-    "repository-upstream-matches": async () => repositoryProblems(["detached-head", "primary-upstream-mismatch"]),
-    "repository-primary-fetched": async () => repositoryProblems(["primary-fetch-failed"]),
-    "repository-primary-aligned": async () => repositoryProblems(["primary-ahead", "primary-behind", "primary-diverged", "primary-ancestry-inspection-failed", "primary-history-incomplete"]),
-    "repository-event-history-valid": async () => repositoryProblems(["idea.events.history-invalid"]),
+    "repository-head-present": async () =>
+      repositoryProblems("repository-head", ["head-missing"]),
+    "repository-upstream-matches": async () =>
+      repositoryProblems(
+        "repository-upstream",
+        ["detached-head", "primary-upstream-mismatch"],
+      ),
+    "repository-primary-fetched": async () =>
+      repositoryProblems("repository-primary-fetch", ["primary-fetch-failed"]),
+    "repository-primary-aligned": async () =>
+      repositoryProblems(
+        "repository-primary-alignment",
+        [
+          "primary-ahead",
+          "primary-behind",
+          "primary-diverged",
+          "primary-ancestry-inspection-failed",
+          "primary-history-incomplete",
+        ],
+      ),
+    "repository-event-history-valid": async () =>
+      repositoryProblems(
+        "repository-event-history",
+        ["idea.events.history-invalid"],
+      ),
     "project-primary-guidance-valid": async () => {
       if (repository === undefined) throw new ObjectiveOperationError("Repository sample is unavailable.");
       if (!repository.ready) {
-        return failed("repository", { ...observedProblemFacts(repository.observation.problems, repository.observation.state),
+        return failed("project-primary-guidance", { ...observedProblemFacts(repository.observation.problems, repository.observation.state),
           prerequisite: "repository-ready" });
       }
       const ready = readyRepository();
       if (ready.primary === undefined) throw new ObjectiveOperationError("Primary snapshot is unavailable.");
-      return allGuidance(ready.primary);
+      return allGuidance(ready.primary, "project-primary-guidance");
     },
     "idea-metadata-valid": async (bound) => {
       const observed = readySnapshot();
@@ -548,7 +870,10 @@ export async function whatsNextUseCase({
         finish(dialogueReadyObservation(readyRepository().observation, "repository-sync-required", {
           problems: [{ type: "worktree-changes", summary: "Idea selector changed during observation; reobserve before continuing." }],
         }), { nextSteps: recheckCommand });
-        return failed("idea-configuration", { expectedIdeaId: bound.ideaId ?? null, observedIdeaId: prior.id });
+        return failed("idea-selection-changed", {
+          expectedIdeaId: bound.ideaId ?? null,
+          observedIdeaId: prior.id,
+        });
       }
       const local = await observeIdea({ config: observed.config, root: observed.observation.root });
       const current = local.ideas.find(({ id }) => id === prior.id);
@@ -562,13 +887,13 @@ export async function whatsNextUseCase({
             findings: local.diagnostics.map(({ remediation }) => ({ instruction: remediation })),
           }, observation.root, observed.outputLanguage, recheckCommand),
         });
-        return failed("idea-configuration", observedProblemFacts(problems));
+        return failed("idea-metadata", observedProblemFacts(problems));
       }
       if (JSON.stringify(current.revisions) !== JSON.stringify(prior.revisions) || current.eventDigest !== prior.eventDigest) {
         finish(dialogueReadyObservation(readyRepository().observation, "repository-sync-required", {
           problems: [{ type: "worktree-changes", summary: "Idea changed during observation; reobserve before navigating its new revision." }],
         }), { nextSteps: recheckCommand });
-        return failed("repository", {
+        return failed("idea-revision-changed", {
           reason: "idea-changed",
           ideaId: prior.id,
           primary: readyRepository().primary ?? null,
@@ -578,14 +903,16 @@ export async function whatsNextUseCase({
       const selection = await operations.selection();
       if (!selection.passed) throw new ObjectiveOperationError("Idea instance routing has no selected object.");
       const guidance = await operations.guidance();
-      if (!guidance.passed) return failed("guidance", { reason: "phase-guidance-changed" });
+      if (!guidance.passed) {
+        return failed("idea-guidance", { reason: "phase-guidance-changed" });
+      }
       return selected?.state === "abandoned"
         ? failed("idea-inactive", { ideaId: selected.id, lifecycleState: selected.state })
         : passed;
     },
     "idea-contracts-valid": async () => {
       if (selected === null || snapshot?.layout?.diagnostics.length !== 0) {
-        return failed("idea-configuration", {
+        return failed("idea-contracts", {
           ideaId: selected?.id ?? null,
           diagnostics: (snapshot?.layout?.diagnostics ?? []).map(
             ({ code, path }) => ({ code, path }),
@@ -594,12 +921,32 @@ export async function whatsNextUseCase({
       }
       return passed;
     },
-    "idea-ideal-submitted": lifecycleCheck("ideal", false),
-    "idea-ideal-accepted": lifecycleCheck("ideal", true),
-    "idea-inner-submitted": lifecycleCheck("inner", false),
-    "idea-inner-accepted": lifecycleCheck("inner", true),
-    "idea-outer-submitted": lifecycleCheck("outer", false),
-    "idea-outer-accepted": lifecycleCheck("outer", true),
+    "idea-ideal-submitted": lifecycleCheck(
+      "ideal",
+      false,
+      "ideal-unsubmitted",
+    ),
+    "idea-ideal-accepted": lifecycleCheck("ideal", true, "ideal-unaccepted"),
+    "idea-inner-submitted": lifecycleCheck(
+      "inner",
+      false,
+      "implementation-unsubmitted",
+    ),
+    "idea-inner-accepted": lifecycleCheck(
+      "inner",
+      true,
+      "implementation-unaccepted",
+    ),
+    "idea-outer-submitted": lifecycleCheck(
+      "outer",
+      false,
+      "deployment-unsubmitted",
+    ),
+    "idea-outer-accepted": lifecycleCheck(
+      "outer",
+      true,
+      "deployment-unaccepted",
+    ),
   });
   const fallbackOutputLanguage = resolveOutputLanguage({
     ...(canonicalLanguage === undefined ? {} : { override: canonicalLanguage }),
@@ -658,24 +1005,16 @@ export async function whatsNextUseCase({
       ...(canonicalLanguage === undefined ? {} : { override: canonicalLanguage }),
     }).tag;
     const device = await loader.load(SILVERMOON_OBJECTIVE_URIS.device);
-    const created = device.createInstance({
-      subject: { userHome: subject.userHome },
-      language: resolveContentTemplateLanguage(
-        deviceSample.user.config?.preferredLanguage ?? "en-US",
-      ).tag,
-    });
-    if (!created.ok) {
-      throw new ObjectiveOperationError(`Device instance creation failed: ${created.error.type}.`);
-    }
-    const objective = await probeObjective(created.instance);
+    const objective = await probeObjective(
+      loader,
+      device,
+      { userHome: subject.userHome },
+      outputLanguage,
+    );
     const projectedObjective = await objectiveProjection("device", objective);
-    const terminal = projectedObjective.terminal;
-    const problems = objective.position.problems.map(({ id }) => ({
-      type: id,
-      summary: objective.gapSummary,
-    }));
+    const problems = objectiveProblems(objective);
     const observation: ObjectiveReportObservation = {
-      state: terminal ? "objective-ready" : "objective-blocked",
+      state: projectedObjective.terminal ? "objective-ready" : "objective-blocked",
       root: context.root,
       outputLanguage,
       problems,
@@ -683,9 +1022,11 @@ export async function whatsNextUseCase({
       objective: projectedObjective,
     };
     return runtime.complete(observation, {
-      nextSteps: terminal ? [] : [
-        problems[0]?.summary ?? objective.gapSummary,
-        recheckCommand,
+      nextSteps: projectedObjective.terminal ? [] : [
+        firstObjectiveInstruction(
+          projectedObjective,
+          problems[0]?.summary ?? objective.gapSummary,
+        ),
       ],
     });
   }
@@ -694,15 +1035,36 @@ export async function whatsNextUseCase({
   await project();
   const sample = snapshot;
   if (sample === undefined) throw new ObjectiveOperationError("Project observation omitted its sample.");
-  const guideLanguage = resolveContentTemplateLanguage(sample.contentLanguage).tag;
+  const guideLanguage = sample.outputLanguage;
   const routed = selectedSample();
   const scoped = routed?.state === "abandoned" ? null : routed;
-  const guide = await loader.load(scoped === null ? SILVERMOON_OBJECTIVE_URIS.project : SILVERMOON_OBJECTIVE_URIS.idea);
-  const created = guide.createInstance({
-    subject: scoped === null ? subject : { ...subject, ideaId: scoped.id }, language: guideLanguage,
-  });
-  if (!created.ok) throw new ObjectiveOperationError(`Navigation instance creation failed: ${created.error.type}.`);
-  const objective = await probeObjective(created.instance);
+  const guide = await loader.load(scoped === null
+    ? SILVERMOON_OBJECTIVE_URIS.project
+    : SILVERMOON_OBJECTIVE_URIS.idea);
+  const objective = await probeObjective(
+    loader,
+    guide,
+    scoped === null ? subject : { ...subject, ideaId: scoped.id },
+    guideLanguage,
+  );
+  const projectedObjective = await objectiveProjection(
+    selector === undefined ? "project" : "idea",
+    objective,
+  );
+  if (projectedObjective.owner === "device") {
+    const problems = objectiveProblems(objective);
+    return runtime.complete(
+      objectiveReport(sample.observation, projectedObjective, problems),
+      {
+        nextSteps: [
+          firstObjectiveInstruction(
+            projectedObjective,
+            problems[0]?.summary ?? objective.gapSummary,
+          ),
+        ],
+      },
+    );
+  }
   if (scoped === null && objective.position.level.id === "terminal") {
     if (selector === undefined) {
       const observed = readySnapshot();
@@ -718,7 +1080,9 @@ export async function whatsNextUseCase({
         problems: ready.problems,
         objective: await objectiveProjection("project", objective),
       };
-      finish(terminalObservation, { nextSteps: [] });
+      finish(terminalObservation, {
+        nextSteps: [projectReadyInstruction(guideLanguage)],
+      });
       snapshot = observed;
     } else {
       await operations.selection();
@@ -727,15 +1091,36 @@ export async function whatsNextUseCase({
   }
   if (outcome === undefined) throw new TypeError("Navigation checks omitted the report.");
   const isExplicitMiss = outcome.observation.state === "idea-not-found";
-  const projectedObjective = await objectiveProjection(
-    selector === undefined ? "project" : "idea",
-    objective,
+  const useProjectMetadataReference = projectedObjective.problems.some(
+    ({ id, parameters }) =>
+      id.startsWith("project-configuration-")
+      || (
+        id === "project"
+        && Array.isArray(parameters.problemTypes)
+        && parameters.problemTypes.some((type) =>
+          typeof type === "string"
+          && (
+            type.includes("project-metadata")
+            || type.includes("config-missing")
+          )
+        )
+      ),
   );
+  const responseContext = useProjectMetadataReference
+    ? {
+        nextSteps: [
+          firstObjectiveInstruction(
+            projectedObjective,
+            objective.gapSummary,
+          ),
+        ],
+      }
+    : outcome.responseContext;
   return runtime.complete(
     isExplicitMiss
       ? outcome.observation
       : { ...outcome.observation, objective: projectedObjective } as Observation,
-    outcome.responseContext,
+    responseContext,
   );
 }
 

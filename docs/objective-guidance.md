@@ -1,250 +1,150 @@
-# Objective Guide Runtime
+# Functional Objective Pilot runtime
 
-Silvermoon exports a URI-keyed Objective Guide compatibility facade from its
-package root, backed by `@potential-guide/objective-guide` at `0.1.0` (Node
-`>=22.13.0`). The [module](../src/objective-guide/README.md) observes one ordered objective;
-it does not execute repairs, autonomous loops or portfolio scheduling.
+Silvermoon exports the functional Objective Pilot API from its package root. It
+uses exact published RCs:
 
-## Guide package
+- `@potential-guide/objective-pilot@0.1.0-rc.0`
+- `@potential-guide/effects@0.1.0-rc.0`
 
-A file-based Guide is self-contained:
+The runtime observes one ordered Objective. It does not execute repairs,
+autonomous loops, or portfolio scheduling.
 
-```text
-my-guide/
-├── manifest.yaml
-├── checks/
-│   └── project-valid/
-│       └── run.js
-└── references/
-    ├── system/
-    │   ├── overview/
-    │   │   ├── en-US.md
-    │   │   └── zh-CN.md
-    │   └── 404/
-    │       ├── en-US.md
-    │       └── zh-CN.md
-    ├── levels/
-    │   ├── unready/
-    │   │   ├── en-US.md
-    │   │   └── zh-CN.md
-    │   └── terminal/
-    │       ├── en-US.md
-    │       └── zh-CN.md
-    ├── checks/
-    ├── problems/
-    └── pages/
-```
+## Loading and identity
 
-The Manifest declares a Draft 2020-12 root-object domain, ordered levels,
-canonical languages and an optional immediate prerequisite:
-
-```yaml
-schemaVersion: 1
-domainSchema:
-  type: object
-  required: [root]
-  properties:
-    root:
-      type: string
-  additionalProperties: false
-levels:
-  - id: unready
-    advancement:
-      checks: [project-valid]
-defaultLanguage: en-US
-languages: [en-US, zh-CN]
-```
-
-Manifest, Reference and check IDs use lowercase kebab case. A prerequisite
-projects the current subject with the bounded JSONata profile. It normally
-requires prerequisite `terminal`; `minimumLevelId` can instead unlock the
-current Guide once the immediate prerequisite reaches that local level:
-
-```yaml
-prerequisite:
-  manifestUri: ../project/manifest.yaml
-  subject: '{"root": root}'
-  minimumLevelId: repository-unready
-```
-
-Reaching a level means all earlier advancement passed; that level's own checks
-need not pass. The composed description prefix includes only prerequisite
-levels strictly before the configured minimum.
-
-## References
-
-Every Reference identity is `<namespace>/<id>` and every locale is a leaf
-file at:
+`loadPilotSpec(uri, resources)` returns a serializable `PilotSpec`, not a
+stateful Guide instance. The stable Objective identity is a credential-free
+`git+` URI with a repository-relative manifest fragment:
 
 ```text
-references/<namespace>/<id>/<language>.md
+git+https://github.com/owner/repository.git#objectives/project/manifest.yaml
 ```
 
-Namespaces are:
+Its `version` is separate and must be the exact 40- or 64-character commit
+whose resources are read. A resolver spanning repositories implements
+`versionFor(objectiveId)` so each prerequisite receives its own source commit.
+Never label dirty resources as HEAD or copy a root repository version onto
+another source.
 
-- `system/overview` for Guide title, description and overview content;
-- `system/404` for the fixed missing-page result;
-- `levels/<id>` plus the synthesized `levels/terminal`;
-- `checks/<check-id>`;
-- `problems/<problem-id>`;
-- flat general knowledge under `pages/<page-id>`.
+Static `fileResources` can load and validate working-tree definitions, but
+`observe` rejects them. Production observations require stable Git identity and
+exact commit provenance.
 
-Every node must contain exactly the Manifest language set. There is no locale
-fallback and no Manifest override for the References root, overview, terminal
-or 404 identities. Frontmatter carries localized properties, while the path
-carries identity:
-
-```markdown
----
-title: Repository is not ready
-description: The configured primary has not been confirmed.
-instruction: Preserve local work and synchronize without rewriting history.
----
-
-See [[pages/repository-synchronization]].
-```
-
-Level pages additionally require `outcome`. Problem `instruction` and ordinary
-page `description` are optional. Internal links use full Reference IDs.
-Missing IDs return `system/404`; malformed resources, dangling links, I/O and
-permission errors remain explicit failures.
-
-## Check protocol
-
-Each advancement Check ID maps to:
-
-```text
-checks/<check-id>/
-```
-
-That directory contains exactly one `run` or `run.*` entry. Other private
-resources may coexist. File extensions are informational and never select an
-interpreter. Native executables run directly. Text scripts require the limited
-portable shebang:
-
-```text
-#!/usr/bin/env <interpreter>
-```
-
-On POSIX the entry must be executable. On Windows Silvermoon resolves the
-declared interpreter from its controlled environment and starts it directly;
-it does not use `PATHEXT`, file associations, command strings, pipes or shell
-expansion.
-
-The runtime writes one JSON request to stdin:
-
-```json
-{
-  "protocolVersion": 1,
-  "subject": { "root": "/workspace" },
-  "probe": { "tempDirectory": "/tmp/silvermoon-probe-..." }
-}
-```
-
-The check writes exactly one JSON result to stdout:
-
-```json
-{
-  "pass": false,
-  "problems": [
-    {
-      "id": "project-invalid",
-      "parameters": {
-        "configurationPath": "/workspace/.silvermoon/config.yaml",
-        "issueCodes": ["schema-version-unsupported"]
-      }
-    }
-  ]
-}
-```
-
-`pass: false` is a normal exit-zero result. Nonzero exit, timeout, invalid or
-oversized output, unknown Problem ID and protocol violations are operation
-errors. Checks do not receive language and do not return localized text.
-
-## Probe workspace
-
-One public `probe()` invocation creates one temporary workspace. The same
-absolute directory is passed through its prerequisite chain and local ordered
-checks. Concurrent or later probes receive different directories.
-
-Checks may share expensive observations through agreed relative paths and
-formats inside this directory. The runtime treats contents as opaque and
-provides no `useState`, `useMemo` or language-specific cache helper. Producers
-should write atomically; cache corruption or schema mismatch must fail
-explicitly. Absolute paths, traversal and symlink/reparse-point escapes are
-invalid. The runtime removes the workspace when probe succeeds, fails or is
-cancelled.
-
-## Instances and observations
-
-`createInstance` synchronously validates and snapshots a JSON subject and
-resolved language. Expected failures are typed as `invalid-subject`,
-`invalid-prerequisite-subject` or `unsupported-language`. Manifest and resource
-configuration errors reject `load`; check execution failures reject `probe`.
-
-`describeLevels()` returns the prerequisite prefix, local explicit levels and
-one synthesized terminal without exposing numeric indexes. `probe()` runs
-checks serially in declaration order. It completes all checks in the current
-level, aggregates their Problems in declaration order, and stops before the
-next level if any check failed. Silvermoon's compatibility facade retains the
-first failing check as `position.failingCheck`, recorded from runner results
-within each probe rather than inferred from Problem IDs. Same-level checks
-that cannot evaluate guidance because prerequisite observations failed return
-an explicit prerequisite Problem; they do not turn missing readiness into
-success or throw a navigation defect.
-`observation.position` identifies the owning Objective instance, its level,
-the failing check (or `null` at terminal), and the complete ordered Problem
-list. A prerequisite failure therefore retains the prerequisite as its owner
-instead of being relabeled as a local level.
-
-Problems carry stable IDs and structured JSON facts such as paths, revisions,
-states and diagnostic codes. Checks do not put localized report prose such as
-descriptions, summaries, messages or remediation instructions in parameters.
-Read a Problem's localized explanation with:
+## One observation
 
 ```ts
-const page = await observation.position.owner.readPage(
-  `problems/${observation.position.problems[0].id}`,
-);
+import {
+  loadPilotSpec,
+  observe,
+  startEffect,
+} from "silvermoon";
+
+const spec = await loadPilotSpec(objectiveUri, resources);
+const running = startEffect(observe(
+  {
+    spec,
+    subject: { root: "/workspace" },
+    language: "en-US",
+  },
+  {
+    resolveCheck: (ref) => probes.get(JSON.stringify(ref)),
+  },
+), signal);
+
+const envelope = await running.await();
+if (envelope.status !== 200 || envelope.payload === null) {
+  throw new Error(envelope.message);
+}
+const observation = envelope.payload;
 ```
 
-Every probe samples again. Observations and probe workspaces are not persistent
-state or authorization.
+Constructing `observe(...)` does not run a check. `startEffect` starts it.
+`RunningEffect.cancel()` requests interruption; `await()` and `exit()` wait for
+final completion and cleanup. A cancelled parent signal does not run user
+computation. Cancellation is not a business outcome.
 
-Silvermoon's `whats-next` adapter projects this position without flattening
-prerequisite ownership. Its fixed **Current position** section identifies the
-requested target, owning Objective, level, failing check, and every ordered
-Problem with complete parameters. **Downward guidance** points to the matching
-level, check, and Problem Reference pages, embeds their localized
-description/content plus optional level outcome or Problem instruction, and
-provides copyable `silvermoon reference page` commands for further detail.
-Internal Reference links become those commands before display. The report
-treats this content as inert Markdown data: it does not execute or interpolate
-it, and it never substitutes it for dynamic Problem parameters. Paths,
-revisions, branches, and recovery commands remain facts from the current
-invocation. Terminal positions keep the same shell and have no required
-actions while still displaying terminal Reference guidance.
+`PilotObservation` contains:
 
-## Loading
+- `current: { objectiveId, levelId }`
+- fully scoped Problems with Objective, level, check, and Problem IDs
+- `gapSummary` and `observedAt`
+- a per-Objective source-version map
 
-`createObjectiveLoader()` uses file resources and executable checks by default.
-Canonical Manifest URI is the Guide identity, including concurrent loads;
-instances are never cached by subject. Failed loads can be retried.
+Business success is represented by check results, not a top-level observation
+`ok` flag. An invocation fault has no trusted current level.
 
-Applications with virtual URI schemes may explicitly supply both an
-`ObjectiveResourceResolver` and `ObjectiveCheckRunner`. This is a transport
-adapter boundary, not Manifest check binding: the Manifest still references
-only stable Check IDs and keeps no JavaScript module paths.
+## Documentation
 
-## Silvermoon scopes
+Documentation access is stateless:
 
-The bundled Device, Project and Idea definitions are complete Guide package
-trees: real Manifest YAML, localized Markdown References and one `run.js` per
-Check ID. Build and package copy these resources unchanged. Silvermoon's
-application adapter prepares its existing business samples in the probe
-workspace, then the normal file runner starts the real entry and validates its
-JSON result. Device remains advisory; Idea directly composes the cached Project
-Guide and currently keeps the default terminal prerequisite barrier. Existing
-command reports, language, control and exact revision semantics remain
-authoritative.
+```ts
+const levels = describeLevels(spec);
+const page = readPage(spec, "problems/project-invalid", "en-US");
+const results = searchPages(spec, "repair", "en-US");
+```
+
+Each Reference page has `id`, `title`, `description`, `references`, and
+`content`. Missing IDs return `system/404`. Unsupported languages, malformed
+resources, and I/O failures remain explicit errors.
+
+Silvermoon retains its existing localized `outcome` and `instruction`
+frontmatter as an internal resource interpretation for command rendering. The
+public Pilot page model remains the upstream functional model.
+
+## CheckProbe protocol
+
+Use `createMemoryCheckProbe`, `createHttpCheckProbe`, or
+`createProcessCheckProbe`, or implement `CheckProbe` directly. All transports
+use the same envelope.
+
+Passed business check:
+
+```json
+{"status":200,"payload":{"ok":true,"problems":[]},"message":""}
+```
+
+Detected business problem:
+
+```json
+{"status":200,"payload":{"ok":false,"problems":[{"id":"project-invalid","parameters":{}}]},"message":""}
+```
+
+Invocation fault:
+
+```json
+{"status":502,"payload":null,"message":"transport: offline"}
+```
+
+Process stdin is the subject JSON itself. Stdout contains exactly one envelope;
+stderr is the logging side channel. A business problem exits zero. Process
+probes own their `.cache/pguide-probes` workspace, timeout, termination, and
+cleanup. HTTP cancellation abandons local waiting but does not promise remote
+rollback.
+
+## Bundled Silvermoon Objectives
+
+Device, Project, and Idea manifests and localized References remain packaged
+assets. Their identities are stable URIs in the Silvermoon repository, while
+their version is the exact commit from which those definitions are loaded.
+Executable checks are not part of `PilotSpec`; Silvermoon binds current
+business observations with memory CheckProbes.
+
+The adapter converts Pilot Problems back into Silvermoon's existing report
+projection without dropping owner, level, check, or Problem provenance.
+Invocation failures throw explicitly instead of becoming a low-level or empty
+successful observation.
+
+## Public API change
+
+The removed stateful surface is not compatibility-wrapped:
+
+- `createObjectiveLoader` and Guide instances are replaced by
+  `loadPilotSpec` and `observe`.
+- instance documentation methods are replaced by `readPage`, `searchPages`,
+  and `describeLevels`.
+- the old check runner request and `{ pass }` result are replaced by
+  CheckProbe subject stdin and `{ status, payload, message }`.
+- Effect construction and execution are separate; cancellation belongs to
+  `RunningEffect`.
+
+Consumers should migrate to these functions rather than retaining stateful
+instances.

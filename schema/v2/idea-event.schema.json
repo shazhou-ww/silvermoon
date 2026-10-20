@@ -40,6 +40,19 @@
     },
     {
       "properties": {
+        "type": { "const": "setGateMode" },
+        "payload": {
+          "type": "object", "additionalProperties": false, "required": ["level", "mode"],
+          "properties": {
+            "level": { "enum": ["ideal", "inner", "outer"] },
+            "mode": { "enum": ["explicit", "waived"] }
+          }
+        }
+      },
+      "required": ["payload"]
+    },
+    {
+      "properties": {
         "type": { "const": "submitIdeal" },
         "payload": {
           "type": "object", "additionalProperties": false, "required": ["idealRevision"],

@@ -2,8 +2,10 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { whatsNextUseCase } from "../../src/business/whats-next.ts";
 import { createSilvermoonObjectiveLoader, SILVERMOON_OBJECTIVE_URIS } from "../../src/business/objective-guides.ts";
-import type { SilvermoonCheckId } from "../../src/business/objective-guides.ts";
-import type { ObjectiveObservation } from "../../src/objective-guide/index.ts";
+import type {
+  SilvermoonCheckId,
+  SilvermoonObjectiveObservation,
+} from "../../src/business/objective-guides.ts";
 import { createCommandRun } from "../../src/foundation/command-message/index.ts";
 import { ideaPaths } from "../../src/foundation/coordinates/index.ts";
 import { inspectPhaseGuidance } from "../../src/foundation/guidance/index.ts";
@@ -70,12 +72,65 @@ function ready(selected = idea("implementing")): ReadyObservation {
     },
   };
 }
-function harness(snapshot: SnapshotObservation = ready(), blockRepository = false) {
+function deviceFixture(source: "global" | "source-checkout" = "global") {
+  return {
+    runtime: {
+      source,
+      version: "0.5.0",
+      entry: "D:\\checkout\\dist\\bin\\silvermoon.js",
+      packageRoot: "D:\\checkout",
+    },
+    readiness: {
+      runtime: { source, version: "0.5.0" },
+      skill: source === "global"
+        ? {
+          status: "ready",
+          expectedRoot: "D:\\runtime\\skills\\silvermoon",
+          paths: ["D:\\home\\.agents\\skills\\silvermoon"],
+        }
+        : {
+          status: "source-checkout",
+          expectedRoot: "D:\\checkout\\skills\\silvermoon",
+          paths: [],
+        },
+      update: source === "global"
+        ? { status: "current", currentVersion: "0.5.0", source: "cache" }
+        : { status: "source-checkout", currentVersion: "0.5.0", source: "runtime" },
+    },
+    globalConfig: {
+      path: "D:\\home\\.config\\silvermoon\\config.yaml",
+      present: true,
+      valid: true,
+    },
+    diagnostics: [],
+    user: {
+      configPath: "D:\\home\\.config\\silvermoon\\config.yaml",
+      config: { preferredLanguage: "en-US" },
+      diagnostics: [],
+    },
+  } as unknown as Awaited<ReturnType<typeof observeDevice>>;
+}
+function harness(
+  snapshot: SnapshotObservation = ready(),
+  blockRepository = false,
+  device = deviceFixture(),
+) {
   const calls: string[] = [];
-  const observations: ObjectiveObservation[] = [];
+  const observations: SilvermoonObjectiveObservation[] = [];
   const ports: NonNullable<Parameters<typeof whatsNextUseCase>[1]> = {
     createCommandRun: (intent) => createCommandRun(intent, { eventSink: () => {} }),
-    observeSnapshot: async () => { calls.push("snapshot"); return snapshot; },
+    observeSnapshot: async ({ deviceObserver }) => {
+      calls.push("snapshot");
+      if (deviceObserver === undefined) {
+        throw new TypeError("Device observer is required by the test harness.");
+      }
+      await deviceObserver({
+        forceRuntimeRefresh: false,
+        includeReadiness: true,
+        userHome: "D:\\home",
+      });
+      return snapshot;
+    },
     assessRepositoryReadiness: async ({ observed }) => {
       calls.push("repository");
       return blockRepository ? {
@@ -87,7 +142,7 @@ function harness(snapshot: SnapshotObservation = ready(), blockRepository = fals
         branch: { branch: "topic", remote: "origin", repository: config.primaryRepository, upstreamBranch: "main" },
       };
     },
-    observeDevice,
+    observeDevice: async () => device,
     observeIdea: async () => {
       if (snapshot.layout === null) throw new Error("Project must precede local Idea sampling.");
       return { ...snapshot.layout, project: undefined };
@@ -99,10 +154,10 @@ function harness(snapshot: SnapshotObservation = ready(), blockRepository = fals
       for (const key of Object.keys(checks) as SilvermoonCheckId[]) {
         wrapped[key] = async (subject) => { calls.push(key); return checks[key](subject); };
       }
-      return createSilvermoonObjectiveLoader(wrapped, { executeEntries: false });
+      return createSilvermoonObjectiveLoader(wrapped);
     },
-    probeObjective: async (instance) => {
-      const sample = await instance.probe();
+    probeObjective: async (loader, spec, subject, language, signal) => {
+      const sample = await loader.probe(spec, subject, language, signal);
       observations.push(sample);
       return sample;
     },
@@ -136,6 +191,363 @@ test("Guide-driven navigation preserves four projections and direct instance own
   assert.deepEqual(report.actions, []);
 });
 
+test("selected Idea stops at its Device prerequisite with one current direction", async () => {
+  const context = harness(
+    { ...ready(), outputLanguageOverride: "en-US" as const },
+    false,
+    deviceFixture("source-checkout"),
+  );
+  const report = await whatsNextUseCase(
+    { ...context.options, language: "en-US" },
+    context.ports,
+  );
+
+  assert.equal(report.observation.state, "objective-blocked");
+  assert.equal(report.response.kind, "objective");
+  if (report.response.kind !== "objective") assert.fail("Expected Objective response.");
+  assert.equal(report.response.objective.target, "idea");
+  assert.equal(report.response.objective.owner, "device");
+  assert.equal(report.response.objective.level, "runtime-unready");
+  assert.equal(report.response.objective.failingCheck, "device-runtime-linked");
+  assert.deepEqual(report.response.objective.problems, [{
+    id: "device-runtime",
+    parameters: {
+      runtimePath: "D:\\checkout\\dist\\bin\\silvermoon.js",
+      source: "source-checkout",
+      version: "0.5.0",
+      checkoutPath: "D:\\checkout",
+    },
+  }]);
+  assert.deepEqual(
+    report.response.objective.references.map(({ id }) => id),
+    ["checks/device-runtime-linked", "problems/device-runtime"],
+  );
+  const problemReference = report.response.objective.references.find(
+    ({ id }) => id === "problems/device-runtime",
+  );
+  assert.equal(problemReference?.owner, "device");
+  assert.equal(problemReference?.lookup, "problem:device-runtime");
+  assert.equal(
+    problemReference?.command,
+    "silvermoon reference problem:device-runtime --language en-US",
+  );
+  assert.equal(report.response.nextSteps.length, 1);
+  assert.equal(report.response.nextSteps[0]?.text, problemReference?.instruction);
+  assert.match(
+    report.response.nextSteps[0]?.text ?? "",
+    /The goal is to make the intended device runtime reliably reachable/,
+  );
+  assert.match(report.response.nextSteps[0]?.text ?? "", /pnpm setup:dev.+source checkout/);
+  assert.match(report.response.nextSteps[0]?.text ?? "", /npm install --global silvermoon/);
+  assert.doesNotMatch(
+    report.response.nextSteps.map(({ text }) => text).join("\n"),
+    /submitInner|Implementation\.md|安装|如有需要/,
+  );
+  assert.ok(report.response.objective.references.every(
+    ({ command }) => command.endsWith("--language en-US"),
+  ));
+  assert.ok(!context.calls.includes("repository"));
+  assert.ok(!context.calls.includes("idea-metadata-valid"));
+});
+
+test("a non-source runtime failure uses the global install command", async () => {
+  const device = deviceFixture("global");
+  if (device.runtime === null) assert.fail("Expected a runtime fixture.");
+  device.runtime.version = null;
+  const context = harness(
+    { ...ready(), outputLanguageOverride: "en-US" as const },
+    false,
+    device,
+  );
+  const report = await whatsNextUseCase(
+    { ...context.options, language: "en-US" },
+    context.ports,
+  );
+
+  assert.equal(report.response.kind, "objective");
+  if (report.response.kind !== "objective") assert.fail("Expected Objective response.");
+  assert.equal(
+    report.response.objective.problems[0]?.id,
+    "device-runtime",
+  );
+  const problemReference = report.response.objective.references.find(
+    ({ id }) => id === "problems/device-runtime",
+  );
+  const instructions = report.response.nextSteps.map(({ text }) => text).join("\n");
+  assert.equal(report.response.nextSteps[0]?.text, problemReference?.instruction);
+  assert.match(instructions, /npm install --global silvermoon/);
+  assert.match(instructions, /pnpm setup:dev/);
+});
+
+test("an unverifiable canonical skill requires runtime repair before registration", async () => {
+  const device = deviceFixture();
+  device.readiness!.skill = {
+    status: "canonical-unverifiable",
+    expectedRoot: "D:\\runtime\\skills\\silvermoon",
+    paths: [],
+    remediation: "Repair the active runtime.",
+    summary: "Cannot verify the canonical skill.",
+  };
+  const context = harness(
+    { ...ready(), outputLanguageOverride: "en-US" as const },
+    false,
+    device,
+  );
+  const report = await whatsNextUseCase(
+    { ...context.options, language: "en-US" },
+    context.ports,
+  );
+  assert.equal(report.response.kind, "objective");
+  if (report.response.kind !== "objective") assert.fail("Expected Objective response.");
+  assert.equal(
+    report.response.objective.problems[0]?.id,
+    "device-canonical-skill",
+  );
+  assert.match(
+    report.response.nextSteps[0]?.text ?? "",
+    /^The goal is for the active Silvermoon CLI package to be usable.*Inspect the active `silvermoon` executable.*npm install --global silvermoon@latest/,
+  );
+  assert.doesNotMatch(report.response.nextSteps[0]?.text ?? "", /npx skills add/);
+});
+
+test("personal skill repair binds the observed canonical path into the Reference action", async () => {
+  const device = deviceFixture();
+  device.readiness!.skill = {
+    status: "missing",
+    expectedRoot: "D:\\runtime\\skills\\silvermoon",
+    expectedRevision: `sha256:${"a".repeat(64)}`,
+    paths: [],
+    remediation: "Install the canonical skill.",
+  };
+  const context = harness(
+    { ...ready(), outputLanguageOverride: "en-US" as const },
+    false,
+    device,
+  );
+  const report = await whatsNextUseCase(
+    { ...context.options, language: "en-US" },
+    context.ports,
+  );
+  assert.equal(report.response.kind, "objective");
+  if (report.response.kind !== "objective") assert.fail("Expected Objective response.");
+  assert.match(
+    report.response.nextSteps[0]?.text ?? "",
+    /^The goal is for a personal discovery path.*npx skills add "D:\\runtime\\skills\\silvermoon" --global --all/,
+  );
+  assert.doesNotMatch(
+    report.response.nextSteps[0]?.text ?? "",
+    /<canonical-skill-path>/,
+  );
+});
+
+test("device configuration versions choose historical, future, invalid, and format Problems", async () => {
+  const configurationPath = "D:\\home\\.config\\silvermoon\\config.yaml";
+  function invalidDevice({
+    code,
+    status,
+    value,
+    update = {
+      status: "current",
+      currentVersion: "0.5.0",
+      latestVersion: "0.5.0",
+      channel: "latest",
+      checkedAt: "2026-10-15T00:00:00.000Z",
+      source: "registry",
+    },
+  }: {
+    code: string;
+    status: "historical" | "future" | "current";
+    value: number;
+    update?: {
+      status: "available" | "current";
+      currentVersion: string;
+      latestVersion: string;
+      channel: string;
+      checkedAt: string;
+      source: "registry";
+    };
+  }) {
+    const device = deviceFixture();
+    device.globalConfig.valid = false;
+    device.diagnostics = [{
+      code,
+      level: "error",
+      path: `${configurationPath}#version`,
+      message: `Configuration fixture: ${code}`,
+      remediation: "Repair the fixture.",
+    }];
+    device.user = {
+      config: null,
+      configPath: configurationPath,
+      diagnostics: device.diagnostics,
+      version: { status, value, supported: 1 },
+    };
+    device.readiness!.update = update;
+    return device;
+  }
+
+  const cases = [
+    {
+      device: invalidDevice({
+        code: "user-config.historical-version",
+        status: "historical",
+        value: 0,
+      }),
+      problem: "device-configuration-historical-version",
+    },
+    {
+      device: invalidDevice({
+        code: "user-config.future-version",
+        status: "future",
+        value: 2,
+        update: {
+          status: "available",
+          currentVersion: "0.5.0",
+          latestVersion: "0.6.0",
+          channel: "latest",
+          checkedAt: "2026-10-15T00:00:00.000Z",
+          source: "registry",
+        },
+      }),
+      problem: "device-configuration-future-version",
+    },
+    {
+      device: invalidDevice({
+        code: "user-config.future-version",
+        status: "future",
+        value: 2,
+      }),
+      problem: "device-configuration-invalid-version",
+    },
+    {
+      device: invalidDevice({
+        code: "user-config.unknown-key",
+        status: "current",
+        value: 1,
+      }),
+      problem: "device-configuration-format",
+    },
+  ] as const;
+  for (const fixture of cases) {
+    const context = harness(
+      { ...ready(), outputLanguageOverride: "en-US" as const },
+      false,
+      fixture.device,
+    );
+    const report = await whatsNextUseCase(
+      { ...context.options, language: "en-US" },
+      context.ports,
+    );
+    assert.equal(report.response.kind, "objective");
+    if (report.response.kind !== "objective") assert.fail("Expected Objective response.");
+    assert.equal(report.response.objective.problems[0]?.id, fixture.problem);
+    assert.equal(report.response.nextSteps.length, 1);
+    assert.match(
+      report.response.nextSteps[0]?.text ?? "",
+      /^The goal is /,
+    );
+    if (fixture.problem === "device-configuration-invalid-version") {
+      assert.match(
+        report.response.nextSteps[0]?.text ?? "",
+        /^The goal is for the reported personal configuration to declare a currently supported version/,
+      );
+    }
+  }
+});
+
+test("project configuration readiness reuses schema capability classifications", async () => {
+  const cases = [
+    {
+      readiness: "migration-required" as const,
+      validity: "valid" as const,
+      observedVersion: 1,
+      problemType: "schema-migration-required",
+      expected: "project-configuration-historical-version",
+      update: {
+        status: "current",
+        currentVersion: "0.5.0",
+        latestVersion: "0.5.0",
+        channel: "latest",
+        checkedAt: "2026-10-15T00:00:00.000Z",
+        source: "cache",
+      },
+    },
+    {
+      readiness: "runtime-upgrade-required" as const,
+      validity: "unsupported" as const,
+      observedVersion: 3,
+      problemType: "schema-runtime-update-available",
+      expected: "project-configuration-future-version",
+      update: {
+        status: "available",
+        currentVersion: "0.5.0",
+        latestVersion: "0.6.0",
+        channel: "latest",
+        checkedAt: "2026-10-15T00:00:00.000Z",
+        source: "registry",
+      },
+    },
+    {
+      readiness: "runtime-upgrade-required" as const,
+      validity: "unsupported" as const,
+      observedVersion: 3,
+      problemType: "schema-runtime-latest-unsupported",
+      expected: "project-configuration-invalid-version",
+      update: {
+        status: "current",
+        currentVersion: "0.5.0",
+        latestVersion: "0.5.0",
+        channel: "latest",
+        checkedAt: "2026-10-15T00:00:00.000Z",
+        source: "registry",
+      },
+    },
+  ] as const;
+
+  for (const fixture of cases) {
+    const base = ready();
+    const schemas = {
+      manifestVersion: 1 as const,
+      releaseBoundary: "0.5.0",
+      files: [{
+        path: ".silvermoon/config.yaml",
+        family: "project-config",
+        schemaVersion: fixture.observedVersion,
+        targetVersion: 2,
+        validity: fixture.validity,
+        readiness: fixture.readiness,
+      }],
+    };
+    const snapshot: SnapshotObservation = {
+      ...base,
+      projectReady: false,
+      schemas,
+      observation: {
+        ...base.observation,
+        state: "project-setup-required",
+        observedThrough: "configuration",
+        problems: [{
+          type: fixture.problemType,
+          summary: "Project config schema fixture.",
+        }],
+        schemas,
+      },
+    };
+    const device = deviceFixture();
+    device.readiness!.update = fixture.update;
+    const context = harness(snapshot, false, device);
+    const report = await whatsNextUseCase(
+      { ...context.options, language: "en-US" },
+      context.ports,
+    );
+    assert.ok(report.response.objective);
+    assert.equal(report.response.objective.problems[0]?.id, fixture.expected);
+    assert.ok(report.response.objective.references.some(
+      ({ lookup }) => lookup === "page:project-metadata",
+    ));
+  }
+});
+
 test("concurrent command instances do not share snapshot or lifecycle state", async () => {
   const first = harness(ready(idea("preparing")));
   const second = harness(ready(idea("deploying")));
@@ -158,14 +570,23 @@ test("project and repository failures gate Idea checks and retain report diagnos
   const first = harness(unavailable);
   const blocked = await whatsNextUseCase(first.options, first.ports);
   assert.deepEqual(first.calls, [
-    "snapshot", "project-config-valid", "project-user-config-valid", "project-layout-valid",
+    "snapshot",
+    "device-config-valid",
+    "device-runtime-linked",
+    "device-skill-discoverable",
+    "device-update-current",
+    "project-config-valid",
+    "project-user-config-valid",
+    "project-layout-valid",
   ]);
   assert.equal(first.observations[0]?.position.level.id, "configuration-invalid");
   assert.equal(first.observations[0]?.position.failingCheck, "project-config-valid");
   const projectParameters = first.observations[0]?.position.problems[0]?.parameters;
   assert.deepEqual(projectParameters, {
-    state: "project-setup-required",
     problemTypes: ["schema-invalid"],
+    path: ".silvermoon/config.yaml",
+    observedVersion: null,
+    targetVersion: null,
   });
   assertNoLocalizedProblemProse(projectParameters);
   assert.doesNotMatch(JSON.stringify(projectParameters), /Unsupported schema/);
@@ -175,12 +596,17 @@ test("project and repository failures gate Idea checks and retain report diagnos
   assert.equal(blocked.response.objective?.owner, "project");
   assert.equal(blocked.response.objective?.failingCheck, "project-config-valid");
   assert.deepEqual(blocked.response.objective?.problems, [{
-    id: "project",
+    id: "project-configuration-format",
     parameters: projectParameters!,
   }]);
   assert.deepEqual(
     blocked.response.objective?.references.map(({ id }) => id),
-    ["levels/configuration-invalid", "checks/project-config-valid", "problems/project"],
+    [
+      "levels/configuration-invalid",
+      "checks/project-config-valid",
+      "problems/project-configuration-format",
+      "pages/project-metadata",
+    ],
   );
   const second = harness(ready(), true);
   const sync = await whatsNextUseCase(second.options, second.ports);
@@ -194,6 +620,8 @@ test("project and repository failures gate Idea checks and retain report diagnos
     root: "D:\\fixture",
     head: null,
     primary: null,
+    expectedRepository: "https://example.test/owner/repository.git",
+    expectedBranch: "main",
     branch: null,
   });
   assertNoLocalizedProblemProse(repositoryParameters);
@@ -251,7 +679,6 @@ test("failed adoption peers report unavailable guidance without sampling an unre
   assert.equal(report.response.objective?.failingCheck, "project-adopted");
   assert.deepEqual(report.response.objective?.problems.map(({ parameters }) => parameters), [
     { state: "project-setup-required", problemTypes: ["project-not-adopted"] },
-    { state: "project-setup-required", problemTypes: ["project-not-adopted"], prerequisite: "project-ready" },
   ]);
   assert.deepEqual(context.calls.slice(-3), ["project-adopted", "project-schema-ready", "project-guidance-valid"]);
   assert.ok(!context.calls.includes("repository"));
@@ -270,7 +697,11 @@ test("no selector stays Project-only even for one Idea; invalid selectors do not
     if (selector === undefined) {
       assert.equal(report.response.kind, "objective");
       if (report.response.kind === "objective") {
-        assert.deepEqual(report.response.nextSteps, []);
+        assert.equal(report.response.nextSteps.length, 1);
+        assert.match(
+          report.response.nextSteps[0]?.text ?? "",
+          /next goal is to choose the Idea.+silvermoon list-ideas.+silvermoon whats-next/,
+        );
         assert.deepEqual(report.response.objective, {
           target: "project",
           owner: "project",
@@ -281,6 +712,8 @@ test("no selector stays Project-only even for one Idea; invalid selectors do not
           references: [{
             kind: "level",
             id: "levels/terminal",
+            owner: "project",
+            lookup: "level:terminal",
             title: "Objective attained",
             description: "All checks passed in this probe.",
             content: [
@@ -289,7 +722,7 @@ test("no selector stays Project-only even for one Idea; invalid selectors do not
               "This terminal means every advancement check required by the current probe passed.",
               "It is a sampled conclusion, not permanent truth, a real-world mutation, or human authorization.",
             ].join("\n"),
-            command: "silvermoon reference page project levels/terminal --language en-US",
+            command: "silvermoon reference level:terminal --language en-US",
           }],
         });
       }
@@ -339,6 +772,8 @@ test("outside-worktree bare navigation targets Device and stops at terminal", as
     references: [{
       kind: "level",
       id: "levels/terminal",
+      owner: "device",
+      lookup: "level:terminal",
       title: "Objective attained",
       description: "All checks passed in this probe.",
       content: [
@@ -347,7 +782,7 @@ test("outside-worktree bare navigation targets Device and stops at terminal", as
         "This terminal means every advancement check required by the current probe passed.",
         "It is a sampled conclusion, not permanent truth, a real-world mutation, or human authorization.",
       ].join("\n"),
-      command: "silvermoon reference page device levels/terminal --language en-US",
+      command: "silvermoon reference level:terminal --language en-US",
     }],
   });
   assert.deepEqual(report.response.nextSteps, []);
@@ -393,6 +828,37 @@ test("v2 exact submission and acceptance occupy separate levels; stale submissio
       }
     }
   }
+});
+
+test("waived inner passage is projected distinctly and advances to deployment", async () => {
+  const selected = idea("deploying");
+  selected.gateModes = {
+    ideal: "explicit",
+    inner: "waived",
+    outer: "explicit",
+  };
+  selected.submissions = submissions(selected, "outer", "unsubmitted");
+  const { acceptedRevision: _acceptedRevision, ...inner } =
+    selected.submissions.inner;
+  selected.submissions.inner = {
+    ...inner,
+    state: "waived",
+    submittedRevision: selected.implementationRevision,
+    waivedRevision: selected.implementationRevision,
+  };
+  const context = harness(ready(selected));
+  const report = await whatsNextUseCase(context.options, context.ports);
+  assert.equal(context.observations.at(-1)?.position.level.id, "deployment-unsubmitted");
+  assert.equal(report.observation.state, "idea-selected");
+  if (report.observation.state !== "idea-selected") {
+    assert.fail("Expected selected idea observation.");
+  }
+  assert.equal(report.observation.selectedIdea.gateModes?.inner, "waived");
+  assert.equal(report.observation.selectedIdea.submissions?.inner.state, "waived");
+  assert.equal(
+    report.observation.selectedIdea.submissions?.inner.waivedRevision,
+    selected.implementationRevision,
+  );
 });
 
 test("v1 lifecycle remains compatible; completed is terminal and abandoned stops without becoming completed", async () => {
@@ -449,7 +915,10 @@ test("unknown selectors do not read active Idea metadata", async () => {
   const options = { ...context.options, idea: "missing" };
   const report = await whatsNextUseCase(options, context.ports);
   assert.equal(report.observation.state, "idea-not-found");
-  assert.deepEqual(report.observation.candidates, []);
+  assert.deepEqual(
+    report.observation.candidates.map(({ id, state }) => ({ id, state })),
+    [{ id, state: "implementing" }],
+  );
 });
 
 test("fresh Idea metadata faults and concurrent changes cannot produce stale lifecycle review", async () => {

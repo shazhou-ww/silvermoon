@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
 import { afterEach, test } from "node:test";
 
-import { whatsNext } from "../../src/business/whats-next.ts";
 import { FIRST_ID } from "../helpers/repository.ts";
-import { createWhatsNextTestHelpers } from "../helpers/whatsnext.ts";
+import {
+  createWhatsNextTestHelpers,
+  whatsNext,
+} from "../helpers/whatsnext.ts";
 
 const { fixture } = createWhatsNextTestHelpers(afterEach);
 

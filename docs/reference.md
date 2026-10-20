@@ -164,8 +164,9 @@ numbers derived from one-based file order, and a 1 MiB limit per record includin
 LF. New records omit sequence and include a CLI-generated UTC RFC 3339 millisecond
 timestamp. Historical sequence fields and missing timestamps remain readable;
 present timestamps must be nondecreasing. Its strict
-twelve-event union updates accepted and submitted revision facts, interaction
-messages, and unified control; no observations, creation/import markers, or
+thirteen-event union updates gate policy, accepted and submitted revision
+facts, interaction messages, and unified control; no observations,
+creation/import markers, or
 audit envelope are stored. The nested-world revisions and five lifecycle
 states are unchanged.
 
@@ -219,17 +220,24 @@ and use the same `silvermoon migrate` command, which resolves back to the
 unpublished implementation. No navigation command automatically migrates a v1
 project.
 
-V2's ten business types are `setAlias`, `setLanguage`, `submitIdeal`,
+V2's eleven business types are `setAlias`, `setLanguage`, `setGateMode`, `submitIdeal`,
 `submitInner`, `submitOuter`, `acceptIdeal`, `acceptInner`, `acceptOuter`,
 `abandon`, and `resume`. The two interaction types, `ping` and `pong`, carry
 only a nonempty `message` string. Replay retains ordered messages and projects
 `control.owner` with its last transfer across messages, submissions,
-acceptances, and terminal events. Each phase's submitted revision is separate
-from its accepted revision. After `abandon`, only `resume` is legal.
+acceptances, gate passage, and terminal events. Each phase's submitted revision
+is separate from its accepted or waived revision. After `abandon`, only
+`resume` is legal.
 Interaction appends need the local byte precondition but no primary fetch;
 submissions need the exact current world on primary but no human confirmation;
 acceptances additionally require explicit confirmation and the same revision
-already submitted. The CLI cannot authenticate upstream or downstream senders.
+already submitted. Every level defaults to `explicit`; `setGateMode` requires
+explicit upstream confirmation in a nonterminal phase. The current runtime
+accepts `waived` only for `inner`. An exact inner submission under that mode,
+or a late waiver of that submitted revision, advances without `acceptInner`
+while retaining distinct waived evidence. Restoring `explicit` does not revoke
+an already passed revision, and changed world content makes old passage
+evidence stale. The CLI cannot authenticate upstream or downstream senders.
 
 ## Experimental JavaScript Package API
 
@@ -332,18 +340,46 @@ silvermoon create-idea [--language <tag>] [--audience <human|agent>] [--trace <f
 silvermoon migrate [--apply --expected-digest <sha256> | --resume --confirm-stopped | --rollback --confirm-stopped]
 silvermoon check [--remote | --commit <revision> | --staged | --worktree] [--language <en|en-US|zh|zh-CN>] [--audience <human|agent>] [--trace <file.trace.jsonl>]
 silvermoon event <replay|append> <idea> [--input <request.json>] [--after-length <bytes>] [--after-digest <oid>] [--full-history] [--expected-digest <8+-hex-prefix>] [--expected-primary <commit>] [--confirm-decision] [--audience <human|agent>]
-silvermoon reference page <device|project|idea> <reference-id> [--language <tag>] [--audience <human|agent> | --json]
-silvermoon reference search <device|project|idea> <query> [--language <tag>] [--audience <human|agent> | --json]
+silvermoon reference [<level|check|problem|page|system>:]<reference-or-query> [--language <tag>] [--audience <human|agent> | --json]
 ```
 
 `reference` reads the packaged Objective Guide resources without inspecting or
-changing a repository. `page` preserves the Guide's `system/404` result for a
-missing stable ID, while malformed resources, unsupported locales, and other
-configuration failures exit explicitly. Markdown output expands every
-`[[reference-id|label]]` link into a copyable `silvermoon reference page`
-command. `search` delegates to the Guide's existing `searchPages` index and
-returns stable IDs with the same navigable commands. `--json` returns the
-read-only result directly; human and agent audiences receive Markdown.
+changing a repository. An explicit namespace maps to the existing stable ID
+directories and resolves the page across the Idea -> Project -> Device
+prerequisite chain. If the canonical ID exists under multiple owners, the
+result reports every owner instead of selecting by traversal order.
+
+Without a namespace, `reference` applies the existing title, description, and
+content search semantics across all three Objectives. One result opens
+automatically; multiple results list namespace, owner, stable ID, and a
+copyable explicit command; zero results is a successful empty result. Markdown
+output expands every `[[reference-id|label]]` link into the same explicit
+namespace form. `--json` alone returns structured data; the default and both
+audiences receive Markdown. The older `reference page <objective>
+<reference-id>` and `reference search <objective> <query>` forms remain
+compatibility entry points but are not generated.
+
+An explicit structured page result retains both its short lookup and canonical
+identity:
+
+```json
+{
+  "lookup": "check:repository-upstream-matches",
+  "operation": "read",
+  "namespace": "check",
+  "query": "repository-upstream-matches",
+  "owner": "project",
+  "referenceId": "checks/repository-upstream-matches",
+  "language": "en-US",
+  "page": {
+    "id": "checks/repository-upstream-matches"
+  }
+}
+```
+
+Structured search lists use the same `namespace`, `owner`, `referenceId`, and
+`command` fields. A uniquely matched search returns the page shape with
+`operation: "search"`; an empty search returns `results: []`.
 
 Every valid invocation starts one ordered domain-message stream with
 `intention.accepted`. Observation facts are folded through one immutable
@@ -379,10 +415,12 @@ projections:
         {
           "kind": "level",
           "id": "levels/terminal",
+          "owner": "project",
+          "lookup": "level:terminal",
           "title": "Objective attained",
           "description": "All checks passed in this probe.",
           "content": "## Meaning\n\nThis terminal means every advancement check required by the current probe passed.",
-          "command": "silvermoon reference page project levels/terminal --language en-US"
+          "command": "silvermoon reference level:terminal --language en-US"
         }
       ]
     }
@@ -403,10 +441,12 @@ projections:
         {
           "kind": "level",
           "id": "levels/terminal",
+          "owner": "project",
+          "lookup": "level:terminal",
           "title": "Objective attained",
           "description": "All checks passed in this probe.",
           "content": "## Meaning\n\nThis terminal means every advancement check required by the current probe passed.",
-          "command": "silvermoon reference page project levels/terminal --language en-US"
+          "command": "silvermoon reference level:terminal --language en-US"
         }
       ]
     },
@@ -435,18 +475,20 @@ projections:
   and any ordered `nextSteps`, choices, items, validation result, review
   context, or guidance needed by the caller.
 
-Dialogue observations and responses also carry the same optional `device`
-advisory. `device.runtime` identifies the running package as `global`, `host`,
-or `source-checkout`; `device.skill` reports personal-link health; and
+Dialogue observations and responses also carry optional `device` telemetry.
+`device.runtime` identifies the running package as `global`, `host`, or
+`source-checkout`; `device.skill` reports personal-link health; and
 `device.update` reports `current`, `available`, `unavailable`,
 `managed-by-host`, or `source-checkout` with cache or registry provenance. Its
 optional `channel` identifies the npm dist-tag selected from the installed
 version; `latestVersion` remains the observed target version on that channel.
-For Project and Idea targets these fields remain advisory and never enter
-`problems` or change command success. For a Device target, the corresponding
-Objective checks use the same facts to determine its current level. Snapshot-only
-`check` responses omit `device` so their result depends only on the selected
-project snapshot and explicit primary state.
+For check-backed `whats-next`, Project requires Device through
+`update-unconfirmed`. Configuration, runtime, and skill failures therefore
+retain Device as the single Objective owner even when Project or Idea was the
+target. Update status remains telemetry and does not block those targets.
+These fields never become project `problems` or change project snapshot
+validity. Snapshot-only `check` responses omit `device` so their result depends
+only on the selected project snapshot and explicit primary state.
 
 A selected active v2 idea adds a primary-bound `review` object to its
 `next-steps` response only when the exact current phase revision has a matching
@@ -658,13 +700,21 @@ Observations are discriminated by command intent and `state`:
 - Every check-backed blocked or ready `whats-next` response projects the same
   Objective position: requested target, actual owner (including prerequisite
   ownership), level, failing check, complete ordered Problems with structured
-  parameters, and matching level/check/Problem Reference guidance. Each
-  Reference projection preserves kind, ID, title, description, content,
+  parameters, and useful check/Problem References. Device does not include a
+  nonterminal level Reference merely because the level exists; terminal
+  reports retain their terminal page. Each Reference projection preserves kind, ID,
+  owner, lookup, title, description, content,
   optional level outcome or Problem instruction, and its further-detail
-  command. Internal links are rendered as `silvermoon reference page`
-  commands without executing or interpolating Reference content. Markdown
-  renders these as the fixed **Current position** and **Downward guidance**
-  sections. Dynamic paths, revisions, branches, and retry commands remain
+  command. Internal links are rendered as explicit namespace
+  `silvermoon reference` commands without executing or interpolating Reference
+  content. Markdown
+  titles the requested target Objective and renders fixed **Current status**,
+  **Problems**, **Next action**, and compact **References** sections. Current
+  status explains prerequisite ownership in prose, while Problems labels
+  observed facts without exposing raw IDs or parameter JSON. Those machine
+  fields remain unchanged in the structured response. Terminal output renders
+  **Outcome** and **References** only. Markdown does not inline full Reference
+  pages. Dynamic paths, revisions, branches, and retry commands remain
   invocation facts; Reference pages remain stable explanatory knowledge.
 - Selected `whats-next` returns `idea-selected` with only `selectedIdea`
   (`id`, optional `alias`, lifecycle `state`), including terminal ideas. V2
@@ -708,6 +758,8 @@ metadata schema, and layout. It does not inspect execution source, a package
 manager, `package.json`, project-local Silvermoon dependencies, `node_modules`,
 or repository skill paths. Runtime identity, update status, and personal skill
 registration are device facts and do not change a project snapshot result.
+For `whats-next`, the Device Objective consumes those facts as the first
+prerequisite while preserving that snapshot boundary.
 
 Complete project observations expose `schemas`, containing the runtime
 capability-manifest version, its release boundary, and one record for every

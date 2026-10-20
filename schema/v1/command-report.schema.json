@@ -56,14 +56,21 @@
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["kind", "id", "title", "content", "command"],
+            "required": ["kind", "id", "owner", "lookup", "title", "content", "command"],
             "properties": {
               "kind": {
-                "enum": ["level", "check", "problem"]
+                "enum": ["level", "check", "problem", "page"]
               },
               "id": {
                 "type": "string",
                 "minLength": 1
+              },
+              "owner": {
+                "enum": ["device", "project", "idea"]
+              },
+              "lookup": {
+                "type": "string",
+                "pattern": "^(level|check|problem|page):[^:]+$"
               },
               "title": {
                 "type": "string",

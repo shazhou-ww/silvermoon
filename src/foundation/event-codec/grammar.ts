@@ -27,10 +27,17 @@ type FieldEvent = {
     |"implementation.accepted"|"deployment.accepted";
   payload: EventPayload;
 } & EventMetadata;
+type GateModeEvent = {
+  type: "setGateMode";
+  payload: {
+    level: "ideal"|"inner"|"outer";
+    mode: "explicit"|"waived";
+  };
+} & EventMetadata;
 type StateEvent = {
   type: "abandon"|"resume"|"idea.abandoned"|"idea.resumed";
 } & EventMetadata;
-export type IdeaEvent = SignalEvent|FieldEvent|StateEvent;
+export type IdeaEvent = SignalEvent|FieldEvent|GateModeEvent|StateEvent;
 
 export type IdeaEventStatus = Record<string, string|true|undefined> & {
   id: string;
@@ -43,6 +50,8 @@ export type IdeaEventStatus = Record<string, string|true|undefined> & {
   submittedIdealRevision?: string;
   submittedImplementationRevision?: string;
   submittedDeploymentRevision?: string;
+  innerGateMode?: "waived";
+  waivedImplementationRevision?: string;
 };
 
 export type IdeaControlOwner = "upstream"|"downstream"|"none";
@@ -55,7 +64,7 @@ export interface IdeaControl {
       | "ping" | "pong"
       | "submitIdeal" | "submitInner" | "submitOuter"
       | "acceptIdeal" | "acceptInner" | "acceptOuter"
-      | "abandon" | "resume";
+      | "setGateMode" | "abandon" | "resume";
   } | null;
 }
 
@@ -143,6 +152,7 @@ export const LEGACY_EVENT_TYPES = Object.freeze([
 export const IDEA_EVENT_TYPES = Object.freeze([
   ...Object.values(EVENT_RENAMES),
   ...Object.keys(SUBMISSION_FIELDS),
+  "setGateMode",
   "ping",
   "pong",
 ]);
@@ -158,6 +168,7 @@ export function renameLegacyEvents(events: unknown[]) {
 export const EVENT_PERMISSIONS = Object.freeze({
   setAlias: "both",
   setLanguage: "both",
+  setGateMode: "upstream",
   submitIdeal: "downstream",
   submitInner: "downstream",
   submitOuter: "downstream",
@@ -244,7 +255,7 @@ function payloadValue(event: IdeaEvent, key: string): string|null {
   if (!("payload" in event)) {
     throw new IdeaEventFormatError(`payload requires exactly ${key}`);
   }
-  const value = event.payload[key];
+  const value = (event.payload as EventPayload)[key];
   if (typeof value !== "string" && value !== null) {
     throw new IdeaEventFormatError(`payload requires exactly ${key}`);
   }
@@ -263,11 +274,12 @@ function assertValidIdeaEvent(
     throw new IdeaEventFormatError(`unsupported event type: ${String(type)}`);
   }
   const field = fieldDefinition(type, legacy);
+  const gateMode = !legacy && type === "setGateMode";
   const message = !legacy && (type === "ping" || type === "pong");
   const hasTimestamp = isRecord(event) && Object.hasOwn(event, "timestamp");
   keys(
     event,
-    field || message
+    field || gateMode || message
       ? ["sequence", "type", ...(hasTimestamp ? ["timestamp"] : []), "payload"]
       : ["sequence", "type", ...(hasTimestamp ? ["timestamp"] : [])],
     "event",
@@ -296,6 +308,18 @@ function assertValidIdeaEvent(
       }, options);
     } catch (cause) {
       throw new IdeaEventFormatError(errorMessage(cause), { cause });
+    }
+  }
+  if (gateMode) {
+    keys(event.payload, ["level", "mode"], "payload");
+    const { level, mode } = event.payload;
+    if (typeof level !== "string"
+      || !["ideal", "inner", "outer"].includes(level)
+      || typeof mode !== "string"
+      || !["explicit", "waived"].includes(mode)) {
+      throw new IdeaEventFormatError(
+        "setGateMode payload requires level ideal|inner|outer and mode explicit|waived",
+      );
     }
   }
   if (message) {
@@ -341,6 +365,11 @@ function serializeValidatedIdeaEvent(
   const field = fieldDefinition(validated.type, legacy);
   if (field && "payload" in validated) {
     value.payload = { [field[0]]: payloadValue(validated, field[0]) };
+  } else if (validated.type === "setGateMode") {
+    value.payload = {
+      level: validated.payload.level,
+      mode: validated.payload.mode,
+    };
   } else if (validated.type === "ping" || validated.type === "pong") {
     value.payload = { message: validated.payload.message };
   }
@@ -410,11 +439,20 @@ export function initialEventState(
 function nextControl(
   before: IdeaEventState,
   event: IdeaEvent,
+  status: IdeaEventStatus,
 ): IdeaControl {
   if (!before.control) {
     throw new IdeaEventFormatError("current events require control state");
   }
-  const owner = CONTROL_OWNERS[event.type];
+  const gatePassEvent = event.type === "submitInner"
+    || (event.type === "setGateMode"
+      && event.payload.level === "inner"
+      && event.payload.mode === "waived");
+  const gatePassed = gatePassEvent
+    && status.waivedImplementationRevision !== undefined
+    && status.waivedImplementationRevision
+      === status.submittedImplementationRevision;
+  const owner = gatePassed ? "downstream" : CONTROL_OWNERS[event.type];
   if (owner === undefined) return before.control;
   return {
     owner,
@@ -444,6 +482,24 @@ export function reduceIdeaEvent(
     const value = payloadValue(validated, input);
     if (value === null) delete status[output];
     else status[output] = value;
+    if (validated.type === "submitInner" && status.innerGateMode === "waived") {
+      if (value !== null) status.waivedImplementationRevision = value;
+    }
+  } else if (validated.type === "setGateMode") {
+    if (validated.payload.mode === "waived" && validated.payload.level !== "inner") {
+      return reject("unsupported-gate-waiver");
+    }
+    if (validated.payload.level === "inner") {
+      if (validated.payload.mode === "waived") {
+        status.innerGateMode = "waived";
+        if (status.submittedImplementationRevision !== undefined) {
+          status.waivedImplementationRevision =
+            status.submittedImplementationRevision;
+        }
+      } else {
+        delete status.innerGateMode;
+      }
+    }
   } else if (validated.type === "idea.abandoned" || validated.type === "abandon") {
     status.abandoned = true;
   } else if (validated.type === "idea.resumed" || validated.type === "resume") {
@@ -462,7 +518,7 @@ export function reduceIdeaEvent(
           message: validated.payload.message,
         }],
       },
-      control: nextControl(before, validated),
+      control: nextControl(before, validated, status),
     } };
   }
   if (isDeepStrictEqual(status, before.status)) return reject("no-state-change");
@@ -474,7 +530,7 @@ export function reduceIdeaEvent(
     status,
     sequence: validated.sequence,
     interaction: before.interaction,
-    control: nextControl(before, validated),
+    control: nextControl(before, validated, status),
   } };
 }
 

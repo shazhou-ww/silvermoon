@@ -1,13 +1,15 @@
 ---
-title: "device-configuration"
-description: "Resolve device-configuration and probe again."
+title: "Device configuration is invalid"
+description: "The personal Silvermoon configuration does not satisfy the contract required to determine device readiness."
+instruction: "The goal is to make the reported configuration valid for the current runtime. Review the stated contract mismatch, then correct only the affected YAML field; for a version mismatch, a possible repair is `version: 1`. Preserve unrelated preferences and rerun through `silvermoon` to verify the configuration."
 ---
 
 ## Problem guidance
 
-**device-configuration** means the related Objective condition did not hold in this probe.
-Inspect the returned parameters and current repository facts, preserve unknown work,
-perform the applicable recovery, and probe again.
+The personal Silvermoon configuration cannot currently be used for device
+readiness. The Problem fact identifies the file and explains the observed
+contract mismatch.
 
-This page is the stable knowledge entry. Dynamic paths, revisions, diagnostics,
-and recovery targets come from the current check result.
+The desired outcome is valid YAML that preserves unrelated preferences. Use
+the reported mismatch to choose the smallest repair; an unsupported or missing
+version can normally be corrected to `version: 1`.

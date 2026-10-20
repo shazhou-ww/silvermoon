@@ -14,26 +14,27 @@ find \
   /checkout/dist/src/business/objectives \
   -type f -path '*/checks/*/run.js' -exec sed -i 's/\r$//' {} +
 
-git init --bare /tmp/silvermoon-primary.git
-git --git-dir=/tmp/silvermoon-primary.git fetch /scenario-source.bundle HEAD:refs/heads/main
-primary_repository="$(git --git-dir=/tmp/silvermoon-primary.git show refs/heads/main:.silvermoon/config.yaml | sed -n 's/^primaryRepository: //p' | tr -d '\r')"
-primary_branch="$(git --git-dir=/tmp/silvermoon-primary.git show refs/heads/main:.silvermoon/config.yaml | sed -n 's/^primaryBranch: //p' | tr -d '\r')"
+primary_git="${HOME}/workspace-primary.git"
+git init --bare "${primary_git}"
+git --git-dir="${primary_git}" fetch /scenario-source.bundle HEAD:refs/heads/main
+primary_repository="$(git --git-dir="${primary_git}" show refs/heads/main:.silvermoon/config.yaml | sed -n 's/^primaryRepository: //p' | tr -d '\r')"
+primary_branch="$(git --git-dir="${primary_git}" show refs/heads/main:.silvermoon/config.yaml | sed -n 's/^primaryBranch: //p' | tr -d '\r')"
 if [[ -z "${primary_repository}" || -z "${primary_branch}" ]]; then
   printf '%s\n' "Project config must define primaryRepository and primaryBranch." >&2
   exit 1
 fi
 
 if [[ "${primary_branch}" != "main" ]]; then
-  git --git-dir=/tmp/silvermoon-primary.git update-ref \
+  git --git-dir="${primary_git}" update-ref \
     "refs/heads/${primary_branch}" \
     refs/heads/main
-  git --git-dir=/tmp/silvermoon-primary.git update-ref -d refs/heads/main
+  git --git-dir="${primary_git}" update-ref -d refs/heads/main
 fi
-git --git-dir=/tmp/silvermoon-primary.git symbolic-ref HEAD "refs/heads/${primary_branch}"
-git clone --branch "${primary_branch}" file:///tmp/silvermoon-primary.git /workspace
+git --git-dir="${primary_git}" symbolic-ref HEAD "refs/heads/${primary_branch}"
+git clone --branch "${primary_branch}" "file://${primary_git}" /workspace
 git -C /workspace remote set-url origin "${primary_repository}"
 git -C /workspace config \
-  "url.file:///tmp/silvermoon-primary.git.insteadOf" \
+  "url.file://${primary_git}.insteadOf" \
   "${primary_repository}"
 git -C /workspace fetch origin "${primary_branch}"
 git -C /workspace switch --create scenario

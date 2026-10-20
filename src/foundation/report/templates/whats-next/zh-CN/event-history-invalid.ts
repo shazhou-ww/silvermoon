@@ -6,13 +6,9 @@
 import type { EventHistoryInvalidParameters } from "../contract.ts";
 
 /** @pure */
-const eventHistoryInvalid = ({
-  recheckCommand,
-}: EventHistoryInvalidParameters) =>
-  [
-    `保留双方历史。检查所选提交的事件边界，`,
-    `仅在获得授权时修复明确的错误，`,
-    `然后重试 ${recheckCommand}。`,
-  ].join("");
+const eventHistoryInvalid = (
+  _parameters: EventHistoryInvalidParameters,
+) =>
+  `目标是在保留双方历史的前提下，让所选提交边界具有有效的 append-only 事件历史；仅修复已获得明确授权的错误。`;
 
 export default eventHistoryInvalid;

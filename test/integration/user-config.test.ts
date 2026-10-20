@@ -49,7 +49,9 @@ test("loads and serializes canonical user configuration", async () => {
 test("rejects invalid, unknown, and noncanonical user configuration", async () => {
   const fixtures: ReadonlyArray<readonly [string, string]> = [
     ["preferredLanguage: zh-CN\n", "user-config.missing-version"],
-    ["version: 2\n", "user-config.unsupported-version"],
+    ["version: 0\n", "user-config.historical-version"],
+    ["version: 2\n", "user-config.future-version"],
+    ["version: invalid\n", "user-config.unsupported-version"],
     ["version: 1\nlanguage: zh-CN\n", "user-config.unknown-key"],
     ["version: 1\npreferredLanguage: zh-cn\n", "user-config.invalid-preferred-language"],
     ["preferredLanguage: zh-CN\nversion: 1\n", "user-config.noncanonical"],
@@ -62,6 +64,18 @@ test("rejects invalid, unknown, and noncanonical user configuration", async () =
     assert.ok(diagnostic, source);
     assert.equal(diagnostic.code, code, source);
     assert.match(diagnostic.path, /config\.yaml/);
+  }
+});
+
+test("classifies configuration versions relative to the current contract", async () => {
+  for (const [source, status, value] of [
+    ["version: 0\n", "historical", 0],
+    ["version: 1\n", "current", 1],
+    ["version: 2\n", "future", 2],
+    ["version: invalid\n", "invalid", "invalid"],
+  ] as const) {
+    const loaded = await loadUserConfig({ home: await homeWithConfig(source) });
+    assert.deepEqual(loaded.version, { status, value, supported: 1 });
   }
 });
 

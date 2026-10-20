@@ -2,13 +2,14 @@ import {
   lstat,
   mkdir,
   readFile,
-  readdir,
   realpath,
   rm,
   symlink,
 } from "node:fs/promises";
 import { homedir } from "node:os";
-import { dirname, join, relative, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
+
+import { directoriesMatch } from "./skill-content-revision.ts";
 
 function samePath(left: string, right: string) {
   const normalizedLeft = resolve(left);
@@ -16,42 +17,6 @@ function samePath(left: string, right: string) {
   return process.platform === "win32"
     ? normalizedLeft.toLowerCase() === normalizedRight.toLowerCase()
     : normalizedLeft === normalizedRight;
-}
-
-async function regularFiles(root: string, directory = root): Promise<string[] | null> {
-  const files: string[] = [];
-  for (const entry of await readdir(directory, { withFileTypes: true })) {
-    const path = join(directory, entry.name);
-    if (entry.isDirectory()) {
-      const nested = await regularFiles(root, path);
-      if (nested === null) return null;
-      files.push(...nested);
-    } else if (entry.isFile()) {
-      files.push(relative(root, path));
-    } else {
-      return null;
-    }
-  }
-  return files.sort();
-}
-
-async function directoriesMatch(left: string, right: string) {
-  const [leftFiles, rightFiles] = await Promise.all([
-    regularFiles(left),
-    regularFiles(right),
-  ]);
-  if (leftFiles === null || rightFiles === null) return false;
-  if (leftFiles.length !== rightFiles.length) return false;
-  for (let index = 0; index < leftFiles.length; index += 1) {
-    const path = leftFiles[index];
-    if (path === undefined || path !== rightFiles[index]) return false;
-    const [leftContent, rightContent] = await Promise.all([
-      readFile(join(left, path)),
-      readFile(join(right, path)),
-    ]);
-    if (!leftContent.equals(rightContent)) return false;
-  }
-  return true;
 }
 
 export async function linkPersonalSkill({
@@ -85,7 +50,7 @@ export async function linkPersonalSkill({
       replacement = "link";
     } else if (
       metadata.isDirectory()
-      && await directoriesMatch(source, destination)
+      && await directoriesMatch(source, destination).catch(() => false)
     ) {
       await rm(destination, { recursive: true });
       replacement = "copy";

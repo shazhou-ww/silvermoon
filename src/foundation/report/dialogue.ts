@@ -31,12 +31,31 @@ export function diagnosticInstruction(
   diagnostic: Diagnostic & { remediation: string },
   language = "en-US",
 ) {
+  const remediation = diagnostic.code === "project.metadata-missing"
+    ? localize(
+      language,
+      "Create complete Silvermoon project metadata using `silvermoon reference page:project-metadata --language en-US`.",
+      "参考 `silvermoon reference page:project-metadata --language zh-CN` 创建完整的 Silvermoon 项目 metadata。",
+    )
+    : diagnostic.code === "config.missing"
+    ? localize(
+      language,
+      "Create `.silvermoon/config.yaml` using `silvermoon reference page:project-metadata --language en-US`.",
+      "参考 `silvermoon reference page:project-metadata --language zh-CN` 创建 `.silvermoon/config.yaml`。",
+    )
+    : diagnostic.code === "config.invalid-yaml"
+    ? localize(
+      language,
+      "Rewrite `.silvermoon/config.yaml` as strict YAML using `silvermoon reference page:project-metadata --language en-US`.",
+      "参考 `silvermoon reference page:project-metadata --language zh-CN`，把 `.silvermoon/config.yaml` 重写为合法的 strict YAML。",
+    )
+    : diagnostic.remediation;
   return localize(
     language,
-    diagnostic.remediation,
+    remediation,
     diagnostic.path
-      ? `修复 ${diagnostic.path} 的 ${diagnostic.code}：${diagnostic.remediation}`
-      : `修复 ${diagnostic.code}：${diagnostic.remediation}`,
+      ? `修复 ${diagnostic.path} 的 ${diagnostic.code}：${remediation}`
+      : `修复 ${diagnostic.code}：${remediation}`,
   );
 }
 

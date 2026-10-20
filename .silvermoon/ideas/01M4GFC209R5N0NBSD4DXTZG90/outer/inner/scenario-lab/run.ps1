@@ -1,3 +1,8 @@
+param(
+    [ValidatePattern("^[a-z0-9-]+$")]
+    [string[]]$Scenario = @()
+)
+
 $ErrorActionPreference = "Stop"
 
 $labDirectory = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -18,6 +23,14 @@ $env:SCENARIO_SOURCE_DIRTY = if ($sourceChanges) { "true" } else { "false" }
 
 $composeFile = Join-Path $labDirectory "compose.yaml"
 $bundlePath = Join-Path $labDirectory "source.bundle"
+$hadScenarioIds = Test-Path Env:SCENARIO_IDS
+$previousScenarioIds = $env:SCENARIO_IDS
+if ($Scenario.Count -gt 0) {
+    $env:SCENARIO_IDS = $Scenario -join ","
+}
+elseif ($hadScenarioIds) {
+    Remove-Item Env:SCENARIO_IDS
+}
 try {
     git -C $repositoryRoot bundle create $bundlePath HEAD
     if ($LASTEXITCODE -ne 0) {
@@ -31,5 +44,11 @@ try {
 finally {
     if (Test-Path $bundlePath) {
         Remove-Item -LiteralPath $bundlePath
+    }
+    if ($hadScenarioIds) {
+        $env:SCENARIO_IDS = $previousScenarioIds
+    }
+    else {
+        Remove-Item Env:SCENARIO_IDS -ErrorAction SilentlyContinue
     }
 }

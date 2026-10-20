@@ -6,9 +6,9 @@
 import type { RecheckParameters } from "../contract.ts";
 
 /** @pure */
-const projectRecheck = ({
-  recheckCommand,
-}: RecheckParameters) =>
-  `完成适用步骤后，再运行 ${recheckCommand}。`;
+const projectRecheck = (
+  _parameters: RecheckParameters,
+) =>
+  "目标是在保留无关内容的同时得到有效且完整的项目 snapshot。";
 
 export default projectRecheck;

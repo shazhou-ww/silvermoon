@@ -22,13 +22,26 @@ test("keeps runtime dependencies inside their supported engine and peer ranges",
 
   assert.equal(manifest.dependencies.commander, "^15.0.0");
   assert.equal(manifest.engines.node, ">=22.13.0");
-  const objectivePackage = "@potential-guide/objective-guide";
-  assert.equal(manifest.dependencies[objectivePackage], "0.1.0");
-  assert.deepEqual(importer[objectivePackage], { specifier: "0.1.0", version: "0.1.0" });
-  assert.equal(
-    semver.subset(manifest.engines.node, lock.packages[`${objectivePackage}@0.1.0`].engines.node),
-    true,
-  );
+  for (const packageName of [
+    "@potential-guide/effects",
+    "@potential-guide/objective-pilot",
+  ]) {
+    const version = "0.1.0-rc.0";
+    assert.equal(manifest.dependencies[packageName], version);
+    assert.deepEqual(importer[packageName], {
+      specifier: version,
+      version,
+    });
+    assert.equal(
+      semver.subset(
+        manifest.engines.node,
+        lock.packages[`${packageName}@${version}`].engines.node,
+      ),
+      true,
+    );
+  }
+  assert.ok(!("@potential-guide/objective-guide" in manifest.dependencies));
+  assert.ok(!("silvermoon" in manifest.dependencies));
   assert.ok(!("jsonata" in manifest.dependencies));
   assert.ok(!("ajv" in manifest.dependencies));
   assert.equal(manifest.devDependencies.ajv, "^8.20.0");
@@ -43,8 +56,28 @@ test("keeps runtime dependencies inside their supported engine and peer ranges",
     true,
   );
 
+  const forkBase = "https://github.com/shazhou-ww/opentui/releases/download/opentui-0.4.0-koffi-2.16.3-1";
+  for (const name of ["core", "react"]) {
+    assert.equal(
+      manifest.dependencies[`@opentui/${name}`],
+      `${forkBase}/opentui-${name}-0.4.0-koffi.2.16.3.1.tgz`,
+    );
+  }
+  assert.ok(!("@jitl/opentui-core" in manifest.dependencies));
+  assert.ok(
+    !Object.keys(lock.overrides ?? {}).some((key) => /opentui|koffi/.test(key)),
+    "the published TUI runtime must not rely on root overrides",
+  );
+  const coreKey = `@opentui/core@${manifest.dependencies["@opentui/core"]}`;
+  const core = lock.packages[coreKey];
+  const coreSnapshot =
+    lock.snapshots[`@opentui/core@${importer["@opentui/core"].version}`];
+  assert.equal(core.version, "0.4.0-koffi.2.16.3.1");
+  assert.equal(coreSnapshot.optionalDependencies.koffi, "2.16.3");
+
   const openTuiPeers =
-    lock.packages["@jitl/opentui-react@0.4.0"].peerDependencies;
+    lock.packages[`@opentui/react@${manifest.dependencies["@opentui/react"]}`].peerDependencies;
+  assert.equal(openTuiPeers["@opentui/core"], core.version);
   for (const dependency of ["react-devtools-core", "ws"]) {
     const projectRange = manifest.dependencies[dependency];
     const peerRange = openTuiPeers[dependency];

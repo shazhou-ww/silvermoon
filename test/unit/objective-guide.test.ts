@@ -1,348 +1,155 @@
 import assert from "node:assert/strict";
-import { stat } from "node:fs/promises";
 import { test } from "node:test";
+
 import {
-  createObjectiveLoader, ObjectiveConfigurationError, ObjectiveOperationError,
-  SUBJECT_PROJECTION_LIMITS,
+  createMemoryCheckProbe,
+  describeLevels,
+  loadPilotSpec,
+  observe,
+  readPage,
+  searchPages,
+  startEffect,
 } from "../../src/objective-guide/index.ts";
 import type {
-  CheckRequest, CheckResult, ObjectiveGuideInstance, ObjectiveGuideManifest,
-  ObjectivePageResource, ObjectiveResourceResolver,
+  CheckProbe,
+  PageResource,
+  PilotManifest,
+  ResourceResolver,
 } from "../../src/objective-guide/index.ts";
 
-const rootUri = "https://objectives.test/root/manifest.yaml";
-const childUri = "https://objectives.test/child/manifest.yaml";
-type Handler = (request: CheckRequest) => Promise<CheckResult>;
+const manifestUri =
+  "git+https://objectives.test/team/repository.git#objectives/project/manifest.yaml";
+const version = "a".repeat(40);
 
-function manifest(overrides: Partial<ObjectiveGuideManifest> = {}): ObjectiveGuideManifest {
-  return {
+function markdown(title: string, description: string, body = "") {
+  return `---\ntitle: ${JSON.stringify(title)}\ndescription: ${JSON.stringify(description)}\n---\n${body}\n`;
+}
+
+function fixture() {
+  const manifest: PilotManifest = {
     schemaVersion: 1,
     domainSchema: {
-      type: "object", required: ["root"],
-      properties: { root: { type: "string" } }, additionalProperties: false,
+      type: "object",
+      required: ["root"],
+      properties: { root: { type: "string" } },
+      additionalProperties: false,
     },
-    levels: [{ id: "unready", advancement: { checks: ["ready"] } }],
+    levels: [{
+      id: "unready",
+      advancement: { checks: [{ id: "ready", problems: ["not-ready"] }] },
+    }],
     defaultLanguage: "en-US",
-    languages: ["en-US", "zh-CN"],
-    ...overrides,
+    languages: ["en-US"],
   };
-}
-function markdown(properties: Record<string, string>, body = "") {
-  return `---\n${Object.entries(properties).map(([key, value]) => `${key}: ${JSON.stringify(value)}`).join("\n")}\n---\n${body}\n`;
-}
-function fixture(
-  configs: Record<string, ObjectiveGuideManifest> = { [rootUri]: manifest() },
-  handlers: Record<string, Handler> = {},
-) {
-  const texts = new Map<string, string>();
-  const pages = new Map<string, ObjectivePageResource[]>();
-  const reads: string[] = [];
-  for (const [uri, config] of Object.entries(configs)) {
-    texts.set(uri, JSON.stringify(config));
-    const source = new URL("references/", uri).href;
-    const resources: ObjectivePageResource[] = [];
-    const add = (id: string, language: string, properties: Record<string, string>, body = "") => {
-      resources.push({ uri: new URL(`${id}/${language}.md`, source).href, source: markdown(properties, body) });
-    };
-    for (const language of config.languages) {
-      add("system/overview", language, { title: language, description: `Objective ${language}` });
-      add("system/404", language, { title: `Missing ${language}`, description: `Missing ${language}` });
-      add("levels/terminal", language, { title: `Ready ${language}`, description: `Ready ${language}` });
-      for (const level of config.levels) {
-        add(`levels/${level.id}`, language, {
-          title: `${level.id} ${language}`,
-          description: `Waiting ${language}`,
-          outcome: `Cost and benefit ${language}`,
-        });
-        for (const id of level.advancement.checks) add(`checks/${id}`, language, {
-          title: id, description: `Check ${id} ${language}`,
-        });
-      }
-      add("problems/problem", language, {
-        title: `Problem ${language}`, description: `Fix it ${language}`,
-      }, "[[system/404]]");
-    }
-    pages.set(source, resources);
-  }
-  const resources: ObjectiveResourceResolver = {
+  const pages: Array<[string, string, string, string?]> = [
+    ["system/overview", "Project", "Project objective"],
+    ["system/404", "Missing", "No such page"],
+    ["levels/unready", "Unready", "Project is not ready"],
+    ["levels/terminal", "Ready", "Project is ready"],
+    ["checks/ready", "Readiness", "Checks project readiness"],
+    ["problems/not-ready", "Not ready", "Repair the project", "Detailed repair guidance."],
+  ];
+  const resources: ResourceResolver = {
+    version,
     async readText(uri) {
-      reads.push(uri);
-      const value = texts.get(uri);
-      if (value === undefined) throw new Error(`Missing text ${uri}`);
-      return value;
+      assert.equal(uri, manifestUri);
+      return JSON.stringify(manifest);
     },
     async readPages(uri) {
-      const value = pages.get(uri);
-      if (value === undefined) throw new Error(`Missing pages ${uri}`);
-      return value;
+      return pages.map(([id, title, description, content]): PageResource => ({
+        uri: `${uri}${id}/en-US.md`,
+        source: markdown(title, description, content),
+      }));
     },
   };
-  const loader = createObjectiveLoader({
-    resources,
-    checkRunner: {
-      async run(_uri, id, request) {
-        return await (handlers[id] ?? (async () => ({ pass: true } as const)))(request);
+  return { resources };
+}
+
+test("loads a serializable Pilot spec and reads searchable documentation", async () => {
+  const spec = await loadPilotSpec(manifestUri, fixture().resources);
+  assert.equal(spec.objectiveId, manifestUri);
+  assert.equal(spec.version, version);
+  assert.deepEqual(describeLevels(spec), [
+    { objectiveId: manifestUri, levelId: "unready" },
+    { objectiveId: manifestUri, levelId: "terminal" },
+  ]);
+  assert.equal(readPage(spec, "problems/not-ready", "en-US").description, "Repair the project");
+  assert.equal(readPage(spec, "missing", "en-US").id, "system/404");
+  assert.deepEqual(searchPages(spec, "repair", "en-US"), [
+    { id: "problems/not-ready", title: "Not ready" },
+  ]);
+});
+
+test("observe starts only through startEffect and preserves problem provenance", async () => {
+  const spec = await loadPilotSpec(manifestUri, fixture().resources);
+  let calls = 0;
+  const probe = createMemoryCheckProbe(async (subject) => {
+    calls++;
+    assert.deepEqual(subject, { root: "project" });
+    return {
+      status: 200,
+      payload: {
+        ok: false,
+        problems: [{ id: "not-ready", parameters: { path: "config.yaml" } }],
       },
+      message: "",
+    };
+  });
+  const effect = observe(
+    { spec, subject: { root: "project" }, language: "en-US" },
+    { resolveCheck: () => probe },
+  );
+  assert.equal(calls, 0);
+  const envelope = await startEffect(effect).await();
+  assert.equal(calls, 1);
+  assert.equal(envelope.status, 200);
+  assert.ok(envelope.payload);
+  assert.deepEqual(envelope.payload.current, {
+    objectiveId: manifestUri,
+    levelId: "unready",
+  });
+  assert.deepEqual(envelope.payload.problems, [{
+    ref: {
+      objectiveId: manifestUri,
+      levelId: "unready",
+      checkId: "ready",
+      problemId: "not-ready",
     },
-  });
-  return { texts, pages, reads, resources, loader };
-}
-async function instance(context: ReturnType<typeof fixture>, language = "en-US"): Promise<ObjectiveGuideInstance> {
-  const guide = await context.loader.load(rootUri);
-  const created = guide.createInstance({ subject: { root: "project" }, language });
-  if (!created.ok) assert.fail(JSON.stringify({ type: created.error.type }));
-  return created.instance;
-}
-
-test("canonical identity is language-neutral and References provide descriptions", async () => {
-  const context = fixture();
-  const [first, second] = await Promise.all([
-    context.loader.load(rootUri), context.loader.load("https://objectives.test/root/./manifest.yaml"),
-  ]);
-  assert.equal(first, second);
-  assert.equal(context.reads.filter((uri) => uri === rootUri).length, 1);
-  const en = await instance(context);
-  const zh = await instance(context, "zh-CN");
-  assert.equal(en.guide, zh.guide);
-  assert.equal(en.title, "en-US");
-  assert.equal(zh.title, "zh-CN");
-  assert.deepEqual(en.describeLevels().map(({ id }) => id), ["unready", "terminal"]);
-  assert.equal(en.describeLevels()[0]?.advancementOutcome, "Cost and benefit en-US");
-  assert.equal((await en.readPage("missing")).id, "system/404");
-  assert.deepEqual(await en.searchPages("fix it"), [{ id: "problems/problem", title: "Problem en-US" }]);
+    parameters: { path: "config.yaml" },
+  }]);
 });
 
-test("instance subjects are immutable and schema/language failures remain typed", async () => {
-  const guide = await fixture().loader.load(rootUri);
-  const subject = { root: "before" };
-  const result = guide.createInstance({ subject });
-  if (!result.ok) assert.fail("Expected instance.");
-  subject.root = "after";
-  assert.equal(result.instance.subject.root, "before");
-  assert.ok(Object.isFrozen(result.instance.subject));
-  const invalid = guide.createInstance({ subject: { root: 5 } });
-  if (invalid.ok || invalid.error.type !== "invalid-subject") assert.fail("Expected subject failure.");
-  const unsupported = guide.createInstance({ subject: { root: "x" }, language: "en" });
-  if (unsupported.ok || unsupported.error.type !== "unsupported-language") assert.fail("Expected language failure.");
+test("invocation failures remain explicit envelopes", async () => {
+  const spec = await loadPilotSpec(manifestUri, fixture().resources);
+  const probe = createMemoryCheckProbe(() => {
+    throw new Error("offline");
+  });
+  const envelope = await startEffect(observe(
+    { spec, subject: { root: "project" } },
+    { resolveCheck: () => probe },
+  )).await();
+  assert.equal(envelope.status, 502);
+  assert.equal(envelope.payload, null);
+  assert.match(envelope.message, /offline/);
 });
 
-test("position identifies the owner, failing check and complete ordered Problems", async () => {
-  const calls: string[] = [];
-  const directories: string[] = [];
-  let passing = false;
-  const config = manifest({ levels: [
-    { id: "one", advancement: { checks: ["first"] } },
-    { id: "two", advancement: { checks: ["second"] } },
-  ] });
-  const context = fixture({ [rootUri]: config }, {
-    first: async (request) => {
-      calls.push("first");
-      directories.push(request.probe.tempDirectory);
-      return passing ? { pass: true } : {
-        pass: false, problems: [
-          { id: "problem", parameters: { path: "first" } },
-          { id: "problem", parameters: { path: "second" } },
-        ],
-      };
-    },
-    second: async (request) => {
-      calls.push("second");
-      directories.push(request.probe.tempDirectory);
-      return { pass: true };
-    },
-  });
-  const current = await instance(context);
-  const failed = await current.probe();
-  assert.equal(failed.position.owner, current);
-  assert.equal(failed.position.level.id, "one");
-  assert.equal(failed.position.level.instance, current);
-  assert.equal(failed.position.failingCheck, "first");
-  assert.equal(failed.gapSummary, "Fix it en-US\nFix it en-US");
-  assert.deepEqual(failed.position.problems, [
-    { id: "problem", parameters: { path: "first" } },
-    { id: "problem", parameters: { path: "second" } },
-  ]);
-  assert.equal((await failed.position.owner.readPage(
-    `problems/${failed.position.problems[0]!.id}`,
-  )).id, "problems/problem");
-  await assert.rejects(stat(directories[0]!));
-  passing = true;
-  const terminal = await current.probe();
-  assert.equal(terminal.position.level.id, "terminal");
-  assert.equal(terminal.position.owner, current);
-  assert.equal(terminal.position.failingCheck, null);
-  assert.deepEqual(terminal.position.problems, []);
-  assert.deepEqual(calls, ["first", "first", "second"]);
-  assert.equal(directories[1], directories[2]);
-  assert.notEqual(directories[0], directories[1]);
-  await assert.rejects(stat(directories[1]!));
-});
-
-test("prerequisite defaults to terminal and can unlock at a declared minimum level", async () => {
-  let passFirst = false;
-  const calls: string[] = [];
-  const child = manifest({ levels: [
-    { id: "configured", advancement: { checks: ["first"] } },
-    { id: "synchronized", advancement: { checks: ["second"] } },
-  ] });
-  const root = manifest({ prerequisite: {
-    manifestUri: childUri, subject: '{"root": root}', minimumLevelId: "synchronized",
-  } });
-  const context = fixture({ [rootUri]: root, [childUri]: child }, {
-    first: async () => {
-      calls.push("first");
-      return passFirst ? { pass: true } : {
-        pass: false, problems: [{ id: "problem", parameters: {} }],
-      };
-    },
-    second: async () => { calls.push("second"); return { pass: false, problems: [{ id: "problem", parameters: {} }] }; },
-    ready: async () => { calls.push("root"); return { pass: true }; },
-  });
-  const current = await instance(context);
-  assert.deepEqual(current.describeLevels().map(({ id }) => id), ["configured", "unready", "terminal"]);
-  const prerequisiteFailure = await current.probe();
-  assert.equal(prerequisiteFailure.position.level.id, "configured");
-  assert.equal(prerequisiteFailure.position.owner, current.prerequisite);
-  assert.equal(prerequisiteFailure.position.failingCheck, "first");
-  passFirst = true;
-  const sample = await current.probe();
-  assert.equal(sample.position.owner, current);
-  assert.equal(sample.position.level.id, "terminal");
-  assert.deepEqual(calls, ["first", "first", "second", "root"]);
-
-  const terminalContext = fixture({
-    [rootUri]: manifest({ prerequisite: { manifestUri: childUri, subject: '{"root": root}' } }),
-    [childUri]: child,
-  }, {
-    first: async () => ({ pass: true }),
-    second: async () => ({ pass: false, problems: [{ id: "problem", parameters: {} }] }),
-  });
-  const terminalPrerequisite = await instance(terminalContext);
-  const blocked = await terminalPrerequisite.probe();
-  assert.equal(blocked.position.level.id, "synchronized");
-  assert.equal(blocked.position.owner, terminalPrerequisite.prerequisite);
-  assert.equal(blocked.position.failingCheck, "second");
-});
-
-test("invalid minimum levels, malformed References and unknown Problems fail explicitly", async () => {
-  const invalidMinimum = fixture({
-    [rootUri]: manifest({ prerequisite: {
-      manifestUri: childUri, subject: '{"root": root}', minimumLevelId: "missing",
-    } }),
-    [childUri]: manifest(),
-  });
-  await assert.rejects(invalidMinimum.loader.load(rootUri), /minimum level/);
-
-  const missing = fixture();
-  const source = new URL("references/", rootUri).href;
-  missing.pages.set(source, missing.pages.get(source)!.filter(({ uri }) => !uri.includes("/system/404/")));
-  await assert.rejects(missing.loader.load(rootUri), /Missing Reference|cover every language/);
-
-  const unknown = await instance(fixture(undefined, {
-    ready: async () => ({ pass: false, problems: [{ id: "missing", parameters: {} }] }),
-  }));
-  await assert.rejects(unknown.probe(), ObjectiveOperationError);
-});
-
-test("public prerequisite projection rejects dynamic capabilities and bounds expressions", async () => {
-  const projection = async (subject: string) => {
-    const context = fixture({
-      [rootUri]: manifest({ prerequisite: { manifestUri: childUri, subject } }),
-      [childUri]: manifest(),
+test("cancelling a RunningEffect interrupts the active probe", async () => {
+  const spec = await loadPilotSpec(manifestUri, fixture().resources);
+  let started!: () => void;
+  const active = new Promise<void>((resolve) => { started = resolve; });
+  const probe: CheckProbe = async (_subject, signal) => {
+    started();
+    await new Promise<void>((_resolve, reject) => {
+      signal.addEventListener("abort", () => reject(signal.reason), { once: true });
     });
-    const guide = await context.loader.load(rootUri);
-    assert.ok(guide.prerequisite);
-    return guide.prerequisite;
+    assert.fail("Cancelled probe completed.");
   };
-  for (const expression of ['$now()', '$random()', '$eval(root)', '$map(root, function($x){$x})', '($x := root; $x)']) {
-    await assert.rejects(projection(expression), ObjectiveConfigurationError);
-  }
-  await assert.rejects(projection(JSON.stringify("x".repeat(SUBJECT_PROJECTION_LIMITS.expressionBytes))), /expression limit/);
-  assert.deepEqual((await projection('{"root": root, "n": count + 1}')).mapSubject({ root: "project", count: 2 }),
-    { root: "project", n: 3 });
-});
-
-test("same-level checks stay serial, aggregate failures in order and stop before later levels", async () => {
-  let active = 0;
-  let maximum = 0;
-  const calls: string[] = [];
-  const run = (id: string): Handler => async () => {
-    active++;
-    maximum = Math.max(maximum, active);
-    calls.push(id);
-    await new Promise((resolve) => setTimeout(resolve, 5));
-    active--;
-    return { pass: false, problems: [{ id: "problem", parameters: { check: id } }] };
-  };
-  const current = await instance(fixture({
-    [rootUri]: manifest({ levels: [
-      { id: "unready", advancement: { checks: ["first", "second"] } },
-      { id: "later", advancement: { checks: ["later"] } },
-    ] }),
-  }, { first: run("first"), second: run("second"), later: run("later") }));
-  const observation = await current.probe();
-  assert.equal(maximum, 1);
-  assert.deepEqual(calls, ["first", "second"]);
-  assert.equal(observation.position.failingCheck, "first");
-  assert.deepEqual(observation.position.problems.map(({ parameters }) => parameters.check), ["first", "second"]);
-});
-
-test("overlapping probes of one instance isolate first-failure provenance and clean their workspaces", async () => {
-  const directories = new Map<string, number>();
-  let release!: () => void;
-  const bothStarted = new Promise<void>((resolve) => { release = resolve; });
-  const current = await instance(fixture({
-    [rootUri]: manifest({ levels: [{ id: "unready", advancement: { checks: ["first", "second"] } }] }),
-  }, {
-    first: async ({ probe }) => {
-      const probeId = directories.size;
-      directories.set(probe.tempDirectory, probeId);
-      if (directories.size === 2) release();
-      await bothStarted;
-      return probeId === 0 ? { pass: false, problems: [{ id: "problem", parameters: { probeId } }] }
-        : { pass: true };
-    },
-    second: async ({ probe }) => directories.get(probe.tempDirectory) === 1
-      ? { pass: false, problems: [{ id: "problem", parameters: { probeId: 1 } }] }
-      : { pass: true },
-  }));
-  const samples = await Promise.all([current.probe(), current.probe()]);
-  assert.deepEqual(samples.map(({ position }) => position.failingCheck), ["first", "second"]);
-  assert.deepEqual(samples.map(({ position }) => position.problems[0]?.parameters.probeId), [0, 1]);
-  assert.equal(directories.size, 2);
-  for (const directory of directories.keys()) await assert.rejects(stat(directory), { code: "ENOENT" });
-});
-
-test("runner defects stop queued peers and clean the probe workspace", async () => {
-  const defect = new Error("runner defect");
-  let directory: string | undefined;
-  const calls: string[] = [];
-  const current = await instance(fixture({
-    [rootUri]: manifest({ levels: [{ id: "unready", advancement: { checks: ["first", "second"] } }] }),
-  }, {
-    first: async ({ probe }) => {
-      calls.push("first");
-      directory = probe.tempDirectory;
-      throw defect;
-    },
-    second: async () => { calls.push("second"); return { pass: true }; },
-  }));
-  await assert.rejects(current.probe(), (error) => error === defect);
-  assert.deepEqual(calls, ["first"]);
-  assert.ok(directory);
-  await assert.rejects(stat(directory), { code: "ENOENT" });
-});
-
-test("resource and runner errors propagate instead of becoming low levels or 404", async () => {
-  const error = new Error("permission denied");
-  const context = fixture();
-  await assert.rejects(createObjectiveLoader({
-    resources: { ...context.resources, readText: async () => { throw error; } },
-  }).load(rootUri), (caught) => caught === error);
-  const failed = await instance(fixture(undefined, { ready: async () => { throw error; } }));
-  await assert.rejects(failed.probe(), (caught) => caught === error);
-  const malformed = await instance(fixture(undefined, {
-    ready: async () => ({ pass: false, problems: [] } as unknown as CheckResult),
-  }));
-  await assert.rejects(malformed.probe(), ObjectiveOperationError);
+  const running = startEffect(observe(
+    { spec, subject: { root: "project" } },
+    { resolveCheck: () => probe },
+  ));
+  await active;
+  running.cancel();
+  await assert.rejects(running.await());
+  assert.equal(running.signal.aborted, true);
 });

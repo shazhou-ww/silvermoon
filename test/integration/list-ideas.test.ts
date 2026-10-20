@@ -254,7 +254,7 @@ test("[inventory-metadata-error] reports the canonical Idea.md template", async 
   assert.match(
     report.response.nextSteps[0]?.text ?? "",
     new RegExp(
-      `Restore ${documentPath.replaceAll(".", "\\.")} as the current idea's canonical Idea.md`,
+      `The goal is for ${documentPath.replaceAll(".", "\\.")} to be the current idea's readable canonical Idea.md`,
     ),
   );
   assert.match(

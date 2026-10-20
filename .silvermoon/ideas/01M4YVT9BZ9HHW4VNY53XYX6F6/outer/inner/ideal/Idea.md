@@ -6,7 +6,9 @@ Device `whats-next` 的 Agent 输出会在 `References` 中分别给出 level、
 
 ## 结果
 
-Agent 只需从最外层 objective 发起 Reference lookup，由其递归委派内层 objective 查找目标页面；`page` 与 `level`、`problem` 等类型标识并入后续 lookup 路径，不再作为独立首层参数。默认 References 不因层级存在就单独列出 Device level 页面，同时保留有用下钻和结构化 Reference 契约。
+Reference lookup 不再要求 Agent 指定 Idea、Project 或 Device；运行时递归解析页面 owner。`page` 不再作为独立子命令，`level`、`check`、`problem` 等类型改为可选的冒号 namespace；显式 namespace 精确读取单页，省略 namespace 时复用现有 Reference 搜索，唯一命中自动打开、多命中返回列表。默认 References 不因层级存在就单独列出 Device level 页面，同时保留有用下钻和结构化 Reference 契约。
+
+命令的 before/after、参数结构与递归解析规则见 [Reference 命令结构设计](./Reference-command-shape.md)。
 
 ## 边界
 
@@ -16,6 +18,6 @@ Agent 只需从最外层 objective 发起 Reference lookup，由其递归委派�
 
 ## 验收标准
 
-- 对三层递进 objective 的 Reference lookup 只需从最外层发起，并能递归解析到内层目标页面。
-- `page`、`level`、`problem` 等类型标识并入 lookup 路径后仍可明确区分页面，check/problem 下钻保留上下文，结构化 Reference 参数不丢失。
+- 对三层递进 objective 的 Reference lookup 无需指定 Objective，并能递归解析目标页面的实际 owner。
+- `page` 不再作为子命令，类型使用可选冒号 namespace；显式 namespace 可精确读取单页，省略时搜索并对唯一命中自动打开、多命中返回列表；默认输出 human-readable，仅显式 `--json` 返回结构化结果，check/problem 下钻参数不丢失。
 - Device 默认 References 不再仅因层级存在而包含 level 页面；双语输出、测试和文档与递进 lookup 规则一致。

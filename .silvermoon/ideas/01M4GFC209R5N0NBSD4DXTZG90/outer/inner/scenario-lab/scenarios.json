@@ -6,13 +6,13 @@
       "idea": "whats-next-template-review",
       "languages": ["en-US", "zh-CN"],
       "flow": {
-        "objective": "device",
+        "objective": "target idea → owner device",
         "check": "device-runtime-linked",
         "branch": "失败分支",
         "previousState": "个人配置有效，当前 checkout 已通过 pnpm setup:dev 链接为设备级全局 runtime。",
         "transitionAction": "从 PATH 移除全局 bin 目录，但以绝对路径执行同一个 Silvermoon binary，模拟绕过全局入口。",
-        "currentState": "Device 报告 source-checkout 和 device setup required；Idea 仍停在 implementation-unsubmitted，说明设备检查只提供 advisory。",
-        "nextAction": "恢复全局 bin 到 PATH 并用 silvermoon 重试；device-runtime-linked 通过后进入 device-skill-discoverable。"
+        "currentState": "目标仍是 Idea，但 prerequisite chain 在 runtime-unready 由 Device 独占；只报告 PATH 问题，不评估或输出 Idea lifecycle 行动。",
+        "nextAction": "目标是让稳定的设备级 silvermoon 可执行文件可由 PATH 发现；source checkout 可使用 pnpm setup:dev，其他安装来源可使用全局安装，然后重试同一检查。"
       }
     },
     {
@@ -21,28 +21,193 @@
       "idea": "whats-next-template-review",
       "languages": ["en-US", "zh-CN"],
       "flow": {
-        "objective": "device",
+        "objective": "target idea → owner device",
         "check": "device-skill-discoverable",
         "branch": "失败分支",
         "previousState": "设备级全局 runtime 可发现，canonical skill 已链接到个人 discovery 路径。",
         "transitionAction": "删除个人级 silvermoon skill 链接，再通过全局 silvermoon 执行同一 idea probe。",
-        "currentState": "Device advisory 标记 Personal skill missing；Project 与 Idea 仍继续评估并到达 implementation-unsubmitted。",
-        "nextAction": "运行 silvermoon-link-skill 或 checkout 的 pnpm link:skill 后重试；通过后进入 device-update-current。"
+        "currentState": "Device 在 skill-unready 独占当前 Objective；Project 与 Idea 暂不评估，也不输出 lifecycle 行动。",
+        "nextAction": "目标是让个人级 discovery 路径安装 active runtime 随包 skill，并使内容 revision 与 canonical skill 一致；使用报告路径运行 npx skills add 后重试。"
       }
     },
     {
-      "id": "project-user-config-invalid",
-      "state": "invalid-user-config",
+      "id": "device-skill-content-mismatched",
+      "state": "skill-content-mismatched",
       "idea": "whats-next-template-review",
       "languages": ["en-US", "zh-CN"],
       "flow": {
-        "objective": "project",
-        "check": "project-user-config-valid",
-        "branch": "失败分支",
-        "previousState": "Device 整备完成，Project 已通过 project-config-valid，准备验证个人配置。",
-        "transitionAction": "把个人 config.yaml 的 version 写成 invalid，再运行带准确 idea selector 的 whats-next。",
-        "currentState": "Project 停在 configuration-invalid，problemTypes 为 user-config-unsupported-version，尚未进入后续 layout 和 repository checks。",
-        "nextAction": "把 version 修复为 1 并重试；project-user-config-valid 通过后进入 project-layout-valid。"
+        "objective": "target idea → owner device",
+        "check": "device-skill-discoverable",
+        "branch": "内容 revision 不一致分支",
+        "previousState": "设备级全局 runtime 可发现，canonical skill 已链接到个人 discovery 路径且内容 revision 一致。",
+        "transitionAction": "用独立副本替换个人级 skill 链接，并修改副本中的 SKILL.md，使 observed revision 与 active runtime 的 expected revision 不同。",
+        "currentState": "Device 在 skill-unready 独占当前 Objective；Problem 携带 expected revision、observed revision 和 discovery 路径。",
+        "nextAction": "目标是让个人级 discovery 路径中的 skill 内容 revision 与 active runtime canonical skill 一致；使用报告路径运行 npx skills add 后重试。"
+      }
+    },
+    {
+      "id": "device-canonical-skill-unverifiable",
+      "state": "canonical-skill-unverifiable",
+      "idea": "whats-next-template-review",
+      "languages": ["en-US", "zh-CN"],
+      "flow": {
+        "objective": "target idea → owner device",
+        "check": "device-skill-discoverable",
+        "branch": "canonical skill 无法验证分支",
+        "previousState": "active runtime 随包提供可读取且可计算 revision 的 canonical skill。",
+        "transitionAction": "删除 active runtime canonical skill 中的 SKILL.md，同时保留 personal registration。",
+        "currentState": "Device 无法建立 expected revision，因此不能把问题误报为 personal skill 缺失或版本不一致。",
+        "nextAction": "目标是让 active CLI package 可用，且随包 canonical skill 可读取并能计算 expected revision；先排查 package、磁盘与权限，必要时全局重装 silvermoon@latest。"
+      }
+    },
+    {
+      "id": "device-config-historical-version",
+      "state": "historical-user-config",
+      "idea": "whats-next-template-review",
+      "languages": ["en-US", "zh-CN"],
+      "flow": {
+        "objective": "target idea → owner device",
+        "check": "device-config-valid",
+        "branch": "历史版本分支",
+        "previousState": "个人配置有效时，Device 可继续验证 runtime、skill 和 update，再把控制交给 Project。",
+        "transitionAction": "把个人 config.yaml 的 version 写成历史版本 0，再运行带准确 idea selector 的 whats-next。",
+        "currentState": "Device 直接报告配置版本 0 过旧，以及当前 runtime 支持版本 1；Project 与 Idea checks 尚未评估。",
+        "nextAction": "目标是让个人配置使用当前支持的版本并符合该版本 contract；保留有效偏好，按配置 Reference page 升级后重试。"
+      }
+    },
+    {
+      "id": "device-config-invalid-version",
+      "state": "future-user-config-current-cli",
+      "idea": "whats-next-template-review",
+      "languages": ["en-US", "zh-CN"],
+      "flow": {
+        "objective": "target idea → owner device",
+        "check": "device-config-valid",
+        "branch": "错误版本号分支",
+        "previousState": "个人配置使用当前 version: 1，runtime、skill 和 update 均可继续检查。",
+        "transitionAction": "把个人 config.yaml 的 version 写成 2，并让隔离 registry 确认当前 0.5.0 CLI 已是最新版。",
+        "currentState": "Device 明确报告版本号错误，而不是把它解释为等待 CLI 更新。",
+        "nextAction": "目标是让个人配置声明当前支持的版本并符合该版本 contract；参考 personal config Reference page 修复后重试。"
+      }
+    },
+    {
+      "id": "device-config-future-version",
+      "state": "future-user-config-update-available",
+      "idea": "whats-next-template-review",
+      "languages": ["en-US", "zh-CN"],
+      "flow": {
+        "objective": "target idea → owner device",
+        "check": "device-config-valid",
+        "branch": "版本过新分支",
+        "previousState": "个人配置声明当前 binary 不支持的版本 2。",
+        "transitionAction": "让隔离 npm registry 返回支持未来 contract 的更高 Silvermoon CLI 版本。",
+        "currentState": "Device 报告配置版本相对当前 binary 过新，并证明有新版 CLI 可升级。",
+        "nextAction": "目标是让 active CLI 支持配置声明的版本；registry 已证明有新版可用，升级 device-level CLI 后由新版 runtime 重新验证。"
+      }
+    },
+    {
+      "id": "device-config-invalid-format",
+      "state": "invalid-user-config-format",
+      "idea": "whats-next-template-review",
+      "languages": ["en-US", "zh-CN"],
+      "flow": {
+        "objective": "target idea → owner device",
+        "check": "device-config-valid",
+        "branch": "当前版本格式错误分支",
+        "previousState": "个人配置使用当前 version: 1 且只包含 contract 允许的字段。",
+        "transitionAction": "保留 version: 1，但加入不受支持的 language 字段。",
+        "currentState": "Device 直接报告配置格式错误及实际 diagnostic；完整格式留在独立 Reference page。",
+        "nextAction": "目标是让配置内容符合已声明版本的 schema 和 canonical YAML 格式；保留原文件供核对，按配置 Reference page 重写后重试。"
+      }
+    },
+    {
+      "id": "project-silvermoon-folder-missing",
+      "state": "project-silvermoon-folder-missing",
+      "idea": "whats-next-template-review",
+      "languages": ["en-US", "zh-CN"],
+      "flow": {
+        "objective": "target idea → owner project",
+        "check": "project-config-valid",
+        "branch": "项目 metadata 根目录缺失",
+        "previousState": "Device checks 已通过，repository 包含完整且有效的 .silvermoon project metadata。",
+        "transitionAction": "删除 synthetic project 的 .silvermoon 目录。",
+        "currentState": "Project 无法建立 Silvermoon project snapshot，并在进入 repository 或 Idea checks 前停止。",
+        "nextAction": "目标是在保留现有 repository 内容的同时，建立完整有效的 Silvermoon project metadata。"
+      }
+    },
+    {
+      "id": "project-config-missing",
+      "state": "project-config-missing",
+      "idea": "whats-next-template-review",
+      "languages": ["en-US", "zh-CN"],
+      "flow": {
+        "objective": "target idea → owner project",
+        "check": "project-config-valid",
+        "branch": "项目配置缺失",
+        "previousState": ".silvermoon 目录存在，并包含有效 project config、guidance 和 ideas。",
+        "transitionAction": "只删除 synthetic project 的 .silvermoon/config.yaml。",
+        "currentState": "Project 能观察 .silvermoon layout，但缺少定义 primary 与 project contract 的配置。",
+        "nextAction": "目标是让项目包含完整有效的 .silvermoon/config.yaml，同时保留其余 project metadata。"
+      }
+    },
+    {
+      "id": "project-config-historical-version",
+      "state": "project-config-historical-version",
+      "idea": "whats-next-template-review",
+      "languages": ["en-US", "zh-CN"],
+      "flow": {
+        "objective": "target idea → owner project",
+        "check": "project-schema-ready",
+        "branch": "项目配置历史版本",
+        "previousState": ".silvermoon/config.yaml 使用当前 target schema version 2。",
+        "transitionAction": "把 project config 改为可读取但需要迁移的 version 1。",
+        "currentState": "Project 报告历史版本、target version 和声明的 migration path。",
+        "nextAction": "目标是按 schema capability 把 project config 迁移到当前 target，不能只修改 version 字段。"
+      }
+    },
+    {
+      "id": "project-config-invalid-version",
+      "state": "project-config-invalid-version",
+      "idea": "whats-next-template-review",
+      "languages": ["en-US", "zh-CN"],
+      "flow": {
+        "objective": "target idea → owner project",
+        "check": "project-schema-ready",
+        "branch": "项目配置版本号错误",
+        "previousState": "project config 声明 active CLI 可读取的 schema 版本。",
+        "transitionAction": "把 config version 改为 3，并让隔离 registry 确认 active CLI 已是最新。",
+        "currentState": "Project 明确报告版本号错误，而不是等待 CLI 更新。",
+        "nextAction": "目标是让 project config 声明当前支持的版本并符合该版本 contract。"
+      }
+    },
+    {
+      "id": "project-config-future-version",
+      "state": "project-config-future-version",
+      "idea": "whats-next-template-review",
+      "languages": ["en-US", "zh-CN"],
+      "flow": {
+        "objective": "target idea → owner project",
+        "check": "project-schema-ready",
+        "branch": "项目配置版本过新",
+        "previousState": "project config 声明 active CLI 无法读取的 schema version 3。",
+        "transitionAction": "让隔离 registry 返回更高版本的 Silvermoon CLI。",
+        "currentState": "Project 证明有新版 CLI 可用，才把该配置分类为版本过新。",
+        "nextAction": "目标是升级 active CLI，使其支持 project config 声明的 schema 版本。"
+      }
+    },
+    {
+      "id": "project-config-invalid-format",
+      "state": "project-config-invalid-format",
+      "idea": "whats-next-template-review",
+      "languages": ["en-US", "zh-CN"],
+      "flow": {
+        "objective": "target idea → owner project",
+        "check": "project-config-valid",
+        "branch": "项目配置内容无效",
+        "previousState": ".silvermoon/config.yaml 声明已知版本并满足对应 schema。",
+        "transitionAction": "保留 config 路径，但写入无法解析的 YAML。",
+        "currentState": "Project 报告版本已知但内容不符合 schema，不继续 repository 或 Idea checks。",
+        "nextAction": "目标是让 project config 内容符合其声明版本的 schema。"
       }
     },
     {
@@ -51,13 +216,13 @@
       "idea": "whats-next-template-review",
       "languages": ["en-US", "zh-CN"],
       "flow": {
-        "objective": "project",
+        "objective": "target idea → owner project",
         "check": "repository-worktree-clean",
         "branch": "失败分支",
         "previousState": "Device 与 Project 配置、layout、schema、guidance checks 已通过，repository 准备验证 clean worktree。",
         "transitionAction": "在 synthetic worktree 新建 scenario-untracked.txt，保留 branch 与 upstream 不变。",
         "currentState": "Project 停在 repository-unready，repository problemTypes 为 worktree-changes。",
-        "nextAction": "检查并保留未知工作，移除本场景自有文件后重试；通过后进入 repository-head-present。"
+        "nextAction": "目标是在保留未知工作的前提下，为报告的未跟踪文件确定明确去向；完成处置后重试同一检查。"
       }
     },
     {
@@ -66,13 +231,13 @@
       "idea": "whats-next-template-review",
       "languages": ["en-US", "zh-CN"],
       "flow": {
-        "objective": "project",
+        "objective": "target idea → owner project",
         "check": "repository-upstream-matches",
         "branch": "detached-head 失败变体",
         "previousState": "worktree clean 且 HEAD 存在，scenario 分支原本跟踪 origin/main。",
         "transitionAction": "切换到 origin/main 的 detached HEAD，再运行同一 idea probe。",
         "currentState": "Project 停在 repository-unready，branch identity 为空，problemTypes 为 detached-head。",
-        "nextAction": "保留工作后切回 scenario 并恢复 origin/main upstream；该 check 通过后进入 repository-primary-fetched。"
+        "nextAction": "目标是在不丢失工作的前提下，把当前 commit 附着到跟踪 configured primary 的本地分支；完成后重试同一检查。"
       }
     },
     {
@@ -81,13 +246,13 @@
       "idea": "whats-next-template-review",
       "languages": ["en-US", "zh-CN"],
       "flow": {
-        "objective": "project",
+        "objective": "target idea → owner project",
         "check": "repository-upstream-matches",
         "branch": "primary-upstream-mismatch 失败变体",
         "previousState": "worktree clean、HEAD 存在，scenario 分支原本跟踪 synthetic origin/main。",
         "transitionAction": "保留 scenario 分支但执行 git branch --unset-upstream，再运行同一 idea probe。",
         "currentState": "Project 停在 repository-unready，分支名存在但 remote/upstream 为空，problemTypes 为 primary-upstream-mismatch。",
-        "nextAction": "重新设置 origin/main upstream 并验证；该 check 通过后进入 repository-primary-fetched。"
+        "nextAction": "目标是让当前分支跟踪 configured primary；可按现状复用或新增 named remote 并设置 upstream，验证后重试同一检查。"
       }
     },
     {
@@ -98,10 +263,10 @@
         "objective": "project",
         "check": "无；routing 补充节点",
         "branch": "未提供 selector",
-        "previousState": "Device advisory 已完成采样，Project 的全部 advancement checks 已通过，但尚未选择 idea。",
+        "previousState": "Device prerequisite 已达到 update-unconfirmed，Project 的全部 advancement checks 已通过，但尚未选择 idea。",
         "transitionAction": "运行 silvermoon whats-next，不传 ULID 或 alias。",
         "currentState": "报告把 Target Objective 设为 project 并直接到达 terminal，没有列出 active ideas 或选择提示。",
-        "nextAction": "调用者只能另行运行 silvermoon list-ideas 后再传入 selector；当前输出没有说明这一步，列为文案缺失。"
+        "nextAction": "目标是明确选择下一项 Idea 工作；可列出 active Ideas 后传入 selector，或在没有适合候选时创建新 Idea。"
       }
     },
     {
@@ -116,7 +281,7 @@
         "previousState": "Project checks 已通过，调用者开始显式选择要继续的 idea。",
         "transitionAction": "传入不存在的 alias scenario-idea-does-not-exist。",
         "currentState": "报告说明 selector 未匹配，但同时声称没有 active ideas；同一 fixture 中实际存在 implementing idea。",
-        "nextAction": "应列出可选 active ideas 或提示运行 list-ideas，再用准确 ULID/alias 重试；当前输出未提供完整恢复路径。"
+        "nextAction": "目标是解析到唯一 active Idea；可依据输出中的候选使用准确 selector 重试，或在没有适合候选时创建新 Idea。"
       }
     },
     {
@@ -125,13 +290,13 @@
       "idea": "whats-next-template-review",
       "languages": ["en-US", "zh-CN"],
       "flow": {
-        "objective": "idea",
+        "objective": "target idea → owner idea",
         "check": "idea-inner-submitted",
         "branch": "主链当前节点",
         "previousState": "Project checks 已通过，调用者已从 inventory 取得准确 alias。",
         "transitionAction": "传入 whats-next-template-review，进入该 idea 的当前 lifecycle probe。",
         "currentState": "Idea 为 implementing、control 为 downstream，accepted Ideal 保持有效，当前 implementation revision 尚未 submit。",
-        "nextAction": "继续 Inner World 与 ledger，证据就绪后同步到 primary 并 append submitInner，再重新观测 implementation-unaccepted。"
+        "nextAction": "目标是在已接受范围内完成实现和证据；准备就绪后可同步 exact revision 并提交 Inner World，再重新观测 lifecycle。"
       }
     }
   ]

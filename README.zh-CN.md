@@ -66,11 +66,12 @@ silvermoon list-ideas
 ```
 
 > **备注**：每台设备或 Agent host 只安装并更新一个全局 Silvermoon runtime。
-> 对话命令会在结构化报告中保留个人级 skill 健康度，但 Text 和 TUI 仅在
-> 需要处理时显示设备提示。只有发现项目 schema 高于当前 runtime 的读取
-> 能力时，Silvermoon 才查询已安装版本对应的 npm channel。目标项目不固定
-> Silvermoon 版本，也不保存它的 skill。从 `0.4.0` 起，项目兼容性由 runtime
-> 持有的逐文件 schema capability 与 migration graph 决定。
+> `whats-next` 把设备配置、可从 `PATH` 发现的 runtime 和个人级 skill 健康度作为
+> 单一 Objective 链的首个 prerequisite；更新状态只保留为非阻塞 telemetry。
+> 只有发现项目 schema 高于当前 runtime 的读取能力时，Silvermoon 才查询已安装
+> 版本对应的 npm channel。目标项目不固定 Silvermoon 版本，也不保存它的 skill。
+> 从 `0.4.0` 起，项目兼容性由 runtime 持有的逐文件 schema capability 与
+> migration graph 决定。
 
 稳定安装使用 `silvermoon@latest`。开发设备可以主动选择按需手工发布的
 `silvermoon@canary`，而不会改变正式版 `latest` channel。

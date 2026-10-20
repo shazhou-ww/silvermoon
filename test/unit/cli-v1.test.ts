@@ -143,17 +143,12 @@ test("registers only the approved command surface", () => {
     command.name() === "reference"
   );
   assert.ok(reference);
-  assert.deepEqual(
-    reference.commands.map((command) => command.name()),
-    ["page", "search"],
-  );
-  for (const operation of reference.commands) {
-    assert.ok(operation.options.some(({ long }) => long === "--audience"));
-    assert.ok(operation.options.some(({ long }) => long === "--json"));
-    assert.ok(operation.options.some(({ long }) => long === "--language"));
-    assert.equal(operation.options.some(({ long }) => long === "--root"), false);
-    assert.equal(operation.options.some(({ long }) => long === "--trace"), false);
-  }
+  assert.deepEqual(reference.commands, []);
+  assert.ok(reference.options.some(({ long }) => long === "--audience"));
+  assert.ok(reference.options.some(({ long }) => long === "--json"));
+  assert.ok(reference.options.some(({ long }) => long === "--language"));
+  assert.equal(reference.options.some(({ long }) => long === "--root"), false);
+  assert.equal(reference.options.some(({ long }) => long === "--trace"), false);
   const list = program.commands.find((command) => command.name() === "list-ideas");
   assert.ok(list);
   for (const option of [
@@ -188,6 +183,29 @@ test("registers only the approved command surface", () => {
 });
 
 test("Reference CLI preserves 404s, navigation commands, and explicit failures", async () => {
+  const direct = capture();
+  assert.equal(await runCli([
+    "reference", "check:repository-upstream-matches", "--language", "en-US", "--json",
+  ], direct.io), 0);
+  assert.equal(JSON.parse(firstLog(direct.logs)).owner, "project");
+
+  const discovery = capture();
+  assert.equal(await runCli([
+    "reference", "repository-upstream-matches", "--audience", "agent",
+  ], discovery.io), 0);
+  assert.match(firstLog(discovery.logs), /Owner: `project`/);
+
+  for (const query of ["page", "search"]) {
+    const literal = capture();
+    assert.equal(await runCli([
+      "reference", query, "--json",
+    ], literal.io), 0);
+    const result = JSON.parse(firstLog(literal.logs));
+    assert.equal(result.lookup, query);
+    assert.equal(result.operation, "search");
+    assert.equal(literal.errors.length, 0);
+  }
+
   const missing = capture();
   assert.equal(await runCli([
     "reference", "page", "project", "not/present", "--language", "en-US", "--json",
@@ -200,7 +218,7 @@ test("Reference CLI preserves 404s, navigation commands, and explicit failures",
   ], search.io), 0);
   assert.match(
     firstLog(search.logs),
-    /silvermoon reference page idea \S+ --language zh-CN/,
+    /silvermoon reference \S+:\S+ --language zh-CN/,
   );
 
   const human = capture();
@@ -233,6 +251,24 @@ test("Reference CLI preserves 404s, navigation commands, and explicit failures",
   assert.equal(await runCli([
     "reference", "page", "unknown", "system/overview",
   ], objective.io), 2);
+
+  const partial = capture();
+  assert.equal(await runCli([
+    "reference", "page", "project",
+  ], partial.io), 2);
+  assert.match(
+    String(partial.errors[0]),
+    /legacy reference page requires <device\|project\|idea> and a value/,
+  );
+
+  const invalidSearchObjective = capture();
+  assert.equal(await runCli([
+    "reference", "search", "unknown", "repository",
+  ], invalidSearchObjective.io), 2);
+  assert.match(
+    String(invalidSearchObjective.errors[0]),
+    /legacy reference search requires <device\|project\|idea> and a value/,
+  );
 });
 
 test("normalizes trace paths to the exact lowercase suffix", () => {

@@ -237,7 +237,7 @@ test("uses the shared root-stage setup observation for every target outside Git"
     );
     assert.deepEqual(
       report.observation.problems.map(({ type }: { type: string }) => type),
-      ["git-repository-missing", "config-missing"],
+      ["git-repository-missing", "project-metadata-missing"],
     );
   }
 });

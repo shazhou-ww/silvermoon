@@ -12,19 +12,32 @@ levels:
   - id: configuration-invalid
     advancement:
       checks:
-        - device-config-valid
+        - id: device-config-valid
+          problems:
+            - device-configuration
+            - device-configuration-historical-version
+            - device-configuration-future-version
+            - device-configuration-invalid-version
+            - device-configuration-format
   - id: runtime-unready
     advancement:
       checks:
-        - device-runtime-linked
+        - id: device-runtime-linked
+          problems:
+            - device-runtime
   - id: skill-unready
     advancement:
       checks:
-        - device-skill-discoverable
+        - id: device-skill-discoverable
+          problems:
+            - device-skill
+            - device-canonical-skill
   - id: update-unconfirmed
     advancement:
       checks:
-        - device-update-current
+        - id: device-update-current
+          problems:
+            - device-update
 defaultLanguage: en-US
 languages:
   - en-US

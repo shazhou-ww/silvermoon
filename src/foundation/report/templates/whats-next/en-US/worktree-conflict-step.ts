@@ -6,9 +6,6 @@
 
 /** @pure */
 const worktreeConflictStep = () =>
-  [
-    `Inspect every conflicted path and its contents,`,
-    `then resolve the conflicts without discarding either side.`,
-  ].join(" ");
+  `The goal is a worktree with no conflicted paths while preserving both sides' content.`;
 
 export default worktreeConflictStep;

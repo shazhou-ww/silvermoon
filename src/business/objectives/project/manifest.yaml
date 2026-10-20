@@ -12,32 +12,67 @@ domainSchema:
     userHome:
       type: string
       minLength: 1
+prerequisite:
+  manifestUri: ../device/manifest.yaml
+  subject: '{"userHome": userHome}'
+  minimumLevelId: update-unconfirmed
 levels:
   - id: configuration-invalid
     advancement:
       checks:
-        - project-config-valid
-        - project-user-config-valid
-        - project-layout-valid
+        - id: project-config-valid
+          problems:
+            - project-configuration
+            - project-configuration-future-version
+            - project-configuration-invalid-version
+            - project-configuration-runtime-unconfirmed
+            - project-configuration-format
+        - id: project-user-config-valid
+          problems:
+            - project-user-configuration
+        - id: project-layout-valid
+          problems:
+            - project-layout
   - id: project-unprepared
     advancement:
       checks:
-        - project-adopted
-        - project-schema-ready
-        - project-guidance-valid
+        - id: project-adopted
+          problems:
+            - project-adoption
+        - id: project-schema-ready
+          problems:
+            - project-schema
+            - project-configuration-historical-version
+        - id: project-guidance-valid
+          problems:
+            - project-guidance
   - id: repository-unready
     advancement:
       checks:
-        - repository-worktree-clean
-        - repository-head-present
-        - repository-upstream-matches
+        - id: repository-worktree-clean
+          problems:
+            - repository-worktree
+        - id: repository-head-present
+          problems:
+            - repository-head
+        - id: repository-upstream-matches
+          problems:
+            - repository-upstream
   - id: primary-unconfirmed
     advancement:
       checks:
-        - repository-primary-fetched
-        - repository-primary-aligned
-        - repository-event-history-valid
-        - project-primary-guidance-valid
+        - id: repository-primary-fetched
+          problems:
+            - repository-primary-fetch
+        - id: repository-primary-aligned
+          problems:
+            - repository-primary-alignment
+        - id: repository-event-history-valid
+          problems:
+            - repository-event-history
+        - id: project-primary-guidance-valid
+          problems:
+            - project-primary-guidance
 defaultLanguage: en-US
 languages:
   - en-US

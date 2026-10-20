@@ -91,6 +91,16 @@ test("configures reviewable dependency updates for npm and GitHub Actions", asyn
     (update: { [x: string]: string; }) => update["package-ecosystem"] === "npm",
   );
   assert.equal(npm["versioning-strategy"], "increase-if-necessary");
+  assert.deepEqual(npm.ignore, [
+    {
+      "dependency-name": "@types/node",
+      "update-types": ["version-update:semver-major"],
+    },
+    {
+      "dependency-name": "typescript",
+      "update-types": ["version-update:semver-major"],
+    },
+  ]);
   assert.deepEqual(npm.groups, {
     "production-dependencies": {
       "dependency-type": "production",

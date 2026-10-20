@@ -1,14 +1,15 @@
 # Source modules
 
-## 当前 Objective Guide module
+## 当前 Objective Pilot module
 
-[objective-guide](./objective-guide/README.md) 是发布包 `@potential-guide/objective-guide`
-`0.1.0` 的薄兼容层，提供 URI-keyed Loader、语言中立 Guide
-和绑定 subject/language 的 instance；[whats-next](./business/whats-next.ts) 使用
-设备、项目、Idea 三个作用域的 Guide，领域报告与精确生命周期事实仍由现有能力
-提供。详情见[运行时说明](../docs/objective-guidance.md)。
-旧 professional-model module 已由 Objective Guide 取代并移除；不保留并行的
-numeric-level、JS check registry 或注入式状态运行时。
+[objective-guide](./objective-guide/README.md) 直接重导
+`@potential-guide/objective-pilot@0.1.0-rc.0` 与
+`@potential-guide/effects@0.1.0-rc.0` 的函数式入口：
+`loadPilotSpec` 加载不可变规格，`observe` 构造单次观测 Effect，
+`startEffect` 负责启动、等待与取消。[whats-next](./business/whats-next.ts)
+将设备、项目、Idea 三个稳定 Git Objective URI 绑定到内存 CheckProbe；领域报告与
+精确生命周期事实仍由现有能力提供。详情见[运行时说明](../docs/objective-guidance.md)。
+旧 Guide instance、check runner 请求和 `{ pass }` 结果协议不保留兼容包装。
 
 ## 三层目标架构
 

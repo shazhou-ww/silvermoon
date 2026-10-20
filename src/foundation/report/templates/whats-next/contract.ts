@@ -80,7 +80,7 @@ interface LifecycleCurrentParameters {
   ledgerPath: string;
   name: string;
   primaryCommit: string;
-  submissionState: "unsubmitted" | "accepted" | "stale" | null;
+  submissionState: "unsubmitted" | "accepted" | "waived" | "stale" | null;
   submitAction: string;
 }
 
@@ -99,7 +99,7 @@ export interface LifecyclePreparingParameters extends LifecycleCurrentParameters
 export interface LifecyclePreparedParameters extends LifecycleSubmittedParameters {}
 
 export interface LifecycleImplementingParameters extends LifecycleCurrentParameters {
-  idealPath: string;
+  idealDocumentPath: string;
   worldPath: string;
 }
 

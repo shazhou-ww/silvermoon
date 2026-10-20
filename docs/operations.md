@@ -18,17 +18,22 @@ required action. Idea inventory belongs exclusively to `list-ideas`; pass a
 canonical uppercase ULID or exact, unique, case-sensitive alias to navigate an
 Idea.
 
-Every check-backed `whats-next` report has two fixed parts. **Current position**
-contains the target and owning Objective, level, failing check, the complete
-ordered Problem list with structured parameters, and invocation-specific
-paths, revisions, branches, and commands. **Downward guidance** links the
-matching level, check, and Problem Reference pages through copyable
-`silvermoon reference page` commands. Each entry directly includes localized
-static description/content and any level outcome or Problem instruction;
-internal Reference links are rewritten as detail commands without executing or
-interpolating the content. Terminal reports retain the same shell, have no
-failing check or Problems, and contain no required actions while still showing
-terminal guidance.
+Every check-backed `whats-next` report uses one compact Objective shell.
+Its title names the requested target Objective. **Current status** explains in
+one sentence whether that target is advancing directly or waiting for the
+current owner as a prerequisite, followed by a labeled observation context
+when relevant.
+**Problems** contains the complete ordered Problem list with short
+descriptions and human-readable observed facts. Machine Objective,
+level/check, and Problem IDs plus raw parameters remain available in JSON
+instead of appearing as an unexplained status list. **Next action** contains
+the current recovery instruction and recheck command once. **References**
+links useful check and Problem pages through copyable explicit namespace
+commands such as `silvermoon reference problem:repository-worktree` instead of
+embedding their full static content. A level page is included only when it
+adds distinct progression guidance; Device reports do not include one merely
+because a level exists. Terminal reports contain only **Outcome** and
+**References**.
 
 The shared observation exposes the resolved content preference as
 `configuration.preferredLanguage` and the built-in rendering locale as
@@ -47,19 +52,20 @@ work. Runtime and personal skill health belong to device readiness, never the
 project snapshot. `whats-next` never edits, checks out, merges, commits,
 stashes, deletes, resets, fast-forwards, or pushes.
 
-Dialogue reports observe runtime source/version and personal skill health
-independently from project readiness. Routine observations mark runtime
-freshness as not required and do not invoke npm. When project inspection finds
-a schema newer than the running runtime can read, a global installation queries
-its installed npm channel and reuses a successful result for less than 24
-hours; stable versions follow `latest` and canaries follow `canary`. The query
-runs through npm, honoring active registry, proxy, certificate, and
-authentication settings from `.npmrc` and `NPM_CONFIG_*`. Direct source
-invocations and embedding hosts do not perform that registry query. A direct
-source invocation is reported as device setup debt: link the checkout globally
-and rerun through `silvermoon`.
-Registry or skill failures remain device diagnostics and do not replace
-project problems or lifecycle instructions.
+`whats-next` evaluates one Device -> Project -> Idea prerequisite chain.
+Project requires Device to reach `update-unconfirmed`: invalid device
+configuration, a runtime not discoverable on `PATH`, or a missing personal
+skill link leaves Device as the one current owner. Routine observations mark
+runtime freshness as not required and do not invoke npm. When project
+inspection finds a schema newer than the running runtime can read, a global
+installation queries its installed npm channel and reuses a successful result
+for less than 24 hours; stable versions follow `latest` and canaries follow
+`canary`. Registry failures remain non-blocking telemetry and do not replace
+project problems or lifecycle instructions. Structured reports retain device
+telemetry; Objective text and TUI output do not add it as a parallel advisory.
+Direct source invocations and embedding hosts do not perform the registry
+query. When a source checkout is the observed runtime, repair or install the
+`PATH`-discoverable global entry and rerun through `silvermoon`.
 
 Project schema readiness is reported per schema-bearing file. A valid file at
 the runtime's write target is `current`; a valid readable historical file is
@@ -243,6 +249,12 @@ the matching `submitIdeal`, `submitInner`, or `submitOuter` for that exact
 revision, integrate the event, and reobserve. Only a current submission with
 upstream control produces the corresponding `response.review`; ping/pong may
 transfer control within the same phase without changing the submission fact.
+If the fresh report shows `inner=waived`, the exact synchronized
+`submitInner` advances directly to deploying with `waived` passage evidence
+and no `acceptInner`; do not manufacture an implementation review or decision.
+Gate modes default independently to `explicit`. `setGateMode` is an upstream
+decision event requiring `--confirm-decision`; only `inner: waived` is
+currently supported, and `ideal` plus `outer` remain explicit.
 
 After an explicit decision, reconfirm that it applies to the selected idea and
 the current reported world revision. For v2, use the

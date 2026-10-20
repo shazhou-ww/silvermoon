@@ -10,6 +10,7 @@ import {
 } from "../../foundation/event-codec/index.ts";
 import type { IdeaEventState } from "../../foundation/event-codec/index.ts";
 import { detectEventFormat } from "../../foundation/event-history/index.ts";
+import { deriveEventIdeaState } from "../../foundation/event-reducer/index.ts";
 import { readEventStorage } from "../../foundation/event-store/index.ts";
 import { projectEventSnapshot } from "../../foundation/projection-cache/index.ts";
 import { inspectTreePaths, worktreeSnapshot } from "../../foundation/git/index.ts";
@@ -23,6 +24,7 @@ import {
   errorMessage,
 } from "./business-types.ts";
 import type {
+  GateModesProjection,
   IdeaControlProjection,
   IdeaSubmissionsProjection,
   PhaseSubmissionProjection,
@@ -60,6 +62,7 @@ export interface ObservedIdea {
   control?: IdeaControlProjection;
   submissions?: IdeaSubmissionsProjection;
   eventDigest?: string;
+  gateModes?: GateModesProjection;
   statusPath: string;
   ledgerPath: string;
   worlds: {
@@ -109,11 +112,17 @@ function projectSubmissions(
     const currentRevision = revisions[definition.revision];
     const submittedRevision = status[definition.submitted];
     const acceptedRevision = status[definition.accepted];
+    const waivedRevision = key === "inner"
+      ? status.waivedImplementationRevision
+      : undefined;
     const submissionState = acceptedRevision === currentRevision
       ? "accepted"
+      : waivedRevision === currentRevision
+      ? "waived"
       : submittedRevision === currentRevision
       ? "submitted"
       : submittedRevision !== undefined || acceptedRevision !== undefined
+        || waivedRevision !== undefined
       ? "stale"
       : "unsubmitted";
     return {
@@ -127,6 +136,7 @@ function projectSubmissions(
       },
       ...(submittedRevision === undefined ? {} : { submittedRevision }),
       ...(acceptedRevision === undefined ? {} : { acceptedRevision }),
+      ...(waivedRevision === undefined ? {} : { waivedRevision }),
     };
   };
   return {
@@ -650,7 +660,9 @@ export async function inspectIdeaLayout({
         documentPath: paths.deploymentDocumentPath,
       },
     };
-    const state = deriveIdeaState(revisions, status);
+    const state = eventState === undefined
+      ? deriveIdeaState(revisions, status)
+      : deriveEventIdeaState(revisions, eventState.status);
     const submissions = eventState === undefined
       ? undefined
       : projectSubmissions(revisions, eventState.status, state);
@@ -684,6 +696,15 @@ export async function inspectIdeaLayout({
       ...(control === undefined ? {} : { control }),
       ...(submissions === undefined ? {} : { submissions }),
       ...(eventDigest === undefined ? {} : { eventDigest }),
+      ...(eventState === undefined ? {} : {
+        gateModes: {
+          ideal: "explicit",
+          inner: eventState.status.innerGateMode === "waived"
+            ? "waived"
+            : "explicit",
+          outer: "explicit",
+        },
+      }),
     };
     if (status.alias !== undefined) idea.alias = status.alias;
     ideas.push(idea);
