@@ -5,6 +5,18 @@ publishing Silvermoon ideas.
 
 ## Navigate
 
+For a repository's first Silvermoon setup, add the project configuration and an
+empty regular `.silvermoon/ideas/.gitkeep` file. Git cannot track an empty
+directory by itself. This exact placeholder is permitted in both empty and
+populated inventories; it is not an idea and does not affect world revisions.
+Directories, symlinks, nonempty placeholders, and other non-ULID entries remain
+invalid.
+
+Validate the worktree and staged snapshots before committing this setup, then
+run `silvermoon create-idea --audience agent` from a clean branch tracking the
+configured primary. The command preserves the placeholder and creates the
+first real idea with its own generated ULID.
+
 ```sh
 silvermoon whats-next
 silvermoon whats-next 01M36QGPNTXEPP61DA4KP4AVZF

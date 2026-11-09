@@ -421,6 +421,20 @@ export async function inspectIdeaLayout({
     const folderPath = resolve(ideasRoot, entry.name);
     const folderMetadata = await filesystem.lstat(folderPath);
     const relativePath = displayPath(root, folderPath);
+    if (entry.name === ".gitkeep") {
+      if (
+        !folderMetadata.isFile() || folderMetadata.isSymbolicLink()
+        || (await filesystem.readFile(folderPath)).length !== 0
+      ) {
+        diagnostics.push(error(
+          "layout.ideas.invalid-placeholder",
+          relativePath,
+          "The ideas placeholder must be an empty regular .gitkeep file.",
+          "Keep an empty regular .gitkeep file or remove the invalid placeholder.",
+        ));
+      }
+      continue;
+    }
     const folded = entry.name.toUpperCase();
     const existingCase = caseNames.get(folded);
     if (existingCase && existingCase !== entry.name) {

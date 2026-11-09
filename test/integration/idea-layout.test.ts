@@ -122,6 +122,37 @@ test("derives three nested world tree revisions", async () => {
   );
 });
 
+test("allows an empty ideas placeholder without changing existing world revisions", async () => {
+  const root = await createRepository();
+  const before = firstIdea(await inspect(root));
+  await writeFile(join(root, ".silvermoon", "ideas", ".gitkeep"), "");
+
+  const inspected = await inspect(root);
+
+  assert.deepEqual(inspected.diagnostics, []);
+  assert.equal(inspected.ideas.length, 1);
+  assert.deepEqual(firstIdea(inspected).revisions, before.revisions);
+});
+
+test("rejects nonempty and directory placeholders and unrelated inventory files", async () => {
+  const root = await createRepository();
+  const placeholder = join(root, ".silvermoon", "ideas", ".gitkeep");
+  await writeFile(placeholder, "not a placeholder\n");
+  assert.ok((await inspect(root)).diagnostics.some(
+    ({ code }) => code === "layout.ideas.invalid-placeholder",
+  ));
+  await rm(placeholder);
+  await mkdir(placeholder);
+  assert.ok((await inspect(root)).diagnostics.some(
+    ({ code }) => code === "layout.ideas.invalid-placeholder",
+  ));
+  await rm(placeholder, { recursive: true });
+  await writeFile(join(root, ".silvermoon", "ideas", ".GITKEEP"), "");
+  assert.ok((await inspect(root)).diagnostics.some(
+    ({ code }) => code === "idea.id.invalid",
+  ));
+});
+
 test("derives SHA-256 world revisions from the shared snapshot", async () => {
   const root = await createRepository({ objectFormat: "sha256" });
 

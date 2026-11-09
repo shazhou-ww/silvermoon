@@ -12,6 +12,7 @@ import { join, resolve } from "node:path";
 import { afterEach, test } from "node:test";
 
 import { createIdea } from "../../src/business/create-idea.ts";
+import { checkRepository } from "../../src/index.ts";
 import { observeGitCommands } from "../../src/foundation/git/index.ts";
 import {
   DEPLOYMENT_TEMPLATE,
@@ -222,6 +223,45 @@ test("creates the first idea when the ideas directory does not yet exist", async
       "utf8",
     ),
     "",
+  );
+});
+
+test("validates and commits a zero-idea bootstrap before creating its first idea", async () => {
+  const repository = await fixture({ ideas: [] });
+  const placeholder = join(repository.root, ".silvermoon", "ideas", ".gitkeep");
+  await writeFile(placeholder, "");
+  const worktree = await checkRepository({
+    root: repository.root,
+    userHome: repository.base,
+    worktree: true,
+  });
+  assert.equal(worktree.observation.state, "project-ready");
+  assert.deepEqual(worktree.observation.problems, []);
+  git(repository.root, "add", ".silvermoon");
+  const staged = await checkRepository({
+    root: repository.root,
+    userHome: repository.base,
+    staged: true,
+  });
+  assert.equal(staged.observation.state, "project-ready");
+  assert.deepEqual(staged.observation.problems, []);
+  git(repository.root, "commit", "-m", "Keep empty idea inventory");
+  git(repository.root, "push", "origin", "main");
+  const committed = await checkRepository({
+    root: repository.root,
+    userHome: repository.base,
+  });
+  assert.equal(committed.observation.state, "project-ready");
+  const report = await createIdea({
+    generateId: () => createdId,
+    root: repository.root,
+    userHome: repository.base,
+  });
+  assert.equal(report.observation.state, "idea-created");
+  assert.equal(await readFile(placeholder, "utf8"), "");
+  assert.deepEqual(
+    await readdir(join(repository.root, ".silvermoon", "ideas")),
+    [".gitkeep", createdId],
   );
 });
 
