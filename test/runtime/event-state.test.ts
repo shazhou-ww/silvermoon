@@ -1,12 +1,24 @@
 import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
+import { existsSync } from "node:fs";
 import { readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 import { pathToFileURL } from "node:url";
 
-import { eventCommand } from "../../src/business/event-command.ts";
+import { eventCommand, eventCommandUseCase } from "../../src/business/event-command.ts";
+import { appendFullEvent } from "../../src/business/append-event-history.ts";
+import { appendProjectedInteraction, appendProjectedMetadata } from "../../src/business/append-event.ts";
+import { replayStoredEvents } from "../../src/business/replay-events.ts";
+import { resolveIdea } from "../../src/business/shared/index.ts";
+import { createCommandRun } from "../../src/foundation/command-message/index.ts";
+import { readEventDelta } from "../../src/foundation/event-cursor/index.ts";
+import { readEventStorage } from "../../src/foundation/event-store/index.ts";
+import { worktreeSnapshot } from "../../src/foundation/git/index.ts";
+import { createGitSnapshotFileSystem } from "../../src/foundation/snapshot/index.ts";
+import { inspectAdoption } from "../../src/foundation/skill-registration/index.ts";
+import { regularBytes } from "../../src/foundation/state-transaction/index.ts";
 import { migrateEvents } from "../../src/business/migrate-v1-to-v2.ts";
 import { runSchemaMigration } from "../../src/business/schema-migration.ts";
 import { checkRepository } from "../../src/index.ts";
@@ -489,6 +501,47 @@ test("world observation is read-only and primary movement invalidates a pending 
   assert.match(firstProblem(stale).summary, /Primary moved/);
   assert.deepEqual(await readFile(join(root, paths.eventsPath)), before);
 });
+
+for (const fullHistory of [false, true]) {
+  test(`primary movement during ${fullHistory ? "full" : "projected"} append validation releases the transaction for retry`, async (t) => {
+    const { root } = await fixture(t);
+    await migrate(root);
+    publish(root, "Migrate");
+    const paths = ideaPaths(FIRST_ID);
+    const before = await readFile(join(root, paths.eventsPath));
+    const observed = await replay(root);
+    const transaction = join(root, ".silvermoon/transaction");
+    let advanced = false;
+    const report = await eventCommandUseCase({
+      root, operation: "append", idea: FIRST_ID, fullHistory,
+      input: { type: "setLanguage", payload: { language: "en" } },
+      expectedDigest: observed.digest,
+      expectedPrimary: observed.baseline.commit,
+    }, {
+      createCommandRun: (intention) => createCommandRun(intention, {
+        eventSink(message) {
+          if (!advanced && message.type === "action.requested"
+            && message.action.type === "fetch-primary" && existsSync(transaction)) {
+            advanced = true;
+            git(root, "commit", "--allow-empty", "-m", "Advance primary during validation");
+            git(root, "push", "origin", "HEAD:main");
+          }
+        },
+      }),
+      inspectAdoption, worktreeSnapshot, resolveIdea, readEventStorage,
+      readEventDelta, createGitSnapshotFileSystem, appendProjectedInteraction,
+      appendProjectedMetadata, appendFullEvent, replayStoredEvents,
+    });
+    assert.ok(advanced, "Primary must move after acquiring the transaction");
+    assert.equal(report.observation.state, "check-unavailable");
+    assert.match(firstProblem(report).summary, /aborted before application.*Primary moved before write/);
+    assert.deepEqual(await readFile(join(root, paths.eventsPath)), before);
+    assert.equal(await regularBytes(transaction), null);
+    const retried = await append(root, { type: "setLanguage", payload: { language: "en" } });
+    assert.equal(eventReceipt(retried).outcome, "candidate-written");
+    assert.equal(await regularBytes(transaction), null);
+  });
+}
 
 test("missing tracking refs and shallow missing parents fail closed; committed v1 history stays readable", async (t) => {
   const { root, base, remote } = await fixture(t);

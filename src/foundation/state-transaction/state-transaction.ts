@@ -345,6 +345,7 @@ export async function stateTransaction(root: string, kind: TransactionPlan["kind
   // Keep transient hard-link sources outside the worktree so concurrent losers
   // cannot disappear during the winner's Git snapshot validation.
   await publishTransactionPlan(root, path, planSource);
+  let applicationStarted = false;
   try {
     await syncDirectory(dirname(path));
     // Before taking any effect the entire source must still equal the requested old state.
@@ -361,11 +362,38 @@ export async function stateTransaction(root: string, kind: TransactionPlan["kind
     }
     await validate?.();
     await afterStep?.("prepared");
+    applicationStarted = true;
     await applyPlan(root, validatedPlan, false, afterStep);
     await validateApplied?.();
     await afterStep?.("applied");
     await finish(root, planSource);
   } catch (cause) {
+    if (!applicationStarted) {
+      try {
+        for (const file of plan.files) {
+          await checkParents(
+            root,
+            [...directories, ...removeDirectories].includes(dirname(file.path))
+              ? dirname(file.path)
+              : file.path,
+          );
+          if (!equal(await regularBytes(resolve(root, file.path)), decode(file.before))
+            || await regularBytes(resolve(root, `${file.path}.pending`)) !== null) {
+            throw new Error(`Transaction source or pending bytes changed: ${file.path}`);
+          }
+        }
+        await finish(root, planSource);
+      } catch (cleanup) {
+        throw new AggregateError(
+          [cause, cleanup],
+          `State transaction validation failed and cleanup is unconfirmed; preserve ${TRANSACTION_PATH}: ${errorMessage(cause)}; ${errorMessage(cleanup)}`,
+        );
+      }
+      throw new Error(
+        `State transaction aborted before application; state files were not written. Reobserve before retrying: ${errorMessage(cause)}`,
+        { cause },
+      );
+    }
     throw new Error(
       `State transaction incomplete; preserve ${TRANSACTION_PATH} and use its explicit recovery command. Files may have changed: ${errorMessage(cause)}`,
       { cause },

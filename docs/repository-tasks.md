@@ -32,6 +32,12 @@ silvermoon check --remote
 Use the primary commit stated in the report as the expected remote tip. When
 primary moves, reobserve instead of replaying approval or acceptance.
 
+If validation fails before a state transaction begins applying files, the
+runtime verifies that source files remain unchanged and no pending files exist,
+then releases its transaction marker and reports the failure. Reobserve before
+retrying. Changed sources, unknown pending bytes, or failures after application
+starts retain the transaction evidence for explicit recovery.
+
 Choose the entry command from the user's intent. Explicit inventory requests
 use `silvermoon list-ideas`; explicit new-idea requests use
 `silvermoon create-idea` even when unrelated active ideas exist; all navigation

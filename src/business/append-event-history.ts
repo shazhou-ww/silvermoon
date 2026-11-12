@@ -138,7 +138,7 @@ export async function appendFullEvent({
             context: { id, primary, revisions: selected.revisions, storage: store.storage, afterDigest: head(candidate) },
             validate: async () => {
               const live = await refreshPrimary();
-              if (live !== primary) throw new Error("Primary moved before write; recover the unwritten transaction, then reobserve.");
+              if (live !== primary) throw new Error("Primary moved before write; reobserve before retrying.");
               if (worktreeSnapshot(root, { paths: protectedPaths }).tree !== protectedTree) {
                 throw new Error("Worlds changed during validation.");
               }

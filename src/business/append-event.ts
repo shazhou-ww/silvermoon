@@ -269,7 +269,7 @@ export async function appendProjectedMetadata({
     await writeProjectedAppend(root, id, paths, before, planned, options,
       { primary, revisions: selected.revisions }, {
       validate: async () => {
-        if (await refreshPrimary() !== primary) throw new Error("Primary moved before write; recover the unwritten transaction, then reobserve.");
+        if (await refreshPrimary() !== primary) throw new Error("Primary moved before write; reobserve before retrying.");
         const live = worktreeSnapshot(root, { reuseIndex: true }).tree;
         if (JSON.stringify([...inspectTreePaths(root, live, protectedPaths)]) !== protectedSignature) {
           throw new Error("Worlds or project state changed during validation.");
