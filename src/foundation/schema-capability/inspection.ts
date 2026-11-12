@@ -331,6 +331,8 @@ export async function inspectProjectSchemas({
     });
     entries.sort((left, right) => left.name.localeCompare(right.name));
     for (const entry of entries) {
+      const entryMetadata = await metadata(resolve(ideasRoot, entry.name), filesystem);
+      if (!entryMetadata?.isDirectory() || entryMetadata.isSymbolicLink()) continue;
       const paths = ideaPaths(entry.name);
       for (const path of [paths.statusPath, paths.eventsPath]) {
         const inspected = await inspectIdeaState(

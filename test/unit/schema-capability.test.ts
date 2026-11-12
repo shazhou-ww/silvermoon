@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { lstat, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, sep } from "node:path";
 import { afterEach, test } from "node:test";
 
 import {
@@ -114,6 +114,32 @@ test("rejects a manifest that breaks a historical migration path", async () => {
     () => validateSchemaCapabilityManifest(manifest),
     /no continuous migration from version 1/,
   );
+});
+
+test("schema inspection does not descend into an inventory placeholder", async () => {
+  const root = await mkdtemp(join(tmpdir(), "silvermoon-schema-placeholder-"));
+  temporaryDirectories.push(root);
+  await writeMetadata(root, ".silvermoon/config.yaml",
+    "version: 2\nprimaryRepository: https://example.test/owner/repository.git\nprimaryBranch: main\n");
+  await writeMetadata(root, ".silvermoon/ideas/.gitkeep", "");
+  const placeholder = join(root, ".silvermoon", "ideas", ".gitkeep");
+  const readiness = await inspectProjectSchemas({
+    root,
+    filesystem: {
+      async lstat(path) {
+        // POSIX reports ENOTDIR for descendants of a regular file.
+        if (path.startsWith(`${placeholder}${sep}`)) {
+          throw Object.assign(new Error(`Not a directory: ${path}`), { code: "ENOTDIR" });
+        }
+        return lstat(path);
+      },
+      readFile,
+      readdir,
+    },
+  });
+  assert.deepEqual(readiness.files.map(({ path, readiness }) => ({ path, readiness })), [
+    { path: ".silvermoon/config.yaml", readiness: "current" },
+  ]);
 });
 
 test("accumulates per-file validity and readiness across mixed project schemas", async () => {
