@@ -29,7 +29,7 @@
 
 ### Setup
 
-Silvermoon requires Node.js 22 or later, along with Git access to the
+Silvermoon requires Node.js 22.13.0 or later, along with Git access to the
 repository's primary branch.
 
 From the project directory, send this prompt to your coding agent:

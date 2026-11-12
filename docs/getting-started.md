@@ -4,7 +4,7 @@ This guide is the authoritative setup and first-use path for Silvermoon.
 
 ## Prerequisites
 
-- Node.js 22 or newer.
+- Node.js 22.13.0 or newer.
 - A Git repository whose shared primary branch is reachable over HTTPS.
 - Permission to fetch that branch and to publish ordinary non-force commits
   through the repository's normal collaboration path.

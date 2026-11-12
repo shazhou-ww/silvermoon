@@ -3,6 +3,49 @@
 This changelog starts with the Silvermoon 0.3.0 release series. Earlier release
 history remains available through npm and Git tags.
 
+## [0.5.0]
+
+### Objective navigation and references
+
+- Organizes `whats-next` around one Device -> Project -> Idea prerequisite
+  chain. Bare navigation observes Device outside a Git worktree and Project
+  inside one; idea inventory remains explicit through `list-ideas`.
+- Presents self-contained localized Objective reports with ordered Problems,
+  observed facts, recovery instructions, and copyable Reference commands.
+- Adds namespace-based `silvermoon reference` lookup and cross-Objective
+  search without requiring repository inspection.
+- Defers npm freshness queries until an unreadable future project schema
+  requires them. Routine navigation no longer queries the registry.
+
+### Gate policy and migration
+
+- Adds explicitly confirmed per-level gate policy. Only the Inner gate can be
+  waived; its exact submitted revision retains distinct waived evidence rather
+  than manufacturing human acceptance. Changed content invalidates stale
+  passage evidence.
+- Exposes the generic `silvermoon migrate` command for read-only planning,
+  exact-digest application, resume, and rollback. The version-specific
+  migration executable remains a compatibility alias.
+- Supports an empty `.silvermoon/ideas/.gitkeep` bootstrap inventory and fixes
+  schema inspection of that placeholder when creating the first idea.
+- Releases unwritten transaction preparations after validation fails so a
+  rejected write does not leave a stale transaction behind.
+
+### Runtime and API upgrade
+
+- Requires Node.js 22.13.0 or newer. Project configuration and idea-state
+  schema versions 1 and 2 remain readable; historical projects require the
+  declared migration before lifecycle writes.
+- Replaces the experimental stateful Objective Guide API with the functional
+  Objective Pilot and Effect APIs. Programmatic consumers must update removed
+  loader, instance-documentation, and check-runner calls; see the
+  [API migration guide](./docs/objective-guidance.md).
+- Uses pinned OpenTUI fork archives with Koffi 2.16.3 to fix native callback
+  crashes on Windows and keep one shared OpenTUI core instance.
+- Makes canary publication manual-only. Stable `latest` publication remains a
+  separate immutable tag instruction with GitHub OIDC provenance and
+  post-publication verification.
+
 ## [0.4.0]
 
 ### Global runtime boundary
@@ -136,6 +179,7 @@ history remains available through npm and Git tags.
   GitHub OIDC trusted publishing, provenance, and post-publication identity
   verification, now including MIT and public package metadata.
 
+[0.5.0]: https://github.com/shazhou-ww/silvermoon/compare/npm/silvermoon-recovery/v0.4.0...npm/silvermoon/v0.5.0
 [0.4.0]: https://github.com/shazhou-ww/silvermoon/compare/npm/silvermoon/v0.3.0...npm/silvermoon/v0.4.0
 [0.3.0]: https://github.com/shazhou-ww/silvermoon/compare/npm/silvermoon/v0.2.2...npm/silvermoon/v0.3.0
 [0.3.0-rc.2]: https://github.com/shazhou-ww/silvermoon/compare/npm/silvermoon/v0.3.0-rc.1...npm/silvermoon/v0.3.0-rc.2

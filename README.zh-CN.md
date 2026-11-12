@@ -17,7 +17,7 @@
 
 ### Setup
 
-Silvermoon 需要 Node.js 22 或更高版本，并且能通过 Git 访问仓库的 primary branch。
+Silvermoon 需要 Node.js 22.13.0 或更高版本，并且能通过 Git 访问仓库的 primary branch。
 
 在项目目录下，把这段提示词发给你的 coding agent：
 
