@@ -20,6 +20,7 @@ minimumReleaseAgeExclude:
   - '@github/copilot-sdk@1.0.16'
   - '@potential-guide/effects@0.1.0-rc.0'
   - '@potential-guide/objective-pilot@0.1.0-rc.0'
+  - markdownlint-cli2@0.24.1
 peerDependencyRules:
   allowedVersions:
     'bun-ffi-structs>typescript': ^6

@@ -46,6 +46,15 @@ history remains available through npm and Git tags.
   separate immutable tag instruction with GitHub OIDC provenance and
   post-publication verification.
 
+### Dependency security updates
+
+- Updates the Copilot SDK to 1.0.31 with patched Zod, and refreshes compatible
+  shell-quote and fast-uri dependencies.
+- Updates the Markdown lint toolchain to include patched markdown-it and
+  smol-toml releases.
+- Verifies repaired runtime dependency versions in a clean npm installation
+  of the tarball rather than relying on development-only resolution overrides.
+
 ## [0.4.0]
 
 ### Global runtime boundary

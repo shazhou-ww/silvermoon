@@ -13,6 +13,7 @@ import {
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import semver from "semver";
 import { npmCommand } from "../../src/foundation/process/index.ts";
 
 const packageRoot = fileURLToPath(new URL("../..", import.meta.url));
@@ -107,6 +108,31 @@ try {
     ),
   );
   assert.equal(installedManifest.name, "silvermoon");
+  const dependencyVersions = JSON.parse(run(process.execPath, ["--input-type=module", "-e", `
+    import { createRequire } from "node:module";
+    const require = createRequire(import.meta.url);
+    const runtime = createRequire(require.resolve("silvermoon"));
+    const sdk = createRequire(runtime.resolve("@github/copilot-sdk"));
+    const devtools = createRequire(runtime.resolve("react-devtools-core"));
+    const pilot = createRequire(import.meta.resolve("@potential-guide/objective-pilot"));
+    const ajv = createRequire(pilot.resolve("ajv"));
+    console.log(JSON.stringify({
+      zod: sdk("zod/package.json").version,
+      "shell-quote": devtools("shell-quote/package.json").version,
+      "fast-uri": ajv("fast-uri/package.json").version,
+    }));
+  `], bootstrap));
+  for (const [name, minimum] of [
+    ["zod", "4.6.6"],
+    ["shell-quote", "1.11.0"],
+    ["fast-uri", "3.1.9"],
+  ] as const) {
+    const version = dependencyVersions[name];
+    assert.ok(
+      typeof version === "string" && semver.gte(version, minimum),
+      `Installed ${name}@${version} must include the security fix in ${minimum}`,
+    );
+  }
   for (const scope of ["device", "project", "idea"]) {
     assert.equal((await stat(join(
       bootstrap, "node_modules", "silvermoon", "dist", "src", "business",
